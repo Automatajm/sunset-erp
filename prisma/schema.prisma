@@ -1,0 +1,1877 @@
+// ============================================
+// PRISMA SCHEMA - SUNSET ERP
+// Professional Multi-Tenant ERP System
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum SystemRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  USER
+  VIEWER
+  GUEST
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum PermissionScope {
+  GLOBAL
+  TENANT
+  DEPARTMENT
+  OWN
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+  FIXED_ASSET
+  TOOL
+  MATERIAL
+  CONSUMABLE
+}
+
+enum MeasurementSystem {
+  METRIC
+  IMPERIAL
+  BOTH
+}
+
+enum UnitPurpose {
+  PURCHASE
+  STORAGE
+  CONSUMPTION
+  SALE
+}
+
+enum CalendarType {
+  ISO_8601
+  GREGORIAN
+}
+
+// ============================================
+// SYSTEM CORE
+// ============================================
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(50)
+  name      String   @db.VarChar(200)
+  domain    String?  @unique @db.VarChar(255)
+  
+  isActive  Boolean  @default(true)
+  maxUsers  Int      @default(50)
+  settings  Json     @default("{}") @db.JsonB
+
+  // Master Data Management
+  categories  Category[]
+  items       Item[]
+  
+  // Financial
+  baseCurrencyId String? @db.Uuid
+  baseCurrency   Currency? @relation("TenantBaseCurrency", fields: [baseCurrencyId], references: [id])
+  
+  // Calendar
+  calendarConfig CalendarConfig?
+  
+  passwordPolicy Json?    @db.JsonB
+  mfaRequired    Boolean  @default(false)
+  sessionTimeout Int      @default(480)
+  
+  
+    statusGroups StatusGroup[]
+  alertRules   AlertRule[]
+  warehouses   Warehouse[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  deletedAt DateTime?
+  version   Int       @default(0)
+  
+  users         User[]
+  roles         Role[]
+  permissions   Permission[]
+  modules       Module[]
+  auditLogs     AuditLog[]
+  
+  @@index([code])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("sys_tenants")
+}
+
+model User {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  
+  email        String @db.VarChar(255)
+  username     String? @db.VarChar(100)
+  passwordHash String @db.VarChar(255)
+  
+  firstName String  @db.VarChar(100)
+  lastName  String  @db.VarChar(100)
+  fullName  String? @db.VarChar(200)
+  phone     String? @db.VarChar(20)
+  avatar    String? @db.VarChar(255)
+  
+  isActive        Boolean @default(true)
+  isEmailVerified Boolean @default(false)
+  isLocked        Boolean @default(false)
+  
+  mfaEnabled Boolean  @default(false)
+  mfaSecret  String?  @db.VarChar(255)
+  
+  passwordChangedAt   DateTime?
+  passwordExpiresAt   DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  
+  lastLoginAt    DateTime?
+  lastActivityAt DateTime?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  deletedAt DateTime?
+  version   Int       @default(0)
+  
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  userPermissions UserPermission[]
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  passwordHistory PasswordHistory[]
+  
+  @@unique([tenantId, email])
+  @@unique([tenantId, username])
+  @@index([tenantId, isActive])
+  @@index([tenantId, email])
+  @@index([email])
+  @@index([deletedAt])
+  @@map("sys_users")
+}
+
+model Role {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  
+  code        String      @db.VarChar(50)
+  name        String      @db.VarChar(100)
+  description String?     @db.Text
+  systemRole  SystemRole?
+  
+  parentRoleId String? @db.Uuid
+  level        Int     @default(1)
+  
+  isSystemRole Boolean @default(false)
+  isActive     Boolean @default(true)
+  priority     Int     @default(0)
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  deletedAt DateTime?
+  version   Int       @default(0)
+  
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentRole Role?  @relation("RoleHierarchy", fields: [parentRoleId], references: [id])
+  childRoles Role[] @relation("RoleHierarchy")
+  
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  
+  @@unique([tenantId, code])
+  @@index([tenantId, isActive])
+  @@index([parentRoleId])
+  @@index([deletedAt])
+  @@map("sys_roles")
+}
+
+model Permission {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String? @db.Uuid
+  
+  code        String @unique @db.VarChar(100)
+  name        String @db.VarChar(100)
+  description String? @db.Text
+  
+  module   String @db.VarChar(50)
+  resource String @db.VarChar(50)
+  action   String @db.VarChar(20)
+  
+  scope PermissionScope @default(TENANT)
+  
+  isSystemPermission Boolean @default(false)
+  isActive           Boolean @default(true)
+  
+  metadata Json? @db.JsonB
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  deletedAt DateTime?
+  version   Int       @default(0)
+  
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  
+  @@index([module, resource, action])
+  @@index([tenantId, isActive])
+  @@index([deletedAt])
+  @@map("sys_permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  
+  scopeType String? @db.VarChar(50)
+  scopeId   String? @db.Uuid
+  
+  validFrom  DateTime?
+  validUntil DateTime?
+  
+  assignedBy String?  @db.Uuid
+  assignedAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId, scopeType, scopeId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("sys_user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+  
+  effect     PermissionEffect @default(ALLOW)
+  conditions Json?            @db.JsonB
+  
+  createdAt DateTime @default(now())
+  
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("sys_role_permissions")
+}
+
+model UserPermission {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @db.Uuid
+  permissionId String @db.Uuid
+  
+  effect PermissionEffect @default(ALLOW)
+  
+  validFrom  DateTime?
+  validUntil DateTime?
+  
+  assignedBy String?   @db.Uuid
+  assignedAt DateTime  @default(now())
+  reason     String?   @db.Text
+  
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@map("sys_user_permissions")
+}
+
+model Session {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  
+  refreshToken String  @unique @db.VarChar(500)
+  accessToken  String? @db.VarChar(500)
+  
+  ipAddress  String @db.VarChar(45)
+  userAgent  String @db.Text
+  deviceInfo Json?  @db.JsonB
+  
+  expiresAt      DateTime
+  lastActivityAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  
+  isValid       Boolean   @default(true)
+  revokedAt     DateTime?
+  revokedReason String?   @db.Text
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isValid])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sys_sessions")
+}
+
+model PasswordHistory {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @db.Uuid
+  passwordHash String @db.VarChar(255)
+  
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
+  @@map("sys_password_history")
+}
+
+model AuditLog {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @db.Uuid
+  userId   String? @db.Uuid
+  
+  action     String @db.VarChar(100)
+  module     String @db.VarChar(50)
+  resource   String @db.VarChar(100)
+  resourceId String? @db.Uuid
+  
+  ipAddress String  @db.VarChar(45)
+  userAgent String? @db.Text
+  
+  oldData  Json? @db.JsonB
+  newData  Json? @db.JsonB
+  metadata Json? @db.JsonB
+  
+  status       AuditStatus @default(SUCCESS)
+  errorMessage String?     @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action, module])
+  @@index([resourceId])
+  @@map("adm_audit_logs")
+}
+
+model Module {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  
+  code        String  @db.VarChar(50)
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+  
+  parentModuleId String? @db.Uuid
+  level          Int     @default(1)
+  modulePath     String  @db.VarChar(255)
+  
+  icon      String?  @db.VarChar(50)
+  route     String?  @db.VarChar(255)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  
+  metadata Json? @db.JsonB
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  deletedAt DateTime?
+  version   Int       @default(0)
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentModule Module?  @relation("ModuleHierarchy", fields: [parentModuleId], references: [id])
+  childModules Module[] @relation("ModuleHierarchy")
+  
+  @@unique([tenantId, modulePath])
+  @@index([tenantId, isActive])
+  @@index([parentModuleId])
+  @@index([modulePath])
+  @@index([deletedAt])
+  @@map("adm_modules")
+}
+
+// ============================================
+// MASTER DATA MANAGEMENT
+// ============================================
+
+model UnitCategory {
+  id          String @id @default(uuid()) @db.Uuid
+  
+  code        String @unique @db.VarChar(50)
+  name        String @db.VarChar(100)
+  description String? @db.VarChar(500)
+  
+  system MeasurementSystem
+  
+  units UnitOfMeasure[]
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("mdm_unit_categories")
+}
+
+model UnitOfMeasure {
+  id String @id @default(uuid()) @db.Uuid
+  
+  code   String @unique @db.VarChar(20)
+  name   String @db.VarChar(100)
+  symbol String @db.VarChar(20)
+  
+  categoryId String @db.Uuid
+  category   UnitCategory @relation(fields: [categoryId], references: [id])
+  
+  system           MeasurementSystem
+  isBaseUnit       Boolean           @default(false)
+  conversionFactor Decimal           @db.Decimal(18, 8) @default(1.0)
+  
+  itemsAsBase         Item[]                 @relation("ItemBaseUnit")
+  itemUnitConversions ItemUnitConversion[]
+  
+  conversionsFrom UnitConversion[] @relation("FromUnit")
+  conversionsTo   UnitConversion[] @relation("ToUnit")
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("mdm_units_of_measure")
+  @@index([categoryId])
+  @@index([system])
+}
+
+model UnitConversion {
+  id String @id @default(uuid()) @db.Uuid
+  
+  fromUnitId String @db.Uuid
+  fromUnit   UnitOfMeasure @relation("FromUnit", fields: [fromUnitId], references: [id])
+  
+  toUnitId String @db.Uuid
+  toUnit   UnitOfMeasure @relation("ToUnit", fields: [toUnitId], references: [id])
+  
+  factor  Decimal @db.Decimal(18, 8)
+  formula String? @db.VarChar(500)
+  
+  @@unique([fromUnitId, toUnitId])
+  @@map("mdm_unit_conversions")
+  @@index([fromUnitId])
+  @@index([toUnitId])
+}
+
+model Currency {
+  id String @id @default(uuid()) @db.Uuid
+  
+  code   String @unique @db.VarChar(3)
+  name   String @db.VarChar(100)
+  symbol String @db.VarChar(10)
+  
+  decimalPlaces  Int     @default(2)
+  isBaseCurrency Boolean @default(false)
+  
+  exchangeRatesFrom ExchangeRate[] @relation("FromCurrency")
+  exchangeRatesTo   ExchangeRate[] @relation("ToCurrency")
+  tenantsAsBase     Tenant[]       @relation("TenantBaseCurrency")
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("fin_currencies")
+}
+
+model ExchangeRate {
+  id String @id @default(uuid()) @db.Uuid
+  
+  fromCurrencyId String @db.Uuid
+  fromCurrency   Currency @relation("FromCurrency", fields: [fromCurrencyId], references: [id])
+  
+  toCurrencyId String @db.Uuid
+  toCurrency   Currency @relation("ToCurrency", fields: [toCurrencyId], references: [id])
+  
+  rate          Decimal   @db.Decimal(18, 8)
+  effectiveDate DateTime
+  expiryDate    DateTime?
+  source        String?   @db.VarChar(100)
+  
+  createdAt DateTime @default(now())
+  createdBy String?
+  
+  @@unique([fromCurrencyId, toCurrencyId, effectiveDate])
+  @@map("fin_exchange_rates")
+  @@index([fromCurrencyId, toCurrencyId])
+  @@index([effectiveDate])
+}
+
+model CalendarConfig {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @unique @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  
+  calendarType   CalendarType @default(ISO_8601)
+  firstDayOfWeek Int          @default(1)
+  
+  fiscalYearStartMonth Int @default(1)
+  fiscalYearStartDay   Int @default(1)
+  
+  useWeeklyPeriods    Boolean @default(true)
+  useMonthlyPeriods   Boolean @default(true)
+  useQuarterlyPeriods Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("sys_calendar_configs")
+}
+
+model Category {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String? @db.Uuid
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  
+  code        String  @unique @db.VarChar(50)
+  name        String  @db.VarChar(100)
+  description String? @db.VarChar(500)
+  
+  itemType ItemType
+  
+  parentId String? @db.Uuid
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  level    Int        @default(1)
+  
+  items Item[]
+  
+  isActive  Boolean   @default(true)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
+  
+  @@map("mdm_categories")
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([itemType])
+}
+
+model Item {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  
+  code        String  @db.VarChar(50)
+  name        String  @db.VarChar(200)
+  description String? @db.Text
+  
+  itemType   ItemType
+  categoryId String @db.Uuid
+  category   Category @relation(fields: [categoryId], references: [id])
+  
+  isSellable      Boolean @default(false)
+  isPurchasable   Boolean @default(false)
+  isInventoriable Boolean @default(false)
+  isActive        Boolean @default(true)
+  
+  baseUnitId String @db.Uuid
+  baseUnit   UnitOfMeasure @relation("ItemBaseUnit", fields: [baseUnitId], references: [id])
+  
+  unitConversions ItemUnitConversion[]
+  
+  costPrice Decimal? @db.Decimal(18, 4)
+  salePrice Decimal? @db.Decimal(18, 4)
+  taxRate   Decimal? @db.Decimal(5, 2)
+  
+  currentStock Decimal? @db.Decimal(18, 4)
+  minStock     Decimal? @db.Decimal(18, 4)
+  maxStock     Decimal? @db.Decimal(18, 4)
+  reorderPoint Decimal? @db.Decimal(18, 4)
+  
+  brand   String? @db.VarChar(100)
+  model   String? @db.VarChar(100)
+  sku     String? @db.VarChar(100)
+  barcode String? @db.VarChar(100)
+  
+  tags     String[]
+  imageUrl String? @db.VarChar(500)
+  
+  version   Int       @default(1)
+  createdBy String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
+  
+  @@unique([tenantId, code])
+  
+
+  // Inventory Relations
+  stockLevels         StockLevel[]
+  stockTransactions   StockTransaction[]
+  receiptLines        ReceiptLine[]
+  requisitionLines    RequisitionLine[]
+  issueLines          IssueLine[]
+  transferLines       TransferLine[]
+  scrapLines          ScrapLine[]
+  supplierReturnLines SupplierReturnLine[]
+
+  @@map("mdm_items")
+  @@index([tenantId, itemType])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, isSellable])
+  @@index([tenantId, isPurchasable])
+  @@index([deletedAt])
+}
+
+model ItemUnitConversion {
+  id String @id @default(uuid()) @db.Uuid
+  
+  itemId String @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  purpose UnitPurpose
+  
+  unitId String @db.Uuid
+  unit   UnitOfMeasure @relation(fields: [unitId], references: [id])
+  
+  factor    Decimal  @db.Decimal(18, 8)
+  price     Decimal? @db.Decimal(18, 4)
+  code      String?  @db.VarChar(100)
+  barcode   String?  @db.VarChar(100)
+  isDefault Boolean  @default(false)
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([itemId, purpose, unitId])
+  @@map("mdm_item_unit_conversions")
+  @@index([itemId])
+  @@index([purpose])
+}
+
+// ============================================
+// MASTER DATA - STATUS SYSTEM
+// ============================================
+
+enum StatusType {
+  INITIAL
+  INTERMEDIATE
+  FINAL
+  CANCELLED
+}
+
+model StatusGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @db.Uuid
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  
+  module      String   @db.VarChar(50)
+  entityType  String   @db.VarChar(50)
+  
+  allowCustomStatuses Boolean @default(false)
+  requireWorkflow     Boolean @default(true)
+  
+  isActive      Boolean @default(true)
+  isSystemGroup Boolean @default(false)
+  
+  statuses     Status[]
+  transitions  StatusTransition[]
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("mdm_status_groups")
+  @@index([tenantId])
+  @@index([module, entityType])
+}
+
+model Status {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @db.Uuid
+  
+  statusGroupId String @db.Uuid
+  statusGroup   StatusGroup @relation(fields: [statusGroupId], references: [id], onDelete: Cascade)
+  
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  
+  statusType StatusType @default(INTERMEDIATE)
+  
+  displayOrder Int      @default(0)
+  color        String?  @db.VarChar(20)
+  icon         String?  @db.VarChar(50)
+  
+  isDefault    Boolean @default(false)
+  isEditable   Boolean @default(true)
+  isDeletable  Boolean @default(true)
+  requiresApproval Boolean @default(false)
+  
+  requiredPermission String? @db.VarChar(100)
+  
+  isActive       Boolean @default(true)
+  isSystemStatus Boolean @default(false)
+  
+  transitionsFrom StatusTransition[] @relation("FromStatus")
+  transitionsTo   StatusTransition[] @relation("ToStatus")
+  statusHistoryFrom StatusHistory[] @relation("StatusHistoryFromStatus")
+  statusHistoryTo   StatusHistory[] @relation("StatusHistoryToStatus")
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([statusGroupId, code])
+  @@map("mdm_statuses")
+  @@index([tenantId])
+  @@index([statusGroupId])
+}
+
+model StatusTransition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @db.Uuid
+  
+  statusGroupId String @db.Uuid
+  statusGroup   StatusGroup @relation(fields: [statusGroupId], references: [id], onDelete: Cascade)
+  
+  fromStatusId String? @db.Uuid
+  fromStatus   Status? @relation("FromStatus", fields: [fromStatusId], references: [id])
+  
+  toStatusId   String  @db.Uuid
+  toStatus     Status  @relation("ToStatus", fields: [toStatusId], references: [id])
+  
+  transitionName String @db.VarChar(100)
+  
+  requiresApproval Boolean @default(false)
+  requiresReason   Boolean @default(false)
+  
+  requiredPermission String? @db.VarChar(100)
+  allowedRoles       String[]
+  
+  validationRules Json?   @db.JsonB
+  autoActions     Json?   @db.JsonB
+  
+  isActive     Boolean @default(true)
+  displayOrder Int     @default(0)
+  
+  statusHistory StatusHistory[]
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("mdm_status_transitions")
+  @@index([statusGroupId])
+  @@index([fromStatusId])
+  @@index([toStatusId])
+}
+
+model StatusHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  entityType  String   @db.VarChar(50)
+  entityId    String   @db.Uuid
+  
+  fromStatusId String? @db.Uuid
+  fromStatus   Status? @relation("StatusHistoryFromStatus", fields: [fromStatusId], references: [id])
+  
+  toStatusId   String  @db.Uuid
+  toStatus     Status  @relation("StatusHistoryToStatus", fields: [toStatusId], references: [id], map: "status_history_to_status")
+  
+  transitionId String? @db.Uuid
+  transition   StatusTransition? @relation(fields: [transitionId], references: [id])
+  
+  changedBy String   @db.Uuid
+  changedAt DateTime @default(now())
+  
+  reason    String? @db.Text
+  comments  String? @db.Text
+  
+  documentSnapshot Json? @db.JsonB
+  
+  @@map("mdm_status_history")
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([changedAt])
+}
+
+// ============================================
+// ALERTS & NOTIFICATIONS SYSTEM
+// ============================================
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  URGENT
+}
+
+enum AlertStatus {
+  NEW
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationType {
+  ALERT
+  APPROVAL
+  TASK
+  REMINDER
+  SYSTEM
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+  SLACK
+  TEAMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model AlertType {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @db.Uuid
+  
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  
+  category    String   @db.VarChar(50)
+  severity    AlertSeverity @default(WARNING)
+  
+  icon  String? @db.VarChar(50)
+  color String? @db.VarChar(20)
+  
+  isActive      Boolean @default(true)
+  isSystemAlert Boolean @default(false)
+  
+  alertRules AlertRule[]
+  alerts Alert[]
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("mdm_alert_types")
+}
+
+model AlertRule {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  alertTypeId String   @db.Uuid
+  alertType   AlertType @relation(fields: [alertTypeId], references: [id])
+  
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  
+  scope         String  @db.VarChar(50)
+  warehouseId   String? @db.Uuid
+  categoryId    String? @db.Uuid
+  itemId        String? @db.Uuid
+  
+  conditions  Json     @db.JsonB
+  autoActions Json?    @db.JsonB
+  
+  notificationChannels NotificationChannel[]
+  notifyRoles          String[]
+  notifyUsers          String[]
+  
+  repeatAlert      Boolean @default(false)
+  repeatInterval   Int?
+  maxRepetitions   Int?
+  
+  escalateEnabled     Boolean @default(false)
+  escalateAfterHours  Int?
+  escalateToRoles     String[]
+  escalateToUsers     String[]
+  
+  isActive Boolean @default(true)
+  
+  alerts Alert[]
+  
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_alert_rules")
+  @@index([tenantId])
+  @@index([alertTypeId])
+}
+
+model Alert {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  alertRuleId String?  @db.Uuid
+  alertRule   AlertRule? @relation(fields: [alertRuleId], references: [id])
+  
+  alertTypeId String   @db.Uuid
+  alertType   AlertType @relation(fields: [alertTypeId], references: [id])
+  
+  entityType String   @db.VarChar(50)
+  entityId   String   @db.Uuid
+  
+  itemId       String? @db.Uuid
+  warehouseId  String? @db.Uuid
+  locationId   String? @db.Uuid
+  lotNumber    String? @db.VarChar(100)
+  
+  severity AlertSeverity
+  status   AlertStatus   @default(NEW)
+  
+  title   String @db.VarChar(500)
+  message String @db.Text
+  
+  alertData    Json  @db.JsonB
+  actionsTaken Json? @db.JsonB
+  
+  acknowledgedBy String?   @db.Uuid
+  acknowledgedAt DateTime?
+  
+  resolvedBy    String?   @db.Uuid
+  resolvedAt    DateTime?
+  resolutionNotes String? @db.Text
+  
+  escalated   Boolean   @default(false)
+  escalatedAt DateTime?
+  escalatedTo String[]
+  
+  isRepeat        Boolean @default(false)
+  originalAlertId String? @db.Uuid
+  repeatCount     Int     @default(0)
+  
+  notifications Notification[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_alerts")
+  @@index([tenantId])
+  @@index([status])
+  @@index([severity])
+  @@index([itemId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  alertId String? @db.Uuid
+  alert   Alert?  @relation(fields: [alertId], references: [id])
+  
+  userId String @db.Uuid
+  
+  notificationType NotificationType
+  channel          NotificationChannel
+  
+  title   String @db.VarChar(500)
+  message String @db.Text
+  data    Json?  @db.JsonB
+  
+  actionUrl   String? @db.VarChar(500)
+  actionLabel String? @db.VarChar(100)
+  
+  status NotificationStatus @default(PENDING)
+  
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+  
+  failureReason String? @db.Text
+  retryCount    Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("sys_notifications")
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// INVENTORY - CORE MODELS
+// ============================================
+
+enum WarehouseType {
+  MAIN
+  BRANCH
+  VIRTUAL
+  CONSIGNMENT
+  QUARANTINE
+}
+
+enum TransactionType {
+  RECEIPT
+  ISSUE
+  ADJUSTMENT
+  TRANSFER_OUT
+  TRANSFER_IN
+  SCRAP
+  RETURN_TO_SUPPLIER
+  RETURN_FROM_CUSTOMER
+  COUNT_ADJUSTMENT
+}
+
+enum RequisitionType {
+  MANUAL
+  AUTOMATIC
+  SALES
+  PRODUCTION
+  TRANSFER
+  MAINTENANCE
+}
+
+enum IssuePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TransferType {
+  REGULAR
+  EMERGENCY
+  REBALANCE
+  RETURN
+}
+
+enum ScrapType {
+  EXPIRED
+  DAMAGED
+  OBSOLETE
+  QUALITY_REJECT
+  THEFT
+  LOST
+  REGULATORY
+  HAZARDOUS_DISPOSAL
+}
+
+enum DisposalMethod {
+  LANDFILL
+  INCINERATION
+  RECYCLING
+  HAZMAT_DISPOSAL
+  RETURN_TO_VENDOR
+  DONATION
+  OTHER
+}
+
+enum SupplierReturnType {
+  DEFECTIVE
+  WRONG_ITEM
+  EXCESS_QUANTITY
+  EXPIRED
+  QUALITY_ISSUE
+  COMMERCIAL
+  OTHER
+}
+
+enum ReturnResolution {
+  CREDIT_NOTE
+  REPLACEMENT
+  REFUND
+  REPAIR
+  NO_CHARGE
+}
+
+model Warehouse {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  
+  warehouseType WarehouseType @default(MAIN)
+  
+  address     String?  @db.Text
+  city        String?  @db.VarChar(100)
+  state       String?  @db.VarChar(100)
+  country     String?  @db.VarChar(100)
+  postalCode  String?  @db.VarChar(20)
+  
+  phone       String?  @db.VarChar(50)
+  email       String?  @db.VarChar(100)
+  
+  managerId   String?  @db.Uuid
+  
+  isActive    Boolean  @default(true)
+  
+  locations   WarehouseLocation[]
+  stockLevels StockLevel[]
+  receipts    Receipt[]
+  issues      Issue[]
+  transfersFrom Transfer[] @relation("FromWarehouse")
+  transfersTo   Transfer[] @relation("ToWarehouse")
+  scraps      Scrap[]
+  supplierReturns SupplierReturn[]
+  
+  createdBy String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedBy String?  @db.Uuid
+  
+  @@unique([tenantId, code])
+  @@map("inv_warehouses")
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model WarehouseLocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  warehouseId String   @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  
+  aisle       String?  @db.VarChar(20)
+  rack        String?  @db.VarChar(20)
+  shelf       String?  @db.VarChar(20)
+  bin         String?  @db.VarChar(20)
+  
+  locationPath String? @db.VarChar(100)
+  
+  isActive    Boolean  @default(true)
+  
+  stockLevels StockLevel[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([warehouseId, code])
+  @@map("inv_warehouse_locations")
+  @@index([tenantId])
+  @@index([warehouseId])
+}
+
+model StockLevel {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  itemId      String   @db.Uuid
+  item        Item     @relation(fields: [itemId], references: [id])
+  
+  warehouseId String   @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  locationId  String?  @db.Uuid
+  location    WarehouseLocation? @relation(fields: [locationId], references: [id])
+  
+  lotNumber      String?  @db.VarChar(100)
+  serialNumber   String?  @db.VarChar(100)
+  expiryDate     DateTime?
+  
+  quantityOnHand      Decimal @default(0) @db.Decimal(18, 6)
+  quantityAvailable   Decimal @default(0) @db.Decimal(18, 6)
+  quantityReserved    Decimal @default(0) @db.Decimal(18, 6)
+  quantityInTransit   Decimal @default(0) @db.Decimal(18, 6)
+  
+  unitCost   Decimal @default(0) @db.Decimal(18, 6)
+  totalValue Decimal @default(0) @db.Decimal(18, 2)
+  
+  lastStockCount DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([tenantId, itemId, warehouseId, locationId, lotNumber, serialNumber])
+  @@map("inv_stock_levels")
+  @@index([tenantId])
+  @@index([itemId])
+  @@index([warehouseId])
+  @@index([expiryDate])
+}
+
+model StockTransaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  transactionType   TransactionType
+  transactionNumber String   @db.VarChar(50)
+  transactionDate   DateTime @default(now())
+  
+  itemId      String   @db.Uuid
+  item        Item     @relation(fields: [itemId], references: [id])
+  
+  warehouseId String   @db.Uuid
+  locationId  String?  @db.Uuid
+  
+  quantity    Decimal  @db.Decimal(18, 6)
+  unitCost    Decimal  @db.Decimal(18, 6)
+  totalCost   Decimal  @db.Decimal(18, 2)
+  
+  balanceAfter Decimal @db.Decimal(18, 6)
+  
+  lotNumber      String?  @db.VarChar(100)
+  serialNumber   String?  @db.VarChar(100)
+  
+  sourceModule       String?  @db.VarChar(50)
+  sourceDocumentType String?  @db.VarChar(50)
+  sourceDocumentId   String?  @db.Uuid
+  sourceDocumentNumber String? @db.VarChar(100)
+  sourceLineId       String?  @db.Uuid
+  
+  reason String? @db.Text
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  
+  @@map("inv_stock_transactions")
+  @@index([tenantId])
+  @@index([itemId])
+  @@index([warehouseId])
+  @@index([transactionDate])
+  @@index([sourceDocumentType, sourceDocumentId])
+}
+
+model Receipt {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  receiptNumber String @unique @db.VarChar(50)
+  
+  purchaseOrderId     String? @db.Uuid
+  purchaseOrderNumber String? @db.VarChar(50)
+  supplierId          String? @db.Uuid
+  
+  warehouseId String   @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate   DateTime?
+  receiptDate          DateTime  @default(now())
+  
+  deliveryPerformance Decimal? @db.Decimal(5, 2)
+  quantityAccuracy    Decimal? @db.Decimal(5, 2)
+  qualityScore        Decimal? @db.Decimal(5, 2)
+  
+  totalQuantityOrdered  Decimal @default(0) @db.Decimal(18, 6)
+  totalQuantityReceived Decimal @default(0) @db.Decimal(18, 6)
+  totalQuantityRejected Decimal @default(0) @db.Decimal(18, 6)
+  totalValue            Decimal @default(0) @db.Decimal(18, 2)
+  
+  notes String? @db.Text
+  
+  lines ReceiptLine[]
+  
+  receivedBy String   @db.Uuid
+  createdBy  String   @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  version    Int      @default(0)
+  
+  @@map("inv_receipts")
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([statusCode])
+  @@index([receiptDate])
+}
+
+model ReceiptLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  receiptId   String   @db.Uuid
+  receipt     Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  
+  lineNumber  Int
+  
+  itemId      String   @db.Uuid
+  item        Item     @relation(fields: [itemId], references: [id])
+  
+  quantityOrdered  Decimal @db.Decimal(18, 6)
+  quantityReceived Decimal @default(0) @db.Decimal(18, 6)
+  quantityRejected Decimal @default(0) @db.Decimal(18, 6)
+  quantityPending  Decimal @default(0) @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitPriceOrdered Decimal @db.Decimal(18, 6)
+  unitPriceActual  Decimal @default(0) @db.Decimal(18, 6)
+  totalCost        Decimal @default(0) @db.Decimal(18, 2)
+  
+  qualityStatus    String?  @db.VarChar(50)
+  rejectionReason  String?  @db.Text
+  
+  locationId  String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  expiryDate   DateTime?
+  
+  statusCode String @db.VarChar(50)
+  
+  receivedAt DateTime?
+  receivedBy String?  @db.Uuid
+  
+  @@map("inv_receipt_lines")
+  @@index([receiptId])
+  @@index([itemId])
+}
+
+model Requisition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  requisitionNumber String @unique @db.VarChar(50)
+  requisitionType   RequisitionType
+  
+  sourceModule       String? @db.VarChar(50)
+  sourceDocumentType String? @db.VarChar(50)
+  sourceDocumentId   String? @db.Uuid
+  
+  requestedBy    String   @db.Uuid
+  requestedFor   String?  @db.VarChar(200)
+  requestDate    DateTime @default(now())
+  requiredDate   DateTime
+  
+  priority IssuePriority @default(NORMAL)
+  
+  warehouseId       String? @db.Uuid
+  deliverToLocation String? @db.Text
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  approvedBy String?   @db.Uuid
+  approvedAt DateTime?
+  
+  projectedIssueDate DateTime?
+  actualIssueDate    DateTime?
+  isProjected        Boolean @default(false)
+  
+  purpose String? @db.Text
+  notes   String? @db.Text
+  
+  totalQuantityRequested Decimal @default(0) @db.Decimal(18, 6)
+  totalQuantityIssued    Decimal @default(0) @db.Decimal(18, 6)
+  totalValue             Decimal @default(0) @db.Decimal(18, 2)
+  
+  lines RequisitionLine[]
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_requisitions")
+  @@index([tenantId])
+  @@index([statusCode])
+  @@index([requestedBy])
+}
+
+model RequisitionLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  requisitionId String      @db.Uuid
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  
+  lineNumber Int
+  
+  itemId String @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id])
+  
+  quantityRequested Decimal @db.Decimal(18, 6)
+  quantityApproved  Decimal @default(0) @db.Decimal(18, 6)
+  quantityIssued    Decimal @default(0) @db.Decimal(18, 6)
+  quantityPending   Decimal @default(0) @db.Decimal(18, 6)
+  quantityCancelled Decimal @default(0) @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitCost  Decimal @default(0) @db.Decimal(18, 6)
+  totalCost Decimal @default(0) @db.Decimal(18, 2)
+  
+  locationId String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  
+  statusCode String @db.VarChar(50)
+  
+  cancellationReason String? @db.Text
+  notes              String? @db.Text
+  
+  issuedAt DateTime?
+  issuedBy String?  @db.Uuid
+  
+  @@map("inv_requisition_lines")
+  @@index([requisitionId])
+  @@index([itemId])
+}
+
+model Issue {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  issueNumber String @unique @db.VarChar(50)
+  
+  requisitionId     String? @db.Uuid
+  requisitionNumber String? @db.VarChar(50)
+  
+  sourceModule       String? @db.VarChar(50)
+  sourceDocumentType String? @db.VarChar(50)
+  sourceDocumentId   String? @db.Uuid
+  
+  warehouseId String   @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  issueDate DateTime @default(now())
+  issuedBy  String   @db.Uuid
+  issuedTo  String?  @db.Uuid
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  issueType String @db.VarChar(50)
+  
+  purpose String? @db.Text
+  notes   String? @db.Text
+  
+  totalQuantityIssued Decimal @default(0) @db.Decimal(18, 6)
+  totalValue          Decimal @default(0) @db.Decimal(18, 2)
+  
+  lines IssueLine[]
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_issues")
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([statusCode])
+}
+
+model IssueLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  issueId    String @db.Uuid
+  issue      Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  
+  requisitionLineId String? @db.Uuid
+  
+  lineNumber Int
+  
+  itemId String @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id])
+  
+  quantityRequested Decimal @default(0) @db.Decimal(18, 6)
+  quantityIssued    Decimal @db.Decimal(18, 6)
+  quantityVariance  Decimal @default(0) @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitCost  Decimal @db.Decimal(18, 6)
+  totalCost Decimal @db.Decimal(18, 2)
+  
+  locationId String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  
+  varianceReason String? @db.Text
+  
+  statusCode String @db.VarChar(50)
+  
+  issuedAt DateTime?
+  issuedBy String?  @db.Uuid
+  
+  @@map("inv_issue_lines")
+  @@index([issueId])
+  @@index([itemId])
+}
+
+model Transfer {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  transferNumber String @unique @db.VarChar(50)
+  
+  fromWarehouseId String    @db.Uuid
+  fromWarehouse   Warehouse @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  
+  toWarehouseId String    @db.Uuid
+  toWarehouse   Warehouse @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  
+  transferType TransferType @default(REGULAR)
+  
+  requestDate  DateTime @default(now())
+  approvedDate DateTime?
+  shippedDate  DateTime?
+  receivedDate DateTime?
+  expectedArrivalDate DateTime?
+  
+  requestedBy String   @db.Uuid
+  approvedBy  String?  @db.Uuid
+  shippedBy   String?  @db.Uuid
+  receivedBy  String?  @db.Uuid
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  priority IssuePriority @default(NORMAL)
+  
+  reason String? @db.Text
+  notes  String? @db.Text
+  
+  shippingCost  Decimal @default(0) @db.Decimal(18, 2)
+  insuranceCost Decimal @default(0) @db.Decimal(18, 2)
+  totalCost     Decimal @default(0) @db.Decimal(18, 2)
+  
+  carrierName    String? @db.VarChar(200)
+  trackingNumber String? @db.VarChar(100)
+  
+  totalQuantityShipped  Decimal @default(0) @db.Decimal(18, 6)
+  totalQuantityReceived Decimal @default(0) @db.Decimal(18, 6)
+  totalQuantityDamaged  Decimal @default(0) @db.Decimal(18, 6)
+  totalValue            Decimal @default(0) @db.Decimal(18, 2)
+  
+  lines TransferLine[]
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_transfers")
+  @@index([tenantId])
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([statusCode])
+}
+
+model TransferLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  transferId String   @db.Uuid
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  
+  lineNumber Int
+  
+  itemId String @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id])
+  
+  quantityRequested Decimal @db.Decimal(18, 6)
+  quantityShipped   Decimal @default(0) @db.Decimal(18, 6)
+  quantityReceived  Decimal @default(0) @db.Decimal(18, 6)
+  quantityDamaged   Decimal @default(0) @db.Decimal(18, 6)
+  quantityRejected  Decimal @default(0) @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitCost  Decimal @db.Decimal(18, 6)
+  totalCost Decimal @db.Decimal(18, 2)
+  
+  fromLocationId String? @db.Uuid
+  toLocationId   String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  expiryDate   DateTime?
+  
+  statusCode String @db.VarChar(50)
+  
+  damageReason    String? @db.Text
+  rejectionReason String? @db.Text
+  
+  shippedAt  DateTime?
+  receivedAt DateTime?
+  
+  @@map("inv_transfer_lines")
+  @@index([transferId])
+  @@index([itemId])
+}
+
+model Scrap {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  scrapNumber String @unique @db.VarChar(50)
+  
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  scrapType ScrapType
+  
+  reason      String @db.Text
+  description String? @db.Text
+  
+  requiresApproval Boolean @default(true)
+  
+  approvedBy    String?   @db.Uuid
+  approvedAt    DateTime?
+  approvalNotes String?   @db.Text
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  scrapDate    DateTime @default(now())
+  disposalDate DateTime?
+  
+  requestedBy  String @db.Uuid
+  processedBy  String? @db.Uuid
+  
+  disposalMethod   DisposalMethod?
+  disposalLocation String? @db.VarChar(200)
+  disposalCompany  String? @db.VarChar(200)
+  disposalCertificate String? @db.VarChar(100)
+  disposalCost     Decimal @default(0) @db.Decimal(18, 2)
+  
+  accountingImpact String? @db.VarChar(50)
+  accountingEntryId String? @db.Uuid
+  
+  totalQuantity Decimal @default(0) @db.Decimal(18, 6)
+  totalValue    Decimal @default(0) @db.Decimal(18, 2)
+  
+  witnessedBy String?   @db.Uuid
+  witnessedAt DateTime?
+  
+  notes String? @db.Text
+  
+  lines ScrapLine[]
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_scraps")
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([statusCode])
+}
+
+model ScrapLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  scrapId    String @db.Uuid
+  scrap      Scrap  @relation(fields: [scrapId], references: [id], onDelete: Cascade)
+  
+  lineNumber Int
+  
+  itemId String @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id])
+  
+  quantity Decimal @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitCost  Decimal @db.Decimal(18, 6)
+  totalCost Decimal @db.Decimal(18, 2)
+  
+  locationId String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  expiryDate   DateTime?
+  
+  reason String? @db.Text
+  
+  isHazardous          Boolean @default(false)
+  hazardClass          String? @db.VarChar(100)
+  disposalInstructions String? @db.Text
+  
+  photoUrls String[]
+  
+  statusCode String @db.VarChar(50)
+  
+  disposedAt DateTime?
+  disposedBy String?  @db.Uuid
+  
+  @@map("inv_scrap_lines")
+  @@index([scrapId])
+  @@index([itemId])
+}
+
+model SupplierReturn {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  
+  returnNumber String @unique @db.VarChar(50)
+  
+  supplierId   String? @db.Uuid
+  supplierName String? @db.VarChar(200)
+  supplierContact String? @db.VarChar(100)
+  
+  sourceType String @db.VarChar(50)
+  
+  receiptId     String? @db.Uuid
+  receiptNumber String? @db.VarChar(50)
+  
+  purchaseOrderId     String? @db.Uuid
+  purchaseOrderNumber String? @db.VarChar(50)
+  
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  returnType SupplierReturnType
+  
+  reason      String @db.Text
+  description String? @db.Text
+  
+  returnRequestDate    DateTime @default(now())
+  approvedDate         DateTime?
+  supplierApprovedDate DateTime?
+  shippedDate          DateTime?
+  supplierReceivedDate DateTime?
+  
+  rmaNumber     String?   @db.VarChar(100)
+  rmaExpiryDate DateTime?
+  
+  statusId   String @db.Uuid
+  statusCode String @db.VarChar(50)
+  
+  expectedResolution ReturnResolution?
+  actualResolution   ReturnResolution?
+  
+  carrierName    String? @db.VarChar(200)
+  trackingNumber String? @db.VarChar(100)
+  shippingCost   Decimal @default(0) @db.Decimal(18, 2)
+  insuranceCost  Decimal @default(0) @db.Decimal(18, 2)
+  
+  totalValue        Decimal @default(0) @db.Decimal(18, 2)
+  creditNoteNumber  String? @db.VarChar(100)
+  creditNoteAmount  Decimal @default(0) @db.Decimal(18, 2)
+  refundAmount      Decimal @default(0) @db.Decimal(18, 2)
+  restockingFee     Decimal @default(0) @db.Decimal(18, 2)
+  
+  returnCostBornBy String? @db.VarChar(50)
+  
+  approvedBy         String?  @db.Uuid
+  supplierApprovedBy String?  @db.VarChar(200)
+  
+  totalQuantity Decimal @default(0) @db.Decimal(18, 6)
+  totalLines    Int     @default(0)
+  
+  impactsSupplierRating Boolean @default(true)
+  
+  accountingEntryId String? @db.Uuid
+  
+  notes String? @db.Text
+  
+  lines SupplierReturnLine[]
+  
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inv_supplier_returns")
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([statusCode])
+  @@index([supplierId])
+}
+
+model SupplierReturnLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  returnId String         @db.Uuid
+  return   SupplierReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  
+  receiptLineId String? @db.Uuid
+  
+  lineNumber Int
+  
+  itemId   String @db.Uuid
+  item     Item   @relation(fields: [itemId], references: [id])
+  itemCode String @db.VarChar(100)
+  itemName String @db.VarChar(200)
+  
+  quantityReturned Decimal @db.Decimal(18, 6)
+  
+  unitId           String  @db.Uuid
+  conversionFactor Decimal @db.Decimal(18, 6)
+  
+  unitCost  Decimal @db.Decimal(18, 6)
+  totalCost Decimal @db.Decimal(18, 2)
+  
+  locationId String? @db.Uuid
+  
+  lotNumber    String? @db.VarChar(100)
+  serialNumber String? @db.VarChar(100)
+  expiryDate   DateTime?
+  
+  returnReason       String @db.Text
+  defectDescription  String? @db.Text
+  
+  supplierQcStatus String? @db.VarChar(50)
+  supplierQcNotes  String? @db.Text
+  
+  photoUrls String[]
+  
+  expectedResolution ReturnResolution?
+  actualResolution   ReturnResolution?
+  
+  replacementReceiptId   String?   @db.Uuid
+  replacementReceived    Boolean   @default(false)
+  replacementReceivedDate DateTime?
+  
+  statusCode String @db.VarChar(50)
+  
+  shippedAt   DateTime?
+  completedAt DateTime?
+  
+  @@map("inv_supplier_return_lines")
+  @@index([returnId])
+  @@index([itemId])
+}
