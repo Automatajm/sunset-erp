@@ -11,6 +11,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { StockTransactionsModule } from './modules/stock-transactions/stock-transactions.module';
+import { BomModule } from './modules/bom/bom.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { StockTransactionsModule } from './modules/stock-transactions/stock-tran
     SalesOrdersModule,
     WarehousesModule,
     StockTransactionsModule,
+    BomModule,
   ],
   controllers: [AppController],
   providers: [AppService],
