@@ -8,6 +8,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { ItemsModule } from './modules/items/items.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CustomersModule } from './modules/customers/customers.module';
     ItemsModule,
     PurchaseOrdersModule,
     CustomersModule,
+    SalesOrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
