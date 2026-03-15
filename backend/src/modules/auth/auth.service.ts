@@ -1,8 +1,9 @@
-﻿import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+﻿import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { SelectTenantDto } from './dto/select-tenant.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -13,7 +14,6 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    // Check if user already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: registerDto.email },
     });
@@ -22,10 +22,8 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
 
-    // Create user (using exact field names from schema)
     const user = await this.prisma.user.create({
       data: {
         email: registerDto.email,
@@ -38,7 +36,6 @@ export class AuthService {
       },
     });
 
-    // Remove password from response
     const { passwordHash, ...userWithoutPassword } = user;
 
     return {
@@ -48,21 +45,26 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    // Find user
     const user = await this.prisma.user.findUnique({
       where: { email: loginDto.email },
+      include: {
+        userTenants: {
+          where: { isActive: true },
+          include: {
+            tenant: true,
+          },
+        },
+      },
     });
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user is active
     if (user.status !== 'active') {
       throw new UnauthorizedException('Account is deactivated');
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
       user.passwordHash,
@@ -72,12 +74,46 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate JWT token
-    const payload = { 
-      sub: user.id, 
+    // Get user's tenants
+    const tenants = user.userTenants.map((ut) => ({
+      id: ut.tenant.id,
+      code: ut.tenant.code,
+      name: ut.tenant.name,
+      isDefault: ut.isDefault,
+    }));
+
+    if (tenants.length === 0) {
+      throw new UnauthorizedException('User has no tenant access. Contact administrator.');
+    }
+
+    // If only one tenant, auto-select it
+    if (tenants.length === 1) {
+      const payload = {
+        sub: user.id,
+        email: user.email,
+        tenantId: tenants[0].id,
+      };
+      const accessToken = this.jwtService.sign(payload);
+
+      return {
+        access_token: accessToken,
+        token_type: 'Bearer',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        tenant: tenants[0],
+        requiresTenantSelection: false,
+      };
+    }
+
+    // Multiple tenants - return list for selection
+    const payload = {
+      sub: user.id,
       email: user.email,
     };
-
     const accessToken = this.jwtService.sign(payload);
 
     return {
@@ -89,7 +125,72 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
       },
+      tenants,
+      requiresTenantSelection: true,
     };
+  }
+
+  async selectTenant(userId: string, selectTenantDto: SelectTenantDto) {
+    // Verify user has access to this tenant
+    const userTenant = await this.prisma.userTenant.findFirst({
+      where: {
+        userId,
+        tenantId: selectTenantDto.tenantId,
+        isActive: true,
+      },
+      include: {
+        tenant: true,
+        user: true,
+      },
+    });
+
+    if (!userTenant) {
+      throw new NotFoundException('You do not have access to this tenant');
+    }
+
+    // Generate new token with tenant
+    const payload = {
+      sub: userId,
+      email: userTenant.user.email,
+      tenantId: userTenant.tenantId,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    return {
+      access_token: accessToken,
+      token_type: 'Bearer',
+      user: {
+        id: userTenant.user.id,
+        email: userTenant.user.email,
+        firstName: userTenant.user.firstName,
+        lastName: userTenant.user.lastName,
+      },
+      tenant: {
+        id: userTenant.tenant.id,
+        code: userTenant.tenant.code,
+        name: userTenant.tenant.name,
+      },
+    };
+  }
+
+  async getUserTenants(userId: string) {
+    const userTenants = await this.prisma.userTenant.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+      include: {
+        tenant: true,
+      },
+    });
+
+    return userTenants.map((ut) => ({
+      id: ut.tenant.id,
+      code: ut.tenant.code,
+      name: ut.tenant.name,
+      isDefault: ut.isDefault,
+    }));
   }
 
   async validateUser(userId: string) {

@@ -36,7 +36,9 @@
         "start:prod": "node dist/main",
         "test:e2e": "jest --config ./test/jest-e2e.json",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-        "start:debug": "nest start --debug --watch"
+        "start:debug": "nest start --debug --watch",
+        "seed": "npx prisma db seed",
+        "seed:reset": "npx prisma migrate reset --force"
     },
     "name": "sunset-erp-backend",
     "description": "Sunset ERP Backend API",
@@ -65,5 +67,8 @@
         "tsconfig-paths": "^4.2.0",
         "typescript": "^5.9.3"
     },
-    "main": "dist/main.js"
+    "main": "dist/main.js",
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
+    }
 }
