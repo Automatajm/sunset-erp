@@ -1,4 +1,4 @@
-﻿# SUNSET ERP - PROFESSIONAL DEVELOPMENT PLAN
+# SUNSET ERP - PROFESSIONAL DEVELOPMENT PLAN
 
 **Complete Enterprise Multi-Tenant SaaS ERP Platform**
 
@@ -182,7 +182,7 @@ Sunset ERP is a complete, enterprise-grade, multi-tenant SaaS ERP platform cover
 **Sub-modules:**
 
 **3.1 Bill of Materials (BOM)**
-- Multi-level BOM (finished goods → sub-assemblies → raw materials)
+- Multi-level BOM (finished goods ? sub-assemblies ? raw materials)
 - Component substitutions
 - Co-products and by-products
 - Scrap percentage
@@ -454,7 +454,7 @@ Sunset ERP is a complete, enterprise-grade, multi-tenant SaaS ERP platform cover
 - Tax calculation on transactions
 - Tax reports (sales tax, VAT)
 - Dominican Republic DGII compliance
-- NCF (Números de Comprobante Fiscal) management
+- NCF (N�meros de Comprobante Fiscal) management
 - Electronic invoicing (e-Factura)
 
 **Key Principles:**
