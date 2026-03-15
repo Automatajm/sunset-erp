@@ -1,5 +1,26 @@
-﻿import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+﻿import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+} from '@nestjs/swagger';
+import { SuppliersService } from './suppliers.service';
+import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -9,47 +30,72 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class SuppliersController {
-  @Get()
-  @RequirePermissions('PROCUREMENT:VIEW')
-  @ApiOperation({ summary: 'Get all suppliers (requires PROCUREMENT:VIEW)' })
-  @ApiResponse({ status: 200, description: 'List of suppliers' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  findAll(@Request() req) {
-    return {
-      message: 'Suppliers list',
-      tenantId: req.user.tenantId,
-      permissions: ['PROCUREMENT:VIEW'],
-      data: [
-        { id: '1', code: 'SUP001', name: 'Example Supplier 1' },
-        { id: '2', code: 'SUP002', name: 'Example Supplier 2' },
-      ],
-    };
-  }
+  constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
   @RequirePermissions('PROCUREMENT:CREATE')
-  @ApiOperation({ summary: 'Create supplier (requires PROCUREMENT:CREATE)' })
-  @ApiResponse({ status: 201, description: 'Supplier created' })
+  @ApiOperation({ summary: 'Create a new supplier' })
+  @ApiResponse({ status: 201, description: 'Supplier created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  create(@Request() req, @Body() createSupplierDto: any) {
-    return {
-      message: 'Supplier created',
-      tenantId: req.user.tenantId,
-      permissions: ['PROCUREMENT:CREATE'],
-      data: createSupplierDto,
-    };
+  @ApiResponse({ status: 409, description: 'Supplier code already exists' })
+  async create(@Request() req, @Body() createSupplierDto: CreateSupplierDto) {
+    return this.suppliersService.create(
+      req.user.tenantId,
+      req.user.id,
+      createSupplierDto,
+    );
   }
 
-  @Get('admin-only')
-  @RequirePermissions('ADMIN:SETTINGS')
-  @ApiOperation({ summary: 'Admin-only endpoint (requires ADMIN:SETTINGS)' })
-  @ApiResponse({ status: 200, description: 'Admin data' })
-  @ApiResponse({ status: 403, description: 'Forbidden - admin only' })
-  adminOnly(@Request() req) {
-    return {
-      message: 'Admin-only data',
-      tenantId: req.user.tenantId,
-      permissions: ['ADMIN:SETTINGS'],
-    };
+  @Get()
+  @RequirePermissions('PROCUREMENT:VIEW')
+  @ApiOperation({ summary: 'Get all suppliers' })
+  @ApiResponse({ status: 200, description: 'List of suppliers' })
+  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  async findAll(@Request() req) {
+    return this.suppliersService.findAll(req.user.tenantId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('PROCUREMENT:VIEW')
+  @ApiOperation({ summary: 'Get supplier by ID' })
+  @ApiParam({ name: 'id', description: 'Supplier UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier details' })
+  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiResponse({ status: 404, description: 'Supplier not found' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.suppliersService.findOne(req.user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('PROCUREMENT:EDIT')
+  @ApiOperation({ summary: 'Update supplier' })
+  @ApiParam({ name: 'id', description: 'Supplier UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiResponse({ status: 404, description: 'Supplier not found' })
+  @ApiResponse({ status: 409, description: 'Supplier code already exists' })
+  async update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() updateSupplierDto: UpdateSupplierDto,
+  ) {
+    return this.suppliersService.update(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      updateSupplierDto,
+    );
+  }
+
+  @Delete(':id')
+  @RequirePermissions('PROCUREMENT:DELETE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete supplier (soft delete)' })
+  @ApiParam({ name: 'id', description: 'Supplier UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiResponse({ status: 404, description: 'Supplier not found' })
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.suppliersService.remove(req.user.tenantId, req.user.id, id);
   }
 }
