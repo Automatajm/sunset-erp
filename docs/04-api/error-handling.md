@@ -1,0 +1,12 @@
+﻿# ERROR HANDLING
+
+## Error Codes
+- VALIDATION_ERROR (400)
+- UNAUTHORIZED (401)
+- FORBIDDEN (403)
+- NOT_FOUND (404)
+- CONFLICT (409)
+- RATE_LIMIT_EXCEEDED (429)
+
+## Format
+See api-design-principles.md
