@@ -17,6 +17,7 @@ import { ProductionOrdersModule } from './modules/production-orders/production-o
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { JournalEntriesModule } from './modules/journal-entries/journal-entries.module';
 import { FinancialReportsModule } from './modules/financial-reports/financial-reports.module';
+import { FiscalPeriodsModule } from './modules/fiscal-periods/fiscal-periods.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { FinancialReportsModule } from './modules/financial-reports/financial-re
     ChartOfAccountsModule,
     JournalEntriesModule,
     FinancialReportsModule,
+    FiscalPeriodsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

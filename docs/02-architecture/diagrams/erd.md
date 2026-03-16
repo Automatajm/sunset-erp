@@ -597,6 +597,28 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "ac_fiscal_periods" {
+    String id "🗝️"
+    String tenant_id 
+    String period_code 
+    String period_name 
+    DateTime start_date 
+    DateTime end_date 
+    String fiscal_year 
+    String fiscal_quarter "❓"
+    String status 
+    Boolean is_current 
+    DateTime closed_at "❓"
+    String closed_by "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -652,4 +674,5 @@ erDiagram
     "ac_journal_entry_lines" }o--|| saas_tenants : "tenant"
     "ac_journal_entry_lines" }o--|| ac_journal_entries : "journalEntry"
     "ac_journal_entry_lines" }o--|| ac_accounts : "account"
+    "ac_fiscal_periods" }o--|| saas_tenants : "tenant"
 ```

@@ -112,6 +112,7 @@ model Tenant {
   BomComponent      BomComponent[]
   SalesOrderLine    SalesOrderLine[]
   JournalEntryLine  JournalEntryLine[]
+  fiscalPeriods     FiscalPeriod[]
 
   @@map("saas_tenants")
 }
@@ -1072,6 +1073,38 @@ model JournalEntryLine {
   @@index([journalEntryId])
   @@index([accountId])
   @@map("ac_journal_entry_lines")
+}
+
+model FiscalPeriod {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  periodCode    String    @map("period_code") @db.VarChar(20)
+  periodName    String    @map("period_name") @db.VarChar(100)
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime  @map("end_date") @db.Date
+  fiscalYear    String    @map("fiscal_year") @db.VarChar(20)
+  fiscalQuarter String?   @map("fiscal_quarter") @db.VarChar(10)
+  status        String    @default("open") @db.VarChar(20)
+  isCurrent     Boolean   @default(false) @map("is_current")
+  closedAt      DateTime? @map("closed_at")
+  closedBy      String?   @map("closed_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, periodCode])
+  @@index([tenantId])
+  @@index([tenantId, periodCode])
+  @@index([fiscalYear])
+  @@index([status])
+  @@index([isCurrent])
+  @@map("ac_fiscal_periods")
 }
 
 // ============================================================================
