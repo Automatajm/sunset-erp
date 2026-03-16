@@ -14,6 +14,8 @@ import { StockTransactionsModule } from './modules/stock-transactions/stock-tran
 import { BomModule } from './modules/bom/bom.module';
 import { WorkCentersModule } from './modules/work-centers/work-centers.module';
 import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
+import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
+import { JournalEntriesModule } from './modules/journal-entries/journal-entries.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ProductionOrdersModule } from './modules/production-orders/production-o
     BomModule,
     WorkCentersModule,
     ProductionOrdersModule,
+    ChartOfAccountsModule,
+    JournalEntriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
