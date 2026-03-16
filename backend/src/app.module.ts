@@ -12,6 +12,8 @@ import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { StockTransactionsModule } from './modules/stock-transactions/stock-transactions.module';
 import { BomModule } from './modules/bom/bom.module';
+import { WorkCentersModule } from './modules/work-centers/work-centers.module';
+import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { BomModule } from './modules/bom/bom.module';
     WarehousesModule,
     StockTransactionsModule,
     BomModule,
+    WorkCentersModule,
+    ProductionOrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
