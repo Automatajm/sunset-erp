@@ -16,6 +16,7 @@ import { WorkCentersModule } from './modules/work-centers/work-centers.module';
 import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { JournalEntriesModule } from './modules/journal-entries/journal-entries.module';
+import { FinancialReportsModule } from './modules/financial-reports/financial-reports.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { JournalEntriesModule } from './modules/journal-entries/journal-entries.
     ProductionOrdersModule,
     ChartOfAccountsModule,
     JournalEntriesModule,
+    FinancialReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
