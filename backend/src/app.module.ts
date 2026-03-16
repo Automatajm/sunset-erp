@@ -18,6 +18,8 @@ import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-acco
 import { JournalEntriesModule } from './modules/journal-entries/journal-entries.module';
 import { FinancialReportsModule } from './modules/financial-reports/financial-reports.module';
 import { FiscalPeriodsModule } from './modules/fiscal-periods/fiscal-periods.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
+import { CashFlowModule } from './modules/cash-flow/cash-flow.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { FiscalPeriodsModule } from './modules/fiscal-periods/fiscal-periods.mod
     JournalEntriesModule,
     FinancialReportsModule,
     FiscalPeriodsModule,
+    BudgetsModule,
+    CashFlowModule,
   ],
   controllers: [AppController],
   providers: [AppService],

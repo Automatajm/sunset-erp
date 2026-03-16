@@ -619,6 +619,79 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "ac_budgets" {
+    String id "🗝️"
+    String tenant_id 
+    String budget_code 
+    String budget_name 
+    String fiscal_year 
+    String description "❓"
+    String status 
+    DateTime approved_at "❓"
+    String approved_by "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ac_budget_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String budget_id 
+    String account_id 
+    String fiscal_period 
+    Decimal budget_amount 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ac_cash_flow_projections" {
+    String id "🗝️"
+    String tenant_id 
+    String projection_code 
+    String projection_name 
+    DateTime start_date 
+    DateTime end_date 
+    String scenario 
+    String description "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ac_cash_flow_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String cash_flow_projection_id 
+    DateTime line_date 
+    String line_type 
+    String category 
+    Decimal amount 
+    String description "❓"
+    String account_id "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -675,4 +748,12 @@ erDiagram
     "ac_journal_entry_lines" }o--|| ac_journal_entries : "journalEntry"
     "ac_journal_entry_lines" }o--|| ac_accounts : "account"
     "ac_fiscal_periods" }o--|| saas_tenants : "tenant"
+    "ac_budgets" }o--|| saas_tenants : "tenant"
+    "ac_budget_lines" }o--|| saas_tenants : "tenant"
+    "ac_budget_lines" }o--|| ac_budgets : "budget"
+    "ac_budget_lines" }o--|| ac_accounts : "account"
+    "ac_cash_flow_projections" }o--|| saas_tenants : "tenant"
+    "ac_cash_flow_lines" }o--|| saas_tenants : "tenant"
+    "ac_cash_flow_lines" }o--|| ac_cash_flow_projections : "cashFlowProjection"
+    "ac_cash_flow_lines" }o--|o ac_accounts : "account"
 ```

@@ -90,29 +90,33 @@ model Tenant {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  userTenants       UserTenant[]
-  subscriptions     Subscription[]
-  invoices          Invoice[]
-  usageRecords      UsageRecord[]
-  roles             Role[]
-  suppliers         Supplier[]
-  items             Item[]
-  warehouses        Warehouse[]
-  stock             Stock[]
-  stockMovements    StockMovement[]
-  boms              Bom[]
-  workCenters       WorkCenter[]
-  productionOrders  ProductionOrder[]
-  customers         Customer[]
-  salesOrders       SalesOrder[]
-  accounts          Account[]
-  journalEntries    JournalEntry[]
-  PurchaseOrder     PurchaseOrder[]
-  PurchaseOrderLine PurchaseOrderLine[]
-  BomComponent      BomComponent[]
-  SalesOrderLine    SalesOrderLine[]
-  JournalEntryLine  JournalEntryLine[]
-  fiscalPeriods     FiscalPeriod[]
+  userTenants         UserTenant[]
+  subscriptions       Subscription[]
+  invoices            Invoice[]
+  usageRecords        UsageRecord[]
+  roles               Role[]
+  suppliers           Supplier[]
+  items               Item[]
+  warehouses          Warehouse[]
+  stock               Stock[]
+  stockMovements      StockMovement[]
+  boms                Bom[]
+  workCenters         WorkCenter[]
+  productionOrders    ProductionOrder[]
+  customers           Customer[]
+  salesOrders         SalesOrder[]
+  accounts            Account[]
+  journalEntries      JournalEntry[]
+  PurchaseOrder       PurchaseOrder[]
+  PurchaseOrderLine   PurchaseOrderLine[]
+  BomComponent        BomComponent[]
+  SalesOrderLine      SalesOrderLine[]
+  JournalEntryLine    JournalEntryLine[]
+  fiscalPeriods       FiscalPeriod[]
+  budgets             Budget[] // <-- ADD THIS
+  budgetLines         BudgetLine[] // <-- ADD THIS
+  cashFlowProjections CashFlowProjection[] // <-- ADD THIS
+  cashFlowLines       CashFlowLine[] // <-- ADD THIS
 
   @@map("saas_tenants")
 }
@@ -1008,6 +1012,8 @@ model Account {
 
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   journalEntryLines JournalEntryLine[]
+  budgetLines       BudgetLine[] // <-- ADD THIS
+  cashFlowLines     CashFlowLine[] // <-- ADD THIS
 
   @@unique([tenantId, accountNumber])
   @@index([tenantId])
@@ -1105,6 +1111,118 @@ model FiscalPeriod {
   @@index([status])
   @@index([isCurrent])
   @@map("ac_fiscal_periods")
+}
+
+model Budget {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  budgetCode  String    @map("budget_code") @db.VarChar(50)
+  budgetName  String    @map("budget_name") @db.VarChar(255)
+  fiscalYear  String    @map("fiscal_year") @db.VarChar(20)
+  description String?   @db.Text
+  status      String    @default("draft") @db.VarChar(20)
+  approvedAt  DateTime? @map("approved_at")
+  approvedBy  String?   @map("approved_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  budgetLines BudgetLine[]
+
+  @@unique([tenantId, budgetCode])
+  @@index([tenantId])
+  @@index([fiscalYear])
+  @@index([status])
+  @@map("ac_budgets")
+}
+
+model BudgetLine {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  budgetId     String  @map("budget_id") @db.Uuid
+  accountId    String  @map("account_id") @db.Uuid
+  fiscalPeriod String  @map("fiscal_period") @db.VarChar(20)
+  budgetAmount Decimal @map("budget_amount") @db.Decimal(18, 2)
+  notes        String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  budget  Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@unique([budgetId, accountId, fiscalPeriod])
+  @@index([tenantId])
+  @@index([budgetId])
+  @@index([accountId])
+  @@index([fiscalPeriod])
+  @@map("ac_budget_lines")
+}
+
+model CashFlowProjection {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  projectionCode String   @map("projection_code") @db.VarChar(50)
+  projectionName String   @map("projection_name") @db.VarChar(255)
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  scenario       String   @default("realistic") @db.VarChar(50)
+  description    String?  @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  cashFlowLines CashFlowLine[]
+
+  @@unique([tenantId, projectionCode])
+  @@index([tenantId])
+  @@index([scenario])
+  @@map("ac_cash_flow_projections")
+}
+
+model CashFlowLine {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  cashFlowProjectionId String   @map("cash_flow_projection_id") @db.Uuid
+  lineDate             DateTime @map("line_date") @db.Date
+  lineType             String   @map("line_type") @db.VarChar(50)
+  category             String   @db.VarChar(100)
+  amount               Decimal  @db.Decimal(18, 2)
+  description          String?  @db.Text
+  accountId            String?  @map("account_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  cashFlowProjection CashFlowProjection @relation(fields: [cashFlowProjectionId], references: [id], onDelete: Cascade)
+  account            Account?           @relation(fields: [accountId], references: [id])
+
+  @@index([tenantId])
+  @@index([cashFlowProjectionId])
+  @@index([lineDate])
+  @@index([lineType])
+  @@index([accountId])
+  @@map("ac_cash_flow_lines")
 }
 
 // ============================================================================
