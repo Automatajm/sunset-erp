@@ -6,3 +6,27 @@ body {
   background-color: #0f172a;
   color: #f1f5f9;
 }
+
+/* Tremor Dark Theme Overrides */
+.dark {
+  --tremor-brand-faint: #0B1229;
+  --tremor-brand-muted: #172554;
+  --tremor-brand-subtle: #1e40af;
+  --tremor-brand: #3b82f6;
+  --tremor-brand-emphasis: #60a5fa;
+  --tremor-brand-inverted: #030712;
+  
+  --tremor-background-muted: #131A2B;
+  --tremor-background-subtle: #1e293b;
+  --tremor-background: #0f172a;
+  --tremor-background-emphasis: #d1d5db;
+  
+  --tremor-border: #334155;
+  --tremor-ring: #334155;
+  
+  --tremor-content-subtle: #94a3b8;
+  --tremor-content: #cbd5e1;
+  --tremor-content-emphasis: #e2e8f0;
+  --tremor-content-strong: #f8fafc;
+  --tremor-content-inverted: #000000;
+}
