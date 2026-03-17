@@ -1,4 +1,10 @@
-﻿export default function Home() {
+﻿"use client";
+
+import { useAuth } from '@/lib/contexts/AuthContext';
+
+function Home() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation Bar - NetSuite Style */}
@@ -19,7 +25,13 @@
             placeholder="Search..." 
             className="bg-primary-foreground/10 border border-white/20 rounded px-3 py-1.5 text-sm text-white placeholder:text-white/60"
           />
-          <div className="text-white text-sm">Larry Nelson</div>
+          <div className="text-white text-sm">{user?.name || user?.email}</div>
+          <button
+            onClick={logout}
+            className="text-white/90 hover:text-white text-sm bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </nav>
 
@@ -33,7 +45,7 @@
       {/* Main Content */}
       <main className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* KPI Card */}
+          {/* KPI Cards */}
           <div className="bg-card border border-border rounded-lg p-4">
             <div className="text-muted-foreground text-sm mb-1">Revenue</div>
             <div className="flex items-end gap-2">
@@ -75,34 +87,40 @@
           </div>
         </div>
 
-        {/* Welcome Message */}
+        {/* Welcome Section */}
         <div className="mt-6 bg-card border border-border rounded-lg p-8 text-center">
           <h2 className="text-3xl font-bold text-foreground mb-4">
-            🎉 Welcome to Sunset ERP! 🎉
+            Welcome back, {user?.name || user?.email}
           </h2>
           <p className="text-muted-foreground text-lg mb-6">
-            Your complete Enterprise Resource Planning system is ready!
+            Your complete Enterprise Resource Planning system is ready
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <div className="text-2xl mb-2">📊</div>
-              <div className="text-sm font-medium text-foreground">16 Modules</div>
+              <div className="text-4xl font-bold text-blue-400 mb-2">16</div>
+              <div className="text-sm font-medium text-foreground">Modules</div>
             </div>
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-              <div className="text-2xl mb-2">🔌</div>
-              <div className="text-sm font-medium text-foreground">113+ APIs</div>
+              <div className="text-4xl font-bold text-green-400 mb-2">113+</div>
+              <div className="text-sm font-medium text-foreground">APIs</div>
             </div>
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-              <div className="text-2xl mb-2">🗄️</div>
-              <div className="text-sm font-medium text-foreground">55 Tables</div>
+              <div className="text-4xl font-bold text-purple-400 mb-2">55</div>
+              <div className="text-sm font-medium text-foreground">Tables</div>
             </div>
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-              <div className="text-2xl mb-2">✅</div>
+              <div className="text-4xl font-bold text-amber-400 mb-2">✓</div>
               <div className="text-sm font-medium text-foreground">Production Ready</div>
             </div>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ProtectedHome() {
+  return (
+    <Home />
   );
 }

@@ -1,33 +1,33 @@
 ﻿import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
-
-  // CORS configuration
+  // Enable CORS for frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: ['http://localhost:3001', 'http://10.0.0.19:3001'],
     credentials: true,
   });
 
   // Global prefix
   app.setGlobalPrefix('api');
 
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Sunset ERP API')
-    .setDescription('Multi-tenant SaaS ERP Platform API Documentation')
+    .setDescription('Enterprise Resource Planning System API')
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -40,21 +40,15 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('Authentication', 'User authentication and authorization')
-    .addTag('Health', 'System health checks')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  
-  console.log(`🚀 Application is running on: http://localhost:${port}/api`);
-  console.log(`📚 Swagger docs available at: http://localhost:${port}/api/docs`);
+  await app.listen(3000);
+
+  console.log('\n✅ Database connected');
+  console.log(`🚀 Application is running on: http://localhost:3000/api`);
+  console.log(`📚 Swagger docs available at: http://localhost:3000/api/docs`);
 }
 bootstrap();
