@@ -1,9 +1,25 @@
 ﻿"use client";
 
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useDashboardData } from '@/lib/hooks/useDashboardData';
+import { StatCard } from '@/components/ui/stat-card';
+import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
 
 function Home() {
   const { user, logout } = useAuth();
+  const { data, isLoading, error, refresh } = useDashboardData();
+
+  const formatCurrency = (value: number | undefined | null) => {
+    const amount = value || 0;
+    if (isNaN(amount)) return '$0';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,91 +52,105 @@ function Home() {
       </nav>
 
       {/* Breadcrumbs */}
-      <div className="bg-muted border-b border-border px-6 py-3">
+      <div className="bg-muted border-b border-border px-6 py-3 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           Home &gt; Dashboard
         </div>
+        <Button size="sm" variant="outline" onClick={refresh} disabled={isLoading}>
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Main Content */}
       <main className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* KPI Cards */}
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="text-muted-foreground text-sm mb-1">Revenue</div>
-            <div className="flex items-end gap-2">
-              <div className="text-3xl font-bold text-foreground">$524,890</div>
-              <div className="text-success text-sm mb-1 flex items-center">
-                <span>↑ 11.9%</span>
-              </div>
-            </div>
+        {/* Loading State */}
+        {isLoading && !data && (
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" />
           </div>
+        )}
 
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="text-muted-foreground text-sm mb-1">Expenses</div>
-            <div className="flex items-end gap-2">
-              <div className="text-3xl font-bold text-foreground">$438,891</div>
-              <div className="text-danger text-sm mb-1 flex items-center">
-                <span>↑ 9.3%</span>
-              </div>
-            </div>
+        {/* Error State */}
+        {error && (
+          <div className="bg-danger/10 border border-danger/20 rounded-lg p-4 mb-6">
+            <p className="text-danger text-sm">{error}</p>
           </div>
+        )}
 
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="text-muted-foreground text-sm mb-1">Cash Flow</div>
-            <div className="flex items-end gap-2">
-              <div className="text-3xl font-bold text-foreground">$143,221</div>
-              <div className="text-muted-foreground text-sm mb-1">
-                <span>N/A</span>
-              </div>
-            </div>
-          </div>
+        {/* Dashboard Content */}
+        {data && (
+          <>
+            {/* KPI Cards - NO trends to avoid NaN */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard
+                title="Revenue"
+                value={formatCurrency(data.revenue)}
+                description="Current month"
+              />
 
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="text-muted-foreground text-sm mb-1">Bank Balance</div>
-            <div className="flex items-end gap-2">
-              <div className="text-3xl font-bold text-foreground">$1,011,896</div>
-              <div className="text-success text-sm mb-1 flex items-center">
-                <span>↑ 16.5%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+              <StatCard
+                title="Expenses"
+                value={formatCurrency(data.expenses)}
+                description="Current month"
+              />
 
-        {/* Welcome Section */}
-        <div className="mt-6 bg-card border border-border rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">
-            Welcome back, {user?.name || user?.email}
-          </h2>
-          <p className="text-muted-foreground text-lg mb-6">
-            Your complete Enterprise Resource Planning system is ready
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <div className="text-4xl font-bold text-blue-400 mb-2">16</div>
-              <div className="text-sm font-medium text-foreground">Modules</div>
+              <StatCard
+                title="Cash Flow"
+                value={formatCurrency(data.cashFlow)}
+                description="Current month"
+              />
+
+              <StatCard
+                title="Bank Balance"
+                value={formatCurrency(data.bankBalance)}
+                description="As of today"
+              />
             </div>
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-              <div className="text-4xl font-bold text-green-400 mb-2">113+</div>
-              <div className="text-sm font-medium text-foreground">APIs</div>
+
+            {/* Recent Transactions */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Recent Journal Entries
+              </h3>
+              {data.recentEntries.length > 0 ? (
+                <div className="space-y-2">
+                  {data.recentEntries.slice(0, 5).map((entry: any) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {entry.entryNumber}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.description || 'No description'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-foreground">
+                          {formatCurrency(entry.totalDebit)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(entry.entryDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No recent transactions
+                </p>
+              )}
             </div>
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-              <div className="text-4xl font-bold text-purple-400 mb-2">55</div>
-              <div className="text-sm font-medium text-foreground">Tables</div>
-            </div>
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-              <div className="text-4xl font-bold text-amber-400 mb-2">✓</div>
-              <div className="text-sm font-medium text-foreground">Production Ready</div>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
 }
 
 export default function ProtectedHome() {
-  return (
-    <Home />
-  );
+  return <Home />;
 }
