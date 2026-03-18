@@ -1,50 +1,42 @@
-﻿import apiClient from './client';
-
-export interface Account {
-  id: string;
-  accountNumber: string;
-  name: string;
-  accountType: string;
-  accountCategory: string;
-  parentAccountId?: string;
-  allowManualPosting: boolean;
-  isActive: boolean;
-  balance?: number;
-  createdAt: string;
-  updatedAt: string;
+﻿// ─────────────────────────────────────────────────────────────────────────────
+// lib/api/chart-of-accounts.ts  (FIXED — real field names from backend)
+// ─────────────────────────────────────────────────────────────────────────────
+import apiClient from './client';
+import { Account, CreateAccountDto, UpdateAccountDto, AccountType } from './types';
+ 
+// Backend returns { value: Account[], Count: number } for list endpoints
+function extractList(data: any): Account[] {
+  if (Array.isArray(data)) return data;
+  if (data?.value && Array.isArray(data.value)) return data.value;
+  return [];
 }
-
+ 
 export const chartOfAccountsApi = {
-  // Get all accounts
-  getAll: async (params?: {
-    accountType?: string;
-    isActive?: boolean;
-    search?: string;
-  }): Promise<Account[]> => {
-    const response = await apiClient.get('/chart-of-accounts', { params });
-    return response.data;
+  getAll: async (params?: { accountType?: AccountType }): Promise<Account[]> => {
+    const res = await apiClient.get('/chart-of-accounts', { params });
+    return extractList(res.data);
   },
-
-  // Get single account
+  getByType: async (): Promise<Record<AccountType, Account[]>> => {
+    const res = await apiClient.get('/chart-of-accounts/by-type');
+    return res.data;
+  },
+  getByCode: async (code: string): Promise<Account> => {
+    const res = await apiClient.get(`/chart-of-accounts/code/${code}`);
+    return res.data;
+  },
   getById: async (id: string): Promise<Account> => {
-    const response = await apiClient.get(`/chart-of-accounts/${id}`);
-    return response.data;
+    const res = await apiClient.get(`/chart-of-accounts/${id}`);
+    return res.data;
   },
-
-  // Create account
-  create: async (data: Partial<Account>): Promise<Account> => {
-    const response = await apiClient.post('/chart-of-accounts', data);
-    return response.data;
+  create: async (data: CreateAccountDto): Promise<Account> => {
+    const res = await apiClient.post('/chart-of-accounts', data);
+    return res.data;
   },
-
-  // Update account
-  update: async (id: string, data: Partial<Account>): Promise<Account> => {
-    const response = await apiClient.patch(`/chart-of-accounts/${id}`, data);
-    return response.data;
+  update: async (id: string, data: UpdateAccountDto): Promise<Account> => {
+    const res = await apiClient.patch(`/chart-of-accounts/${id}`, data);
+    return res.data;
   },
-
-  // Delete account
-  delete: async (id: string): Promise<void> => {
+  remove: async (id: string): Promise<void> => {
     await apiClient.delete(`/chart-of-accounts/${id}`);
   },
 };

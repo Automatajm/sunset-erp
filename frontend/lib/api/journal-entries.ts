@@ -1,26 +1,39 @@
 ﻿import apiClient from './client';
-import { JournalEntry } from './types';
+import { JournalEntry, CreateJournalEntryDto, UpdateJournalEntryDto, EntryStatus } from './types';
+
+function extractList(data: unknown): JournalEntry[] {
+  if (Array.isArray(data)) return data as JournalEntry[];
+  const d = data as Record<string, unknown>;
+  if (d?.value && Array.isArray(d.value)) return d.value as JournalEntry[];
+  return [];
+}
 
 export const journalEntriesApi = {
-  // Get all journal entries
-  getAll: async (params?: {
-    limit?: number;
-    status?: string;
-    fiscalPeriod?: string;
-  }): Promise<JournalEntry[]> => {
-    const response = await apiClient.get('/journal-entries', { params });
-    return response.data;
+  getAll: async (params?: { status?: EntryStatus }): Promise<JournalEntry[]> => {
+    const res = await apiClient.get('/journal-entries', { params });
+    return extractList(res.data);
   },
-
-  // Get single journal entry
-  getById: async (id: string) => {
-    const response = await apiClient.get(`/journal-entries/${id}`);
-    return response.data;
+  getById: async (id: string): Promise<JournalEntry> => {
+    const res = await apiClient.get(`/journal-entries/${id}`);
+    return res.data;
   },
-
-  // Create journal entry
-  create: async (data: any) => {
-    const response = await apiClient.post('/journal-entries', data);
-    return response.data;
+  create: async (data: CreateJournalEntryDto): Promise<JournalEntry> => {
+    const res = await apiClient.post('/journal-entries', data);
+    return res.data;
+  },
+  update: async (id: string, data: UpdateJournalEntryDto): Promise<JournalEntry> => {
+    const res = await apiClient.patch(`/journal-entries/${id}`, data);
+    return res.data;
+  },
+  post: async (id: string): Promise<JournalEntry> => {
+    const res = await apiClient.patch(`/journal-entries/${id}/post`);
+    return res.data;
+  },
+  unpost: async (id: string): Promise<JournalEntry> => {
+    const res = await apiClient.patch(`/journal-entries/${id}/unpost`);
+    return res.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/journal-entries/${id}`);
   },
 };
