@@ -27,6 +27,7 @@ export interface Supplier {
   website?: string;
   paymentTerms?: string;
   currency?: string;
+  creditLimit?: string | null;
   category?: string;
   notes?: string;
   isActive: boolean;
@@ -171,7 +172,7 @@ export interface Customer {
   phone?: string;
   email?: string;
   website?: string;
-  creditLimit?: number;
+  creditLimit?: string | null;  // backend returns as string
   creditStatus?: CreditStatus;
   paymentTerms?: string;
   currency?: string;
@@ -348,22 +349,22 @@ export interface Account {
 }
 
 export interface CreateAccountDto {
-  accountNumber: string;
-  name: string;
+  // POST uses accountCode/accountName (backend inconsistency vs GET which returns accountNumber/name)
+  accountCode: string;
+  accountName: string;
   accountType: AccountType;
-  accountCategory?: string;
-  parentAccountId?: string;
+  accountSubType?: string;
   currency?: string;
   isActive?: boolean;
-  allowManualPosting?: boolean;
-  requireReconciliation?: boolean;
 }
 
 export type UpdateAccountDto = Partial<CreateAccountDto>;
 
 // ─── Journal Entries ──────────────────────────────────────────────────────────
 
+// Backend accepts entryType in POST but returns journalType in GET (internal inconsistency)
 export type JournalType = 'general' | 'adjustment' | 'closing' | 'opening';
+export type EntryType   = 'general' | 'adjustment' | 'closing' | 'opening'; // alias for POST
 export type EntryStatus = 'draft' | 'posted';
 
 export interface JournalEntryLine {
@@ -404,9 +405,8 @@ export interface CreateJournalEntryLineDto {
 
 export interface CreateJournalEntryDto {
   entryDate: string;
-  journalType: JournalType;
+  entryType: EntryType;   // POST field name (backend inconsistency)
   description?: string;
-  reference?: string;
   fiscalPeriod?: string;
   lines: CreateJournalEntryLineDto[];
 }

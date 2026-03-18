@@ -6,12 +6,12 @@ import { journalEntriesApi } from '@/lib/api/journal-entries';
 import { chartOfAccountsApi } from '@/lib/api/chart-of-accounts';
 import {
   JournalEntry, CreateJournalEntryDto, CreateJournalEntryLineDto,
-  JournalType, EntryStatus, Account,
+  JournalType, EntryType, EntryStatus, Account,
 } from '@/lib/api/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
+const JOURNAL_TYPES: { value: EntryType; label: string }[] = [
   { value: 'general',    label: 'General' },
   { value: 'adjustment', label: 'Adjustment' },
   { value: 'closing',    label: 'Closing' },
@@ -221,8 +221,8 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
 }) {
   const [form, setForm] = useState<Omit<CreateJournalEntryDto, 'lines'>>({
     entryDate: new Date().toISOString().split('T')[0],
-    journalType: 'general',
-    description: '', reference: '', fiscalPeriod: '',
+    entryType: 'general' as EntryType,
+    description: '', fiscalPeriod: '',
   });
   const [lines, setLines] = useState<CreateJournalEntryLineDto[]>([
     { ...EMPTY_LINE }, { ...EMPTY_LINE },
@@ -235,7 +235,7 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
       setError('');
       setForm({
         entryDate: new Date().toISOString().split('T')[0],
-        journalType: 'general', description: '', reference: '', fiscalPeriod: '',
+        entryType: 'general' as EntryType, description: '', fiscalPeriod: '',
       });
       setLines([{ ...EMPTY_LINE }, { ...EMPTY_LINE }]);
     }
@@ -260,7 +260,7 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
     if (!balanced) { setError(`Entry not balanced — Debit: ${debit.toFixed(2)}, Credit: ${credit.toFixed(2)}`); return; }
     setSubmitting(true); setError('');
     try {
-      await journalEntriesApi.create({ ...form, lines: validLines });
+      await journalEntriesApi.create({ entryDate: form.entryDate, entryType: form.entryType as EntryType, description: form.description || undefined, fiscalPeriod: form.fiscalPeriod || undefined, lines: validLines });
       onSaved(); onClose();
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -333,7 +333,7 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
                 </div>
                 <div className="je-field">
                   <label className="je-label">Journal Type *</label>
-                  <select className="je-select" value={form.journalType} onChange={setField('journalType')}>
+                  <select className="je-select" value={form.entryType} onChange={setField('entryType')}>
                     {JOURNAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
