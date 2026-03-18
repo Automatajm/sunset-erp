@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { financialReportsApi } from '@/lib/api/financial-reports';
 
@@ -418,8 +418,8 @@ function GLView({ data }: { data: GLReport }) {
                   <th style={{ ...TH, width: 120 }}>Date</th>
                   <th style={{ ...TH, width: 160 }}>Entry #</th>
                   <th style={TH}>Description</th>
-                  <th style={{ ...TH, textAlign: 'right' }}>Debit</th>
-                  <th style={{ ...TH, textAlign: 'right' }}>Credit</th>
+                  <th style={{ ...TH, textAlign: 'right', width: 160 }}>Debit</th>
+                  <th style={{ ...TH, textAlign: 'right', width: 160 }}>Credit</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,10 +432,10 @@ function GLView({ data }: { data: GLReport }) {
                       {entry.entryNumber}
                     </td>
                     <td style={{ ...TD, color: '#e2dfd8' }}>{entry.description}</td>
-                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: entry.debit > 0 ? '#e2dfd8' : 'rgba(255,255,255,0.2)' }}>
+                    <td style={{ ...TD, textAlign: 'right', ...MONO, width: 160, color: entry.debit > 0 ? '#e2dfd8' : 'rgba(255,255,255,0.2)' }}>
                       {fmtAmt(entry.debit)}
                     </td>
-                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: entry.credit > 0 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>
+                    <td style={{ ...TD, textAlign: 'right', ...MONO, width: 160, color: entry.credit > 0 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>
                       {fmtAmt(entry.credit)}
                     </td>
                   </tr>
@@ -445,10 +445,10 @@ function GLView({ data }: { data: GLReport }) {
                   <td colSpan={3} style={{ ...TD, fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500, borderTop: 'none' }}>
                     Account Total
                   </td>
-                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: '#e2dfd8', borderTop: 'none' }}>
+                  <td style={{ ...TD, textAlign: 'right', ...MONO, width: 160, fontWeight: 500, color: '#e2dfd8', borderTop: 'none' }}>
                     {fmtAmt(totalDebit, true)}
                   </td>
-                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>
+                  <td style={{ ...TD, textAlign: 'right', ...MONO, width: 160, fontWeight: 500, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>
                     {fmtAmt(totalCredit, true)}
                   </td>
                 </tr>
@@ -471,7 +471,16 @@ const TAB_CONFIG: { key: ReportTab; label: string; desc: string }[] = [
 ];
 
 export default function FinancialReportsPage() {
-  const [tab,      setTab]      = useState<ReportTab>('pl');
+  const [tab, setTab] = useState<ReportTab>('pl');
+
+  // Read ?tab= from URL after hydration
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get('tab') as ReportTab | null;
+      if (t && ['pl','bs','tb','gl'].includes(t)) setTab(t);
+    }
+  }, []);
   const [filters,  setFilters]  = useState<Record<string, string>>({});
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
@@ -522,7 +531,7 @@ export default function FinancialReportsPage() {
         .fr-tab-active { color:#fb923c !important; border-bottom-color:#fb923c !important; }
         .fr-wrap {
           background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12);
-          border-radius:10px; overflow:hidden; padding:16px;
+          border-radius:10px; overflow:hidden; padding:16px; width:100%; box-sizing:border-box;
         }
         .fr-empty {
           text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px;

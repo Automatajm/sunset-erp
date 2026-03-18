@@ -1,7 +1,16 @@
-﻿"use client";
+"use client";
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ERPShell from '@/components/layout/ERPShell';
+import { financialReportsApi } from '@/lib/api/financial-reports';
+import { salesOrdersApi }      from '@/lib/api/sales-orders';
+import { purchaseOrdersApi }   from '@/lib/api/purchase-orders';
+import { cashFlowApi }         from '@/lib/api/cash-flow';
+
+// ─── Chart data types ─────────────────────────────────────────────────────────
+
+interface WeekPoint { label: string; revenue: number; expenses: number; income: number }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,67 +31,74 @@ interface FinRow {
   lastMonth: string;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
-const KPI_ROWS: KpiRow[] = [
-  { indicator: 'Revenue',             period: 'This Period vs. Last Period',    current: '$524,890',   previous: '$468,908', change: '11.9%', positive: true  },
-  { indicator: 'Expenses',            period: 'This Period vs. Last Period',    current: '$438,801',   previous: '$401,297', change: '9.3%',  positive: false },
-  { indicator: 'Operating Cash Flow', period: 'This Period vs. Last Period',    current: '$143,221',   previous: '-$21,251', change: 'N/A',   positive: true  },
-  { indicator: 'Total Bank Balance',  period: 'This Period vs. Last Period',    current: '$1,011,896', previous: '$868,675', change: '16.5%', positive: true  },
-  { indicator: 'Payables',            period: 'Today vs. Same Day Last Month',  current: '$477,173',   previous: '$405,645', change: '17.6%', positive: false },
-  { indicator: 'Receivables',         period: 'Today vs. Same Day Last Month',  current: '$476,982',   previous: '$357,768', change: '33.3%', positive: true  },
+function fmtK(n: number) {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000)     return `$${(n / 1_000).toFixed(1)}K`;
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+}
+
+// ─── Static fin rows (period comparison unavailable without history) ───────────
+
+const FIN_ROWS_STATIC: FinRow[] = [
+  { indicator: 'Bank Balance',   today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
+  { indicator: 'Revenue',        today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
+  { indicator: 'Cost of Goods',  today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
+  { indicator: 'Gross Margin',   today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
+  { indicator: 'Gross Margin %', today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
+  { indicator: 'Expenses',       today: '—', thisWeek: '—', thisMonth: '—', lastMonth: '—' },
 ];
 
-const FIN_ROWS: FinRow[] = [
-  { indicator: 'Bank Balance',   today: '$868,674', thisWeek: '$979,996',  thisMonth: '$1,011,896', lastMonth: '$868,675' },
-  { indicator: 'Revenue',        today: '$0',       thisWeek: '$159,008',  thisMonth: '$524,890',   lastMonth: '$468,908' },
-  { indicator: 'Cost of Goods',  today: '$0',       thisWeek: '$95,372',   thisMonth: '$318,415',   lastMonth: '$284,967' },
-  { indicator: 'Gross Margin',   today: '$0',       thisWeek: '$63,636',   thisMonth: '$206,475',   lastMonth: '$183,941' },
-  { indicator: 'Gross Margin %', today: 'N/A',      thisWeek: '40.02%',    thisMonth: '39.34%',     lastMonth: '39.23%'  },
-  { indicator: 'Expenses',       today: '$0',       thisWeek: '$95,372',   thisMonth: '$438,801',   lastMonth: '$401,297' },
-];
+// ─── Quick Access — with correct tab deep links ────────────────────────────────
 
 const QUICK_ACCESS = [
-  { label: 'Balance Sheet',    color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.2)',  href: '/accounting/reports' },
-  { label: 'Trial Balance',    color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.18)', href: '/accounting/reports' },
-  { label: 'Income Statement', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.18)', href: '/accounting/reports' },
+  { label: 'Balance Sheet',    color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.2)',   href: '/accounting/reports?tab=bs' },
+  { label: 'Trial Balance',    color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.18)', href: '/accounting/reports?tab=tb' },
+  { label: 'Income Statement', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.18)', href: '/accounting/reports?tab=pl' },
   { label: 'Budget vs Actual', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.18)',href: '/accounting/budgets' },
 ];
 
-// ─── Mini charts ──────────────────────────────────────────────────────────────
+// ─── Mini charts — data driven ───────────────────────────────────────────────
 
-const BAR_HEIGHTS = [52,48,55,50,58,54,60,56,62,59,65,61,70,68,74,72,78,75,80,76,82,79,85];
-
-function MiniBarChart({ color = '#fb923c' }: { color?: string }) {
+function MiniBarChart({ values, color = '#fb923c' }: { values?: number[]; color?: string }) {
+  // Fallback static data while loading
+  const pts = values && values.length > 0 ? values : [52,48,55,50,58,54,60,56,62,59,65,61,70,68,74,72,78,75,80,76,82,79,85];
+  const max = Math.max(...pts, 1);
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 60 }}>
-      {BAR_HEIGHTS.map((h, i) => (
+      {pts.map((v, i) => (
         <div key={i} style={{
-          width: 6, height: `${h}%`,
-          background: i === BAR_HEIGHTS.length - 1 ? color : `${color}55`,
+          width: 6, height: `${Math.max((v / max) * 100, 3)}%`,
+          background: i === pts.length - 1 ? color : `${color}66`,
           borderRadius: '2px 2px 0 0', flex: '0 0 auto',
+          transition: 'height 0.3s ease',
         }} />
       ))}
     </div>
   );
 }
 
-function MiniLineChart({ color = '#4ade80' }: { color?: string }) {
-  const pts = [40,38,42,36,44,40,46,42,50,46,52,48,56,50,58,52,60,54,64,58,68,62,72];
+function MiniLineChart({ values, color = '#4ade80' }: { values?: number[]; color?: string }) {
+  const pts = values && values.length > 1 ? values : [40,38,42,36,44,40,46,42,50,46,52,48,56,50,58,52,60,54,64,58,68,62,72];
   const w = 220, h = 60;
+  const max = Math.max(...pts, 1);
+  const min = Math.min(...pts, 0);
+  const range = max - min || 1;
   const xs = pts.map((_, i) => (i / (pts.length - 1)) * w);
-  const ys = pts.map(v => h - (v / 80) * h);
-  const d = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
+  const ys = pts.map(v => h - ((v - min) / range) * (h * 0.85) - h * 0.05);
+  const d = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const area = d + ` L${w},${h} L0,${h} Z`;
+  const gradId = `lg-${color.replace('#','')}`;
   return (
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ height: 60 }}>
       <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.25" />
           <stop offset="100%" stopColor={color} stopOpacity="0.02" />
         </linearGradient>
       </defs>
-      <path d={area} fill="url(#lg)" />
+      <path d={area} fill={`url(#${gradId})`} />
       <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
@@ -143,15 +159,147 @@ function Delta({ value, positive }: { value: string; positive: boolean }) {
   );
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function Sk({ w = 70 }: { w?: number }) {
+  return <span style={{ display: 'inline-block', width: w, height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.08)', animation: 'db-pulse 1.2s ease-in-out infinite' }} />;
+}
+
 // ─── Dashboard content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
   const router = useRouter();
 
+  // ── Live data state ──
+  const [loading,    setLoading]    = useState(true);
+  const [kpiRows,    setKpiRows]    = useState<KpiRow[]>([]);
+  const [heroes,     setHeroes]     = useState<{ label: string; value: string; color: string; up: boolean }[]>([]);
+  const [finHeroes,  setFinHeroes]  = useState<{ label: string; value: string }[]>([]);
+  const [finRows,    setFinRows]    = useState<FinRow[]>(FIN_ROWS_STATIC);
+  const [revPoints,  setRevPoints]  = useState<number[]>([]);
+  const [expPoints,  setExpPoints]  = useState<number[]>([]);
+  const [incPoints,  setIncPoints]  = useState<number[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [pl, tb, soRaw, poRaw, cfRaw, gl] = await Promise.all([
+          financialReportsApi.getProfitAndLoss(),
+          financialReportsApi.getTrialBalance(),
+          salesOrdersApi.getAll(),
+          purchaseOrdersApi.getAll(),
+          cashFlowApi.getAll(),
+          financialReportsApi.getGeneralLedger(),
+        ]);
+
+        // Trial balance
+        type TBAccount = { accountNumber: string; netBalance: number; accountType: string };
+        const tbAccounts = (tb as { accounts: TBAccount[] }).accounts ?? [];
+        const cashInBank = tbAccounts.find(a => a.accountNumber === '1110')?.netBalance ?? 0;
+        const ar         = Math.abs(tbAccounts.find(a => a.accountNumber === '1120')?.netBalance ?? 0);
+
+        // P&L
+        const plData  = pl as { revenue: { total: number }; expenses: { total: number }; netIncome: number };
+        const revenue  = plData.revenue?.total   ?? 0;
+        const expenses = plData.expenses?.total  ?? 0;
+        const netIncome= plData.netIncome        ?? 0;
+
+        // Orders
+        type OItem = { total: string; status: string };
+        const sos = soRaw as OItem[];
+        const pos = poRaw as OItem[];
+        const openSOValue  = sos.filter(o => o.status !== 'closed').reduce((s, o) => s + Number(o.total), 0);
+        const pendingPOVal = pos.filter(o => o.status === 'approved').reduce((s, o) => s + Number(o.total), 0);
+
+        // Cash flow
+        type CFLine = { lineType: string; amount: string };
+        type CFProj = { cashFlowLines?: CFLine[] };
+        const allLines     = (cfRaw as CFProj[]).flatMap(p => p.cashFlowLines ?? []);
+        const projInflow   = allLines.filter(l => l.lineType === 'inflow').reduce((s, l)  => s + Number(l.amount), 0);
+        const projOutflow  = allLines.filter(l => l.lineType === 'outflow').reduce((s, l) => s + Number(l.amount), 0);
+        const projNet      = projInflow - projOutflow;
+
+        // ── Weekly chart points from General Ledger ──
+        type GLEntry = { date: string; accountNumber: string; debit: number; credit: number };
+        const glData = gl as { entries?: GLEntry[] };
+        const glEntries = glData.entries ?? [];
+
+        // Group by ISO week (Mon-Sun), collect revenue credits (4xxx) and expense debits (5xxx)
+        const weekMap: Record<string, { revenue: number; expenses: number }> = {};
+        glEntries.forEach(e => {
+          const d = new Date(e.date);
+          // Get Monday of that week
+          const day = d.getDay();
+          const diff = (day === 0 ? -6 : 1 - day);
+          const mon = new Date(d);
+          mon.setDate(d.getDate() + diff);
+          const key = mon.toISOString().split('T')[0];
+          if (!weekMap[key]) weekMap[key] = { revenue: 0, expenses: 0 };
+          if (e.accountNumber.startsWith('4')) weekMap[key].revenue  += e.credit;
+          if (e.accountNumber.startsWith('5')) weekMap[key].expenses += e.debit;
+        });
+
+        const weeks = Object.keys(weekMap).sort();
+        const revPts = weeks.map(w => weekMap[w].revenue);
+        const expPts = weeks.map(w => weekMap[w].expenses);
+        const incPts = weeks.map(w => weekMap[w].revenue - weekMap[w].expenses);
+
+        if (revPts.length > 0) {
+          setRevPoints(revPts);
+          setExpPoints(expPts);
+          setIncPoints(incPts);
+        }
+
+        // ── KPI heroes (same 4 slots as original) ──
+        setHeroes([
+          { label: 'Revenue',      value: fmtK(revenue),   color: '#4ade80',                        up: revenue  > 0 },
+          { label: 'Expenses',     value: fmtK(expenses),  color: '#f87171',                        up: false    },
+          { label: 'Net Income',   value: netIncome !== 0 ? fmtK(netIncome) : 'N/A', color: netIncome >= 0 ? '#4ade80' : '#f87171', up: netIncome >= 0 },
+          { label: 'Bank Balance', value: fmtK(cashInBank),color: '#60a5fa',                        up: cashInBank > 0 },
+        ]);
+
+        // ── KPI rows (same 6 rows as original, live current, no previous) ──
+        setKpiRows([
+          { indicator: 'Revenue',             period: 'Inception to date',      current: fmtK(revenue),    previous: '—',  change: revenue > 0 ? 'LIVE' : 'N/A', positive: revenue > 0 },
+          { indicator: 'Expenses',            period: 'Inception to date',      current: fmtK(expenses),   previous: '—',  change: expenses > 0 ? 'LIVE' : 'N/A', positive: false },
+          { indicator: 'Net Cash Flow (proj)',period: 'All projections',         current: fmtK(projNet),    previous: '—',  change: projNet >= 0 ? 'LIVE' : 'N/A', positive: projNet >= 0 },
+          { indicator: 'Total Bank Balance',  period: 'Account 1110',            current: fmtK(cashInBank), previous: '—',  change: cashInBank > 0 ? 'LIVE' : 'N/A', positive: cashInBank > 0 },
+          { indicator: 'Payables (PO)',       period: 'Approved POs',           current: fmtK(pendingPOVal),previous: '—', change: pendingPOVal > 0 ? 'LIVE' : 'N/A', positive: false },
+          { indicator: 'Receivables',         period: 'Account 1120',           current: fmtK(ar),          previous: '—', change: ar > 0 ? 'LIVE' : 'N/A', positive: true },
+        ]);
+
+        // ── Fin heroes ──
+        const grossMarginPct = revenue > 0 ? ((revenue - expenses) / revenue * 100).toFixed(1) + '%' : 'N/A';
+        const netPct         = revenue > 0 ? (netIncome / revenue * 100).toFixed(1) + '%' : 'N/A';
+        setFinHeroes([
+          { label: 'Gross Margin %',        value: grossMarginPct },
+          { label: 'Net Income % of Sales', value: netPct },
+          { label: 'Bank Balance',          value: fmtK(cashInBank) },
+          { label: 'Proj. CF Net',          value: fmtK(projNet) },
+        ]);
+
+        // ── Fin rows — fill current values in "This Month" column ──
+        setFinRows([
+          { indicator: 'Bank Balance',   today: '—', thisWeek: '—', thisMonth: fmtK(cashInBank), lastMonth: '—' },
+          { indicator: 'Revenue',        today: '—', thisWeek: '—', thisMonth: fmtK(revenue),    lastMonth: '—' },
+          { indicator: 'Cost of Goods',  today: '—', thisWeek: '—', thisMonth: '—',              lastMonth: '—' },
+          { indicator: 'Gross Margin',   today: '—', thisWeek: '—', thisMonth: fmtK(revenue - expenses), lastMonth: '—' },
+          { indicator: 'Gross Margin %', today: '—', thisWeek: '—', thisMonth: grossMarginPct,   lastMonth: '—' },
+          { indicator: 'Expenses',       today: '—', thisWeek: '—', thisMonth: fmtK(expenses),   lastMonth: '—' },
+        ]);
+
+      } catch { /* non-blocking — keeps placeholders */ }
+      finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+        @keyframes db-pulse { 0%,100%{opacity:0.35} 50%{opacity:0.75} }
 
         .db-header {
           display: flex; align-items: center; justify-content: space-between;
@@ -266,7 +414,7 @@ function DashboardContent() {
             <div style={{ marginBottom: 8 }}>
               <select className="period-select"><option>By Period</option></select>
             </div>
-            <MiniBarChart color="#fb923c" />
+            <MiniBarChart values={incPoints} color="#fb923c" />
             <div className="chart-title" style={{ marginTop: 8 }}>Income By Period</div>
             <div className="chart-subtitle">In Thousands</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 4 }}>
@@ -283,7 +431,7 @@ function DashboardContent() {
             <div style={{ marginBottom: 8 }}>
               <select className="period-select"><option>Weekly</option></select>
             </div>
-            <MiniBarChart color="#60a5fa" />
+            <MiniBarChart values={revPoints} color="#60a5fa" />
             <div className="chart-title" style={{ marginTop: 8 }}>Weekly New Business</div>
             <div className="chart-subtitle">In Thousands</div>
           </Portlet>
@@ -292,7 +440,7 @@ function DashboardContent() {
         {/* MIDDLE */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-          {/* Quick Access */}
+          {/* Quick Access — deep links to report tabs */}
           <Portlet title="Quick Access">
             <div className="quick-grid">
               {QUICK_ACCESS.map(qa => (
@@ -315,23 +463,26 @@ function DashboardContent() {
             </div>
           </Portlet>
 
-          {/* KPIs */}
+          {/* KPIs — live data */}
           <Portlet title="Key Performance Indicators">
             <div className="kpi-heroes">
-              {[
-                { label: 'Revenue',      value: '11.9%', color: '#4ade80', up: true },
-                { label: 'Expenses',     value: '9.3%',  color: '#f87171', up: false },
-                { label: 'Cash Flow',    value: 'N/A',   color: 'rgba(255,255,255,0.4)', up: true },
-                { label: 'Bank Balance', value: '16.5%', color: '#4ade80', up: true },
-              ].map(k => (
-                <div key={k.label} className="kpi-hero">
-                  <div className="kpi-hero-label">{k.label}</div>
-                  <div className="kpi-hero-value" style={{ color: k.color, fontSize: k.value === 'N/A' ? 18 : 22 }}>
-                    {k.value !== 'N/A' && <span style={{ fontSize: 14 }}>{k.up ? '▲' : '▼'}</span>}
-                    {k.value}
-                  </div>
-                </div>
-              ))}
+              {loading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="kpi-hero">
+                      <div className="kpi-hero-label"><Sk w={60} /></div>
+                      <div className="kpi-hero-value" style={{ marginTop: 6 }}><Sk w={80} /></div>
+                    </div>
+                  ))
+                : heroes.map(k => (
+                    <div key={k.label} className="kpi-hero">
+                      <div className="kpi-hero-label">{k.label}</div>
+                      <div className="kpi-hero-value" style={{ color: k.color, fontSize: k.value === 'N/A' ? 18 : 20 }}>
+                        {k.value !== 'N/A' && <span style={{ fontSize: 13 }}>{k.up ? '▲' : '▼'}</span>}
+                        {k.value}
+                      </div>
+                    </div>
+                  ))
+              }
             </div>
             <table className="kpi-table">
               <thead>
@@ -339,49 +490,66 @@ function DashboardContent() {
                   <th>Indicator</th><th>Period</th>
                   <th style={{ textAlign: 'right' }}>Current</th>
                   <th style={{ textAlign: 'right' }}>Previous</th>
-                  <th style={{ textAlign: 'center' }}>Change</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {KPI_ROWS.map(row => (
-                  <tr key={row.indicator}>
-                    <td className="indicator">{row.indicator}</td>
-                    <td className="period">{row.period}</td>
-                    <td className="mono" style={{ textAlign: 'right' }}>{row.current}</td>
-                    <td className="mono" style={{ textAlign: 'right', color: 'rgba(255,255,255,0.4)' }}>{row.previous}</td>
-                    <td style={{ textAlign: 'center' }}><Delta value={row.change} positive={row.positive} /></td>
-                  </tr>
-                ))}
+                {loading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i}>
+                        {[100, 130, 70, 30, 50].map((w, j) => (
+                          <td key={j} style={{ padding: '9px 8px' }}><Sk w={w} /></td>
+                        ))}
+                      </tr>
+                    ))
+                  : kpiRows.map(row => (
+                      <tr key={row.indicator}>
+                        <td className="indicator">{row.indicator}</td>
+                        <td className="period">{row.period}</td>
+                        <td className="mono" style={{ textAlign: 'right' }}>{row.current}</td>
+                        <td className="mono" style={{ textAlign: 'right', color: 'rgba(255,255,255,0.4)' }}>{row.previous}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {row.change === 'N/A'
+                            ? <Delta value="N/A" positive={false} />
+                            : <span style={{ fontSize: 10, color: row.positive ? '#4ade80' : '#f87171', background: row.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding: '2px 7px', borderRadius: 20 }}>{row.positive ? '▲ Live' : '▼ Live'}</span>
+                          }
+                        </td>
+                      </tr>
+                    ))
+                }
               </tbody>
             </table>
           </Portlet>
 
-          {/* Financials */}
+          {/* Financials — live data */}
           <Portlet title="Financials">
             <div className="fin-heroes">
-              {[
-                { label: 'Gross Margin %',        value: '39.34%' },
-                { label: 'Net Income % of Sales', value: '16.40%' },
-                { label: 'Bank Balance',          value: '$868,674' },
-                { label: 'EBITDA',                value: '$86,089' },
-              ].map(f => (
-                <div key={f.label} className="fin-hero">
-                  <div className="fin-hero-label">{f.label}</div>
-                  <div className="fin-hero-value">{f.value}</div>
-                </div>
-              ))}
+              {loading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="fin-hero">
+                      <div className="fin-hero-label"><Sk w={80} /></div>
+                      <div className="fin-hero-value" style={{ marginTop: 4 }}><Sk w={70} /></div>
+                    </div>
+                  ))
+                : finHeroes.map(f => (
+                    <div key={f.label} className="fin-hero">
+                      <div className="fin-hero-label">{f.label}</div>
+                      <div className="fin-hero-value">{f.value}</div>
+                    </div>
+                  ))
+              }
             </div>
             <table className="fin-table">
               <thead>
                 <tr><th>Indicator</th><th>Today</th><th>This Week</th><th>This Month</th><th>Last Month</th></tr>
               </thead>
               <tbody>
-                {FIN_ROWS.map(row => (
+                {finRows.map(row => (
                   <tr key={row.indicator}>
                     <td>{row.indicator}</td>
                     <td>{row.today}</td>
                     <td>{row.thisWeek}</td>
-                    <td>{row.thisMonth}</td>
+                    <td style={{ color: row.thisMonth !== '—' ? '#f1ede8' : undefined }}>{row.thisMonth}</td>
                     <td>{row.lastMonth}</td>
                   </tr>
                 ))}
@@ -396,7 +564,7 @@ function DashboardContent() {
             <div style={{ marginBottom: 8 }}>
               <select className="period-select"><option>By Period</option></select>
             </div>
-            <MiniLineChart color="#4ade80" />
+            <MiniLineChart values={revPoints} color="#4ade80" />
             <div className="chart-title" style={{ marginTop: 8 }}>Revenue By Period</div>
             <div className="chart-subtitle">In Thousands</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 4 }}>
@@ -413,7 +581,7 @@ function DashboardContent() {
             <div style={{ marginBottom: 8 }}>
               <select className="period-select"><option>By Period</option></select>
             </div>
-            <MiniLineChart color="#f87171" />
+            <MiniLineChart values={expPoints} color="#f87171" />
             <div className="chart-title" style={{ marginTop: 8 }}>Expenses By Period</div>
             <div className="chart-subtitle">In Thousands</div>
           </Portlet>
