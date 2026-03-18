@@ -1,13 +1,21 @@
-﻿import apiClient from './client';
-import { JournalEntry, CreateJournalEntryDto, UpdateJournalEntryDto, EntryStatus } from './types';
-
+﻿// ─────────────────────────────────────────────────────────────────────────────
+// lib/api/journal-entries.ts  (FIXED — real field names from backend)
+// ─────────────────────────────────────────────────────────────────────────────
+import apiClient from './client';
+import {
+  JournalEntry,
+  CreateJournalEntryDto,
+  UpdateJournalEntryDto,
+  EntryStatus,
+} from './types';
+ 
 function extractList(data: unknown): JournalEntry[] {
   if (Array.isArray(data)) return data as JournalEntry[];
   const d = data as Record<string, unknown>;
   if (d?.value && Array.isArray(d.value)) return d.value as JournalEntry[];
   return [];
 }
-
+ 
 export const journalEntriesApi = {
   getAll: async (params?: { status?: EntryStatus }): Promise<JournalEntry[]> => {
     const res = await apiClient.get('/journal-entries', { params });

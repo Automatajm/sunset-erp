@@ -1,23 +1,30 @@
 ﻿// ─────────────────────────────────────────────────────────────────────────────
-// lib/api/financial-reports.ts  (updated with correct ReportFilters)
+// lib/api/financial-reports.ts  (real response shapes — no wrapper)
 // ─────────────────────────────────────────────────────────────────────────────
 import apiClient from './client';
-import { ReportFilters } from './types';
+ 
+export interface ReportParams {
+  startDate?: string;
+  endDate?: string;
+  fiscalPeriod?: string;
+  accountType?: string;
+  accountNumber?: string;
+}
  
 export const financialReportsApi = {
-  getTrialBalance: async (params?: ReportFilters) => {
+  getTrialBalance: async (params?: ReportParams) => {
     const res = await apiClient.get('/financial-reports/trial-balance', { params });
     return res.data;
   },
-  getProfitAndLoss: async (params?: ReportFilters) => {
+  getProfitAndLoss: async (params?: ReportParams) => {
     const res = await apiClient.get('/financial-reports/profit-and-loss', { params });
     return res.data;
   },
-  getBalanceSheet: async (params?: ReportFilters) => {
+  getBalanceSheet: async (params?: ReportParams) => {
     const res = await apiClient.get('/financial-reports/balance-sheet', { params });
     return res.data;
   },
-  getGeneralLedger: async (params?: ReportFilters) => {
+  getGeneralLedger: async (params?: ReportParams) => {
     const res = await apiClient.get('/financial-reports/general-ledger', { params });
     return res.data;
   },

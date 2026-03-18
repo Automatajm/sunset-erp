@@ -9,13 +9,20 @@ import {
   PeriodStatus,
 } from './types';
  
+function extractList(data: unknown): FiscalPeriod[] {
+  if (Array.isArray(data)) return data as FiscalPeriod[];
+  const d = data as Record<string, unknown>;
+  if (d?.value && Array.isArray(d.value)) return d.value as FiscalPeriod[];
+  return [];
+}
+ 
 export const fiscalPeriodsApi = {
   getAll: async (params?: {
     fiscalYear?: string;
     status?: PeriodStatus;
   }): Promise<FiscalPeriod[]> => {
     const res = await apiClient.get('/fiscal-periods', { params });
-    return res.data;
+    return extractList(res.data);
   },
   getCurrent: async (): Promise<FiscalPeriod> => {
     const res = await apiClient.get('/fiscal-periods/current');

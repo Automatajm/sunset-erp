@@ -2,22 +2,29 @@
 // lib/api/work-centers.ts
 // ─────────────────────────────────────────────────────────────────────────────
 import apiClient from './client';
-import { WorkCenter, CreateWorkCenterDto, UpdateWorkCenterDto } from './types';
- 
+import { WorkCenterType } from './types';
+
+function extractList(data: unknown) {
+  if (Array.isArray(data)) return data;
+  const d = data as Record<string, unknown>;
+  if (d?.value && Array.isArray(d.value)) return d.value;
+  return [];
+}
+
 export const workCentersApi = {
-  getAll: async (): Promise<WorkCenter[]> => {
-    const res = await apiClient.get('/work-centers');
-    return res.data;
+  getAll: async (params?: { workCenterType?: WorkCenterType }) => {
+    const res = await apiClient.get('/work-centers', { params });
+    return extractList(res.data);
   },
-  getById: async (id: string): Promise<WorkCenter> => {
+  getById: async (id: string) => {
     const res = await apiClient.get(`/work-centers/${id}`);
     return res.data;
   },
-  create: async (data: CreateWorkCenterDto): Promise<WorkCenter> => {
+  create: async (data: { code: string; name: string; workCenterType?: WorkCenterType; capacityPerHour?: number; efficiencyPercent?: number; costPerHour?: number; isActive?: boolean }) => {
     const res = await apiClient.post('/work-centers', data);
     return res.data;
   },
-  update: async (id: string, data: UpdateWorkCenterDto): Promise<WorkCenter> => {
+  update: async (id: string, data: Partial<{ code: string; name: string; workCenterType: WorkCenterType; capacityPerHour: number; efficiencyPercent: number; costPerHour: number; isActive: boolean }>) => {
     const res = await apiClient.patch(`/work-centers/${id}`, data);
     return res.data;
   },
