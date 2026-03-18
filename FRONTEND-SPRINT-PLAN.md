@@ -1,355 +1,365 @@
-﻿# SUNSET ERP - FRONTEND DEVELOPMENT SPRINT PLAN
-
-## 🎯 SPRINT OVERVIEW
-
-**Sprint Goal:** Build production-ready frontend with authentication, core UI components, and initial module screens
-
-**Duration:** 3-4 sessions (8-12 hours)
-
-**Current Status:** Foundation complete ✅
-- Next.js 14 setup
-- NetSuite dark theme configured
-- Demo dashboard created
-- Port configuration (3001)
+﻿# SUNSET ERP — FRONTEND SPRINT PLAN
+**Updated:** March 17, 2026  
+**Status:** Active development
 
 ---
 
-## 📊 SPRINT BACKLOG
+## CURRENT STATE
 
-### SPRINT 1: AUTHENTICATION & API INTEGRATION (2-3 hours)
+### Completed
+| Area | Status |
+|---|---|
+| Next.js 14 + TypeScript setup | Done |
+| Sunset dark theme (design system v1.0) | Done |
+| Login page (glassmorphism, sunset palette) | Done |
+| Auth context + protected routes | Done |
+| API client (Axios + JWT interceptors) | Done |
+| ERPShell layout (topbar + horizontal nav) | Done |
+| Dashboard (portlet grid, KPI table, charts) | Done |
+| Chart of Accounts page (old layout — needs ERPShell) | Needs fix |
 
-**Goal:** Enable secure communication between frontend and backend
+### API Services in `lib/api/`
+| File | Status | Note |
+|---|---|---|
+| `client.ts` | Done | |
+| `auth.ts` | Done | |
+| `chart-of-accounts.ts` | Done | Fields wrong — uses `accountNumber` but backend expects `accountCode` |
+| `financial-reports.ts` | Done | |
+| `journal-entries.ts` | Done | Partial — missing post/unpost |
+| `types.ts` | Partial | Missing most entity types |
 
-**User Stories:**
-
-**US-1.1: As a user, I want to log in to the system**
-- Acceptance Criteria:
-  - [ ] Login page with email/password form
-  - [ ] Form validation (Zod schema)
-  - [ ] API call to POST /api/auth/login
-  - [ ] JWT token storage (localStorage or cookies)
-  - [ ] Error handling (invalid credentials)
-  - [ ] Redirect to dashboard on success
-- Estimate: 45 minutes
-- Priority: HIGH
-
-**US-1.2: As a user, I want my session to persist**
-- Acceptance Criteria:
-  - [ ] Auth context provider (React Context)
-  - [ ] Token refresh logic
-  - [ ] Auto-logout on token expiration
-  - [ ] Protected route wrapper component
-  - [ ] Redirect to login if not authenticated
-- Estimate: 30 minutes
-- Priority: HIGH
-
-**US-1.3: As a developer, I want a configured API client**
-- Acceptance Criteria:
-  - [ ] Axios instance with base URL (http://localhost:3000)
-  - [ ] Request interceptor (add JWT to headers)
-  - [ ] Response interceptor (handle 401 errors)
-  - [ ] TypeScript types for API responses
-  - [ ] Error handling utilities
-- Estimate: 30 minutes
-- Priority: HIGH
-
-**US-1.4: As a user, I want to log out**
-- Acceptance Criteria:
-  - [ ] Logout button in top navigation
-  - [ ] Clear tokens from storage
-  - [ ] Redirect to login page
-  - [ ] Clear any cached user data
-- Estimate: 15 minutes
-- Priority: MEDIUM
-
-**Sprint 1 Deliverables:**
-- ✅ Working login flow
-- ✅ Protected routes
-- ✅ API client configured
-- ✅ Session management
+### Pages in `app/`
+| Route | Status |
+|---|---|
+| `/` | Done — dashboard with portlets |
+| `/login` | Done |
+| `/accounting/chart-of-accounts` | Needs refactor to ERPShell |
 
 ---
 
-### SPRINT 2: CORE UI COMPONENTS (2-3 hours)
+## BACKEND — ALL 16 MODULES (from Swagger)
 
-**Goal:** Build reusable component library for consistent UI
-
-**User Stories:**
-
-**US-2.1: As a developer, I want base UI components**
-- Components to build:
-  - [ ] Button (variants: primary, secondary, danger)
-  - [ ] Input (text, email, password, number)
-  - [ ] Label
-  - [ ] Card (with header, body, footer)
-  - [ ] Badge (for status indicators)
-  - [ ] Spinner/Loading indicator
-- Acceptance Criteria:
-  - [ ] TypeScript props interfaces
-  - [ ] Tailwind styling with NetSuite theme
-  - [ ] Accessible (ARIA labels)
-  - [ ] Storybook examples (optional)
-- Estimate: 60 minutes
-- Priority: HIGH
-
-**US-2.2: As a developer, I want form components**
-- Components to build:
-  - [ ] Form wrapper (React Hook Form integration)
-  - [ ] FormField (label + input + error)
-  - [ ] Select/Dropdown
-  - [ ] Textarea
-  - [ ] Checkbox
-  - [ ] DatePicker
-- Acceptance Criteria:
-  - [ ] Validation with Zod
-  - [ ] Error message display
-  - [ ] Controlled components
-  - [ ] TypeScript types
-- Estimate: 60 minutes
-- Priority: HIGH
-
-**US-2.3: As a developer, I want data display components**
-- Components to build:
-  - [ ] DataTable (with TanStack Table)
-    - Sorting
-    - Filtering
-    - Pagination
-    - Column visibility
-  - [ ] StatCard (KPI display)
-  - [ ] Chart wrapper (Recharts)
-- Acceptance Criteria:
-  - [ ] Responsive design
-  - [ ] Loading states
-  - [ ] Empty states
-  - [ ] TypeScript generic types
-- Estimate: 90 minutes
-- Priority: HIGH
-
-**US-2.4: As a developer, I want modal/dialog components**
-- Components to build:
-  - [ ] Modal/Dialog
-  - [ ] Confirmation dialog
-  - [ ] Drawer/Sidebar
-- Acceptance Criteria:
-  - [ ] Radix UI primitives
-  - [ ] Keyboard navigation (ESC to close)
-  - [ ] Focus trap
-  - [ ] Animations
-- Estimate: 45 minutes
-- Priority: MEDIUM
-
-**Sprint 2 Deliverables:**
-- ✅ Component library (20+ components)
-- ✅ Form validation system
-- ✅ Data table with all features
-- ✅ Modal system
+| # | Module | Tag | Endpoints | Frontend Status |
+|---|---|---|---|---|
+| 1 | Authentication | Authentication | 6 | Done |
+| 2 | Suppliers | Suppliers | 4 | Not started |
+| 3 | Items | Items | 5 | Not started |
+| 4 | Purchase Orders | Purchase Orders | 5 + status | Not started |
+| 5 | Customers | Customers | 4 | Not started |
+| 6 | Sales Orders | Sales Orders | 5 + status | Not started |
+| 7 | Warehouses | Warehouses | 4 | Not started |
+| 8 | Stock Transactions | Stock Transactions | 4 | Not started |
+| 9 | Bill of Materials | BOM | 5 + calculate | Not started |
+| 10 | Work Centers | Work Centers | 4 | Not started |
+| 11 | Production Orders | Production Orders | 5 + status | Not started |
+| 12 | Chart of Accounts | Chart of Accounts | 7 | Partial — fix fields |
+| 13 | Journal Entries | Journal Entries | 7 (post/unpost) | Partial |
+| 14 | Financial Reports | Financial Reports | 4 | Service done, no page |
+| 15 | Fiscal Periods | Fiscal Periods | 10 | Not started |
+| 16 | Budgets | Budgets | 10 | Not started |
+| 17 | Cash Flow Projection | Cash Flow | 9 | Not started |
 
 ---
 
-### SPRINT 3: DASHBOARD & REAL DATA (1-2 hours)
+## KNOWN FIELD CORRECTIONS (from Swagger schemas)
 
-**Goal:** Connect dashboard to backend APIs and display real data
+### Chart of Accounts
+Current code uses wrong field names. Correct mapping:
 
-**User Stories:**
+| Frontend (wrong) | Backend (correct) |
+|---|---|
+| `accountNumber` | `accountCode` |
+| `name` | `accountName` |
+| `accountCategory` | `accountSubType` |
+| `allowManualPosting` | `isHeader` (inverted — header = non-posting) |
 
-**US-3.1: As a user, I want to see real KPIs on the dashboard**
-- Acceptance Criteria:
-  - [ ] Fetch data from backend APIs
-  - [ ] Display real metrics (Revenue, Expenses, Cash Flow)
-  - [ ] Show trend indicators (↑↓)
-  - [ ] Loading skeletons
-  - [ ] Error handling
-  - [ ] Auto-refresh every 5 minutes
-- API Endpoints to use:
-  - GET /api/financial-reports/profit-and-loss
-  - GET /api/financial-reports/balance-sheet
-  - GET /api/cash-flow/:id/summary
-- Estimate: 45 minutes
-- Priority: HIGH
-
-**US-3.2: As a user, I want to see recent transactions**
-- Acceptance Criteria:
-  - [ ] Fetch recent journal entries
-  - [ ] Display in table format
-  - [ ] Show entry number, date, description, amount
-  - [ ] Click to view details
-  - [ ] Pagination
-- API Endpoint: GET /api/journal-entries?limit=10
-- Estimate: 30 minutes
-- Priority: MEDIUM
-
-**US-3.3: As a user, I want to see charts with real data**
-- Charts to build:
-  - [ ] Revenue trend (bar chart)
-  - [ ] Expense trend (line chart)
-  - [ ] Cash flow projection (area chart)
-- Acceptance Criteria:
-  - [ ] Recharts integration
-  - [ ] Responsive
-  - [ ] Tooltips
-  - [ ] Legend
-  - [ ] NetSuite color scheme
-- Estimate: 45 minutes
-- Priority: MEDIUM
-
-**Sprint 3 Deliverables:**
-- ✅ Live dashboard with real data
-- ✅ KPI cards with backend data
-- ✅ Charts with actual numbers
-- ✅ Recent transactions list
+### Key enums extracted from Swagger
+```
+itemType:         raw_material | finished_good | work_in_progress | service
+valuationMethod:  average | fifo | standard
+warehouseType:    regular | consignment | transit
+transactionType:  receipt | issue | transfer | adjustment
+accountType:      asset | liability | equity | revenue | expense
+entryType:        general | adjustment | closing | opening
+PO status:        approved | rejected | closed
+SO status:        confirmed | shipped | delivered | closed
+Production status: released | in_progress | completed | cancelled
+creditStatus:     good | watch | hold
+scenario:         optimistic | realistic | pessimistic
+lineType:         inflow | outflow
+priority:         low | medium | high | urgent
+workCenterType:   machine | labor | assembly | quality
+periodStatus:     open | closed | locked
+budgetStatus:     draft | approved
+```
 
 ---
 
-### SPRINT 4: ACCOUNTING MODULE SCREENS (2-3 hours)
+## SPRINT BACKLOG
 
-**Goal:** Build complete accounting module UI
+### SPRINT A — FIXES & FOUNDATION (current)
+**Goal:** Fix broken things, establish patterns for all future pages
 
-**User Stories:**
+**Tasks:**
+1. Fix `lib/api/chart-of-accounts.ts` — correct field names from Swagger
+2. Fix `lib/api/types.ts` — add all entity interfaces
+3. Refactor `app/accounting/chart-of-accounts/page.tsx` to use ERPShell
+4. Add edit modal + delete confirmation to Chart of Accounts
+5. Fix `lib/api/journal-entries.ts` — add post/unpost methods
 
-**US-4.1: As an accountant, I want to view the chart of accounts**
-- Acceptance Criteria:
-  - [ ] List all accounts in table
-  - [ ] Search/filter by account number, name, type
-  - [ ] Sort by any column
-  - [ ] Show account balance (calculated)
-  - [ ] Create new account button → modal
-  - [ ] Edit account (inline or modal)
-  - [ ] Delete account (with confirmation)
-- API Endpoints:
-  - GET /api/chart-of-accounts
-  - POST /api/chart-of-accounts
-  - PATCH /api/chart-of-accounts/:id
-  - DELETE /api/chart-of-accounts/:id
-- Estimate: 90 minutes
-- Priority: HIGH
-
-**US-4.2: As an accountant, I want to create journal entries**
-- Acceptance Criteria:
-  - [ ] Multi-step form (header + lines)
-  - [ ] Add/remove lines dynamically
-  - [ ] Account dropdown (searchable)
-  - [ ] Debit/Credit inputs
-  - [ ] Auto-calculate totals
-  - [ ] Validation: debits must equal credits
-  - [ ] Save as draft or post
-  - [ ] Success/error messages
-- API Endpoint: POST /api/journal-entries
-- Estimate: 90 minutes
-- Priority: HIGH
-
-**US-4.3: As an accountant, I want to view financial reports**
-- Reports to build:
-  - [ ] Trial Balance
-  - [ ] Profit & Loss Statement
-  - [ ] Balance Sheet
-  - [ ] General Ledger
-- Acceptance Criteria:
-  - [ ] Date range filters
-  - [ ] Print/Export to PDF
-  - [ ] Drill-down to details
-  - [ ] Format numbers (currency)
-  - [ ] Show variance for P&L
-- API Endpoints:
-  - GET /api/financial-reports/trial-balance
-  - GET /api/financial-reports/profit-and-loss
-  - GET /api/financial-reports/balance-sheet
-  - GET /api/financial-reports/general-ledger
-- Estimate: 60 minutes
-- Priority: HIGH
-
-**US-4.4: As an accountant, I want to manage budgets**
-- Acceptance Criteria:
-  - [ ] List budgets
-  - [ ] Create budget with lines
-  - [ ] Budget vs Actual comparison
-  - [ ] Variance analysis
-  - [ ] Approve budget workflow
-- API Endpoints:
-  - GET /api/budgets
-  - POST /api/budgets
-  - GET /api/budgets/:id/vs-actual
-  - PATCH /api/budgets/:id/approve
-- Estimate: 60 minutes
-- Priority: MEDIUM
-
-**Sprint 4 Deliverables:**
-- ✅ Chart of Accounts screen
-- ✅ Journal Entry form
-- ✅ Financial Reports views
-- ✅ Budget Management
+**Deliverable:** Chart of Accounts fully working with correct API fields, edit, delete, and ERPShell layout.
 
 ---
 
-## 🎯 DEFINITION OF DONE
+### SPRINT B — PROCUREMENT (next)
+**Goal:** Suppliers + Items + Purchase Orders
 
-A user story is "Done" when:
-- [ ] Code is written and follows TypeScript best practices
-- [ ] Component is responsive (mobile, tablet, desktop)
-- [ ] Loading states implemented
-- [ ] Error handling implemented
-- [ ] Accessible (keyboard navigation, ARIA labels)
-- [ ] Matches NetSuite dark theme design
-- [ ] API integration working (if applicable)
-- [ ] Manual testing completed
-- [ ] Committed to Git with descriptive message
+**Order:** Suppliers → Items → Purchase Orders (Items depends on nothing, PO depends on both)
 
----
+**Suppliers page** (`app/procurement/suppliers/page.tsx`)
+- Table: code, name, category, paymentTerms, currency, email, phone
+- Create modal: code*, name*, legalName, taxId, phone, email, website, paymentTerms, currency, category, notes
+- Edit modal (same fields)
+- Delete with confirmation
 
-## 📈 SUCCESS METRICS
+**Items page** (`app/inventory/items/page.tsx`)
+- Table: code, name, itemType (badge), baseUom, standardCost, isStockable
+- Filter by itemType (query param)
+- Create modal: code*, name*, itemType*, baseUom*, description, valuationMethod, standardCost, leadTimeDays, safetyStock, reorderPoint, reorderQuantity + boolean toggles
+- Statistics portlet: GET /api/items/statistics
 
-**Sprint 1:**
-- Login success rate: 100%
-- Token refresh working: ✅
-- Protected routes working: ✅
+**Purchase Orders page** (`app/procurement/purchase-orders/page.tsx`)
+- Table: poNumber, supplier name, status (badge), expectedDate, totalAmount, currency
+- Filter by status
+- Create form (full page, not modal — has line items): supplierId* (searchable select from /api/suppliers), expectedDate, deliveryAddress, paymentTerms, currency, notes + dynamic lines (itemId*, orderedQuantity*, uom*, unitPrice*, discountPercent, expectedDate)
+- Status workflow buttons: approve, reject, close
+- Only draft POs editable/deletable
 
-**Sprint 2:**
-- Components created: 20+
-- Reusability: High
-- TypeScript coverage: 100%
-
-**Sprint 3:**
-- Dashboard load time: < 2 seconds
-- Data accuracy: 100%
-- Real-time updates: Every 5 min
-
-**Sprint 4:**
-- Accounting workflows: 100% functional
-- Form validation: Working
-- Reports generated: Accurate
+**New API services:** `lib/api/suppliers.ts`, `lib/api/items.ts`, `lib/api/purchase-orders.ts`
 
 ---
 
-## 🚀 SPRINT EXECUTION ORDER
+### SPRINT C — SALES
+**Goal:** Customers + Sales Orders
 
-**Recommended sequence:**
-1. **Sprint 1** (Authentication) - CRITICAL PATH
-2. **Sprint 2** (UI Components) - FOUNDATION
-3. **Sprint 3** (Dashboard) - QUICK WIN
-4. **Sprint 4** (Accounting) - BUSINESS VALUE
+**Customers page** (`app/sales/customers/page.tsx`)
+- Table: code, name, creditStatus (badge), creditLimit, paymentTerms, currency, email
+- Create/edit modal: code*, name*, legalName, taxId, phone, email, website, creditLimit, creditStatus (good|watch|hold), paymentTerms, currency, notes
 
-**Estimated total time:** 8-12 hours (2-3 sessions)
+**Sales Orders page** (`app/sales/sales-orders/page.tsx`)
+- Table: soNumber, customer name, status (badge), requestedDate, totalAmount, currency
+- Filter by status
+- Create form (full page): customerId*, customerPo, requestedDate, promisedDate, paymentTerms, currency, notes + dynamic lines (itemId*, orderedQuantity*, uom*, unitPrice*, discountPercent, deliveryDate)
+- Status workflow: confirmed → shipped → delivered → closed
 
----
-
-## 📝 NOTES
-
-- Each sprint can be done in one session
-- Prioritize HIGH priority items first
-- Can be done incrementally
-- User Stories can be broken down further if needed
-- Component library will speed up Sprint 4 significantly
+**New API services:** `lib/api/customers.ts`, `lib/api/sales-orders.ts`
 
 ---
 
-## 🎨 DESIGN SYSTEM REFERENCE
+### SPRINT D — INVENTORY
+**Goal:** Warehouses + Stock Transactions + Stock Balance
 
-**Colors:** See tailwind.config.ts
-**Typography:** Inter font family
-**Spacing:** Tailwind default scale
-**Components:** Radix UI + custom styling
-**Icons:** Lucide React
+**Warehouses page** (`app/inventory/warehouses/page.tsx`)
+- Table: code, name, warehouseType (badge), address, isActive
+- Create/edit modal: code*, name*, warehouseType (regular|consignment|transit), address, isActive
+
+**Stock Transactions page** (`app/inventory/stock-transactions/page.tsx`)
+- Table: transactionType (badge), item name, warehouse name, quantity, uom, transactionDate, referenceType
+- Filters: itemId, warehouseId, transactionType
+- Create modal: transactionType*, itemId* (select), warehouseId* (select), quantity*, uom*, referenceId, referenceType, lotNumber, serialNumber, notes, transactionDate
+
+**Stock Balance view** (`app/inventory/stock-balance/page.tsx`)
+- Table: item name, warehouse name, quantity, uom
+- Filters: itemId, warehouseId
+- Calls GET /api/stock-transactions/balance
+
+**New API services:** `lib/api/warehouses.ts`, `lib/api/stock-transactions.ts`
 
 ---
 
-**Last Updated:** March 16, 2026
-**Status:** Ready to start Sprint 1 🚀
+### SPRINT E — ACCOUNTING COMPLETION
+**Goal:** Journal Entries + Financial Reports pages
+
+**Journal Entries page** (`app/accounting/journal-entries/page.tsx`)
+- Table: entryNumber, entryDate, entryType, description, status (badge), totalDebit
+- Filter by status (draft|posted)
+- Create form (full page): entryDate*, entryType*, description, referenceType, referenceNumber + dynamic lines (accountId* searchable select, debitAmount*, creditAmount*, description)
+- Auto-validation: sum(debits) must equal sum(credits)
+- Actions: Post (PATCH /:id/post), Unpost (PATCH /:id/unpost)
+- Only draft entries editable/deletable
+
+**Financial Reports page** (`app/accounting/reports/page.tsx`)
+- Tabs: Trial Balance | P&L | Balance Sheet | General Ledger
+- Shared filters: startDate, endDate, fiscalPeriod, accountType, accountNumber
+- Each report renders its own table structure from the API response
+
+---
+
+### SPRINT F — FINANCIAL PLANNING
+**Goal:** Fiscal Periods + Budgets + Cash Flow
+
+**Fiscal Periods page** (`app/accounting/fiscal-periods/page.tsx`)
+- Table: periodCode, periodName, fiscalYear, fiscalQuarter, status (badge with color: open=green, closed=amber, locked=red), isCurrent
+- Filters: fiscalYear, status
+- Create modal: periodCode*, periodName*, startDate*, endDate*, fiscalYear*, fiscalQuarter, isCurrent
+- Actions per row: Close, Reopen, Lock, Unlock (conditionally shown based on status)
+
+**Budgets page** (`app/accounting/budgets/page.tsx`)
+- Table: budgetCode, budgetName, fiscalYear, status (badge), line count
+- Filters: fiscalYear, status
+- Create modal: budgetCode*, budgetName*, fiscalYear*, description
+- Detail view: budget lines table + Add line form (accountId*, fiscalPeriod*, budgetAmount*, notes)
+- Actions: Approve budget, View vs Actual report
+- vs Actual: side-by-side table with budget, actual, variance columns
+
+**Cash Flow page** (`app/accounting/cash-flow/page.tsx`)
+- Table: projectionCode, projectionName, scenario (badge), startDate, endDate
+- Filter by scenario
+- Create modal: projectionCode*, projectionName*, startDate*, endDate*, scenario*, description
+- Detail view: lines table + Add line form (lineDate*, lineType* inflow|outflow, category*, amount*, description, accountId)
+- Summary view: GET /:id/summary — monthly table with totals and running balance
+
+---
+
+### SPRINT G — MANUFACTURING
+**Goal:** BOM + Work Centers + Production Orders
+
+**Work Centers page** (`app/manufacturing/work-centers/page.tsx`)
+- Table: code, name, workCenterType, capacityPerHour, costPerHour, isActive
+- Create/edit modal: code*, name*, workCenterType, capacityPerHour, efficiencyPercent, costPerHour, isActive, notes
+
+**BOM page** (`app/manufacturing/bom/page.tsx`)
+- Table: bomCode, item name, version, isActive
+- Filter by itemId
+- Create form: itemId* (select), bomCode, description, version, isActive + components list (componentItemId*, quantity*, uom*, scrapPercent, notes)
+- Calculate requirements: GET /api/bom/:id/calculate/:quantity
+
+**Production Orders page** (`app/manufacturing/production-orders/page.tsx`)
+- Table: orderNumber, BOM code, status (badge), quantityOrdered, priority, plannedStartDate
+- Filter by status
+- Create modal: bomId* (select), workCenterId (select), quantityOrdered*, plannedStartDate, plannedEndDate, priority, notes
+- Status workflow: released → in_progress → completed | cancelled
+
+---
+
+## FILE STRUCTURE (target)
+
+```
+app/
+├── page.tsx                          — Dashboard
+├── login/page.tsx                    — Login
+├── procurement/
+│   ├── suppliers/page.tsx
+│   └── purchase-orders/
+│       ├── page.tsx                  — List
+│       └── new/page.tsx              — Create form
+├── sales/
+│   ├── customers/page.tsx
+│   └── sales-orders/
+│       ├── page.tsx
+│       └── new/page.tsx
+├── inventory/
+│   ├── items/page.tsx
+│   ├── warehouses/page.tsx
+│   ├── stock-transactions/page.tsx
+│   └── stock-balance/page.tsx
+├── accounting/
+│   ├── chart-of-accounts/page.tsx    — Fix fields
+│   ├── journal-entries/
+│   │   ├── page.tsx
+│   │   └── new/page.tsx
+│   ├── reports/page.tsx
+│   ├── fiscal-periods/page.tsx
+│   ├── budgets/page.tsx
+│   └── cash-flow/page.tsx
+└── manufacturing/
+    ├── work-centers/page.tsx
+    ├── bom/page.tsx
+    └── production-orders/page.tsx
+
+lib/api/
+├── client.ts                         — Done
+├── auth.ts                           — Done
+├── types.ts                          — Expand
+├── chart-of-accounts.ts              — Fix fields
+├── financial-reports.ts              — Done
+├── journal-entries.ts                — Add post/unpost
+├── suppliers.ts                      — New
+├── customers.ts                      — New
+├── items.ts                          — New
+├── purchase-orders.ts                — New
+├── sales-orders.ts                   — New
+├── warehouses.ts                     — New
+├── stock-transactions.ts             — New
+├── bom.ts                            — New
+├── work-centers.ts                   — New
+├── production-orders.ts              — New
+├── fiscal-periods.ts                 — New
+├── budgets.ts                        — New
+└── cash-flow.ts                      — New
+
+components/
+├── layout/
+│   ├── ERPShell.tsx                  — Done (replaces MainLayout)
+│   └── MainLayout.tsx                — Deprecated, remove after migration
+└── ui/                               — Done (20+ components)
+```
+
+---
+
+## NAVIGATION MAP (ERPShell nav items)
+
+```
+Home          →  /
+Activities    →  (future)
+Sales         →  /sales/customers  (dropdown: Customers, Sales Orders)
+Expenses      →  (future)
+HR            →  (future)
+Financial     →  /accounting/chart-of-accounts
+Reports       →  /accounting/reports
+Documents     →  (future)
+Setup         →  (future)
+Analytics     →  (future)
+```
+
+ERPShell needs a dropdown/submenu system added in Sprint B so Financial and Sales can expand.
+
+---
+
+## CODING STANDARDS
+
+Every page follows this pattern — no exceptions:
+
+```tsx
+// 1. API service file: lib/api/[module].ts
+// - TypeScript interfaces for entity and DTOs
+// - All CRUD methods typed
+// - Enums as const objects
+
+// 2. Page file: app/[section]/[module]/page.tsx
+// - Uses ERPShell with breadcrumbs and title
+// - CSS-in-JS with <style> tag (no Tailwind conflicts)
+// - Inline table (not DataTable component — too limited)
+// - Modal for create/edit
+// - Confirm dialog for delete
+// - Loading spinner
+// - Error display
+// - No emojis, no sidebar, no MainLayout
+```
+
+**Icon rule:** All SVG icons must have `width: Npx; height: Npx; display: block; flex-shrink: 0` — never inherit container size.
+
+---
+
+## COMMIT CONVENTION
+
+```
+feat(suppliers): add suppliers list page with create/edit modals
+feat(items): add items page with type filter and statistics
+fix(chart-of-accounts): correct field names to match backend schema
+feat(api): add suppliers, items, purchase-orders service files
+```
+
+---
+
+*Sunset ERP Frontend Sprint Plan · v2.0 · March 17, 2026*
