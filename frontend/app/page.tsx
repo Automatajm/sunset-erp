@@ -170,7 +170,53 @@ function Sk({ w = 70 }: { w?: number }) {
 function DashboardContent() {
   const router = useRouter();
 
+  // ── Period config ──
+  // selYear: 2026 | 2025
+  // selMonth: 0 = all year, 1-12 = specific month
+  // ytd: if true, from Jan to current month of selYear
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const _now        = new Date();
+  const TODAY_YEAR  = _now.getFullYear();
+  const TODAY_MONTH = _now.getMonth() + 1; // 1-based
+
+  function buildDates(year: number, month: number, ytd: boolean) {
+    const py = year - 1;
+    if (ytd) {
+      // Jan 1 → Mar 31 of selected year vs same period prev year
+      const endM   = TODAY_MONTH;
+      const endDay = new Date(year, endM, 0).getDate();
+      const pEndDay = new Date(py, endM, 0).getDate();
+      return {
+        start:     `${year}-01-01`,
+        end:       `${year}-${String(endM).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`,
+        prevStart: `${py}-01-01`,
+        prevEnd:   `${py}-${String(endM).padStart(2,'0')}-${String(pEndDay).padStart(2,'0')}`,
+        label:     `YTD ${year} vs YTD ${py}`,
+      };
+    }
+    if (month === 0) {
+      return {
+        start: `${year}-01-01`, end: `${year}-12-31`,
+        prevStart: `${py}-01-01`, prevEnd: `${py}-12-31`,
+        label: `${year} vs ${py}`,
+      };
+    }
+    const mm       = String(month).padStart(2,'0');
+    const lastDay  = new Date(year, month, 0).getDate();
+    const pLastDay = new Date(py, month, 0).getDate();
+    return {
+      start:     `${year}-${mm}-01`,
+      end:       `${year}-${mm}-${String(lastDay).padStart(2,'0')}`,
+      prevStart: `${py}-${mm}-01`,
+      prevEnd:   `${py}-${mm}-${String(pLastDay).padStart(2,'0')}`,
+      label:     `${MONTH_NAMES[month-1]} ${year} vs ${MONTH_NAMES[month-1]} ${py}`,
+    };
+  }
+
   // ── Live data state ──
+  const [selYear,  setSelYear]  = useState(() => new Date().getFullYear());
+  const [selMonth, setSelMonth] = useState(0);   // 0 = full year
+  const [ytd,      setYtd]      = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [kpiRows,    setKpiRows]    = useState<KpiRow[]>([]);
   const [heroes,     setHeroes]     = useState<{ label: string; value: string; color: string; up: boolean }[]>([]);
@@ -183,27 +229,40 @@ function DashboardContent() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      const pd = buildDates(selYear, selMonth, ytd);
+      // period label derived from pd.label
+      const params = `?startDate=${pd.start}&endDate=${pd.end}`;
+      const prevParams = pd.prevStart ? `?startDate=${pd.prevStart}&endDate=${pd.prevEnd}` : params;
       try {
-        const [pl, tb, soRaw, poRaw, cfRaw, gl] = await Promise.all([
-          financialReportsApi.getProfitAndLoss(),
+        const [pl, plPrev, tb, soRaw, poRaw, cfRaw, gl] = await Promise.all([
+          financialReportsApi.getProfitAndLoss({ startDate: pd.start, endDate: pd.end }),
+          financialReportsApi.getProfitAndLoss({ startDate: pd.prevStart || pd.start, endDate: pd.prevEnd || pd.end }),
           financialReportsApi.getTrialBalance(),
           salesOrdersApi.getAll(),
           purchaseOrdersApi.getAll(),
           cashFlowApi.getAll(),
-          financialReportsApi.getGeneralLedger(),
+          financialReportsApi.getGeneralLedger({ startDate: pd.start, endDate: pd.end }),
         ]);
 
         // Trial balance
         type TBAccount = { accountNumber: string; netBalance: number; accountType: string };
         const tbAccounts = (tb as { accounts: TBAccount[] }).accounts ?? [];
-        const cashInBank = tbAccounts.find(a => a.accountNumber === '1110')?.netBalance ?? 0;
-        const ar         = Math.abs(tbAccounts.find(a => a.accountNumber === '1120')?.netBalance ?? 0);
+        const cashInBank = tbAccounts.find(a => a.accountNumber === '1.1.02')?.netBalance ?? 0;
+        const ar         = Math.abs(tbAccounts.find(a => a.accountNumber === '1.1.03')?.netBalance ?? 0);
 
-        // P&L
-        const plData  = pl as { revenue: { total: number }; expenses: { total: number }; netIncome: number };
-        const revenue  = plData.revenue?.total   ?? 0;
-        const expenses = plData.expenses?.total  ?? 0;
-        const netIncome= plData.netIncome        ?? 0;
+        // P&L current and previous
+        type PLData = { revenue: { total: number }; costOfSales: { total: number }; grossProfit: number; expenses: { total: number }; netIncome: number };
+        const plData     = pl     as PLData;
+        const plPrevData = plPrev as PLData;
+        const revenue    = plData.revenue?.total   ?? 0;
+        const expenses   = plData.expenses?.total  ?? 0;
+        const netIncome  = plData.netIncome        ?? 0;
+        const cosTotal   = plData.costOfSales?.total ?? 0;
+        const prevRev    = plPrevData.revenue?.total   ?? 0;
+        const prevExp    = plPrevData.expenses?.total  ?? 0;
+        const prevNI     = plPrevData.netIncome        ?? 0;
+        const prevCoS    = plPrevData.costOfSales?.total ?? 0;
+        const pctChg = (cur: number, prev: number) => prev > 0 ? ((cur-prev)/prev*100).toFixed(1)+'%' : '—';
 
         // Orders
         type OItem = { total: string; status: string };
@@ -251,26 +310,26 @@ function DashboardContent() {
           setIncPoints(incPts);
         }
 
-        // ── KPI heroes (same 4 slots as original) ──
+        // ── KPI heroes with YoY ──
         setHeroes([
-          { label: 'Revenue',      value: fmtK(revenue),   color: '#4ade80',                        up: revenue  > 0 },
-          { label: 'Expenses',     value: fmtK(expenses),  color: '#f87171',                        up: false    },
-          { label: 'Net Income',   value: netIncome !== 0 ? fmtK(netIncome) : 'N/A', color: netIncome >= 0 ? '#4ade80' : '#f87171', up: netIncome >= 0 },
-          { label: 'Bank Balance', value: fmtK(cashInBank),color: '#60a5fa',                        up: cashInBank > 0 },
+          { label: 'Revenue',      value: fmtK(revenue),   color: '#4ade80',   up: revenue >= prevRev  },
+          { label: 'Expenses',     value: fmtK(expenses),  color: '#f87171',   up: false               },
+          { label: 'Net Income',   value: fmtK(netIncome), color: netIncome >= 0 ? '#4ade80' : '#f87171', up: netIncome >= prevNI },
+          { label: 'Bank Balance', value: fmtK(cashInBank),color: '#60a5fa',   up: cashInBank > 0      },
         ]);
 
-        // ── KPI rows (same 6 rows as original, live current, no previous) ──
+        // ── KPI rows with YoY comparison ──
         setKpiRows([
-          { indicator: 'Revenue',             period: 'Inception to date',      current: fmtK(revenue),    previous: '—',  change: revenue > 0 ? 'LIVE' : 'N/A', positive: revenue > 0 },
-          { indicator: 'Expenses',            period: 'Inception to date',      current: fmtK(expenses),   previous: '—',  change: expenses > 0 ? 'LIVE' : 'N/A', positive: false },
-          { indicator: 'Net Cash Flow (proj)',period: 'All projections',         current: fmtK(projNet),    previous: '—',  change: projNet >= 0 ? 'LIVE' : 'N/A', positive: projNet >= 0 },
-          { indicator: 'Total Bank Balance',  period: 'Account 1110',            current: fmtK(cashInBank), previous: '—',  change: cashInBank > 0 ? 'LIVE' : 'N/A', positive: cashInBank > 0 },
-          { indicator: 'Payables (PO)',       period: 'Approved POs',           current: fmtK(pendingPOVal),previous: '—', change: pendingPOVal > 0 ? 'LIVE' : 'N/A', positive: false },
-          { indicator: 'Receivables',         period: 'Account 1120',           current: fmtK(ar),          previous: '—', change: ar > 0 ? 'LIVE' : 'N/A', positive: true },
+          { indicator: 'Revenue',             period: pd.label, current: fmtK(revenue),     previous: fmtK(prevRev),  change: pctChg(revenue,prevRev),   positive: revenue >= prevRev   },
+          { indicator: 'Cost of Sales',       period: pd.label, current: fmtK(cosTotal),    previous: fmtK(prevCoS),  change: pctChg(cosTotal,prevCoS),  positive: cosTotal <= prevCoS  },
+          { indicator: 'Gross Profit',        period: pd.label, current: fmtK(revenue-cosTotal), previous: fmtK(prevRev-prevCoS), change: pctChg(revenue-cosTotal,prevRev-prevCoS), positive: (revenue-cosTotal)>=(prevRev-prevCoS) },
+          { indicator: 'Net Income',          period: pd.label, current: fmtK(netIncome),   previous: fmtK(prevNI),   change: pctChg(netIncome,prevNI),  positive: netIncome >= prevNI  },
+          { indicator: 'Expenses',            period: pd.label, current: fmtK(expenses),    previous: fmtK(prevExp),  change: pctChg(expenses,prevExp),  positive: expenses <= prevExp  },
+          { indicator: 'Bank Balance',        period: 'Account 1.1.02', current: fmtK(cashInBank), previous: '—', change: cashInBank > 0 ? 'LIVE' : 'N/A', positive: cashInBank > 0 },
         ]);
 
         // ── Fin heroes ──
-        const grossMarginPct = revenue > 0 ? ((revenue - expenses) / revenue * 100).toFixed(1) + '%' : 'N/A';
+        const grossMarginPct = revenue > 0 ? ((revenue - (plData.costOfSales?.total ?? 0)) / revenue * 100).toFixed(1) + '%' : 'N/A';
         const netPct         = revenue > 0 ? (netIncome / revenue * 100).toFixed(1) + '%' : 'N/A';
         setFinHeroes([
           { label: 'Gross Margin %',        value: grossMarginPct },
@@ -279,21 +338,22 @@ function DashboardContent() {
           { label: 'Proj. CF Net',          value: fmtK(projNet) },
         ]);
 
-        // ── Fin rows — fill current values in "This Month" column ──
+        // ── Fin rows — current period vs previous period ──
+        const prevGM     = prevRev > 0 ? ((prevRev-prevCoS)/prevRev*100).toFixed(1)+'%' : '—';
         setFinRows([
-          { indicator: 'Bank Balance',   today: '—', thisWeek: '—', thisMonth: fmtK(cashInBank), lastMonth: '—' },
-          { indicator: 'Revenue',        today: '—', thisWeek: '—', thisMonth: fmtK(revenue),    lastMonth: '—' },
-          { indicator: 'Cost of Goods',  today: '—', thisWeek: '—', thisMonth: '—',              lastMonth: '—' },
-          { indicator: 'Gross Margin',   today: '—', thisWeek: '—', thisMonth: fmtK(revenue - expenses), lastMonth: '—' },
-          { indicator: 'Gross Margin %', today: '—', thisWeek: '—', thisMonth: grossMarginPct,   lastMonth: '—' },
-          { indicator: 'Expenses',       today: '—', thisWeek: '—', thisMonth: fmtK(expenses),   lastMonth: '—' },
+          { indicator: 'Bank Balance',   today: '—', thisWeek: '—', thisMonth: fmtK(cashInBank),       lastMonth: '—'          },
+          { indicator: 'Revenue',        today: '—', thisWeek: '—', thisMonth: fmtK(revenue),          lastMonth: fmtK(prevRev) },
+          { indicator: 'Cost of Goods',  today: '—', thisWeek: '—', thisMonth: fmtK(cosTotal),         lastMonth: fmtK(prevCoS) },
+          { indicator: 'Gross Margin',   today: '—', thisWeek: '—', thisMonth: fmtK(revenue-cosTotal), lastMonth: fmtK(prevRev-prevCoS) },
+          { indicator: 'Gross Margin %', today: '—', thisWeek: '—', thisMonth: grossMarginPct,         lastMonth: prevGM        },
+          { indicator: 'Expenses',       today: '—', thisWeek: '—', thisMonth: fmtK(expenses),         lastMonth: fmtK(prevExp) },
         ]);
 
       } catch { /* non-blocking — keeps placeholders */ }
       finally { setLoading(false); }
     };
     load();
-  }, []);
+  }, [selYear, selMonth, ytd]);
 
   return (
     <>
@@ -395,7 +455,68 @@ function DashboardContent() {
 
       {/* Page header */}
       <div className="db-header">
-        <div className="db-title">Home</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="db-title">Home</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+
+            {/* ── Year selector ── */}
+            {[TODAY_YEAR, TODAY_YEAR - 1].map(y => (
+              <button key={y} onClick={() => { setSelYear(y); setYtd(false); }} style={{
+                padding: '3px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                fontFamily: "'IBM Plex Sans',sans-serif",
+                background: selYear === y && !ytd ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
+                border: `0.5px solid ${selYear === y && !ytd ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                color: selYear === y && !ytd ? '#fb923c' : 'rgba(255,255,255,0.45)',
+                fontWeight: selYear === y && !ytd ? 600 : 400,
+                transition: 'all 0.15s',
+              }}>{y}</button>
+            ))}
+
+            {/* ── Divider ── */}
+            <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 16, margin: '0 2px' }}>│</span>
+
+            {/* ── Month buttons ── */}
+            {MONTH_NAMES.map((name, i) => {
+              const m = i + 1;
+              const active = selMonth === m && !ytd;
+              return (
+                <button key={m} onClick={() => { setSelMonth(selMonth === m ? 0 : m); setYtd(false); }} style={{
+                  padding: '3px 7px', borderRadius: 5, fontSize: 11, cursor: 'pointer',
+                  fontFamily: "'IBM Plex Sans',sans-serif",
+                  background: active ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.03)',
+                  border: `0.5px solid ${active ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  color: active ? '#60a5fa' : 'rgba(255,255,255,0.38)',
+                  transition: 'all 0.15s',
+                }}>{name}</button>
+              );
+            })}
+
+            {/* ── Divider ── */}
+            <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 16, margin: '0 2px' }}>│</span>
+
+            {/* ── YTD button ── */}
+            <button onClick={() => { setYtd(y => !y); setSelMonth(0); }} style={{
+              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              fontFamily: "'IBM Plex Sans',sans-serif",
+              background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
+              border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              color: ytd ? '#a78bfa' : 'rgba(255,255,255,0.45)',
+              fontWeight: ytd ? 600 : 400,
+              transition: 'all 0.15s',
+            }}>YTD</button>
+
+            {/* ── Reset ── */}
+            <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonth(0); setYtd(false); }} style={{
+              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              fontFamily: "'IBM Plex Sans',sans-serif",
+              background: 'rgba(255,255,255,0.03)',
+              border: '0.5px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.3)',
+              transition: 'all 0.15s',
+            }}>↺ Reset</button>
+
+          </div>
+        </div>
         <div className="db-actions">
           <span className="db-action-link">Portlet settings</span>
           <span className="db-sep">·</span>
@@ -541,7 +662,7 @@ function DashboardContent() {
             </div>
             <table className="fin-table">
               <thead>
-                <tr><th>Indicator</th><th>Today</th><th>This Week</th><th>This Month</th><th>Last Month</th></tr>
+                <tr><th>Indicator</th><th>Today</th><th>This Week</th><th style={{color:'#fb923c'}}>Current Period</th><th>Previous Period</th></tr>
               </thead>
               <tbody>
                 {finRows.map(row => (
