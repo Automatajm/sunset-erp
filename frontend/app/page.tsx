@@ -459,18 +459,44 @@ function DashboardContent() {
           <div className="db-title">Home</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
 
-            {/* ── Year selector ── */}
-            {[TODAY_YEAR, TODAY_YEAR - 1].map(y => (
-              <button key={y} onClick={() => { setSelYear(y); setYtd(false); }} style={{
-                padding: '3px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                fontFamily: "'IBM Plex Sans',sans-serif",
-                background: selYear === y && !ytd ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
-                border: `0.5px solid ${selYear === y && !ytd ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
-                color: selYear === y && !ytd ? '#fb923c' : 'rgba(255,255,255,0.45)',
-                fontWeight: selYear === y && !ytd ? 600 : 400,
-                transition: 'all 0.15s',
-              }}>{y}</button>
-            ))}
+            {/* ── TY / LY ── */}
+            {([TODAY_YEAR, TODAY_YEAR - 1] as const).map((y, idx) => {
+              const label = idx === 0 ? 'TY' : 'LY';
+              const active = selYear === y && !ytd && selMonth === 0;
+              return (
+                <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonth(0); }} style={{
+                  padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                  fontFamily: "'IBM Plex Sans',sans-serif",
+                  background: active ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
+                  border: `0.5px solid ${active ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                  color: active ? '#fb923c' : 'rgba(255,255,255,0.45)',
+                  fontWeight: active ? 600 : 400,
+                  transition: 'all 0.15s',
+                  title: String(y),
+                }}>{label}</button>
+              );
+            })}
+
+            {/* ── YTD ── */}
+            <button onClick={() => { setYtd(v => !v); setSelMonth(0); }} style={{
+              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              fontFamily: "'IBM Plex Sans',sans-serif",
+              background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
+              border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              color: ytd ? '#a78bfa' : 'rgba(255,255,255,0.45)',
+              fontWeight: ytd ? 600 : 400,
+              transition: 'all 0.15s',
+            }}>YTD</button>
+
+            {/* ── Reset ── */}
+            <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonth(0); setYtd(false); }} style={{
+              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              fontFamily: "'IBM Plex Sans',sans-serif",
+              background: 'rgba(255,255,255,0.03)',
+              border: '0.5px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.3)',
+              transition: 'all 0.15s',
+            }}>↺ Reset</button>
 
             {/* ── Divider ── */}
             <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 16, margin: '0 2px' }}>│</span>
@@ -490,30 +516,6 @@ function DashboardContent() {
                 }}>{name}</button>
               );
             })}
-
-            {/* ── Divider ── */}
-            <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 16, margin: '0 2px' }}>│</span>
-
-            {/* ── YTD button ── */}
-            <button onClick={() => { setYtd(y => !y); setSelMonth(0); }} style={{
-              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-              fontFamily: "'IBM Plex Sans',sans-serif",
-              background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
-              border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.1)'}`,
-              color: ytd ? '#a78bfa' : 'rgba(255,255,255,0.45)',
-              fontWeight: ytd ? 600 : 400,
-              transition: 'all 0.15s',
-            }}>YTD</button>
-
-            {/* ── Reset ── */}
-            <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonth(0); setYtd(false); }} style={{
-              padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-              fontFamily: "'IBM Plex Sans',sans-serif",
-              background: 'rgba(255,255,255,0.03)',
-              border: '0.5px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.3)',
-              transition: 'all 0.15s',
-            }}>↺ Reset</button>
 
           </div>
         </div>
