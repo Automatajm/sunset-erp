@@ -1,9 +1,10 @@
-﻿// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Auth ────────────────────────────────────────────────────────────────────
 
 export interface User {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   tenantId: string;
   role: string;
   permissions: string[];
@@ -14,7 +15,7 @@ export interface LoginResponse {
   user: User;
 }
 
-// ─── Suppliers ────────────────────────────────────────────────────────────────
+// ─── Suppliers ───────────────────────────────────────────────────────────────
 
 export interface Supplier {
   id: string;
@@ -27,7 +28,6 @@ export interface Supplier {
   website?: string;
   paymentTerms?: string;
   currency?: string;
-  creditLimit?: string | null;
   category?: string;
   notes?: string;
   isActive: boolean;
@@ -51,7 +51,7 @@ export interface CreateSupplierDto {
 
 export type UpdateSupplierDto = Partial<CreateSupplierDto>;
 
-// ─── Items ────────────────────────────────────────────────────────────────────
+// ─── Items ───────────────────────────────────────────────────────────────────
 
 export type ItemType = 'raw_material' | 'finished_good' | 'work_in_progress' | 'service';
 export type ValuationMethod = 'average' | 'fifo' | 'standard';
@@ -69,12 +69,12 @@ export interface Item {
   isManufacturable: boolean;
   isLotTracked: boolean;
   isSerialTracked: boolean;
-  valuationMethod?: ValuationMethod;
+  valuationMethod: ValuationMethod;
   standardCost?: number;
-  leadTimeDays?: number;
-  safetyStock?: number;
-  reorderPoint?: number;
-  reorderQuantity?: number;
+  leadTimeDays: number;
+  safetyStock: number;
+  reorderPoint: number;
+  reorderQuantity: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -83,9 +83,9 @@ export interface Item {
 export interface CreateItemDto {
   code: string;
   name: string;
+  description?: string;
   itemType: ItemType;
   baseUom: string;
-  description?: string;
   isStockable?: boolean;
   isPurchasable?: boolean;
   isSaleable?: boolean;
@@ -102,22 +102,101 @@ export interface CreateItemDto {
 
 export type UpdateItemDto = Partial<CreateItemDto>;
 
-// ─── Purchase Orders ──────────────────────────────────────────────────────────
+// ─── Warehouses ──────────────────────────────────────────────────────────────
 
-export type POStatus = 'draft' | 'approved' | 'rejected' | 'closed';
+export type WarehouseType = 'regular' | 'consignment' | 'transit';
+
+export interface Warehouse {
+  id: string;
+  code: string;
+  name: string;
+  warehouseType: WarehouseType;
+  address?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWarehouseDto {
+  code: string;
+  name: string;
+  warehouseType?: WarehouseType;
+  address?: string;
+  isActive?: boolean;
+}
+
+export type UpdateWarehouseDto = Partial<CreateWarehouseDto>;
+
+// ─── Stock Transactions ──────────────────────────────────────────────────────
+// POST DTO uses transactionType/transactionDate (swagger names)
+// Backend maps these to movementType/movementDate (Prisma field names)
+// GET response returns Prisma field names: movementType, movementDate
+
+export type TransactionType = 'receipt' | 'issue' | 'transfer' | 'adjustment';
+
+export interface StockTransaction {
+  id: string;
+  movementNumber: string;
+  movementType: TransactionType;
+  movementDate: string;
+  itemId: string;
+  item?: Item;
+  fromWarehouseId?: string;
+  toWarehouseId?: string;
+  fromWarehouse?: Warehouse;
+  quantity: number;
+  uom: string;
+  referenceId?: string;
+  referenceType?: string;
+  lotNumber?: string;
+  serialNumber?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateStockTransactionDto {
+  transactionType: TransactionType;
+  itemId: string;
+  warehouseId: string;
+  quantity: number;
+  uom: string;
+  referenceId?: string;
+  referenceType?: string;
+  lotNumber?: string;
+  serialNumber?: string;
+  notes?: string;
+  transactionDate?: string;
+}
+
+export interface StockBalance {
+  id: string;
+  itemId: string;
+  item?: Item;
+  warehouseId: string;
+  warehouse?: Warehouse;
+  onHandQuantity: number;
+  reservedQuantity: number;
+  unitCost: number;
+  lotNumber?: string;
+  serialNumber?: string;
+}
+
+// ─── Purchase Orders ─────────────────────────────────────────────────────────
 
 export interface PurchaseOrderLine {
   id: string;
+  lineNumber: number;
   itemId: string;
   item?: Item;
   description?: string;
   orderedQuantity: number;
   receivedQuantity: number;
   uom: string;
-  unitPrice: number;
-  discountPercent?: number;
-  lineTotal: number;
+  unitPrice: string;
+  discountPercent: number;
+  lineTotal: string;
   expectedDate?: string;
+  status: string;
 }
 
 export interface PurchaseOrder {
@@ -125,13 +204,15 @@ export interface PurchaseOrder {
   poNumber: string;
   supplierId: string;
   supplier?: Supplier;
-  status: POStatus;
+  poDate: string;
   expectedDate?: string;
-  deliveryAddress?: string;
   paymentTerms?: string;
   currency?: string;
+  subtotal: string;
+  taxAmount: string;
+  total: string;
+  status: string;
   notes?: string;
-  totalAmount: number;
   lines: PurchaseOrderLine[];
   createdAt: string;
   updatedAt: string;
@@ -157,9 +238,9 @@ export interface CreatePurchaseOrderDto {
   lines: CreatePurchaseOrderLineDto[];
 }
 
-export type UpdatePurchaseOrderDto = Omit<Partial<CreatePurchaseOrderDto>, 'lines'>;
+export type UpdatePurchaseOrderDto = Partial<Omit<CreatePurchaseOrderDto, 'lines'>>;
 
-// ─── Customers ────────────────────────────────────────────────────────────────
+// ─── Customers ───────────────────────────────────────────────────────────────
 
 export type CreditStatus = 'good' | 'watch' | 'hold';
 
@@ -172,8 +253,8 @@ export interface Customer {
   phone?: string;
   email?: string;
   website?: string;
-  creditLimit?: string | null;  // backend returns as string
-  creditStatus?: CreditStatus;
+  creditLimit: string;
+  creditStatus: CreditStatus;
   paymentTerms?: string;
   currency?: string;
   notes?: string;
@@ -199,22 +280,23 @@ export interface CreateCustomerDto {
 
 export type UpdateCustomerDto = Partial<CreateCustomerDto>;
 
-// ─── Sales Orders ─────────────────────────────────────────────────────────────
-
-export type SOStatus = 'draft' | 'confirmed' | 'shipped' | 'delivered' | 'closed';
+// ─── Sales Orders ────────────────────────────────────────────────────────────
 
 export interface SalesOrderLine {
   id: string;
+  lineNumber: number;
   itemId: string;
   item?: Item;
   description?: string;
   orderedQuantity: number;
+  reservedQuantity: number;
   shippedQuantity: number;
   uom: string;
-  unitPrice: number;
-  discountPercent?: number;
-  lineTotal: number;
+  unitPrice: string;
+  discountPercent: number;
+  lineTotal: string;
   deliveryDate?: string;
+  status: string;
 }
 
 export interface SalesOrder {
@@ -222,14 +304,17 @@ export interface SalesOrder {
   soNumber: string;
   customerId: string;
   customer?: Customer;
+  orderDate: string;
   customerPo?: string;
-  status: SOStatus;
   requestedDate?: string;
   promisedDate?: string;
   paymentTerms?: string;
   currency?: string;
+  subtotal: string;
+  taxAmount: string;
+  total: string;
+  status: string;
   notes?: string;
-  totalAmount: number;
   lines: SalesOrderLine[];
   createdAt: string;
   updatedAt: string;
@@ -256,81 +341,11 @@ export interface CreateSalesOrderDto {
   lines: CreateSalesOrderLineDto[];
 }
 
-export type UpdateSalesOrderDto = Omit<Partial<CreateSalesOrderDto>, 'lines'>;
+export type UpdateSalesOrderDto = Partial<Omit<CreateSalesOrderDto, 'lines'>>;
 
-// ─── Warehouses ───────────────────────────────────────────────────────────────
+// ─── Chart of Accounts ───────────────────────────────────────────────────────
 
-export type WarehouseType = 'regular' | 'consignment' | 'transit';
-
-export interface Warehouse {
-  id: string;
-  code: string;
-  name: string;
-  warehouseType?: WarehouseType;
-  address?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateWarehouseDto {
-  code: string;
-  name: string;
-  warehouseType?: WarehouseType;
-  address?: string;
-  isActive?: boolean;
-}
-
-export type UpdateWarehouseDto = Partial<CreateWarehouseDto>;
-
-// ─── Stock Transactions ───────────────────────────────────────────────────────
-
-export type TransactionType = 'receipt' | 'issue' | 'transfer' | 'adjustment';
-
-export interface StockTransaction {
-  id: string;
-  transactionType: TransactionType;
-  itemId: string;
-  item?: Item;
-  warehouseId: string;
-  warehouse?: Warehouse;
-  quantity: number;
-  uom: string;
-  referenceId?: string;
-  referenceType?: string;
-  lotNumber?: string;
-  serialNumber?: string;
-  notes?: string;
-  transactionDate: string;
-  createdAt: string;
-}
-
-export interface CreateStockTransactionDto {
-  transactionType: TransactionType;
-  itemId: string;
-  warehouseId: string;
-  quantity: number;
-  uom: string;
-  referenceId?: string;
-  referenceType?: string;
-  lotNumber?: string;
-  serialNumber?: string;
-  notes?: string;
-  transactionDate?: string;
-}
-
-export interface StockBalance {
-  itemId: string;
-  item?: Item;
-  warehouseId: string;
-  warehouse?: Warehouse;
-  quantity: number;
-  uom: string;
-}
-
-// ─── Chart of Accounts ────────────────────────────────────────────────────────
-
-export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'cost';
 
 export interface Account {
   id: string;
@@ -338,54 +353,50 @@ export interface Account {
   name: string;
   accountType: AccountType;
   accountCategory?: string;
-  parentAccountId?: string | null;
+  parentAccountId?: string;
   currency?: string;
-  isActive: boolean;
   isSystem: boolean;
   allowManualPosting: boolean;
   requireReconciliation: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateAccountDto {
-  // POST uses accountCode/accountName (backend inconsistency vs GET which returns accountNumber/name)
-  accountCode: string;
-  accountName: string;
+  accountNumber: string;
+  name: string;
   accountType: AccountType;
-  accountSubType?: string;
+  accountCategory?: string;
+  parentAccountId?: string;
   currency?: string;
   isActive?: boolean;
+  allowManualPosting?: boolean;
 }
 
 export type UpdateAccountDto = Partial<CreateAccountDto>;
 
-// ─── Journal Entries ──────────────────────────────────────────────────────────
+// ─── Journal Entries ─────────────────────────────────────────────────────────
 
-// Backend accepts entryType in POST but returns journalType in GET (internal inconsistency)
 export type JournalType = 'general' | 'adjustment' | 'closing' | 'opening';
-export type EntryType   = 'general' | 'adjustment' | 'closing' | 'opening'; // alias for POST
 export type EntryStatus = 'draft' | 'posted';
 
 export interface JournalEntryLine {
   id: string;
-  journalEntryId: string;
   lineNumber: number;
   accountId: string;
-  account?: { accountNumber: string; name: string };
+  account?: Account;
   description?: string;
   debitAmount: number;
   creditAmount: number;
-  currency?: string;
-  exchangeRate?: number;
 }
 
 export interface JournalEntry {
   id: string;
   entryNumber: string;
   entryDate: string;
-  postingDate?: string;
-  fiscalPeriod?: string;
+  postingDate: string;
+  fiscalPeriod: string;
   journalType: JournalType;
   reference?: string;
   description?: string;
@@ -400,22 +411,25 @@ export interface CreateJournalEntryLineDto {
   debitAmount: number;
   creditAmount: number;
   description?: string;
-  currency?: string;
 }
 
 export interface CreateJournalEntryDto {
   entryDate: string;
-  entryType: EntryType;   // POST field name (backend inconsistency)
+  journalType: JournalType;
   description?: string;
-  fiscalPeriod?: string;
+  reference?: string;
   lines: CreateJournalEntryLineDto[];
 }
 
-export type UpdateJournalEntryDto = Omit<Partial<CreateJournalEntryDto>, 'lines'>;
+export interface UpdateJournalEntryDto {
+  entryDate?: string;
+  description?: string;
+  reference?: string;
+}
 
-// ─── Fiscal Periods ───────────────────────────────────────────────────────────
+// ─── Fiscal Periods ──────────────────────────────────────────────────────────
 
-export type PeriodStatus = 'open' | 'closed' | 'locked';
+export type FiscalPeriodStatus = 'open' | 'closed' | 'locked';
 
 export interface FiscalPeriod {
   id: string;
@@ -425,10 +439,9 @@ export interface FiscalPeriod {
   endDate: string;
   fiscalYear: string;
   fiscalQuarter?: string;
-  status: PeriodStatus;
+  status: FiscalPeriodStatus;
   isCurrent: boolean;
   closedAt?: string;
-  closedBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -440,11 +453,210 @@ export interface CreateFiscalPeriodDto {
   endDate: string;
   fiscalYear: string;
   fiscalQuarter?: string;
-  status?: PeriodStatus;
+  status?: FiscalPeriodStatus;
   isCurrent?: boolean;
 }
 
 export type UpdateFiscalPeriodDto = Partial<CreateFiscalPeriodDto>;
+
+// ─── BOM ─────────────────────────────────────────────────────────────────────
+// POST DTO uses itemId/bomCode/quantity (swagger names)
+// Backend maps: itemId→parentItemId, bomCode→bomNumber, quantity→quantityPer
+// GET response returns Prisma field names
+
+export interface BomComponent {
+  id: string;
+  lineNumber: number;
+  componentItemId: string;
+  componentItem?: Item;
+  quantityPer: number;
+  uom: string;
+  scrapPercent: number;
+  isPhantom: boolean;
+}
+
+export interface Bom {
+  id: string;
+  bomNumber: string;
+  parentItemId: string;
+  parentItem?: Item;
+  version: number;
+  isActive: boolean;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  components: BomComponent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBomComponentDto {
+  componentItemId: string;
+  quantity: number;
+  uom: string;
+  scrapPercent?: number;
+}
+
+export interface CreateBomDto {
+  itemId: string;
+  bomCode?: string;
+  version?: string;
+  isActive?: boolean;
+  components: CreateBomComponentDto[];
+}
+
+export type UpdateBomDto = Omit<Partial<CreateBomDto>, 'components'>;
+
+// ─── Work Centers ─────────────────────────────────────────────────────────────
+
+export type WorkCenterType = 'machine' | 'labor' | 'assembly' | 'quality';
+
+export interface WorkCenter {
+  id: string;
+  code: string;
+  name: string;
+  workCenterType: WorkCenterType;
+  capacityPerHour?: number;
+  efficiencyPercent: number;
+  costPerHour?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkCenterDto {
+  code: string;
+  name: string;
+  workCenterType?: WorkCenterType;
+  capacityPerHour?: number;
+  efficiencyPercent?: number;
+  costPerHour?: number;
+  isActive?: boolean;
+  notes?: string;
+}
+
+export type UpdateWorkCenterDto = Partial<CreateWorkCenterDto>;
+
+// ─── Production Orders ───────────────────────────────────────────────────────
+// POST DTO uses quantityOrdered (swagger name)
+// Backend maps: quantityOrdered → quantityToProduce (Prisma field)
+// GET response returns Prisma field names
+
+export type ProductionOrderStatus = 'draft' | 'released' | 'in_progress' | 'completed' | 'cancelled';
+export type ProductionPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface ProductionOrder {
+  id: string;
+  poNumber: string;
+  itemId: string;
+  bomId?: string;
+  bom?: Bom;
+  quantityToProduce: number;
+  quantityProduced: number;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  status: ProductionOrderStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductionOrderDto {
+  bomId: string;
+  workCenterId?: string;
+  quantityOrdered: number;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  priority?: ProductionPriority;
+  notes?: string;
+}
+
+export type UpdateProductionOrderDto = Partial<CreateProductionOrderDto>;
+
+// ─── Financial Reports ────────────────────────────────────────────────────────
+
+export interface ReportFilters {
+  startDate?: string;
+  endDate?: string;
+  fiscalPeriod?: string;
+  accountType?: AccountType;
+  accountNumber?: string;
+}
+
+export interface PLAccountLine {
+  accountNumber: string;
+  accountName: string;
+  accountCategory?: string;
+  amount: number;
+}
+
+export interface PLReport {
+  reportName: string;
+  parameters: Record<string, string>;
+  period: { startDate: string; endDate: string };
+  revenue:     { accounts: PLAccountLine[]; total: number };
+  costOfSales: { accounts: PLAccountLine[]; total: number };
+  grossProfit: number;
+  expenses:    { accounts: PLAccountLine[]; total: number };
+  netIncome:   number;
+}
+
+export interface BSAccountLine {
+  accountNumber: string;
+  accountName: string;
+  accountCategory?: string;
+  amount: number;
+}
+
+export interface BalanceSheetReport {
+  reportName: string;
+  parameters: Record<string, string>;
+  asOfDate: string;
+  assets:      { accounts: BSAccountLine[]; total: number };
+  liabilities: { accounts: BSAccountLine[]; total: number };
+  equity:      { accounts: BSAccountLine[]; total: number };
+  totalLiabilitiesAndEquity: number;
+  isBalanced: boolean;
+}
+
+export interface TBAccountLine {
+  accountNumber: string;
+  accountName: string;
+  accountType: string;
+  totalDebits: number;
+  totalCredits: number;
+  netBalance: number;
+}
+
+export interface TrialBalanceReport {
+  reportName: string;
+  parameters: Record<string, string>;
+  asOfDate: string;
+  accounts: TBAccountLine[];
+  totals: {
+    totalDebits: number;
+    totalCredits: number;
+    difference: number;
+    isBalanced: boolean;
+  };
+}
+
+export interface GLEntry {
+  date: string;
+  entryNumber: string;
+  accountNumber: string;
+  accountName: string;
+  description: string;
+  debit: number;
+  credit: number;
+}
+
+export interface GLReport {
+  reportName: string;
+  parameters: Record<string, string>;
+  entries: GLEntry[];
+}
 
 // ─── Budgets ──────────────────────────────────────────────────────────────────
 
@@ -464,9 +676,10 @@ export interface Budget {
   budgetCode: string;
   budgetName: string;
   fiscalYear: string;
-  status: BudgetStatus;
   description?: string;
-  lines: BudgetLine[];
+  status: BudgetStatus;
+  approvedAt?: string;
+  budgetLines: BudgetLine[];
   createdAt: string;
   updatedAt: string;
 }
@@ -500,6 +713,7 @@ export interface CashFlowLine {
   amount: number;
   description?: string;
   accountId?: string;
+  account?: Account;
 }
 
 export interface CashFlowProjection {
@@ -510,7 +724,7 @@ export interface CashFlowProjection {
   endDate: string;
   scenario: CashFlowScenario;
   description?: string;
-  lines: CashFlowLine[];
+  cashFlowLines: CashFlowLine[];
   createdAt: string;
   updatedAt: string;
 }
@@ -533,126 +747,4 @@ export interface CreateCashFlowLineDto {
   amount: number;
   description?: string;
   accountId?: string;
-}
-
-// ─── BOM ─────────────────────────────────────────────────────────────────────
-
-export interface BomComponent {
-  id: string;
-  componentItemId: string;
-  componentItem?: Item;
-  quantity: number;
-  uom: string;
-  scrapPercent?: number;
-  notes?: string;
-}
-
-export interface Bom {
-  id: string;
-  itemId: string;
-  item?: Item;
-  bomCode?: string;
-  description?: string;
-  version?: string;
-  isActive: boolean;
-  components: BomComponent[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateBomComponentDto {
-  componentItemId: string;
-  quantity: number;
-  uom: string;
-  scrapPercent?: number;
-  notes?: string;
-}
-
-export interface CreateBomDto {
-  itemId: string;
-  bomCode?: string;
-  description?: string;
-  version?: string;
-  isActive?: boolean;
-  components: CreateBomComponentDto[];
-}
-
-export type UpdateBomDto = Omit<Partial<CreateBomDto>, 'components'>;
-
-// ─── Work Centers ─────────────────────────────────────────────────────────────
-
-export type WorkCenterType = 'machine' | 'labor' | 'assembly' | 'quality';
-
-export interface WorkCenter {
-  id: string;
-  code: string;
-  name: string;
-  workCenterType?: WorkCenterType;
-  capacityPerHour?: number;
-  efficiencyPercent?: number;
-  costPerHour?: number;
-  isActive: boolean;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateWorkCenterDto {
-  code: string;
-  name: string;
-  workCenterType?: WorkCenterType;
-  capacityPerHour?: number;
-  efficiencyPercent?: number;
-  costPerHour?: number;
-  isActive?: boolean;
-  notes?: string;
-}
-
-export type UpdateWorkCenterDto = Partial<CreateWorkCenterDto>;
-
-// ─── Production Orders ────────────────────────────────────────────────────────
-
-export type ProductionOrderStatus = 'draft' | 'released' | 'in_progress' | 'completed' | 'cancelled';
-export type ProductionPriority = 'low' | 'medium' | 'high' | 'urgent';
-
-export interface ProductionOrder {
-  id: string;
-  orderNumber: string;
-  bomId: string;
-  bom?: Bom;
-  workCenterId?: string;
-  workCenter?: WorkCenter;
-  status: ProductionOrderStatus;
-  quantityOrdered: number;
-  quantityProduced?: number;
-  priority?: ProductionPriority;
-  plannedStartDate?: string;
-  plannedEndDate?: string;
-  actualStartDate?: string;
-  actualEndDate?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateProductionOrderDto {
-  bomId: string;
-  workCenterId?: string;
-  quantityOrdered: number;
-  plannedStartDate?: string;
-  plannedEndDate?: string;
-  priority?: ProductionPriority;
-  notes?: string;
-}
-
-export type UpdateProductionOrderDto = Partial<CreateProductionOrderDto>;
-
-// ─── Financial Reports ────────────────────────────────────────────────────────
-
-export interface ReportFilters {
-  startDate?: string;
-  endDate?: string;
-  fiscalPeriod?: string;
-  accountType?: AccountType;
-  accountNumber?: string;
 }

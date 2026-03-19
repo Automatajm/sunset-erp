@@ -77,9 +77,9 @@ export class JournalEntriesService {
         entryDate: entryDate,
         postingDate: entryDate,
         fiscalPeriod,
-        journalType: createJournalEntryDto.entryType || 'general',
+        journalType: createJournalEntryDto.journalType || 'general',
         description: createJournalEntryDto.description,
-        reference: createJournalEntryDto.referenceNumber,
+        reference: createJournalEntryDto.reference ?? null,
         status: 'draft',
         createdBy: userId,
         updatedBy: userId,
@@ -208,8 +208,8 @@ export class JournalEntriesService {
 
     if (updateJournalEntryDto.description !== undefined) 
       updateData.description = updateJournalEntryDto.description;
-    if (updateJournalEntryDto.referenceNumber !== undefined) 
-      updateData.reference = updateJournalEntryDto.referenceNumber;
+    if (updateJournalEntryDto.reference !== undefined) 
+      updateData.reference = updateJournalEntryDto.reference;
 
     const updatedEntry = await this.prisma.journalEntry.update({
       where: { id },
@@ -352,3 +352,5 @@ export class JournalEntriesService {
     };
   }
 }
+
+

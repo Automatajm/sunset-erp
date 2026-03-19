@@ -14,12 +14,13 @@ const ACCOUNT_TYPES: {
   { value: 'liability', label: 'Liability', color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
   { value: 'equity',    label: 'Equity',    color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
   { value: 'revenue',   label: 'Revenue',   color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  { value: 'cost',      label: 'Cost',      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
   { value: 'expense',   label: 'Expense',   color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.18)' },
 ];
 
 const EMPTY_FORM: CreateAccountDto = {
-  accountCode: '', accountName: '', accountType: 'asset',
-  accountSubType: '', currency: 'USD', isActive: true,
+  accountNumber: '', name: '', accountType: 'asset',
+  accountCategory: '', currency: 'USD', isActive: true, allowManualPosting: true,
 };
 
 function getTypeConfig(t: AccountType) {
@@ -83,14 +84,15 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
   useEffect(() => {
     if (open) {
       setError('');
-      // Map GET fields (accountNumber/name) to POST fields (accountCode/accountName)
       setForm(initial ? {
-        accountCode:   initial.accountNumber,
-        accountName:   initial.name,
-        accountType:   initial.accountType,
-        accountSubType: initial.accountCategory ?? '',
-        currency:      initial.currency ?? 'USD',
-        isActive:      initial.isActive,
+        accountNumber:     initial.accountNumber,
+        name:              initial.name,
+        accountType:       initial.accountType,
+        accountCategory:   initial.accountCategory ?? '',
+        parentAccountId:   initial.parentAccountId ?? '',
+        currency:          initial.currency ?? 'USD',
+        isActive:          initial.isActive,
+        allowManualPosting: initial.allowManualPosting,
       } : EMPTY_FORM);
     }
   }, [open, initial]);
@@ -104,16 +106,15 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.accountCode?.trim() || !form.accountName?.trim()) {
-      setError('Account code and name are required.'); return;
+    if (!form.accountNumber?.trim() || !form.name?.trim()) {
+      setError('Account number and name are required.'); return;
     }
     const payload = {
-      accountCode:    form.accountCode.trim(),
-      accountName:    form.accountName.trim(),
-      accountType:    form.accountType,
-      accountSubType: form.accountSubType?.trim() || undefined,
-      currency:       form.currency || 'USD',
-      isActive:       form.isActive,
+      ...form,
+      accountNumber:   form.accountNumber.trim(),
+      name:            form.name.trim(),
+      accountCategory: form.accountCategory?.trim() || undefined,
+      parentAccountId: form.parentAccountId?.trim() || undefined,
     };
     setSubmitting(true); setError('');
     try {
@@ -183,8 +184,8 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
 
               <div className="am-row">
                 <div className="am-field">
-                  <label className="am-label">Account Code *</label>
-                  <input className="am-input" placeholder="1000" value={form.accountCode ?? ''} onChange={set('accountCode')} required />
+                  <label className="am-label">Account Number *</label>
+                  <input className="am-input" placeholder="1000" value={form.accountNumber ?? ''} onChange={set('accountNumber')} required />
                 </div>
                 <div className="am-field">
                   <label className="am-label">Account Type *</label>
@@ -195,14 +196,14 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
               </div>
 
               <div className="am-field">
-                <label className="am-label">Account Name *</label>
-                <input className="am-input" placeholder="Cash in Bank" value={form.accountName ?? ''} onChange={set('accountName')} required />
+                <label className="am-label">Name *</label>
+                <input className="am-input" placeholder="Cash in Bank" value={form.name ?? ''} onChange={set('name')} required />
               </div>
 
               <div className="am-row">
                 <div className="am-field">
                   <label className="am-label">Category</label>
-                  <input className="am-input" placeholder="current_asset" value={form.accountSubType ?? ''} onChange={set('accountSubType')} />
+                  <input className="am-input" placeholder="current_asset" value={form.accountCategory ?? ''} onChange={set('accountCategory')} />
                 </div>
                 <div className="am-field">
                   <label className="am-label">Currency</label>
@@ -217,7 +218,7 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
 
               <div className="am-field">
                 <label className="am-label">Parent Account</label>
-                <select className="am-select" value={form.accountSubType ?? ''} onChange={set('accountSubType')}>
+                <select className="am-select" value={form.parentAccountId ?? ''} onChange={set('parentAccountId')}>
                   <option value="">— None (root account) —</option>
                   {accounts
                     .filter(a => !initial || a.id !== initial.id)

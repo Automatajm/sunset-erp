@@ -18,11 +18,13 @@ interface ReportAccount {
 }
 
 interface PLReport {
-  reportName: string;
-  period: { startDate: string; endDate: string };
-  revenue: { accounts: ReportAccount[]; total: number };
-  expenses: { accounts: ReportAccount[]; total: number };
-  netIncome: number;
+  reportName:  string;
+  period:      { startDate: string; endDate: string };
+  revenue:     { accounts: ReportAccount[]; total: number };
+  costOfSales: { accounts: ReportAccount[]; total: number };  // cost accounts (5.x)
+  grossProfit: number;
+  expenses:    { accounts: ReportAccount[]; total: number };  // expense accounts (6.x)
+  netIncome:   number;
 }
 
 interface BalanceSheetReport {
@@ -219,7 +221,21 @@ function PLView({ data }: { data: PLReport }) {
             <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No revenue accounts</td></tr>
           )}
 
-          <SectionRow label="Expenses" total={data.expenses.total} color="#f87171" />
+          <SectionRow label="Cost of Sales" total={data.costOfSales?.total ?? 0} color="#fbbf24" />
+          {(data.costOfSales?.accounts ?? []).map(a => (
+            <tr key={a.accountNumber}>
+              <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
+              <td style={{ ...TD, color: '#e2dfd8' }}>{a.accountName}</td>
+              <td style={{ ...TD, textAlign: 'right', ...MONO, color: '#fbbf24' }}>{fmtAmt(a.amount ?? 0)}</td>
+            </tr>
+          ))}
+          {(data.costOfSales?.accounts ?? []).length === 0 && (
+            <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No cost of sales accounts</td></tr>
+          )}
+
+          <TotalRow label="Gross Profit" value={data.grossProfit ?? (data.revenue.total - (data.costOfSales?.total ?? 0))} highlight={false} />
+
+          <SectionRow label="Operating Expenses" total={data.expenses.total} color="#f87171" />
           {data.expenses.accounts.map(a => (
             <tr key={a.accountNumber}>
               <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
@@ -231,11 +247,7 @@ function PLView({ data }: { data: PLReport }) {
             <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No expense accounts</td></tr>
           )}
 
-          <TotalRow
-            label="Net Income"
-            value={data.netIncome}
-            highlight
-          />
+          <TotalRow label="Net Income" value={data.netIncome} highlight />
         </tbody>
       </table>
     </div>

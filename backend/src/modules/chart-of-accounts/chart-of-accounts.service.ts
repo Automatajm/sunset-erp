@@ -7,206 +7,109 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 export class ChartOfAccountsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tenantId: string, userId: string, createAccountDto: CreateAccountDto) {
-    // Check for duplicate account number
+  async create(tenantId: string, userId: string, dto: CreateAccountDto) {
     const existing = await this.prisma.account.findFirst({
-      where: {
-        tenantId,
-        accountNumber: createAccountDto.accountCode,
-        deletedAt: null,
-      },
+      where: { tenantId, accountNumber: dto.accountNumber, deletedAt: null },
     });
+    if (existing) throw new ConflictException(`Account ${dto.accountNumber} already exists`);
 
-    if (existing) {
-      throw new ConflictException(`Account with code ${createAccountDto.accountCode} already exists`);
-    }
-
-    // Verify parent account if provided
-    let parentAccountId = null;
-    if (createAccountDto.parentAccountCode) {
+    if (dto.parentAccountId) {
       const parent = await this.prisma.account.findFirst({
-        where: {
-          tenantId,
-          accountNumber: createAccountDto.parentAccountCode,
-          deletedAt: null,
-        },
+        where: { id: dto.parentAccountId, tenantId, deletedAt: null },
       });
-
-      if (!parent) {
-        throw new NotFoundException(`Parent account ${createAccountDto.parentAccountCode} not found`);
-      }
-
-      if (parent.allowManualPosting) {
-        throw new BadRequestException('Parent account must not allow manual posting (must be a header account)');
-      }
-
-      parentAccountId = parent.id;
+      if (!parent) throw new NotFoundException(`Parent account ${dto.parentAccountId} not found`);
     }
 
-    const account = await this.prisma.account.create({
+    return this.prisma.account.create({
       data: {
         tenantId,
-        accountNumber: createAccountDto.accountCode,
-        name: createAccountDto.accountName,
-        accountType: createAccountDto.accountType,
-        accountCategory: createAccountDto.accountSubType,
-        parentAccountId,
-        currency: createAccountDto.currency || 'USD',
-        isActive: createAccountDto.isActive ?? true,
-        allowManualPosting: !(createAccountDto.isHeader ?? false),
+        accountNumber:        dto.accountNumber,
+        name:                 dto.name,
+        accountType:          dto.accountType,
+        accountCategory:      dto.accountCategory ?? null,
+        parentAccountId:      dto.parentAccountId ?? null,
+        currency:             dto.currency ?? 'USD',
+        isActive:             dto.isActive ?? true,
+        allowManualPosting:   dto.allowManualPosting ?? true,
         requireReconciliation: false,
-        isSystem: false,
-        createdBy: userId,
-        updatedBy: userId,
+        isSystem:             false,
+        createdBy:            userId,
+        updatedBy:            userId,
       },
     });
-
-    return account;
   }
 
   async findAll(tenantId: string, accountType?: string) {
-    const where: any = {
-      tenantId,
-      deletedAt: null,
-    };
-
-    if (accountType) {
-      where.accountType = accountType;
-    }
-
-    const accounts = await this.prisma.account.findMany({
-      where,
-      orderBy: {
-        accountNumber: 'asc',
-      },
+    return this.prisma.account.findMany({
+      where: { tenantId, deletedAt: null, ...(accountType ? { accountType } : {}) },
+      orderBy: { accountNumber: 'asc' },
     });
-
-    return accounts;
   }
 
   async findOne(tenantId: string, id: string) {
     const account = await this.prisma.account.findFirst({
-      where: {
-        id,
-        tenantId,
-        deletedAt: null,
-      },
+      where: { id, tenantId, deletedAt: null },
     });
-
-    if (!account) {
-      throw new NotFoundException(`Account with ID ${id} not found`);
-    }
-
+    if (!account) throw new NotFoundException(`Account ${id} not found`);
     return account;
   }
 
-  async getByCode(tenantId: string, accountCode: string) {
+  async getByCode(tenantId: string, accountNumber: string) {
     const account = await this.prisma.account.findFirst({
-      where: {
-        tenantId,
-        accountNumber: accountCode,
-        deletedAt: null,
-      },
+      where: { tenantId, accountNumber, deletedAt: null },
     });
-
-    if (!account) {
-      throw new NotFoundException(`Account with code ${accountCode} not found`);
-    }
-
+    if (!account) throw new NotFoundException(`Account ${accountNumber} not found`);
     return account;
   }
 
   async getAccountsByType(tenantId: string) {
     const accounts = await this.prisma.account.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-      },
-      orderBy: {
-        accountNumber: 'asc',
-      },
+      where: { tenantId, deletedAt: null },
+      orderBy: { accountNumber: 'asc' },
     });
-
-    // Group by account type
-    const grouped = accounts.reduce((acc, account) => {
-      if (!acc[account.accountType]) {
-        acc[account.accountType] = [];
-      }
-      acc[account.accountType].push(account);
+    const grouped = accounts.reduce((acc, a) => {
+      (acc[a.accountType] ??= []).push(a);
       return acc;
-    }, {} as Record<string, any[]>);
-
+    }, {} as Record<string, typeof accounts>);
     return {
       byType: grouped,
       summary: {
         totalAccounts: accounts.length,
-        assets: grouped['asset']?.length || 0,
-        liabilities: grouped['liability']?.length || 0,
-        equity: grouped['equity']?.length || 0,
-        revenue: grouped['revenue']?.length || 0,
-        expense: grouped['expense']?.length || 0,
+        assets:      grouped['asset']?.length     ?? 0,
+        liabilities: grouped['liability']?.length ?? 0,
+        equity:      grouped['equity']?.length    ?? 0,
+        revenue:     grouped['revenue']?.length   ?? 0,
+        expense:     grouped['expense']?.length   ?? 0,
       },
     };
   }
 
-  async update(tenantId: string, userId: string, id: string, updateAccountDto: UpdateAccountDto) {
+  async update(tenantId: string, userId: string, id: string, dto: UpdateAccountDto) {
     await this.findOne(tenantId, id);
-
-    if (updateAccountDto.accountCode) {
-      const existing = await this.prisma.account.findFirst({
-        where: {
-          tenantId,
-          accountNumber: updateAccountDto.accountCode,
-          id: { not: id },
-          deletedAt: null,
-        },
+    if (dto.accountNumber) {
+      const dup = await this.prisma.account.findFirst({
+        where: { tenantId, accountNumber: dto.accountNumber, id: { not: id }, deletedAt: null },
       });
-
-      if (existing) {
-        throw new ConflictException(`Account with code ${updateAccountDto.accountCode} already exists`);
-      }
+      if (dup) throw new ConflictException(`Account ${dto.accountNumber} already exists`);
     }
-
-    const updateData: any = {
-      updatedBy: userId,
-    };
-
-    if (updateAccountDto.accountCode) updateData.accountNumber = updateAccountDto.accountCode;
-    if (updateAccountDto.accountName) updateData.name = updateAccountDto.accountName;
-    if (updateAccountDto.accountType) updateData.accountType = updateAccountDto.accountType;
-    if (updateAccountDto.accountSubType !== undefined) updateData.accountCategory = updateAccountDto.accountSubType;
-    if (updateAccountDto.currency) updateData.currency = updateAccountDto.currency;
-    if (updateAccountDto.isActive !== undefined) updateData.isActive = updateAccountDto.isActive;
-    if (updateAccountDto.isHeader !== undefined) updateData.allowManualPosting = !updateAccountDto.isHeader;
-    if (updateAccountDto.description !== undefined) updateData.description = updateAccountDto.description;
-
-    const account = await this.prisma.account.update({
-      where: { id },
-      data: updateData,
-    });
-
-    return account;
+    const data: Record<string, unknown> = { updatedBy: userId };
+    if (dto.accountNumber !== undefined)     data.accountNumber     = dto.accountNumber;
+    if (dto.name !== undefined)              data.name              = dto.name;
+    if (dto.accountType !== undefined)       data.accountType       = dto.accountType;
+    if (dto.accountCategory !== undefined)   data.accountCategory   = dto.accountCategory;
+    if (dto.currency !== undefined)          data.currency          = dto.currency;
+    if (dto.isActive !== undefined)          data.isActive          = dto.isActive;
+    if (dto.allowManualPosting !== undefined) data.allowManualPosting = dto.allowManualPosting;
+    return this.prisma.account.update({ where: { id }, data });
   }
 
   async remove(tenantId: string, userId: string, id: string) {
     const account = await this.findOne(tenantId, id);
-
-    // Check if it's a system account
-    if (account.isSystem) {
-      throw new BadRequestException('Cannot delete system account');
-    }
-
+    if (account.isSystem) throw new BadRequestException('Cannot delete system account');
     await this.prisma.account.update({
       where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedBy: userId,
-      },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
-
-    return {
-      message: 'Account deleted successfully',
-      id,
-    };
+    return { message: 'Account deleted successfully', id };
   }
 }

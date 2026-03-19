@@ -1,6 +1,21 @@
-﻿import { PartialType, OmitType } from '@nestjs/swagger';
-import { CreateJournalEntryDto } from './create-journal-entry.dto';
+﻿import { IsString, IsDateString, IsOptional, MaxLength } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class UpdateJournalEntryDto extends PartialType(
-  OmitType(CreateJournalEntryDto, ['lines'] as const)
-) {}
+export class UpdateJournalEntryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  entryDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  reference?: string;
+}
