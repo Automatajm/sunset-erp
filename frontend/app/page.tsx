@@ -277,12 +277,11 @@ function DashboardContent() {
   const TODAY_YEAR  = _now.getFullYear();
   const TODAY_MONTH = _now.getMonth() + 1; // 1-based
 
-  function buildDates(year: number, month: number, ytd: boolean) {
+  function buildDates(year: number, months: number[], ytd: boolean) {
     const py = year - 1;
     if (ytd) {
-      // Jan 1 → Mar 31 of selected year vs same period prev year
-      const endM   = TODAY_MONTH;
-      const endDay = new Date(year, endM, 0).getDate();
+      const endM    = TODAY_MONTH;
+      const endDay  = new Date(year, endM, 0).getDate();
       const pEndDay = new Date(py, endM, 0).getDate();
       return {
         start:     `${year}-01-01`,
@@ -292,29 +291,47 @@ function DashboardContent() {
         label:     `YTD ${year} vs YTD ${py}`,
       };
     }
-    if (month === 0) {
+    if (months.length === 0) {
       return {
         start: `${year}-01-01`, end: `${year}-12-31`,
         prevStart: `${py}-01-01`, prevEnd: `${py}-12-31`,
         label: `${year} vs ${py}`,
       };
     }
-    const mm       = String(month).padStart(2,'0');
-    const lastDay  = new Date(year, month, 0).getDate();
-    const pLastDay = new Date(py, month, 0).getDate();
+    // Multi-month: Jan 1 of first month → last day of last month
+    const sortedMs  = [...months].sort((a,b) => a-b);
+    const firstM    = sortedMs[0];
+    const lastM     = sortedMs[sortedMs.length - 1];
+    const lastDay   = new Date(year, lastM, 0).getDate();
+    const pLastDay  = new Date(py, lastM, 0).getDate();
+    const label     = sortedMs.length === 1
+      ? `${MONTH_NAMES[firstM-1]} ${year} vs ${MONTH_NAMES[firstM-1]} ${py}`
+      : `${MONTH_NAMES[firstM-1]}–${MONTH_NAMES[lastM-1]} ${year} vs ${py}`;
+    // For non-contiguous months, use union of date ranges (start of first → end of last)
     return {
-      start:     `${year}-${mm}-01`,
-      end:       `${year}-${mm}-${String(lastDay).padStart(2,'0')}`,
-      prevStart: `${py}-${mm}-01`,
-      prevEnd:   `${py}-${mm}-${String(pLastDay).padStart(2,'0')}`,
-      label:     `${MONTH_NAMES[month-1]} ${year} vs ${MONTH_NAMES[month-1]} ${py}`,
+      start:     `${year}-${String(firstM).padStart(2,'0')}-01`,
+      end:       `${year}-${String(lastM).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`,
+      prevStart: `${py}-${String(firstM).padStart(2,'0')}-01`,
+      prevEnd:   `${py}-${String(lastM).padStart(2,'0')}-${String(pLastDay).padStart(2,'0')}`,
+      label,
     };
   }
 
+  // YTD end = last day of last selected month (or TODAY_MONTH if no month selected)
+  function buildYtdEnd(year: number, months: number[], ytd: boolean): string {
+    if (ytd || months.length === 0) {
+      const m = TODAY_MONTH;
+      return `${year}-${String(m).padStart(2,'0')}-${new Date(year,m,0).getDate()}`;
+    }
+    const lastM = Math.max(...months);
+    return `${year}-${String(lastM).padStart(2,'0')}-${new Date(year,lastM,0).getDate()}`;
+  }
+
   // ── Live data state ──
-  const [selYear,  setSelYear]  = useState(() => new Date().getFullYear());
-  const [selMonth, setSelMonth] = useState(0);   // 0 = full year
-  const [ytd,      setYtd]      = useState(false);
+  const [selYear,   setSelYear]   = useState(() => new Date().getFullYear());
+  const [selMonths, setSelMonths] = useState<number[]>([]);  // [] = full year, [1,2,3] = multi
+  const [ytd,       setYtd]       = useState(false);
+  const [lastClicked, setLastClicked] = useState<number | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [kpiRows,    setKpiRows]    = useState<KpiRow[]>([]);
   const [heroes,     setHeroes]     = useState<{ label: string; value: string; color: string; up: boolean }[]>([]);
@@ -330,7 +347,7 @@ function DashboardContent() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const pd = buildDates(selYear, selMonth, ytd);
+      const pd = buildDates(selYear, selMonths, ytd);
       // period label derived from pd.label
       // active chart label = selected month in MM/YY format
       // stored in a ref-like way via selMonth/selYear already available in render
@@ -532,12 +549,11 @@ function DashboardContent() {
         weekStart.setDate(todayDate.getDate() - (todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1));
         const weekStartStr = weekStart.toISOString().split('T')[0];
 
-        // YTD dates — Jan 1 of selYear → today if TY, else last day of selMonth or Dec 31
-        const ytdEnd   = selYear === TODAY_YEAR
-          ? todayStr                                           // TY: up to today
-          : selMonth > 0
-            ? `${selYear}-${String(selMonth).padStart(2,'0')}-${new Date(selYear, selMonth, 0).getDate()}`
-            : `${selYear}-12-31`;                             // LY: full year
+        // YTD dates — Jan 1 → last selected month (or today for TY with no month)
+        const _ytdBaseEnd = buildYtdEnd(selYear, selMonths, ytd);
+        const ytdEnd   = selYear === TODAY_YEAR && selMonths.length === 0 && !ytd
+          ? todayStr   // TY with no month filter: use actual today
+          : _ytdBaseEnd;
         const ytdStart = `${selYear}-01-01`;
 
         // Fetch today, this week, YTD, and budget lines in parallel
@@ -625,10 +641,13 @@ function DashboardContent() {
         }
 
         // Budget for full period (all months of selYear) or month-specific
-        const pdMonths = selMonth > 0
-          ? [`${selYear}-${String(selMonth).padStart(2,'0')}`]
+        // Budget months: match selected months or all 12
+        const pdMonths = selMonths.length > 0
+          ? selMonths.map(m => `${selYear}-${String(m).padStart(2,'0')}`)
           : Array.from({length:12},(_,i) => `${selYear}-${String(i+1).padStart(2,'0')}`);
-        const ytdMonths = Array.from({length: selMonth > 0 ? selMonth : TODAY_MONTH},
+        // YTD budget months: Jan → last selected month (or TODAY_MONTH)
+        const ytdLastM  = selMonths.length > 0 ? Math.max(...selMonths) : TODAY_MONTH;
+        const ytdMonths = Array.from({length: ytdLastM},
           (_,i) => `${selYear}-${String(i+1).padStart(2,'0')}`);
 
         // Use embedded account.accountNumber for prefix matching
@@ -709,7 +728,7 @@ function DashboardContent() {
       finally { setLoading(false); }
     };
     load();
-  }, [selYear, selMonth, ytd]);
+  }, [selYear, selMonths, ytd]);
 
   return (
     <>
@@ -812,9 +831,9 @@ function DashboardContent() {
             {/* ── TY / LY ── */}
             {([TODAY_YEAR, TODAY_YEAR - 1] as const).map((y, idx) => {
               const label = idx === 0 ? 'TY' : 'LY';
-              const active = selYear === y && !ytd && selMonth === 0;
+              const active = selYear === y && !ytd && selMonths.length === 0;
               return (
-                <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonth(0); }} style={{
+                <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonths([]); setLastClicked(null); }} style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                   fontFamily: "'IBM Plex Sans',sans-serif",
                   background: active ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
@@ -828,7 +847,7 @@ function DashboardContent() {
             })}
 
             {/* ── YTD ── */}
-            <button onClick={() => { setYtd(v => !v); setSelMonth(0); }} style={{
+            <button onClick={() => { setYtd(v => !v); setSelMonths([]); setLastClicked(null); }} style={{
               padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
               fontFamily: "'IBM Plex Sans',sans-serif",
               background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
@@ -839,7 +858,7 @@ function DashboardContent() {
             }}>YTD</button>
 
             {/* ── Reset ── */}
-            <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonth(0); setYtd(false); }} style={{
+            <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonths([]); setYtd(false); setLastClicked(null); }} style={{
               padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
               fontFamily: "'IBM Plex Sans',sans-serif",
               background: 'rgba(255,255,255,0.03)',
@@ -854,15 +873,35 @@ function DashboardContent() {
             {/* ── Month buttons ── */}
             {MONTH_NAMES.map((name, i) => {
               const m = i + 1;
-              const active = selMonth === m && !ytd;
+              const active = selMonths.includes(m) && !ytd;
               return (
-                <button key={m} onClick={() => { setSelMonth(selMonth === m ? 0 : m); setYtd(false); }} style={{
+                <button key={m} onClick={(e) => {
+                  setYtd(false);
+                  if (e.shiftKey && lastClicked !== null) {
+                    // Shift+click: select range
+                    const lo = Math.min(lastClicked, m);
+                    const hi = Math.max(lastClicked, m);
+                    const range = Array.from({length: hi-lo+1}, (_,k) => lo+k);
+                    setSelMonths(prev => {
+                      const merged = Array.from(new Set([...prev, ...range])).sort((a,b)=>a-b);
+                      return merged;
+                    });
+                  } else {
+                    // Normal click: toggle
+                    setSelMonths(prev =>
+                      prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m].sort((a,b)=>a-b)
+                    );
+                    setLastClicked(m);
+                  }
+                }} style={{
                   padding: '3px 7px', borderRadius: 5, fontSize: 11, cursor: 'pointer',
                   fontFamily: "'IBM Plex Sans',sans-serif",
                   background: active ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.03)',
                   border: `0.5px solid ${active ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
                   color: active ? '#60a5fa' : 'rgba(255,255,255,0.38)',
+                  fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
+                  userSelect: 'none',
                 }}>{name}</button>
               );
             })}
@@ -889,8 +928,8 @@ function DashboardContent() {
               color="#fb923c"
               mode={chartMode}
               onModeChange={setChartMode}
-              activeLabel={selMonth > 0 && chartMode === 'monthly'
-                ? String(selMonth).padStart(2,'0') + '/' + String(selYear).substring(2)
+              activeLabel={selMonths.length > 0 && chartMode === 'monthly'
+                ? String(selMonths[selMonths.length-1]).padStart(2,'0') + '/' + String(selYear).substring(2)
                 : undefined}
               chartType="bar"
             />
@@ -903,8 +942,8 @@ function DashboardContent() {
               color="#f87171"
               mode={chartMode}
               onModeChange={setChartMode}
-              activeLabel={selMonth > 0 && chartMode === 'monthly'
-                ? String(selMonth).padStart(2,'0') + '/' + String(selYear).substring(2)
+              activeLabel={selMonths.length > 0 && chartMode === 'monthly'
+                ? String(selMonths[selMonths.length-1]).padStart(2,'0') + '/' + String(selYear).substring(2)
                 : undefined}
               chartType="bar"
             />
@@ -1067,8 +1106,8 @@ function DashboardContent() {
               color="#4ade80"
               mode={chartMode}
               onModeChange={setChartMode}
-              activeLabel={selMonth > 0 && chartMode === 'monthly'
-                ? String(selMonth).padStart(2,'0') + '/' + String(selYear).substring(2)
+              activeLabel={selMonths.length > 0 && chartMode === 'monthly'
+                ? String(selMonths[selMonths.length-1]).padStart(2,'0') + '/' + String(selYear).substring(2)
                 : undefined}
               chartType="line"
             />
@@ -1081,8 +1120,8 @@ function DashboardContent() {
               color="#f87171"
               mode={chartMode}
               onModeChange={setChartMode}
-              activeLabel={selMonth > 0 && chartMode === 'monthly'
-                ? String(selMonth).padStart(2,'0') + '/' + String(selYear).substring(2)
+              activeLabel={selMonths.length > 0 && chartMode === 'monthly'
+                ? String(selMonths[selMonths.length-1]).padStart(2,'0') + '/' + String(selYear).substring(2)
                 : undefined}
               chartType="line"
             />

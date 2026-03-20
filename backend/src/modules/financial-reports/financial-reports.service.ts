@@ -173,7 +173,8 @@ export class FinancialReportsService {
       where.entryDate = { lte: new Date(params.endDate) };
     }
 
-    const lines = await this.prisma.journalEntryLine.findMany({
+    // ── 1. Balance sheet accounts (asset/liability/equity) ──────────────────
+    const bsLines = await this.prisma.journalEntryLine.findMany({
       where: {
         tenantId,
         deletedAt: null,
@@ -193,7 +194,7 @@ export class FinancialReportsService {
     });
 
     const accountBalances = new Map<string, any>();
-    for (const line of lines) {
+    for (const line of bsLines) {
       if (!accountBalances.has(line.accountId)) {
         accountBalances.set(line.accountId, {
           accountNumber:   line.account.accountNumber,
@@ -211,6 +212,31 @@ export class FinancialReportsService {
       }
     }
 
+    // ── 2. Net Income from P&L accounts (revenue/cost/expense) ──────────────
+    // Sum all revenue credits minus all cost/expense debits = current period NI
+    const plLines = await this.prisma.journalEntryLine.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        journalEntry: where,
+        account: { accountType: { in: ['revenue', 'cost', 'expense'] } },
+      },
+      include: {
+        account: { select: { accountType: true } },
+      },
+    });
+
+    let revenueNet = new Decimal(0);
+    let costExpenseNet = new Decimal(0);
+    for (const line of plLines) {
+      if (line.account.accountType === 'revenue') {
+        revenueNet = revenueNet.plus(line.creditAmount).minus(line.debitAmount);
+      } else {
+        costExpenseNet = costExpenseNet.plus(line.debitAmount).minus(line.creditAmount);
+      }
+    }
+    const currentNetIncome = revenueNet.minus(costExpenseNet);
+
     const assets: any[] = [], liabilities: any[] = [], equity: any[] = [];
     for (const [, acc] of accountBalances) {
       const item = {
@@ -222,6 +248,17 @@ export class FinancialReportsService {
       if (acc.accountType === 'asset')           assets.push(item);
       else if (acc.accountType === 'liability')  liabilities.push(item);
       else                                       equity.push(item);
+    }
+
+    // Add current Net Income as equity line (if non-zero)
+    const niValue = currentNetIncome.toNumber();
+    if (Math.abs(niValue) > 0.01) {
+      equity.push({
+        accountNumber:   '3.2.02',
+        accountName:     'Current Period Net Income',
+        accountCategory: 'retained_earnings',
+        amount: niValue,
+      });
     }
 
     assets.sort((a, b)      => a.accountNumber.localeCompare(b.accountNumber));
@@ -243,6 +280,7 @@ export class FinancialReportsService {
       isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01,
     };
   }
+
 
   async getGeneralLedger(tenantId: string, params: ReportParametersDto) {
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
