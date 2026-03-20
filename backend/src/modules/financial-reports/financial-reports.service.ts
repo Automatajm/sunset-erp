@@ -76,96 +76,123 @@ export class FinancialReportsService {
 
     const lines = await this.prisma.journalEntryLine.findMany({
       where: {
-        tenantId,
-        deletedAt: null,
+        tenantId, deletedAt: null,
         journalEntry: where,
-        account: { accountType: { in: ['revenue', 'expense', 'cost'] } },
+        account: { accountType: { in: ['revenue', 'cost', 'expense'] } },
       },
       include: {
         account: {
           select: {
-            accountNumber: true,
-            name: true,
-            accountType: true,
-            accountCategory: true,
+            accountNumber: true, name: true,
+            accountType: true, accountCategory: true,
           },
         },
       },
     });
 
-    const accountBalances = new Map<string, any>();
+    // Aggregate by account
+    const accMap = new Map<string, any>();
     for (const line of lines) {
-      if (!accountBalances.has(line.accountId)) {
-        accountBalances.set(line.accountId, {
-          accountNumber: line.account.accountNumber,
-          accountName:   line.account.name,
-          accountType:   line.account.accountType,
+      if (!accMap.has(line.accountId)) {
+        accMap.set(line.accountId, {
+          accountNumber:   line.account.accountNumber,
+          accountName:     line.account.name,
+          accountType:     line.account.accountType,
           accountCategory: line.account.accountCategory,
-          balance: new Decimal(0),
+          amount: new Decimal(0),
         });
       }
-      const b = accountBalances.get(line.accountId);
+      const a = accMap.get(line.accountId);
       if (line.account.accountType === 'revenue') {
-        b.balance = b.balance.plus(line.creditAmount).minus(line.debitAmount);
+        a.amount = a.amount.plus(line.creditAmount).minus(line.debitAmount);
       } else {
-        // expense and cost: debits increase
-        b.balance = b.balance.plus(line.debitAmount).minus(line.creditAmount);
+        a.amount = a.amount.plus(line.debitAmount).minus(line.creditAmount);
       }
     }
 
-    const revenues:  any[] = [];
-    const costOfSales: any[] = [];
-    const expenses:  any[] = [];
+    const toItem = (a: any) => ({
+      accountNumber:   a.accountNumber,
+      accountName:     a.accountName,
+      accountCategory: a.accountCategory,
+      amount:          a.amount.toNumber(),
+    });
 
-    for (const [, acc] of accountBalances) {
-      const item = {
-        accountNumber:   acc.accountNumber,
-        accountName:     acc.accountName,
-        accountCategory: acc.accountCategory,
-        amount: acc.balance.toNumber(),
-      };
-      if (acc.accountType === 'revenue') {
-        revenues.push(item);
-      } else if (acc.accountType === 'cost') {
-        costOfSales.push(item);
-      } else {
-        expenses.push(item);
-      }
+    // ── Categorize ────────────────────────────────────────────────────────────
+    const revenue:    any[] = [];
+    const foodCost:   any[] = [];  // 5.1.x cost_of_sales
+    const laborCost:  any[] = [];  // 5.2.x manufacturing_cost
+    const sgaSelling: any[] = [];  // 6.1.x selling_expense
+    const sgaAdmin:   any[] = [];  // 6.2.x general_admin (excl depreciation)
+    const depreciation: any[] = []; // 6.2.06
+    const financial:  any[] = [];  // 6.3.x financial_expense
+    const taxExp:     any[] = [];  // 6.4.x tax_expense
+
+    for (const [, a] of accMap) {
+      const n = a.accountNumber;
+      if (a.accountType === 'revenue')          { revenue.push(toItem(a)); continue; }
+      if (a.accountCategory === 'cost_of_sales') { foodCost.push(toItem(a)); continue; }
+      if (a.accountCategory === 'manufacturing_cost') { laborCost.push(toItem(a)); continue; }
+      if (n === '6.2.06')                        { depreciation.push(toItem(a)); continue; }
+      if (a.accountCategory === 'selling_expense') { sgaSelling.push(toItem(a)); continue; }
+      if (a.accountCategory === 'general_admin') { sgaAdmin.push(toItem(a)); continue; }
+      if (a.accountCategory === 'financial_expense') { financial.push(toItem(a)); continue; }
+      if (a.accountCategory === 'tax_expense')   { taxExp.push(toItem(a)); continue; }
     }
 
-    revenues.sort((a, b)    => a.accountNumber.localeCompare(b.accountNumber));
-    costOfSales.sort((a, b) => a.accountNumber.localeCompare(b.accountNumber));
-    expenses.sort((a, b)    => a.accountNumber.localeCompare(b.accountNumber));
+    const sum = (arr: any[]) => arr.reduce((s, i) => s + i.amount, 0);
 
-    const totalRevenue     = revenues.reduce((s, a)    => s + a.amount, 0);
-    const totalCostOfSales = costOfSales.reduce((s, a) => s + a.amount, 0);
-    const totalExpenses    = expenses.reduce((s, a)    => s + a.amount, 0);
-    const grossProfit      = totalRevenue - totalCostOfSales;
-    const netIncome        = grossProfit  - totalExpenses;
+    const totalRevenue    = sum(revenue);
+    const totalFoodCost   = sum(foodCost);
+    const totalLaborCost  = sum(laborCost);
+    const totalCostOfSales = totalFoodCost + totalLaborCost;
+    const grossProfit     = totalRevenue - totalCostOfSales;
+    const totalSga        = sum(sgaSelling) + sum(sgaAdmin);
+    const totalDepr       = sum(depreciation);
+    const ebit            = grossProfit - totalSga;
+    const ebitda          = ebit + totalDepr;
+    const totalFinancial  = sum(financial);
+    const ebt             = ebit - totalFinancial;
+    const totalTax        = sum(taxExp);
+    const netIncome       = ebt - totalTax;
+
+    // Legacy flat expenses (backwards compat for dashboard)
+    const allExpenses = [...sgaSelling, ...sgaAdmin, ...depreciation, ...financial, ...taxExp];
+
+    const sort = (arr: any[]) => arr.sort((a, b) => a.accountNumber.localeCompare(b.accountNumber));
 
     return {
       reportName: 'Profit & Loss Statement',
       parameters: params,
-      period: {
-        startDate: params.startDate || 'inception',
-        endDate:   params.endDate   || new Date().toISOString().split('T')[0],
-      },
-      revenue: {
-        accounts: revenues,
-        total:    totalRevenue,
-      },
-      costOfSales: {
-        accounts: costOfSales,
-        total:    totalCostOfSales,
+      period: { startDate: params.startDate, endDate: params.endDate },
+      // ── Structured P&L ──────────────────────────────────────────────────────
+      revenue:      { accounts: sort(revenue),     total: totalRevenue    },
+      costOfSales:  {
+        accounts: sort([...foodCost, ...laborCost]), total: totalCostOfSales,
+        foodCost:  { accounts: sort(foodCost),  total: totalFoodCost  },
+        laborCost: { accounts: sort(laborCost), total: totalLaborCost },
       },
       grossProfit,
-      expenses: {
-        accounts: expenses,
-        total:    totalExpenses,
+      grossMarginPct: totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0,
+      sga: {
+        accounts: sort([...sgaSelling, ...sgaAdmin]), total: totalSga,
+        selling: { accounts: sort(sgaSelling), total: sum(sgaSelling) },
+        admin:   { accounts: sort(sgaAdmin),   total: sum(sgaAdmin)   },
       },
+      ebit,
+      ebitMarginPct: totalRevenue > 0 ? (ebit / totalRevenue * 100) : 0,
+      depreciation: { accounts: sort(depreciation), total: totalDepr },
+      ebitda,
+      ebitdaMarginPct: totalRevenue > 0 ? (ebitda / totalRevenue * 100) : 0,
+      financial:    { accounts: sort(financial),    total: totalFinancial },
+      ebt,
+      tax:          { accounts: sort(taxExp),       total: totalTax       },
       netIncome,
+      netMarginPct: totalRevenue > 0 ? (netIncome / totalRevenue * 100) : 0,
+      // ── Legacy flat (dashboard compatibility) ─────────────────────────────
+      expenses:     { accounts: sort(allExpenses),  total: sum(allExpenses) },
     };
   }
+
 
   async getBalanceSheet(tenantId: string, params: ReportParametersDto) {
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
