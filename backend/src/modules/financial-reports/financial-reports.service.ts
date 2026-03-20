@@ -251,10 +251,11 @@ export class FinancialReportsService {
     }
 
     // Add current Net Income as equity line (if non-zero)
+    // Use '3.2.99' as synthetic key to avoid duplicate with JE-based 3.2.02
     const niValue = currentNetIncome.toNumber();
     if (Math.abs(niValue) > 0.01) {
       equity.push({
-        accountNumber:   '3.2.02',
+        accountNumber:   '3.2.99',
         accountName:     'Current Period Net Income',
         accountCategory: 'retained_earnings',
         amount: niValue,

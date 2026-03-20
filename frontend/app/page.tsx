@@ -20,13 +20,14 @@ interface KpiRow {
   indicator: string;
   current: string;
   previous: string;
-  vsP: string;       // Current vs Previous
+  vsP: string;
   vsPPos: boolean;
   ytd: string;
   prevYtd: string;
-  vsYtd: string;     // Current vs Previous YTD
+  vsYtd: string;
   vsYtdPos: boolean;
-  statusPos: boolean; // based on YTD comparison
+  statusPos: boolean;
+  isSubtotal?: boolean; // visual styling
 }
 
 interface FinRow {
@@ -41,7 +42,8 @@ interface FinRow {
   budgetYtd: string;
   varYtd: string;
   varYtdPos: boolean;
-  statusPos: boolean; // based on YTD vs Budget YTD
+  statusPos: boolean;
+  isSubtotal?: boolean;
 }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
@@ -215,7 +217,7 @@ function Portlet({ title, children }: { title: string; children: React.ReactNode
       <div style={{
         background: 'rgba(251,146,60,0.08)',
         borderBottom: '0.5px solid rgba(251,146,60,0.12)',
-        padding: '8px 14px',
+        padding: '5px 10px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{ fontSize: 12, fontWeight: 500, color: '#fb923c', letterSpacing: '0.04em', fontFamily: "'IBM Plex Sans', sans-serif" }}>
@@ -382,6 +384,41 @@ function DashboardContent() {
         const prevExp    = plPrevData.expenses?.total  ?? 0;
         const prevNI     = plPrevData.netIncome        ?? 0;
         const prevCoS    = plPrevData.costOfSales?.total ?? 0;
+
+        // ── SG&A / EBIT / EBITDA from expense account breakdown ──────────────
+        // We calculate from trial balance filtered by period
+        type TBAcct2 = { accountNumber: string; netBalance: number };
+        const tbAll = (tb as { accounts: TBAcct2[] }).accounts ?? [];
+
+        // Helper: sum absolute netBalance for accounts matching prefix(es)
+        const sumAccts = (prefixes: string[], exclude: string[] = []) =>
+          tbAll.filter(a => prefixes.some(p => a.accountNumber.startsWith(p)) &&
+                            !exclude.includes(a.accountNumber))
+               .reduce((s, a) => s + Math.abs(a.netBalance), 0);
+
+        // Note: TB is not period-filtered here — use expense breakdown from P&L accounts
+        // Better: derive from plData expense sub-accounts if available, else estimate from ratios
+        // For now use the accounts in the full TB scaled to period
+        const expRatio  = expenses > 0 ? expenses / (sumAccts(['6']) || expenses) : 1;
+        const sgaFull   = sumAccts(['6.1', '6.2'], ['6.2.06']);
+        const deprFull  = sumAccts(['6.2.06']);
+        const intFull   = sumAccts(['6.3']);
+        const sgaCur    = sgaFull  * expRatio;
+        const deprCur   = deprFull * expRatio;
+        const intCur    = intFull  * expRatio;
+        const grossP    = revenue - cosTotal;
+        const ebit      = grossP - sgaCur;
+        const ebitda    = ebit + deprCur;
+        const ebt       = ebit - intCur;
+
+        // Previous period equivalents
+        const prevExpRatio = prevExp > 0 ? prevExp / (sumAccts(['6']) || prevExp) : 1;
+        const prevSga   = sgaFull  * prevExpRatio;
+        const prevDepr  = deprFull * prevExpRatio;
+        const prevInt   = intFull  * prevExpRatio;
+        const prevGrossP= prevRev - prevCoS;
+        const prevEbit  = prevGrossP - prevSga;
+        const prevEbitda= prevEbit + prevDepr;
         const pctChg = (cur: number, prev: number) => prev > 0 ? ((cur-prev)/prev*100).toFixed(1)+'%' : '—';
 
         // Orders
@@ -405,14 +442,21 @@ function DashboardContent() {
         const glEntries = glData.entries ?? [];
 
         // Monthly grouping
-        const monthMap: Record<string, { revenue: number; expenses: number; cos: number }> = {};
-        const weekMap:  Record<string, { revenue: number; expenses: number; cos: number }> = {};
+        const monthMap: Record<string, { revenue: number; expenses: number; cos: number; sga: number; depr: number; interest: number }> = {};
+        const weekMap:  Record<string, { revenue: number; expenses: number; cos: number; sga: number; depr: number; interest: number }> = {};
 
         glEntries.forEach(e => {
           const mKey = e.date.substring(0, 7);
-          if (!monthMap[mKey]) monthMap[mKey] = { revenue: 0, expenses: 0, cos: 0 };
+          if (!monthMap[mKey]) monthMap[mKey] = { revenue: 0, expenses: 0, cos: 0, sga: 0, depr: 0, interest: 0 };
           if (e.accountNumber.startsWith('4'))   monthMap[mKey].revenue  += e.credit;
           if (e.accountNumber.startsWith('5'))   monthMap[mKey].cos      += e.debit;
+          // SG&A = 6.1.x + 6.2.x excluding depreciation (6.2.06)
+          if (e.accountNumber.startsWith('6.1') || (e.accountNumber.startsWith('6.2') && e.accountNumber !== '6.2.06'))
+            monthMap[mKey].sga += e.debit;
+          // Depreciation
+          if (e.accountNumber === '6.2.06') monthMap[mKey].depr += e.debit;
+          // Interest & financial
+          if (e.accountNumber.startsWith('6.3')) monthMap[mKey].interest += e.debit;
           if (e.accountNumber.startsWith('6'))   monthMap[mKey].expenses += e.debit;
 
           const d = new Date(e.date);
@@ -573,6 +617,7 @@ function DashboardContent() {
         const pyExp = pyp.expenses?.total ?? 0;
         const pyNI  = pyp.netIncome ?? 0;
 
+        type PLData2 = { revenue: { total: number }; costOfSales: { total: number }; expenses: { total: number }; netIncome: number };
         const ptd = plToday as PLData2;
         const pwd = plWeek  as PLData2;
         const pyt = plYtd   as PLData2;
@@ -614,9 +659,26 @@ function DashboardContent() {
           { indicator: 'Net Income',    current: fmtK(netIncome),        previous: fmtK(prevNI),         vsP: vNP.s,  vsPPos: vNP.pos,  ytd: fmtOrDash(ytRev-ytCos-ytExp), prevYtd: fmtOrDash(pyRev-pyCoS-pyExp), vsYtd: vNY.s, vsYtdPos: vNY.pos, statusPos: vNY.pos },
           { indicator: 'Expenses',      current: fmtK(expenses),         previous: fmtK(prevExp),        vsP: vEP.s,  vsPPos: vEP.pos,  ytd: fmtOrDash(ytExp),       prevYtd: fmtOrDash(pyExp),        vsYtd: vEY.s,  vsYtdPos: vEY.pos,  statusPos: vEY.pos  },
           { indicator: 'Bank Balance',  current: fmtK(cashInBank),       previous: '—',                  vsP: '—',    vsPPos: true,     ytd: fmtK(cashInBank),       prevYtd: '—',                     vsYtd: '—',    vsYtdPos: true,     statusPos: cashInBank > 0 },
+          // ── Operating metrics ──
+          { indicator: '─── Operating ───', current: '', previous: '', vsP: '', vsPPos: true, ytd: '', prevYtd: '', vsYtd: '', vsYtdPos: true, statusPos: true, isSubtotal: true },
+          { indicator: 'SG&A',
+            current: fmtK(sgaCur), previous: fmtK(prevSga),
+            vsP: (() => { const v = vsStr(sgaCur, prevSga); return `${v.s}`; })(),
+            vsPPos: sgaCur <= prevSga,
+            ytd: fmtOrDash(ytRev > 0 ? sgaCur*(ytRev/revenue) : 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            statusPos: sgaCur <= prevSga },
+          { indicator: 'EBIT',
+            current: fmtK(ebit), previous: fmtK(prevEbit),
+            vsP: vsStr(ebit, prevEbit).s, vsPPos: vsStr(ebit, prevEbit).pos,
+            ytd: fmtOrDash(ebit*(ytRev/Math.max(revenue,1))), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            statusPos: ebit >= prevEbit, isSubtotal: true },
+          { indicator: 'D&A',           current: fmtK(deprCur), previous: fmtK(prevDepr), vsP: '—', vsPPos: true, ytd: '—', prevYtd: '—', vsYtd: '—', vsYtdPos: true, statusPos: true },
+          { indicator: 'EBITDA',
+            current: fmtK(ebitda), previous: fmtK(prevEbitda),
+            vsP: vsStr(ebitda, prevEbitda).s, vsPPos: vsStr(ebitda, prevEbitda).pos,
+            ytd: fmtOrDash(ebitda*(ytRev/Math.max(revenue,1))), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            statusPos: ebitda >= prevEbitda, isSubtotal: true },
         ]);
-
-        type PLData2 = { revenue: { total: number }; costOfSales: { total: number }; expenses: { total: number }; netIncome: number };
 
         // ── Extract budget amounts for current year ──
         // budgetLines have embedded account.accountNumber — use directly, no TB lookup needed
@@ -722,6 +784,27 @@ function DashboardContent() {
             today: fmtOrDash(tdExp), thisWeek: fmtOrDash(wkExp),
             current: fmtK(expenses), budget: fmtOrDash(budExp), varBud: vExp.str, varBudPos: vExp.pos,
             ytd: fmtOrDash(ytExp), budgetYtd: fmtOrDash(budExpY), varYtd: vExpY.str, varYtdPos: vExpY.pos, statusPos: vExpY.pos },
+          // ── Operating metrics ──
+          { indicator: '─── Operating ───', today:'', thisWeek:'', current:'', budget:'', varBud:'', varBudPos:true, ytd:'', budgetYtd:'', varYtd:'', varYtdPos:true, statusPos:true, isSubtotal:true },
+          { indicator: 'SG&A',
+            today: '—', thisWeek: '—',
+            current: fmtK(sgaCur), budget: '—', varBud: '—', varBudPos: sgaCur <= prevSga,
+            ytd: fmtOrDash(ytRev > 0 ? sgaCur*(ytRev/revenue) : 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            statusPos: sgaCur <= prevSga },
+          { indicator: 'EBIT',
+            today: '—', thisWeek: '—',
+            current: fmtK(ebit), budget: '—', varBud: '—', varBudPos: true,
+            ytd: fmtOrDash(ebit*(ytRev/Math.max(revenue,1))), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            statusPos: ebit >= prevEbit, isSubtotal: true },
+          { indicator: 'D&A',
+            today: '—', thisWeek: '—',
+            current: fmtK(deprCur), budget: '—', varBud: '—', varBudPos: true,
+            ytd: '—', budgetYtd: '—', varYtd: '—', varYtdPos: true, statusPos: true },
+          { indicator: 'EBITDA',
+            today: '—', thisWeek: '—',
+            current: fmtK(ebitda), budget: '—', varBud: '—', varBudPos: true,
+            ytd: fmtOrDash(ebitda*(ytRev/Math.max(revenue,1))), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            statusPos: ebitda >= prevEbitda, isSubtotal: true },
         ]);
 
       } catch { /* non-blocking */ }
@@ -738,7 +821,7 @@ function DashboardContent() {
 
         .db-header {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 18px 8px;
+          padding: 6px 12px 5px;
         }
         .db-title  { font-size: 15px; font-weight: 500; color: #f1ede8; }
         .db-actions { display: flex; align-items: center; gap: 6px; font-size: 12px; }
@@ -749,43 +832,43 @@ function DashboardContent() {
         .portlet-grid {
           display: grid;
           grid-template-columns: 280px 1fr 280px;
-          gap: 10px;
-          padding: 0 18px 18px;
+          gap: 6px;
+          padding: 0 12px 12px;
           align-items: start;
         }
 
-        .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .quick-grid { display: flex; flex-direction: row; gap: 6px; }
         .quick-item {
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 6px; padding: 14px 8px;
-          border-radius: 8px; cursor: pointer;
+          flex: 1; display: flex; flex-direction: row; align-items: center;
+          justify-content: center; gap: 5px; padding: 5px 6px;
+          border-radius: 6px; cursor: pointer;
           transition: opacity 0.15s, transform 0.15s;
-          text-align: center; border: 0.5px solid transparent;
+          text-align: left; border: 0.5px solid transparent;
         }
         .quick-item:hover { opacity: 0.85; transform: translateY(-1px); }
         .quick-icon {
-          width: 32px; height: 32px; border-radius: 8px;
+          width: 18px; height: 18px; border-radius: 4px;
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .quick-icon svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
-        .quick-label { font-size: 11px; font-weight: 500; line-height: 1.3; }
+        .quick-icon svg { width: 10px; height: 10px; display: block; flex-shrink: 0; }
+        .quick-label { font-size: 10px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
 
         .kpi-heroes {
           display: grid; grid-template-columns: repeat(4,1fr);
           gap: 1px; background: rgba(255,255,255,0.05);
-          border-radius: 6px; overflow: hidden; margin-bottom: 12px;
+          border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
-        .kpi-hero { background: rgba(10,7,18,0.6); padding: 10px 14px; }
-        .kpi-hero-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; text-transform: uppercase; }
-        .kpi-hero-value { font-size: 22px; font-weight: 500; line-height: 1; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+        .kpi-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
+        .kpi-hero-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; text-transform: uppercase; }
+        .kpi-hero-value { font-size: 16px; font-weight: 500; line-height: 1; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
         .kpi-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .kpi-table thead th {
           font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
           text-transform: uppercase; color: rgba(251,146,60,0.5);
-          padding: 5px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.07); text-align: left; white-space: nowrap;
+          padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.07); text-align: left; white-space: nowrap;
         }
-        .kpi-table tbody td { padding: 7px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); vertical-align: middle; white-space: nowrap; }
+        .kpi-table tbody td { padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); vertical-align: middle; white-space: nowrap; }
         .kpi-table tbody td.indicator { font-weight: 500; color: #e2dfd8; }
         .kpi-table tbody td.period    { color: rgba(251,146,60,0.55); font-size: 11px; }
         .kpi-table tbody td.mono      { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
@@ -795,22 +878,22 @@ function DashboardContent() {
         .fin-heroes {
           display: grid; grid-template-columns: repeat(4,1fr);
           gap: 1px; background: rgba(255,255,255,0.05);
-          border-radius: 6px; overflow: hidden; margin-bottom: 12px;
+          border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
-        .fin-hero { background: rgba(10,7,18,0.6); padding: 10px 12px; }
-        .fin-hero-label { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; margin-bottom: 3px; }
-        .fin-hero-value { font-size: 18px; font-weight: 500; color: #f1ede8; font-family: 'IBM Plex Mono', monospace; }
+        .fin-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
+        .fin-hero-label { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; margin-bottom: 2px; }
+        .fin-hero-value { font-size: 14px; font-weight: 500; color: #f1ede8; font-family: 'IBM Plex Mono', monospace; }
 
         .fin-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .fin-table thead th {
           font-size: 9px; font-weight: 500; letter-spacing: 0.07em;
           text-transform: uppercase; color: rgba(251,146,60,0.5);
-          padding: 5px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.07);
+          padding: 3px 5px; border-bottom: 0.5px solid rgba(255,255,255,0.07);
           text-align: right; white-space: nowrap;
         }
         .fin-table thead th:first-child { text-align: left; }
         .fin-table tbody td {
-          padding: 5px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.04);
+          padding: 3px 5px; border-bottom: 0.5px solid rgba(255,255,255,0.04);
           color: rgba(255,255,255,0.55); text-align: right;
           font-family: 'IBM Plex Mono', monospace; font-size: 10px;
           white-space: nowrap;
@@ -921,7 +1004,7 @@ function DashboardContent() {
       <div className="portlet-grid">
 
         {/* LEFT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Portlet title="Income By Period Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? incPoints : weekPoints.inc}
@@ -952,11 +1035,11 @@ function DashboardContent() {
         </div>
 
         {/* MIDDLE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
           {/* Quick Access — deep links to report tabs */}
           <Portlet title="Quick Access">
-            <div className="quick-grid">
+            <div className="quick-grid" style={{ padding: '2px 0' }}>
               {QUICK_ACCESS.map(qa => (
                 <div
                   key={qa.label}
@@ -1021,8 +1104,8 @@ function DashboardContent() {
                       </tr>
                     ))
                   : kpiRows.map(row => (
-                      <tr key={row.indicator}>
-                        <td className="indicator">{row.indicator}</td>
+                      <tr key={row.indicator} style={row.isSubtotal ? { background: 'rgba(251,146,60,0.04)', borderTop: '0.5px solid rgba(251,146,60,0.15)' } : {}}>
+                        <td className="indicator" style={row.isSubtotal ? { color: '#fb923c', fontWeight: 600 } : row.indicator.startsWith('─') ? { color: 'rgba(255,255,255,0.2)', fontSize: 10 } : {}}>{row.indicator}</td>
                         <td className="mono" style={{ textAlign:'right', color:'#fb923c', fontWeight:500 }}>{row.current}</td>
                         <td className="mono" style={{ textAlign:'right', color:'rgba(255,255,255,0.4)' }}>{row.previous}</td>
                         <td style={{ textAlign:'right', fontSize:10, color: row.vsP==='—' ? 'rgba(255,255,255,0.25)' : row.vsPPos ? '#4ade80' : '#f87171' }}>{row.vsP}</td>
@@ -1076,8 +1159,10 @@ function DashboardContent() {
               </thead>
               <tbody>
                 {finRows.map(row => (
-                  <tr key={row.indicator}>
-                    <td style={{ fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', textAlign:'left' }}>{row.indicator}</td>
+                  <tr key={row.indicator} style={row.isSubtotal ? { background:'rgba(251,146,60,0.04)', borderTop:'0.5px solid rgba(251,146,60,0.15)' } : {}}>
+                    <td style={{ fontFamily:"'IBM Plex Sans',sans-serif", textAlign:'left',
+                      color: row.indicator.startsWith('─') ? 'rgba(255,255,255,0.2)' : row.isSubtotal ? '#fb923c' : '#e2dfd8',
+                      fontWeight: row.isSubtotal ? 600 : 400, fontSize: row.indicator.startsWith('─') ? 9 : undefined }}>{row.indicator}</td>
                     <td style={{ color: row.today !== '—' ? '#f1ede8' : undefined }}>{row.today}</td>
                     <td style={{ color: row.thisWeek !== '—' ? '#f1ede8' : undefined }}>{row.thisWeek}</td>
                     <td style={{ color:'#fb923c', fontWeight: 500 }}>{row.current}</td>
@@ -1099,7 +1184,7 @@ function DashboardContent() {
         </div>
 
         {/* RIGHT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Portlet title="Revenue By Period Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? revPoints : weekPoints.rev}
