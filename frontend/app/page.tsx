@@ -385,40 +385,29 @@ function DashboardContent() {
         const prevNI     = plPrevData.netIncome        ?? 0;
         const prevCoS    = plPrevData.costOfSales?.total ?? 0;
 
-        // ── SG&A / EBIT / EBITDA from expense account breakdown ──────────────
-        // We calculate from trial balance filtered by period
-        type TBAcct2 = { accountNumber: string; netBalance: number };
-        const tbAll = (tb as { accounts: TBAcct2[] }).accounts ?? [];
+        // ── SG&A / EBIT / EBITDA — exact values from structured P&L ────────────
+        type PLStructured = {
+          sga?: { total: number };
+          ebit?: number;
+          depreciation?: { total: number };
+          ebitda?: number;
+          financial?: { total: number };
+          ebt?: number;
+          tax?: { total: number };
+        };
+        const plS     = plData     as PLStructured;
+        const plPrevS = plPrevData as PLStructured;
 
-        // Helper: sum absolute netBalance for accounts matching prefix(es)
-        const sumAccts = (prefixes: string[], exclude: string[] = []) =>
-          tbAll.filter(a => prefixes.some(p => a.accountNumber.startsWith(p)) &&
-                            !exclude.includes(a.accountNumber))
-               .reduce((s, a) => s + Math.abs(a.netBalance), 0);
+        const sgaCur    = plS.sga?.total          ?? 0;
+        const deprCur   = plS.depreciation?.total ?? 0;
+        const intCur    = plS.financial?.total    ?? 0;
+        const ebit      = plS.ebit                ?? (revenue - cosTotal - sgaCur);
+        const ebitda    = plS.ebitda              ?? (ebit + deprCur);
 
-        // Note: TB is not period-filtered here — use expense breakdown from P&L accounts
-        // Better: derive from plData expense sub-accounts if available, else estimate from ratios
-        // For now use the accounts in the full TB scaled to period
-        const expRatio  = expenses > 0 ? expenses / (sumAccts(['6']) || expenses) : 1;
-        const sgaFull   = sumAccts(['6.1', '6.2'], ['6.2.06']);
-        const deprFull  = sumAccts(['6.2.06']);
-        const intFull   = sumAccts(['6.3']);
-        const sgaCur    = sgaFull  * expRatio;
-        const deprCur   = deprFull * expRatio;
-        const intCur    = intFull  * expRatio;
-        const grossP    = revenue - cosTotal;
-        const ebit      = grossP - sgaCur;
-        const ebitda    = ebit + deprCur;
-        const ebt       = ebit - intCur;
-
-        // Previous period equivalents
-        const prevExpRatio = prevExp > 0 ? prevExp / (sumAccts(['6']) || prevExp) : 1;
-        const prevSga   = sgaFull  * prevExpRatio;
-        const prevDepr  = deprFull * prevExpRatio;
-        const prevInt   = intFull  * prevExpRatio;
-        const prevGrossP= prevRev - prevCoS;
-        const prevEbit  = prevGrossP - prevSga;
-        const prevEbitda= prevEbit + prevDepr;
+        const prevSga   = plPrevS.sga?.total          ?? 0;
+        const prevDepr  = plPrevS.depreciation?.total ?? 0;
+        const prevEbit  = plPrevS.ebit                ?? (prevRev - prevCoS - prevSga);
+        const prevEbitda= plPrevS.ebitda              ?? (prevEbit + prevDepr);
         const pctChg = (cur: number, prev: number) => prev > 0 ? ((cur-prev)/prev*100).toFixed(1)+'%' : '—';
 
         // Orders
@@ -617,7 +606,13 @@ function DashboardContent() {
         const pyExp = pyp.expenses?.total ?? 0;
         const pyNI  = pyp.netIncome ?? 0;
 
-        type PLData2 = { revenue: { total: number }; costOfSales: { total: number }; expenses: { total: number }; netIncome: number };
+        type PLData2 = {
+          revenue: { total: number }; costOfSales: { total: number };
+          expenses: { total: number }; netIncome: number;
+          sga?: { total: number }; ebit?: number;
+          depreciation?: { total: number }; ebitda?: number;
+          financial?: { total: number }; ebt?: number;
+        };
         const ptd = plToday as PLData2;
         const pwd = plWeek  as PLData2;
         const pyt = plYtd   as PLData2;
@@ -665,18 +660,18 @@ function DashboardContent() {
             current: fmtK(sgaCur), previous: fmtK(prevSga),
             vsP: (() => { const v = vsStr(sgaCur, prevSga); return `${v.s}`; })(),
             vsPPos: sgaCur <= prevSga,
-            ytd: fmtOrDash(ytRev > 0 ? sgaCur*(ytRev/revenue) : 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            ytd: fmtOrDash(pyt.sga?.total ?? 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
             statusPos: sgaCur <= prevSga },
           { indicator: 'EBIT',
             current: fmtK(ebit), previous: fmtK(prevEbit),
             vsP: vsStr(ebit, prevEbit).s, vsPPos: vsStr(ebit, prevEbit).pos,
-            ytd: fmtOrDash(ebit*(ytRev/Math.max(revenue,1))), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            ytd: fmtOrDash(pyt.ebit ?? 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
             statusPos: ebit >= prevEbit, isSubtotal: true },
           { indicator: 'D&A',           current: fmtK(deprCur), previous: fmtK(prevDepr), vsP: '—', vsPPos: true, ytd: '—', prevYtd: '—', vsYtd: '—', vsYtdPos: true, statusPos: true },
           { indicator: 'EBITDA',
             current: fmtK(ebitda), previous: fmtK(prevEbitda),
             vsP: vsStr(ebitda, prevEbitda).s, vsPPos: vsStr(ebitda, prevEbitda).pos,
-            ytd: fmtOrDash(ebitda*(ytRev/Math.max(revenue,1))), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
+            ytd: fmtOrDash(pyt.ebitda ?? 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
             statusPos: ebitda >= prevEbitda, isSubtotal: true },
         ]);
 
@@ -723,10 +718,11 @@ function DashboardContent() {
 
         const budRev  = sumBudget(pdMonths, '4');
         const budCos  = sumBudget(pdMonths, '5');
-        const budExp  = sumBudget(pdMonths, '6');
+        // Expenses budget excludes 6.4.x (tax) to match P&L legacy expenses field
+        const budExp  = sumBudget(pdMonths, '6.1') + sumBudget(pdMonths, '6.2') + sumBudget(pdMonths, '6.3');
         const budRevY = sumBudget(ytdMonths, '4');
         const budCosY = sumBudget(ytdMonths, '5');
-        const budExpY = sumBudget(ytdMonths, '6');
+        const budExpY = sumBudget(ytdMonths, '6.1') + sumBudget(ytdMonths, '6.2') + sumBudget(ytdMonths, '6.3');
 
         // ── Variance formatter ──
         const varFmt = (act: number, bud: number): { str: string; pos: boolean } => {
@@ -789,12 +785,12 @@ function DashboardContent() {
           { indicator: 'SG&A',
             today: '—', thisWeek: '—',
             current: fmtK(sgaCur), budget: '—', varBud: '—', varBudPos: sgaCur <= prevSga,
-            ytd: fmtOrDash(ytRev > 0 ? sgaCur*(ytRev/revenue) : 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            ytd: fmtOrDash(pyt.sga?.total ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
             statusPos: sgaCur <= prevSga },
           { indicator: 'EBIT',
             today: '—', thisWeek: '—',
             current: fmtK(ebit), budget: '—', varBud: '—', varBudPos: true,
-            ytd: fmtOrDash(ebit*(ytRev/Math.max(revenue,1))), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            ytd: fmtOrDash(pyt.ebit ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
             statusPos: ebit >= prevEbit, isSubtotal: true },
           { indicator: 'D&A',
             today: '—', thisWeek: '—',
@@ -803,7 +799,7 @@ function DashboardContent() {
           { indicator: 'EBITDA',
             today: '—', thisWeek: '—',
             current: fmtK(ebitda), budget: '—', varBud: '—', varBudPos: true,
-            ytd: fmtOrDash(ebitda*(ytRev/Math.max(revenue,1))), budgetYtd: '—', varYtd: '—', varYtdPos: true,
+            ytd: fmtOrDash(pyt.ebitda ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
             statusPos: ebitda >= prevEbitda, isSubtotal: true },
         ]);
 
