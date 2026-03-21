@@ -273,7 +273,12 @@ export class ArInvoicesService {
       include: { customer: { select: { id: true, code: true, name: true } } },
     });
 
-    const buckets = { current: [] as any[], days30: [] as any[], days60: [] as any[], days90plus: [] as any[] };
+    const buckets = {
+      current: [] as any[],
+      days30: [] as any[],
+      days60: [] as any[],
+      days90plus: [] as any[],
+    };
 
     for (const inv of invoices) {
       const outstanding = Number(inv.totalAmount) - Number(inv.paidAmount);
@@ -302,9 +307,9 @@ export class ArInvoicesService {
     return {
       asOf: today,
       summary: {
-        current:    { count: buckets.current.length,   amount: sum(buckets.current) },
-        days1to30:  { count: buckets.days30.length,    amount: sum(buckets.days30) },
-        days31to60: { count: buckets.days60.length,    amount: sum(buckets.days60) },
+        current:    { count: buckets.current.length,    amount: sum(buckets.current) },
+        days1to30:  { count: buckets.days30.length,     amount: sum(buckets.days30) },
+        days31to60: { count: buckets.days60.length,     amount: sum(buckets.days60) },
         days90plus: { count: buckets.days90plus.length, amount: sum(buckets.days90plus) },
         total: {
           count: invoices.length,
@@ -377,8 +382,18 @@ export class ArInvoicesService {
     const totalAmount = Number(invoice.totalAmount);
 
     const lines: any[] = [
-      { tenantId, lineNumber: 1, accountId: arAccount.id,      description: `AR — Invoice ${invoice.invoiceNumber}`,      debitAmount: totalAmount, creditAmount: 0,           createdBy: userId, updatedBy: userId },
-      { tenantId, lineNumber: 2, accountId: revenueAccount.id, description: `Revenue — Invoice ${invoice.invoiceNumber}`, debitAmount: 0,           creditAmount: totalAmount, createdBy: userId, updatedBy: userId },
+      {
+        tenantId, lineNumber: 1, accountId: arAccount.id,
+        description: `AR — Invoice ${invoice.invoiceNumber}`,
+        debitAmount: totalAmount, creditAmount: 0,
+        createdBy: userId, updatedBy: userId,
+      },
+      {
+        tenantId, lineNumber: 2, accountId: revenueAccount.id,
+        description: `Revenue — Invoice ${invoice.invoiceNumber}`,
+        debitAmount: 0, creditAmount: totalAmount,
+        createdBy: userId, updatedBy: userId,
+      },
     ];
 
     let lineNumber = 3;
@@ -387,11 +402,23 @@ export class ArInvoicesService {
       const cogsAcct = line.cogsAccountId
         ? await this.prisma.account.findFirst({ where: { id: line.cogsAccountId, tenantId } })
         : await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '5.1.01', deletedAt: null } });
-      const fgAcct = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.05', deletedAt: null } });
+      const fgAcct = await this.prisma.account.findFirst({
+        where: { tenantId, accountNumber: '1.1.05', deletedAt: null },
+      });
       if (cogsAcct && fgAcct) {
         lines.push(
-          { tenantId, lineNumber: lineNumber++, accountId: cogsAcct.id, description: `CoGS — ${line.description ?? 'line'}`, debitAmount: Number(line.cogsAmount), creditAmount: 0,                     createdBy: userId, updatedBy: userId },
-          { tenantId, lineNumber: lineNumber++, accountId: fgAcct.id,   description: `FG Inv — ${line.description ?? 'line'}`, debitAmount: 0,                     creditAmount: Number(line.cogsAmount), createdBy: userId, updatedBy: userId },
+          {
+            tenantId, lineNumber: lineNumber++, accountId: cogsAcct.id,
+            description: `CoGS — ${line.description ?? 'line'}`,
+            debitAmount: Number(line.cogsAmount), creditAmount: 0,
+            createdBy: userId, updatedBy: userId,
+          },
+          {
+            tenantId, lineNumber: lineNumber++, accountId: fgAcct.id,
+            description: `FG Inv — ${line.description ?? 'line'}`,
+            debitAmount: 0, creditAmount: Number(line.cogsAmount),
+            createdBy: userId, updatedBy: userId,
+          },
         );
       }
     }
@@ -412,25 +439,40 @@ export class ArInvoicesService {
   }
 
   private async createPaymentJe(tenantId: string, userId: string, invoice: any, dto: ApplyPaymentDto) {
-    const cashAccount = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.02', deletedAt: null } });
-    const arAccount   = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.03', deletedAt: null } });
+    const cashAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '1.1.02', deletedAt: null },
+    });
+    const arAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '1.1.03', deletedAt: null },
+    });
     if (!cashAccount || !arAccount) {
       throw new BadRequestException('Accounts 1.1.02 (Cash) and 1.1.03 (AR) required for payment JE');
     }
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(dto.paymentDate));
     return this.prisma.journalEntry.create({
       data: {
         tenantId, entryNumber,
-        entryDate: new Date(dto.paymentDate), postingDate: new Date(dto.paymentDate),
+        entryDate: new Date(dto.paymentDate),
+        postingDate: new Date(dto.paymentDate),
         fiscalPeriod, journalType: 'ar_payment',
         reference: dto.reference ?? invoice.invoiceNumber,
         description: `Payment received — Invoice ${invoice.invoiceNumber}`,
         status: 'posted', createdBy: userId, updatedBy: userId,
         lines: {
           create: [
-            { tenantId, lineNumber: 1, accountId: cashAccount.id, description: `Cash received — Inv ${invoice.invoiceNumber}`, debitAmount: dto.amount, creditAmount: 0,          createdBy: userId, updatedBy: userId },
-            { tenantId, lineNumber: 2, accountId: arAccount.id,   description: `AR cleared — Inv ${invoice.invoiceNumber}`,    debitAmount: 0,         creditAmount: dto.amount, createdBy: userId, updatedBy: userId },
+            {
+              tenantId, lineNumber: 1, accountId: cashAccount.id,
+              description: `Cash received — Inv ${invoice.invoiceNumber}`,
+              debitAmount: dto.amount, creditAmount: 0,
+              createdBy: userId, updatedBy: userId,
+            },
+            {
+              tenantId, lineNumber: 2, accountId: arAccount.id,
+              description: `AR cleared — Inv ${invoice.invoiceNumber}`,
+              debitAmount: 0, creditAmount: dto.amount,
+              createdBy: userId, updatedBy: userId,
+            },
           ],
         },
       },
@@ -443,12 +485,13 @@ export class ArInvoicesService {
       where: { id: invoice.jeId }, include: { lines: true },
     });
     if (!original) return;
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date());
     const reversedLines = original.lines.map((line, i) => ({
       tenantId, lineNumber: i + 1, accountId: line.accountId,
       description: `REVERSAL — ${line.description}`,
-      debitAmount: Number(line.creditAmount), creditAmount: Number(line.debitAmount),
+      debitAmount: Number(line.creditAmount),
+      creditAmount: Number(line.debitAmount),
       createdBy: userId, updatedBy: userId,
     }));
     return this.prisma.journalEntry.create({
@@ -496,13 +539,19 @@ export class ArInvoicesService {
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
-    const prefix = `JE-${new Date().getFullYear()}`;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const prefix = `JE-${year}${month}`;
+
     const last = await this.prisma.journalEntry.findFirst({
       where: { tenantId, entryNumber: { startsWith: prefix } },
       orderBy: { entryNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
-    return `${prefix}-${(parseInt(last.entryNumber.split('-')[2]) + 1).toString().padStart(4, '0')}`;
+    const parts = last.entryNumber.split('-');
+    const n = parseInt(parts[parts.length - 1]);
+    return `${prefix}-${(n + 1).toString().padStart(4, '0')}`;
   }
 
   private toFiscalPeriod(date: Date): string {
