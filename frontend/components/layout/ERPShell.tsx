@@ -23,7 +23,7 @@ const NAV: NavItem[] = [
     label: 'Sales',
     groups: [
       { label: 'Customers', items: [{ label: 'Customers', href: '/sales/customers' }] },
-      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' }] },
+      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' },{ label: 'AR Invoices',  href: '/sales/invoices' }] },
     ],
   },
   {
