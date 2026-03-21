@@ -692,6 +692,75 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "ar_invoices" {
+    String id "🗝️"
+    String tenant_id 
+    String so_id "❓"
+    String customer_id 
+    String invoice_number 
+    DateTime invoice_date 
+    DateTime due_date 
+    String status 
+    Decimal subtotal 
+    Decimal tax_amount 
+    Decimal total_amount 
+    Decimal paid_amount 
+    String je_id "❓"
+    String currency 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ar_invoice_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String invoice_id 
+    Int line_number 
+    String item_id "❓"
+    String description "❓"
+    Decimal quantity 
+    String uom "❓"
+    Decimal unit_price 
+    Decimal discount_percent 
+    Decimal line_total 
+    Decimal cogs_amount "❓"
+    String revenue_account_id "❓"
+    String cogs_account_id "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ar_payments" {
+    String id "🗝️"
+    String tenant_id 
+    String invoice_id 
+    String payment_number 
+    DateTime payment_date 
+    Decimal amount 
+    String payment_method "❓"
+    String reference "❓"
+    String je_id "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -756,4 +825,16 @@ erDiagram
     "ac_cash_flow_lines" }o--|| saas_tenants : "tenant"
     "ac_cash_flow_lines" }o--|| ac_cash_flow_projections : "cashFlowProjection"
     "ac_cash_flow_lines" }o--|o ac_accounts : "account"
+    "ar_invoices" }o--|| saas_tenants : "tenant"
+    "ar_invoices" }o--|| so_customers : "customer"
+    "ar_invoices" }o--|o so_sales_orders : "salesOrder"
+    "ar_invoices" }o--|o ac_journal_entries : "journalEntry"
+    "ar_invoice_lines" }o--|| saas_tenants : "tenant"
+    "ar_invoice_lines" }o--|| ar_invoices : "invoice"
+    "ar_invoice_lines" }o--|o in_items : "item"
+    "ar_invoice_lines" }o--|o ac_accounts : "revenueAccount"
+    "ar_invoice_lines" }o--|o ac_accounts : "cogsAccount"
+    "ar_payments" }o--|| saas_tenants : "tenant"
+    "ar_payments" }o--|| ar_invoices : "invoice"
+    "ar_payments" }o--|o ac_journal_entries : "journalEntry"
 ```

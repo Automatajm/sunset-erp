@@ -117,7 +117,9 @@ model Tenant {
   budgetLines         BudgetLine[] // <-- ADD THIS
   cashFlowProjections CashFlowProjection[] // <-- ADD THIS
   cashFlowLines       CashFlowLine[] // <-- ADD THIS
-
+  arInvoices     ArInvoice[]
+  arInvoiceLines ArInvoiceLine[]
+  arPayments     ArPayment[]
   @@map("saas_tenants")
 }
 
@@ -625,6 +627,7 @@ model Item {
   salesOrderLines    SalesOrderLine[]
   boms               Bom[]               @relation("BomParentItem")
   bomComponents      BomComponent[]
+  arInvoiceLines ArInvoiceLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -890,6 +893,7 @@ model Customer {
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   salesOrders SalesOrder[]
+  arInvoices  ArInvoice[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -934,6 +938,7 @@ model SalesOrder {
   createdByUser User             @relation("SalesOrderCreatedBy", fields: [createdBy], references: [id])
   updatedByUser User             @relation("SalesOrderUpdatedBy", fields: [updatedBy], references: [id])
   lines         SalesOrderLine[]
+  arInvoices  ArInvoice[]
 
   @@unique([tenantId, soNumber])
   @@index([tenantId])
@@ -1015,6 +1020,9 @@ model Account {
   budgetLines       BudgetLine[] // <-- ADD THIS
   cashFlowLines     CashFlowLine[] // <-- ADD THIS
 
+  arInvoiceLinesRevenue ArInvoiceLine[] @relation("ArLineRevenueAccount")
+  arInvoiceLinesCogs    ArInvoiceLine[] @relation("ArLineCogsAccount")
+
   @@unique([tenantId, accountNumber])
   @@index([tenantId])
   @@index([tenantId, accountNumber])
@@ -1043,6 +1051,8 @@ model JournalEntry {
 
   tenant Tenant             @relation(fields: [tenantId], references: [id])
   lines  JournalEntryLine[]
+  arInvoices  ArInvoice[]  @relation("ArInvoiceJe")
+  arPayments  ArPayment[]  @relation("ArPaymentJe")
 
   @@unique([tenantId, entryNumber])
   @@index([tenantId])
@@ -1226,8 +1236,118 @@ model CashFlowLine {
 }
 
 // ============================================================================
+// ACCOUNTS RECEIVABLE TABLES (ar_*)
+// Sprint 5 — AR Invoicing
+// ============================================================================
+
+model ArInvoice {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  soId          String?   @map("so_id") @db.Uuid
+  customerId    String    @map("customer_id") @db.Uuid
+  invoiceNumber String    @map("invoice_number") @db.VarChar(50)
+  invoiceDate   DateTime  @default(dbgenerated("CURRENT_DATE")) @map("invoice_date") @db.Date
+  dueDate       DateTime  @map("due_date") @db.Date
+  status        String    @default("draft") @db.VarChar(20)
+  subtotal      Decimal   @default(0) @db.Decimal(15, 2)
+  taxAmount     Decimal   @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  totalAmount   Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
+  paidAmount    Decimal   @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  jeId          String?   @map("je_id") @db.Uuid
+  currency      String    @default("USD") @db.VarChar(3)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  updatedBy     String    @map("updated_by") @db.Uuid
+  deletedBy     String?   @map("deleted_by") @db.Uuid
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  customer     Customer        @relation(fields: [customerId], references: [id])
+  salesOrder   SalesOrder?     @relation(fields: [soId], references: [id])
+  journalEntry JournalEntry?   @relation("ArInvoiceJe", fields: [jeId], references: [id])
+  lines        ArInvoiceLine[]
+  payments     ArPayment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, soId])
+  @@index([tenantId, status])
+  @@index([invoiceDate])
+  @@index([dueDate])
+  @@map("ar_invoices")
+}
+
+model ArInvoiceLine {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  invoiceId        String    @map("invoice_id") @db.Uuid
+  lineNumber       Int       @map("line_number")
+  itemId           String?   @map("item_id") @db.Uuid
+  description      String?   @db.Text
+  quantity         Decimal   @db.Decimal(15, 3)
+  uom              String?   @db.VarChar(20)
+  unitPrice        Decimal   @map("unit_price") @db.Decimal(15, 4)
+  discountPercent  Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  lineTotal        Decimal   @map("line_total") @db.Decimal(15, 2)
+  cogsAmount       Decimal?  @map("cogs_amount") @db.Decimal(15, 2)
+  revenueAccountId String?   @map("revenue_account_id") @db.Uuid
+  cogsAccountId    String?   @map("cogs_account_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String    @map("created_by") @db.Uuid
+  updatedBy        String    @map("updated_by") @db.Uuid
+  deletedBy        String?   @map("deleted_by") @db.Uuid
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  invoice        ArInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item           Item?     @relation(fields: [itemId], references: [id])
+  revenueAccount Account?  @relation("ArLineRevenueAccount", fields: [revenueAccountId], references: [id])
+  cogsAccount    Account?  @relation("ArLineCogsAccount", fields: [cogsAccountId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([itemId])
+  @@map("ar_invoice_lines")
+}
+
+model ArPayment {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  invoiceId     String    @map("invoice_id") @db.Uuid
+  paymentNumber String    @map("payment_number") @db.VarChar(50)
+  paymentDate   DateTime  @default(dbgenerated("CURRENT_DATE")) @map("payment_date") @db.Date
+  amount        Decimal   @db.Decimal(15, 2)
+  paymentMethod String?   @map("payment_method") @db.VarChar(50)
+  reference     String?   @db.VarChar(255)
+  jeId          String?   @map("je_id") @db.Uuid
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  updatedBy     String    @map("updated_by") @db.Uuid
+  deletedBy     String?   @map("deleted_by") @db.Uuid
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  invoice      ArInvoice     @relation(fields: [invoiceId], references: [id])
+  journalEntry JournalEntry? @relation("ArPaymentJe", fields: [jeId], references: [id])
+
+  @@unique([tenantId, paymentNumber])
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("ar_payments")
+}
+
+// ============================================================================
 // END OF SCHEMA
 // ============================================================================
 // Total tables: ~50 core tables
 // Ready for: prisma generate && prisma migrate dev
 // ============================================================================
+
+
