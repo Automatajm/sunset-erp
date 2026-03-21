@@ -651,6 +651,16 @@ function DashboardContent() {
           { indicator: 'Revenue',       current: fmtK(revenue),          previous: fmtK(prevRev),        vsP: vRP.s,  vsPPos: vRP.pos,  ytd: fmtOrDash(ytRev),       prevYtd: fmtOrDash(pyRev),        vsYtd: vRY.s,  vsYtdPos: vRY.pos,  statusPos: vRY.pos  },
           { indicator: 'Cost of Sales', current: fmtK(cosTotal),         previous: fmtK(prevCoS),        vsP: vCP.s,  vsPPos: vCP.pos,  ytd: fmtOrDash(ytCos),       prevYtd: fmtOrDash(pyCoS),        vsYtd: vCY.s,  vsYtdPos: vCY.pos,  statusPos: vCY.pos  },
           { indicator: 'Gross Profit',  current: fmtK(revenue-cosTotal), previous: fmtK(prevRev-prevCoS),vsP: vGP.s,  vsPPos: vGP.pos,  ytd: fmtOrDash(ytRev-ytCos), prevYtd: fmtOrDash(pyRev-pyCoS),  vsYtd: vGY.s,  vsYtdPos: vGY.pos,  statusPos: vGY.pos  },
+          { indicator: 'Gross Margin %',
+            current: grossMarginPct,
+            previous: prevRev > 0 ? ((prevRev-prevCoS)/prevRev*100).toFixed(1)+'%' : '—',
+            vsP: (() => { const c=revenue>0?(revenue-cosTotal)/revenue*100:0; const p=prevRev>0?(prevRev-prevCoS)/prevRev*100:0; if(!p)return'—'; const d=c-p; return`${d>=0?'+':''}${d.toFixed(1)}pp`; })(),
+            vsPPos: revenue>0&&prevRev>0 ? (revenue-cosTotal)/revenue>=(prevRev-prevCoS)/prevRev : true,
+            ytd: ytRev > 0 ? ((ytRev-ytCos)/ytRev*100).toFixed(1)+'%' : '—',
+            prevYtd: pyRev>0 ? ((pyRev-pyCoS)/pyRev*100).toFixed(1)+'%' : '—',
+            vsYtd: (() => { const c=ytRev>0?(ytRev-ytCos)/ytRev*100:0; const p=pyRev>0?(pyRev-pyCoS)/pyRev*100:0; if(!p)return'—'; const d=c-p; return`${d>=0?'+':''}${d.toFixed(1)}pp`; })(),
+            vsYtdPos: ytRev>0&&pyRev>0 ? (ytRev-ytCos)/ytRev>=(pyRev-pyCoS)/pyRev : true,
+            statusPos: ytRev>0&&pyRev>0 ? (ytRev-ytCos)/ytRev>=(pyRev-pyCoS)/pyRev : true },
           { indicator: 'Net Income',    current: fmtK(netIncome),        previous: fmtK(prevNI),         vsP: vNP.s,  vsPPos: vNP.pos,  ytd: fmtOrDash(ytRev-ytCos-ytExp), prevYtd: fmtOrDash(pyRev-pyCoS-pyExp), vsYtd: vNY.s, vsYtdPos: vNY.pos, statusPos: vNY.pos },
           { indicator: 'Expenses',      current: fmtK(expenses),         previous: fmtK(prevExp),        vsP: vEP.s,  vsPPos: vEP.pos,  ytd: fmtOrDash(ytExp),       prevYtd: fmtOrDash(pyExp),        vsYtd: vEY.s,  vsYtdPos: vEY.pos,  statusPos: vEY.pos  },
           { indicator: 'Bank Balance',  current: fmtK(cashInBank),       previous: '—',                  vsP: '—',    vsPPos: true,     ytd: fmtK(cashInBank),       prevYtd: '—',                     vsYtd: '—',    vsYtdPos: true,     statusPos: cashInBank > 0 },
@@ -667,7 +677,12 @@ function DashboardContent() {
             vsP: vsStr(ebit, prevEbit).s, vsPPos: vsStr(ebit, prevEbit).pos,
             ytd: fmtOrDash(pyt.ebit ?? 0), prevYtd: '—', vsYtd: '—', vsYtdPos: true,
             statusPos: ebit >= prevEbit, isSubtotal: true },
-          { indicator: 'D&A',           current: fmtK(deprCur), previous: fmtK(prevDepr), vsP: '—', vsPPos: true, ytd: '—', prevYtd: '—', vsYtd: '—', vsYtdPos: true, statusPos: true },
+          { indicator: 'D&A',
+            current: fmtK(deprCur), previous: fmtK(prevDepr),
+            vsP: (() => { if(!prevDepr)return'—'; const d=deprCur-prevDepr; const p=(d/prevDepr*100).toFixed(1); return`${d>=0?'+':''}${fmtK(d)} / ${d>=0?'+':''}${p}%`; })(),
+            vsPPos: deprCur <= prevDepr,
+            ytd: ytRev > 0 ? fmtK(deprCur*(ytRev/Math.max(revenue,1))) : '—',
+            prevYtd: '—', vsYtd: '—', vsYtdPos: true, statusPos: true },
           { indicator: 'EBITDA',
             current: fmtK(ebitda), previous: fmtK(prevEbitda),
             vsP: vsStr(ebitda, prevEbitda).s, vsPPos: vsStr(ebitda, prevEbitda).pos,
@@ -724,6 +739,20 @@ function DashboardContent() {
         const budCosY = sumBudget(ytdMonths, '5');
         const budExpY = sumBudget(ytdMonths, '6.1') + sumBudget(ytdMonths, '6.2') + sumBudget(ytdMonths, '6.3');
 
+        // ── Derived budget metrics ────────────────────────────────────────────
+        const budGrossP  = budRev - budCos;
+        const budSga     = sumBudget(pdMonths, '6.1') + sumBudget(pdMonths, '6.2') - sumBudget(pdMonths, '6.2.06');
+        const budDepr    = sumBudget(pdMonths, '6.2.06');
+        const budInt     = sumBudget(pdMonths, '6.3');
+        const budEbit    = budGrossP - budSga;
+        const budEbitda  = budEbit + budDepr;
+
+        const budGrossPY = budRevY - budCosY;
+        const budSgaY    = sumBudget(ytdMonths, '6.1') + sumBudget(ytdMonths, '6.2') - sumBudget(ytdMonths, '6.2.06');
+        const budDeprY   = sumBudget(ytdMonths, '6.2.06');
+        const budEbitY   = budGrossPY - budSgaY;
+        const budEbitdaY = budEbitY + budDeprY;
+
         // ── Variance formatter ──
         const varFmt = (act: number, bud: number): { str: string; pos: boolean } => {
           if (bud === 0 || act === 0) return { str: '—', pos: true };
@@ -774,8 +803,13 @@ function DashboardContent() {
             ytd: fmtOrDash(ytRev-ytCos), budgetYtd: fmtOrDash(budRevY-budCosY), varYtd: vGMY.str, varYtdPos: vGMY.pos, statusPos: vGMY.pos },
           { indicator: 'Gross Margin %',
             today: tdGMpct, thisWeek: wkGMpct,
-            current: grossMarginPct, budget: budGMpct, varBud: '—', varBudPos: true,
-            ytd: ytGMpct, budgetYtd: budGMpctY, varYtd: '—', varYtdPos: true, statusPos: (ytRev-ytCos) >= (budRevY-budCosY) },
+            current: grossMarginPct, budget: budGMpct,
+            varBud: (() => { const c=revenue>0?(revenue-cosTotal)/revenue*100:0; const b=budRev>0?(budRev-budCos)/budRev*100:0; if(!b)return'—'; const d=c-b; return`${d>=0?'+':''}${d.toFixed(1)}pp`; })(),
+            varBudPos: revenue>0&&budRev>0 ? (revenue-cosTotal)/revenue>=(budRev-budCos)/budRev : true,
+            ytd: ytGMpct, budgetYtd: budGMpctY,
+            varYtd: (() => { const c=ytRev>0?(ytRev-ytCos)/ytRev*100:0; const b=budRevY>0?(budRevY-budCosY)/budRevY*100:0; if(!b)return'—'; const d=c-b; return`${d>=0?'+':''}${d.toFixed(1)}pp`; })(),
+            varYtdPos: ytRev>0&&budRevY>0 ? (ytRev-ytCos)/ytRev>=(budRevY-budCosY)/budRevY : true,
+            statusPos: (ytRev-ytCos) >= (budRevY-budCosY) },
           { indicator: 'Expenses',
             today: fmtOrDash(tdExp), thisWeek: fmtOrDash(wkExp),
             current: fmtK(expenses), budget: fmtOrDash(budExp), varBud: vExp.str, varBudPos: vExp.pos,
@@ -784,23 +818,26 @@ function DashboardContent() {
           { indicator: '─── Operating ───', today:'', thisWeek:'', current:'', budget:'', varBud:'', varBudPos:true, ytd:'', budgetYtd:'', varYtd:'', varYtdPos:true, statusPos:true, isSubtotal:true },
           { indicator: 'SG&A',
             today: '—', thisWeek: '—',
-            current: fmtK(sgaCur), budget: '—', varBud: '—', varBudPos: sgaCur <= prevSga,
-            ytd: fmtOrDash(pyt.sga?.total ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
-            statusPos: sgaCur <= prevSga },
+            current: fmtK(sgaCur), budget: fmtOrDash(budSga), varBud: varCost(sgaCur, budSga).str, varBudPos: varCost(sgaCur, budSga).pos,
+            ytd: fmtOrDash(pyt.sga?.total ?? 0), budgetYtd: fmtOrDash(budSgaY), varYtd: varCost(pyt.sga?.total ?? 0, budSgaY).str, varYtdPos: varCost(pyt.sga?.total ?? 0, budSgaY).pos,
+            statusPos: varCost(pyt.sga?.total ?? 0, budSgaY).pos },
           { indicator: 'EBIT',
             today: '—', thisWeek: '—',
-            current: fmtK(ebit), budget: '—', varBud: '—', varBudPos: true,
-            ytd: fmtOrDash(pyt.ebit ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
-            statusPos: ebit >= prevEbit, isSubtotal: true },
+            current: fmtK(ebit), budget: fmtOrDash(budEbit), varBud: varFmt(ebit, budEbit).str, varBudPos: varFmt(ebit, budEbit).pos,
+            ytd: fmtOrDash(pyt.ebit ?? 0), budgetYtd: fmtOrDash(budEbitY), varYtd: varFmt(pyt.ebit ?? 0, budEbitY).str, varYtdPos: varFmt(pyt.ebit ?? 0, budEbitY).pos,
+            statusPos: varFmt(pyt.ebit ?? 0, budEbitY).pos, isSubtotal: true },
           { indicator: 'D&A',
             today: '—', thisWeek: '—',
-            current: fmtK(deprCur), budget: '—', varBud: '—', varBudPos: true,
-            ytd: '—', budgetYtd: '—', varYtd: '—', varYtdPos: true, statusPos: true },
+            current: fmtK(deprCur), budget: fmtOrDash(budDepr),
+            varBud: varCost(deprCur, budDepr).str, varBudPos: varCost(deprCur, budDepr).pos,
+            ytd: fmtOrDash(pyt.depreciation?.total ?? 0), budgetYtd: fmtOrDash(budDeprY),
+            varYtd: varCost(pyt.depreciation?.total ?? 0, budDeprY).str, varYtdPos: varCost(pyt.depreciation?.total ?? 0, budDeprY).pos,
+            statusPos: varCost(pyt.depreciation?.total ?? 0, budDeprY).pos },
           { indicator: 'EBITDA',
             today: '—', thisWeek: '—',
-            current: fmtK(ebitda), budget: '—', varBud: '—', varBudPos: true,
-            ytd: fmtOrDash(pyt.ebitda ?? 0), budgetYtd: '—', varYtd: '—', varYtdPos: true,
-            statusPos: ebitda >= prevEbitda, isSubtotal: true },
+            current: fmtK(ebitda), budget: fmtOrDash(budEbitda), varBud: varFmt(ebitda, budEbitda).str, varBudPos: varFmt(ebitda, budEbitda).pos,
+            ytd: fmtOrDash(pyt.ebitda ?? 0), budgetYtd: fmtOrDash(budEbitdaY), varYtd: varFmt(pyt.ebitda ?? 0, budEbitdaY).str, varYtdPos: varFmt(pyt.ebitda ?? 0, budEbitdaY).pos,
+            statusPos: varFmt(pyt.ebitda ?? 0, budEbitdaY).pos, isSubtotal: true },
         ]);
 
       } catch { /* non-blocking */ }
