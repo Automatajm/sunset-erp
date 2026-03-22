@@ -839,6 +839,37 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "auto_automation_configs" {
+    String id "🗝️"
+    String tenant_id 
+    String module 
+    String mode 
+    Boolean is_enabled 
+    String notes "❓"
+    DateTime updated_at 
+    String updated_by "❓"
+    }
+  
+
+  "auto_je_queue" {
+    String id "🗝️"
+    String tenant_id 
+    String je_id 
+    String event_type 
+    String source_type 
+    String source_id 
+    String source_ref "❓"
+    String status 
+    String reviewed_by "❓"
+    DateTime reviewed_at "❓"
+    String reject_reason "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -926,4 +957,7 @@ erDiagram
     "mfg_bom_routings" }o--|| saas_tenants : "tenant"
     "mfg_bom_routings" }o--|| mfg_boms : "bom"
     "mfg_bom_routings" }o--|| mfg_work_centers : "workCenter"
+    "auto_automation_configs" }o--|| saas_tenants : "tenant"
+    "auto_je_queue" }o--|| saas_tenants : "tenant"
+    "auto_je_queue" }o--|| ac_journal_entries : "journalEntry"
 ```

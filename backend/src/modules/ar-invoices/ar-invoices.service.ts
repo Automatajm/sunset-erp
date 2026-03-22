@@ -6,10 +6,14 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { CreateArInvoiceDto } from './dto/create-ar-invoice.dto';
 import { UpdateArInvoiceDto, ApplyPaymentDto } from './dto/update-ar-invoice.dto';
+import { AutomationService } from '../automation/automation.service';
 
 @Injectable()
 export class ArInvoicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private automation: AutomationService,
+  ) {}
 
   async create(tenantId: string, userId: string, dto: CreateArInvoiceDto) {
     const customer = await this.prisma.customer.findFirst({
@@ -202,12 +206,22 @@ export class ArInvoicesService {
       throw new BadRequestException(`Cannot send invoice in status "${invoice.status}"`);
     }
     const je = await this.createInvoiceJe(tenantId, userId, invoice);
+
+    // If manual mode, je is null — invoice goes to sent without JE
     const updated = await this.prisma.arInvoice.update({
       where: { id },
-      data: { status: 'sent', jeId: je.id, updatedBy: userId },
+      data: {
+        status: 'sent',
+        jeId: je?.id ?? null,
+        updatedBy: userId,
+      },
       include: this.defaultInclude(),
     });
-    return { message: `Invoice ${invoice.invoiceNumber} sent`, invoice: updated, journalEntry: je };
+    return {
+      message: `Invoice ${invoice.invoiceNumber} sent`,
+      invoice: updated,
+      journalEntry: je,
+    };
   }
 
   async void(tenantId: string, userId: string, id: string) {
@@ -236,6 +250,7 @@ export class ArInvoicesService {
     }
     const paymentNumber = await this.generatePaymentNumber(tenantId);
     const je = await this.createPaymentJe(tenantId, userId, invoice, dto);
+
     const payment = await this.prisma.arPayment.create({
       data: {
         tenantId,
@@ -245,7 +260,7 @@ export class ArInvoicesService {
         amount: dto.amount,
         paymentMethod: dto.paymentMethod ?? null,
         reference: dto.reference ?? null,
-        jeId: je.id,
+        jeId: je?.id ?? null,
         notes: dto.notes ?? null,
         createdBy: userId,
         updatedBy: userId,
@@ -377,23 +392,13 @@ export class ArInvoicesService {
       throw new BadRequestException('Accounts 1.1.03 (AR) and 4.1.01 (Revenue) required for JE');
     }
 
-    const entryNumber = await this.generateJeNumber(tenantId);
+    const entryNumber  = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(invoice.invoiceDate));
-    const totalAmount = Number(invoice.totalAmount);
+    const totalAmount  = Number(invoice.totalAmount);
 
     const lines: any[] = [
-      {
-        tenantId, lineNumber: 1, accountId: arAccount.id,
-        description: `AR — Invoice ${invoice.invoiceNumber}`,
-        debitAmount: totalAmount, creditAmount: 0,
-        createdBy: userId, updatedBy: userId,
-      },
-      {
-        tenantId, lineNumber: 2, accountId: revenueAccount.id,
-        description: `Revenue — Invoice ${invoice.invoiceNumber}`,
-        debitAmount: 0, creditAmount: totalAmount,
-        createdBy: userId, updatedBy: userId,
-      },
+      { lineNumber: 1, accountId: arAccount.id,      description: `AR — Invoice ${invoice.invoiceNumber}`,      debitAmount: totalAmount, creditAmount: 0 },
+      { lineNumber: 2, accountId: revenueAccount.id, description: `Revenue — Invoice ${invoice.invoiceNumber}`, debitAmount: 0,           creditAmount: totalAmount },
     ];
 
     let lineNumber = 3;
@@ -402,82 +407,70 @@ export class ArInvoicesService {
       const cogsAcct = line.cogsAccountId
         ? await this.prisma.account.findFirst({ where: { id: line.cogsAccountId, tenantId } })
         : await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '5.1.01', deletedAt: null } });
-      const fgAcct = await this.prisma.account.findFirst({
-        where: { tenantId, accountNumber: '1.1.05', deletedAt: null },
-      });
+      const fgAcct = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.05', deletedAt: null } });
       if (cogsAcct && fgAcct) {
         lines.push(
-          {
-            tenantId, lineNumber: lineNumber++, accountId: cogsAcct.id,
-            description: `CoGS — ${line.description ?? 'line'}`,
-            debitAmount: Number(line.cogsAmount), creditAmount: 0,
-            createdBy: userId, updatedBy: userId,
-          },
-          {
-            tenantId, lineNumber: lineNumber++, accountId: fgAcct.id,
-            description: `FG Inv — ${line.description ?? 'line'}`,
-            debitAmount: 0, creditAmount: Number(line.cogsAmount),
-            createdBy: userId, updatedBy: userId,
-          },
+          { lineNumber: lineNumber++, accountId: cogsAcct.id, description: `CoGS — ${line.description ?? 'line'}`, debitAmount: Number(line.cogsAmount), creditAmount: 0 },
+          { lineNumber: lineNumber++, accountId: fgAcct.id,   description: `FG Inv — ${line.description ?? 'line'}`, debitAmount: 0, creditAmount: Number(line.cogsAmount) },
         );
       }
     }
 
-    return this.prisma.journalEntry.create({
-      data: {
-        tenantId, entryNumber,
-        entryDate: new Date(invoice.invoiceDate),
-        postingDate: new Date(invoice.invoiceDate),
-        fiscalPeriod, journalType: 'ar_invoice',
-        reference: invoice.invoiceNumber,
-        description: `AR Invoice — ${invoice.invoiceNumber} — ${invoice.customer?.name ?? ''}`,
-        status: 'posted', createdBy: userId, updatedBy: userId,
-        lines: { create: lines },
+    const result = await this.automation.handleAutoJe({
+      tenantId,
+      userId,
+      module:     'ar_invoice',
+      eventType:  'ar_invoice',
+      sourceType: 'ar_invoice',
+      sourceId:   invoice.id,
+      sourceRef:  invoice.invoiceNumber,
+      jeData: {
+        entryNumber,
+        entryDate:    new Date(invoice.invoiceDate),
+        fiscalPeriod,
+        journalType:  'ar_invoice',
+        reference:    invoice.invoiceNumber,
+        description:  `AR Invoice — ${invoice.invoiceNumber} — ${invoice.customer?.name ?? ''}`,
+        lines,
       },
-      include: { lines: true },
     });
+
+    return result.je;
   }
 
   private async createPaymentJe(tenantId: string, userId: string, invoice: any, dto: ApplyPaymentDto) {
-    const cashAccount = await this.prisma.account.findFirst({
-      where: { tenantId, accountNumber: '1.1.02', deletedAt: null },
-    });
-    const arAccount = await this.prisma.account.findFirst({
-      where: { tenantId, accountNumber: '1.1.03', deletedAt: null },
-    });
+    const cashAccount = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.02', deletedAt: null } });
+    const arAccount   = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.03', deletedAt: null } });
     if (!cashAccount || !arAccount) {
       throw new BadRequestException('Accounts 1.1.02 (Cash) and 1.1.03 (AR) required for payment JE');
     }
-    const entryNumber = await this.generateJeNumber(tenantId);
+
+    const entryNumber  = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(dto.paymentDate));
-    return this.prisma.journalEntry.create({
-      data: {
-        tenantId, entryNumber,
-        entryDate: new Date(dto.paymentDate),
-        postingDate: new Date(dto.paymentDate),
-        fiscalPeriod, journalType: 'ar_payment',
-        reference: dto.reference ?? invoice.invoiceNumber,
-        description: `Payment received — Invoice ${invoice.invoiceNumber}`,
-        status: 'posted', createdBy: userId, updatedBy: userId,
-        lines: {
-          create: [
-            {
-              tenantId, lineNumber: 1, accountId: cashAccount.id,
-              description: `Cash received — Inv ${invoice.invoiceNumber}`,
-              debitAmount: dto.amount, creditAmount: 0,
-              createdBy: userId, updatedBy: userId,
-            },
-            {
-              tenantId, lineNumber: 2, accountId: arAccount.id,
-              description: `AR cleared — Inv ${invoice.invoiceNumber}`,
-              debitAmount: 0, creditAmount: dto.amount,
-              createdBy: userId, updatedBy: userId,
-            },
-          ],
-        },
+
+    const result = await this.automation.handleAutoJe({
+      tenantId,
+      userId,
+      module:     'ar_payment',
+      eventType:  'ar_payment',
+      sourceType: 'ar_invoice',
+      sourceId:   invoice.id,
+      sourceRef:  invoice.invoiceNumber,
+      jeData: {
+        entryNumber,
+        entryDate:    new Date(dto.paymentDate),
+        fiscalPeriod,
+        journalType:  'ar_payment',
+        reference:    dto.reference ?? invoice.invoiceNumber,
+        description:  `Payment received — Invoice ${invoice.invoiceNumber}`,
+        lines: [
+          { lineNumber: 1, accountId: cashAccount.id, description: `Cash received — Inv ${invoice.invoiceNumber}`, debitAmount: dto.amount, creditAmount: 0 },
+          { lineNumber: 2, accountId: arAccount.id,   description: `AR cleared — Inv ${invoice.invoiceNumber}`,    debitAmount: 0,         creditAmount: dto.amount },
+        ],
       },
-      include: { lines: true },
     });
+
+    return result.je;
   }
 
   private async createReversalJe(tenantId: string, userId: string, invoice: any) {
@@ -485,25 +478,37 @@ export class ArInvoicesService {
       where: { id: invoice.jeId }, include: { lines: true },
     });
     if (!original) return;
-    const entryNumber = await this.generateJeNumber(tenantId);
+
+    const entryNumber  = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date());
     const reversedLines = original.lines.map((line, i) => ({
-      tenantId, lineNumber: i + 1, accountId: line.accountId,
-      description: `REVERSAL — ${line.description}`,
-      debitAmount: Number(line.creditAmount),
+      lineNumber:   i + 1,
+      accountId:    line.accountId,
+      description:  `REVERSAL — ${line.description}`,
+      debitAmount:  Number(line.creditAmount),
       creditAmount: Number(line.debitAmount),
-      createdBy: userId, updatedBy: userId,
     }));
-    return this.prisma.journalEntry.create({
-      data: {
-        tenantId, entryNumber, entryDate: new Date(), postingDate: new Date(),
-        fiscalPeriod, journalType: 'ar_reversal',
-        reference: invoice.invoiceNumber,
-        description: `VOID reversal — Invoice ${invoice.invoiceNumber}`,
-        status: 'posted', createdBy: userId, updatedBy: userId,
-        lines: { create: reversedLines },
+
+    const result = await this.automation.handleAutoJe({
+      tenantId,
+      userId,
+      module:     'ar_reversal',
+      eventType:  'ar_reversal',
+      sourceType: 'ar_invoice',
+      sourceId:   invoice.id,
+      sourceRef:  invoice.invoiceNumber,
+      jeData: {
+        entryNumber,
+        entryDate:    new Date(),
+        fiscalPeriod,
+        journalType:  'ar_reversal',
+        reference:    invoice.invoiceNumber,
+        description:  `VOID reversal — Invoice ${invoice.invoiceNumber}`,
+        lines: reversedLines,
       },
     });
+
+    return result.je;
   }
 
   private defaultInclude() {
@@ -543,7 +548,6 @@ export class ArInvoicesService {
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const prefix = `JE-${year}${month}`;
-
     const last = await this.prisma.journalEntry.findFirst({
       where: { tenantId, entryNumber: { startsWith: prefix } },
       orderBy: { entryNumber: 'desc' },

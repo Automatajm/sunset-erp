@@ -21,6 +21,8 @@ import { FiscalPeriodsModule } from './modules/fiscal-periods/fiscal-periods.mod
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { CashFlowModule } from './modules/cash-flow/cash-flow.module';
 import { ArInvoicesModule } from './modules/ar-invoices/ar-invoices.module';
+import { AutomationModule } from './modules/automation/automation.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -45,6 +47,7 @@ import { ArInvoicesModule } from './modules/ar-invoices/ar-invoices.module';
     BudgetsModule,
     CashFlowModule,
     ArInvoicesModule,
+    AutomationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
