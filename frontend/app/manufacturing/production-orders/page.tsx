@@ -122,7 +122,6 @@ function DeliverModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: 
                 <input type="number" min="0" step="0.0001" placeholder="0.85" style={INPUT} value={form.unitCost} onChange={e => setForm(f => ({ ...f, unitCost: e.target.value }))} />
               </Field>
             </div>
-            {/* Variance preview */}
             {form.quantityDelivered && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${variance === 0 ? 'rgba(255,255,255,0.08)' : variance < 0 ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}`, borderRadius: 7, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Variance</span>
@@ -219,38 +218,103 @@ function LaborModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: ()
   );
 }
 
-// ─── Actuals Panel (expandable) ───────────────────────────────────────────────
+// ─── Actuals Panel ────────────────────────────────────────────────────────────
 
 function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () => void }) {
   const [tab, setTab] = useState<'labor' | 'materials' | 'variances'>('labor');
   const [laborData,    setLaborData]    = useState<{ actuals: LaborActual[]; summary: LaborSummary } | null>(null);
   const [materialData, setMaterialData] = useState<{ actuals: MaterialActual[]; summary: MaterialSummary } | null>(null);
   const [varianceData, setVarianceData] = useState<{ variances: Variance[]; summary: any } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [postingJe, setPostingJe] = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(false);
+  const [postingJe,    setPostingJe]    = useState<string | null>(null);
+
+  const [loadingBom,         setLoadingBom]         = useState(false);
+  const [loadingRouting,     setLoadingRouting]     = useState(false);
+  const [bomSuggestions,     setBomSuggestions]     = useState<any[] | null>(null);
+  const [bomSelected,        setBomSelected]        = useState<Set<string>>(new Set());
+  const [routingSuggestions, setRoutingSuggestions] = useState<any[] | null>(null);
+  const [routingSelected,    setRoutingSelected]    = useState<Set<number>>(new Set());
+
+  const canPost = ['released', 'in_progress', 'completed'].includes(mo.status);
 
   const load = useCallback(async (t: typeof tab) => {
     setLoading(true);
     try {
-      if (t === 'labor') {
-        setLaborData(await (productionOrdersApi as any).getLaborActuals(mo.id));
-      } else if (t === 'materials') {
-        setMaterialData(await (productionOrdersApi as any).getMaterialActuals(mo.id));
-      } else {
-        setVarianceData(await (productionOrdersApi as any).getVariances(mo.id));
-      }
+      if (t === 'labor')          setLaborData(await (productionOrdersApi as any).getLaborActuals(mo.id));
+      else if (t === 'materials') setMaterialData(await (productionOrdersApi as any).getMaterialActuals(mo.id));
+      else                        setVarianceData(await (productionOrdersApi as any).getVariances(mo.id));
     } finally { setLoading(false); }
   }, [mo.id]);
 
   useEffect(() => { load(tab); }, [tab, load]);
 
+  // ── Load from BOM ──────────────────────────────
+  const handleLoadFromBom = async () => {
+    if (!mo.bomId) return;
+    setLoadingBom(true);
+    try {
+      const suggestions = await bomApi.getMaterialSuggestions(mo.bomId, mo.quantityToProduce);
+      const list = Array.isArray(suggestions) ? suggestions : [];
+      setBomSuggestions(list);
+      setBomSelected(new Set(list.map((s: any) => s.itemId)));
+    } catch { setBomSuggestions([]); }
+    finally { setLoadingBom(false); }
+  };
+
+  const handleConfirmBomSuggestions = async () => {
+    if (!bomSuggestions) return;
+    const selected = bomSuggestions.filter(s => bomSelected.has(s.itemId));
+    if (selected.length === 0) return;
+    setLoadingBom(true);
+    try {
+      for (const s of selected) {
+        await (productionOrdersApi as any).addMaterialActual(mo.id, {
+          itemId: s.itemId, qtyPlanned: s.qtyPlanned, qtyActual: s.qtyPlanned, unitCost: 0, notes: s.note,
+        });
+      }
+      setBomSuggestions(null);
+      setBomSelected(new Set());
+      await load('materials');
+    } finally { setLoadingBom(false); }
+  };
+
+  // ── Load from Routing ──────────────────────────
+  const handleLoadFromRouting = async () => {
+    if (!mo.bomId) return;
+    setLoadingRouting(true);
+    try {
+      const estimate = await bomApi.getLaborEstimate(mo.bomId, mo.quantityToProduce);
+      const steps = estimate.steps ?? [];
+      setRoutingSuggestions(steps);
+      setRoutingSelected(new Set(steps.map((s: any) => s.stepNumber)));
+    } catch { setRoutingSuggestions([]); }
+    finally { setLoadingRouting(false); }
+  };
+
+  const handleConfirmRoutingSuggestions = async () => {
+    if (!routingSuggestions) return;
+    const selected = routingSuggestions.filter(s => routingSelected.has(s.stepNumber));
+    if (selected.length === 0) return;
+    setLoadingRouting(true);
+    try {
+      for (const s of selected) {
+        await (productionOrdersApi as any).addLaborActual(mo.id, {
+          hoursPlanned: s.totalHours,
+          hoursActual:  s.totalHours,
+          laborRate:    s.costPerHour || undefined,
+          notes:        `${s.description ?? ''} — ${s.workCenter?.name ?? ''}`.trim(),
+        });
+      }
+      setRoutingSuggestions(null);
+      setRoutingSelected(new Set());
+      await load('labor');
+    } finally { setLoadingRouting(false); }
+  };
+
   const handlePostJe = async (varianceId: string) => {
     setPostingJe(varianceId);
-    try {
-      await (productionOrdersApi as any).postVarianceJe(varianceId, {});
-      await load('variances');
-      onRefresh();
-    } finally { setPostingJe(null); }
+    try { await (productionOrdersApi as any).postVarianceJe(varianceId, {}); await load('variances'); onRefresh(); }
+    finally { setPostingJe(null); }
   };
 
   const TAB_STYLE = (active: boolean, color: string): React.CSSProperties => ({
@@ -261,35 +325,112 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
     transition: 'all 0.15s',
   });
 
+  const SuggestBtn = ({ label, loading: btnLoading, onClick, color }: { label: string; loading: boolean; onClick: () => void; color: string }) => (
+    <button onClick={onClick} disabled={btnLoading || !mo.bomId || !canPost}
+      title={!canPost ? 'Release MO first to load suggestions' : !mo.bomId ? 'No BOM linked' : undefined}
+      style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: mo.bomId && canPost ? 'pointer' : 'not-allowed', color, background: `${color}15`, border: `0.5px solid ${color}30`, fontFamily: "'IBM Plex Sans',sans-serif", opacity: btnLoading || !mo.bomId || !canPost ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+      {btnLoading ? '…' : `⚡ ${label}`}
+    </button>
+  );
+
+  const CB_STYLE: React.CSSProperties = { width: 14, height: 14, cursor: 'pointer', accentColor: '#a78bfa' };
+
   return (
     <div style={{ padding: '10px 40px 16px', background: 'rgba(255,255,255,0.01)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        <button style={TAB_STYLE(tab === 'labor', '#a78bfa')} onClick={() => setTab('labor')}>⏱ Labor</button>
+        <button style={TAB_STYLE(tab === 'labor',     '#a78bfa')} onClick={() => setTab('labor')}>⏱ Labor</button>
         <button style={TAB_STYLE(tab === 'materials', '#fb923c')} onClick={() => setTab('materials')}>📦 Materials</button>
         <button style={TAB_STYLE(tab === 'variances', '#f87171')} onClick={() => setTab('variances')}>⚠ Variances</button>
       </div>
 
       {loading ? (
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: '8px 0' }}>Loading…</div>
+
       ) : tab === 'labor' && laborData ? (
         <>
-          {/* Labor summary */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Planned', value: `${laborData.summary.totalPlannedHours}h`, color: 'rgba(255,255,255,0.5)' },
-              { label: 'Actual',  value: `${laborData.summary.totalActualHours}h`,  color: '#a78bfa' },
-              { label: 'Variance', value: `${laborData.summary.varianceHours > 0 ? '+' : ''}${laborData.summary.varianceHours}h`, color: laborData.summary.varianceHours > 0 ? '#f87171' : '#4ade80' },
-              { label: 'Labor Cost', value: fmtAmt(laborData.summary.totalLaborCost), color: '#e2dfd8' },
-              { label: 'Efficiency', value: laborData.summary.efficiency ? `${laborData.summary.efficiency.toFixed(1)}%` : '—', color: (laborData.summary.efficiency ?? 0) >= 90 ? '#4ade80' : '#fbbf24' },
-            ].map(s => (
-              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
-                <span style={{ ...MONO, color: s.color, fontSize: 13 }}>{s.value}</span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Planned',    value: `${laborData.summary.totalPlannedHours}h`,                                              color: 'rgba(255,255,255,0.5)' },
+                { label: 'Actual',     value: `${laborData.summary.totalActualHours}h`,                                               color: '#a78bfa' },
+                { label: 'Variance',   value: `${laborData.summary.varianceHours > 0 ? '+' : ''}${laborData.summary.varianceHours}h`, color: laborData.summary.varianceHours > 0 ? '#f87171' : '#4ade80' },
+                { label: 'Labor Cost', value: fmtAmt(laborData.summary.totalLaborCost),                                               color: '#e2dfd8' },
+                { label: 'Efficiency', value: laborData.summary.efficiency ? `${laborData.summary.efficiency.toFixed(1)}%` : '—',    color: (laborData.summary.efficiency ?? 0) >= 90 ? '#4ade80' : '#fbbf24' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
+                  <span style={{ ...MONO, color: s.color, fontSize: 13 }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+            <SuggestBtn label="Load from Routing" loading={loadingRouting} onClick={handleLoadFromRouting} color="#a78bfa" />
           </div>
-          {/* Labor rows */}
+
+          {/* Routing suggestions with checkboxes */}
+          {routingSuggestions && routingSuggestions.length > 0 && (
+            <div style={{ background: 'rgba(167,139,250,0.06)', border: '0.5px solid rgba(167,139,250,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(167,139,250,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Routing Suggestions — select steps to add
+                </span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button onClick={() => setRoutingSelected(new Set(routingSuggestions.map(s => s.stepNumber)))}
+                    style={{ fontSize: 11, color: 'rgba(167,139,250,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                    Select all
+                  </button>
+                  <button onClick={() => setRoutingSelected(new Set())}
+                    style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 10 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 30, padding: '3px 8px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}></th>
+                    {['Step', 'Description', 'Work Center', 'Setup (h)', 'Run (h)', 'Total (h)', 'Est. Cost'].map(h => (
+                      <th key={h} style={{ padding: '3px 8px', fontSize: 10, color: 'rgba(167,139,250,0.5)', fontWeight: 500, textTransform: 'uppercase', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {routingSuggestions.map((s: any) => {
+                    const checked = routingSelected.has(s.stepNumber);
+                    return (
+                      <tr key={s.stepNumber} style={{ opacity: checked ? 1 : 0.4, cursor: 'pointer' }}
+                        onClick={() => setRoutingSelected(prev => { const n = new Set(prev); checked ? n.delete(s.stepNumber) : n.add(s.stepNumber); return n; })}>
+                        <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+                          <input type="checkbox" style={CB_STYLE} checked={checked} onChange={() => {}} />
+                        </td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#a78bfa' }}>{s.stepNumber}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: '#e2dfd8' }}>{s.description || '—'}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{s.workCenter?.name}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, textAlign: 'right' }}>{s.setupTime}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, textAlign: 'right' }}>{s.totalRunHours}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#a78bfa', textAlign: 'right', fontWeight: 500 }}>{s.totalHours}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#4ade80', textAlign: 'right' }}>{fmtAmt(s.estimatedCost)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={handleConfirmRoutingSuggestions} disabled={loadingRouting || routingSelected.size === 0}
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: routingSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,#4c1d95,#6d28d9)', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingRouting || routingSelected.size === 0 ? 0.5 : 1 }}>
+                  {loadingRouting ? 'Adding…' : `✓ Add ${routingSelected.size} step${routingSelected.size !== 1 ? 's' : ''}`}
+                </button>
+                <button onClick={() => { setRoutingSuggestions(null); setRoutingSelected(new Set()); }}
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  Dismiss
+                </button>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{routingSelected.size} of {routingSuggestions.length} selected</span>
+              </div>
+            </div>
+          )}
+          {routingSuggestions && routingSuggestions.length === 0 && (
+            <div style={{ fontSize: 12, color: '#fbbf24', marginBottom: 10 }}>No routing steps defined. Add them in the BOM page first.</div>
+          )}
+
           {laborData.actuals.length === 0 ? (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>No labor actuals recorded yet.</div>
           ) : (
@@ -319,22 +460,89 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
             </table>
           )}
         </>
+
       ) : tab === 'materials' && materialData ? (
         <>
-          {/* Material summary */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Materials', value: String(materialData.summary.totalMaterials), color: '#e2dfd8' },
-              { label: 'Over-consumed', value: String(materialData.summary.overConsumed), color: materialData.summary.overConsumed > 0 ? '#f87171' : 'rgba(255,255,255,0.3)' },
-              { label: 'Under-consumed', value: String(materialData.summary.underConsumed), color: materialData.summary.underConsumed > 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' },
-              { label: 'Total Variance Cost', value: fmtAmt(materialData.summary.totalVarianceCost), color: materialData.summary.totalVarianceCost > 0 ? '#f87171' : materialData.summary.totalVarianceCost < 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' },
-            ].map(s => (
-              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
-                <span style={{ ...MONO, color: s.color, fontSize: 13 }}>{s.value}</span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Materials',       value: String(materialData.summary.totalMaterials),    color: '#e2dfd8' },
+                { label: 'Over-consumed',   value: String(materialData.summary.overConsumed),      color: materialData.summary.overConsumed > 0 ? '#f87171' : 'rgba(255,255,255,0.3)' },
+                { label: 'Under-consumed',  value: String(materialData.summary.underConsumed),     color: materialData.summary.underConsumed > 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' },
+                { label: 'Total Var. Cost', value: fmtAmt(materialData.summary.totalVarianceCost), color: materialData.summary.totalVarianceCost > 0 ? '#f87171' : materialData.summary.totalVarianceCost < 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
+                  <span style={{ ...MONO, color: s.color, fontSize: 13 }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+            <SuggestBtn label="Load from BOM" loading={loadingBom} onClick={handleLoadFromBom} color="#fb923c" />
           </div>
+
+          {/* BOM suggestions with checkboxes */}
+          {bomSuggestions && bomSuggestions.length > 0 && (
+            <div style={{ background: 'rgba(251,146,60,0.05)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  BOM Suggestions — select materials to add
+                </span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button onClick={() => setBomSelected(new Set(bomSuggestions.map(s => s.itemId)))}
+                    style={{ fontSize: 11, color: 'rgba(251,146,60,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                    Select all
+                  </button>
+                  <button onClick={() => setBomSelected(new Set())}
+                    style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 10 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 30, padding: '3px 8px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}></th>
+                    {['Item Code', 'Item Name', 'Qty Planned', 'UOM', 'Note'].map(h => (
+                      <th key={h} style={{ padding: '3px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bomSuggestions.map((s: any) => {
+                    const checked = bomSelected.has(s.itemId);
+                    return (
+                      <tr key={s.itemId} style={{ opacity: checked ? 1 : 0.4, cursor: 'pointer' }}
+                        onClick={() => setBomSelected(prev => { const n = new Set(prev); checked ? n.delete(s.itemId) : n.add(s.itemId); return n; })}>
+                        <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+                          <input type="checkbox" style={{ ...CB_STYLE, accentColor: '#fb923c' }} checked={checked} onChange={() => {}} />
+                        </td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#fb923c', fontSize: 11 }}>{s.itemCode}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: '#e2dfd8' }}>{s.itemName}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#fb923c', textAlign: 'right', fontWeight: 500 }}>{fmtNum(s.qtyPlanned)}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.uom}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 11, color: '#fbbf24' }}>{s.note || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={handleConfirmBomSuggestions} disabled={loadingBom || bomSelected.size === 0}
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: bomSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,#c2410c,#ea580c)', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingBom || bomSelected.size === 0 ? 0.5 : 1 }}>
+                  {loadingBom ? 'Adding…' : `✓ Add ${bomSelected.size} material${bomSelected.size !== 1 ? 's' : ''}`}
+                </button>
+                <button onClick={() => { setBomSuggestions(null); setBomSelected(new Set()); }}
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  Dismiss
+                </button>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{bomSelected.size} of {bomSuggestions.length} selected</span>
+              </div>
+            </div>
+          )}
+          {bomSuggestions && bomSuggestions.length === 0 && (
+            <div style={{ fontSize: 12, color: '#fbbf24', marginBottom: 10 }}>No BOM components found for this order.</div>
+          )}
+
           {materialData.actuals.length === 0 ? (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>No material actuals recorded yet.</div>
           ) : (
@@ -366,16 +574,16 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
             </table>
           )}
         </>
+
       ) : tab === 'variances' && varianceData ? (
         <>
-          {/* Variance summary */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
             {[
-              { label: 'Open', value: String(varianceData.summary.open), color: varianceData.summary.open > 0 ? '#fbbf24' : 'rgba(255,255,255,0.3)' },
-              { label: 'JE Posted', value: String(varianceData.summary.jePosted), color: '#4ade80' },
-              { label: 'Merma Cost', value: fmtAmt(varianceData.summary.totalMermaCost), color: '#f87171' },
+              { label: 'Open',          value: String(varianceData.summary.open),              color: varianceData.summary.open > 0 ? '#fbbf24' : 'rgba(255,255,255,0.3)' },
+              { label: 'JE Posted',     value: String(varianceData.summary.jePosted),          color: '#4ade80' },
+              { label: 'Merma Cost',    value: fmtAmt(varianceData.summary.totalMermaCost),   color: '#f87171' },
               { label: 'Surplus Value', value: fmtAmt(varianceData.summary.totalSurplusCost), color: '#4ade80' },
-              { label: 'Net', value: fmtAmt(varianceData.summary.netVarianceCost), color: varianceData.summary.netVarianceCost > 0 ? '#f87171' : '#4ade80' },
+              { label: 'Net',           value: fmtAmt(varianceData.summary.netVarianceCost),  color: varianceData.summary.netVarianceCost > 0 ? '#f87171' : '#4ade80' },
             ].map(s => (
               <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -409,9 +617,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                     </td>
                     <td style={{ padding: '5px 10px' }}>
                       {v.status === 'open' && v.totalCost && (
-                        <button
-                          onClick={() => handlePostJe(v.id)}
-                          disabled={postingJe === v.id}
+                        <button onClick={() => handlePostJe(v.id)} disabled={postingJe === v.id}
                           style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: postingJe === v.id ? 0.5 : 1 }}>
                           {postingJe === v.id ? '…' : 'Post JE'}
                         </button>
@@ -431,8 +637,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
 // ─── MO Row ───────────────────────────────────────────────────────────────────
 
 function MORow({ mo, boms, onStatusChange, actionBusy, onOpenLabor, onOpenDeliver, onRefresh }: {
-  mo: ProductionOrder;
-  boms: Bom[];
+  mo: ProductionOrder; boms: Bom[];
   onStatusChange: (id: string, status: string) => void;
   actionBusy: string | null;
   onOpenLabor: (mo: ProductionOrder) => void;
@@ -644,7 +849,6 @@ export default function ProductionOrdersPage() {
             </div>
           </div>
         )}
-
         <div className="mo-toolbar">
           <select className="mo-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as ProductionOrderStatus | '')}>
             <option value="">All Status</option>
@@ -655,9 +859,7 @@ export default function ProductionOrdersPage() {
             New Production Order
           </button>
         </div>
-
         {error && <div className="mo-error">{error}</div>}
-
         <div className="mo-wrap">
           {loading ? <div className="mo-loading">Loading…</div>
             : filtered.length === 0 ? <div className="mo-empty">{statusFilter ? 'No orders match.' : 'No production orders yet.'}</div>
@@ -669,16 +871,7 @@ export default function ProductionOrdersPage() {
                   </thead>
                   <tbody>
                     {filtered.map(mo => (
-                      <MORow
-                        key={mo.id}
-                        mo={mo}
-                        boms={boms}
-                        onStatusChange={handleStatusChange}
-                        actionBusy={actionBusy}
-                        onOpenLabor={setLaborMo}
-                        onOpenDeliver={setDeliverMo}
-                        onRefresh={fetchOrders}
-                      />
+                      <MORow key={mo.id} mo={mo} boms={boms} onStatusChange={handleStatusChange} actionBusy={actionBusy} onOpenLabor={setLaborMo} onOpenDeliver={setDeliverMo} onRefresh={fetchOrders} />
                     ))}
                   </tbody>
                 </table>
