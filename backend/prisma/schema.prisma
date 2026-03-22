@@ -120,6 +120,9 @@ model Tenant {
   arInvoices     ArInvoice[]
   arInvoiceLines ArInvoiceLine[]
   arPayments     ArPayment[]
+  moLaborActuals    MoLaborActual[]
+  moMaterialActuals MoMaterialActual[]
+  productionVariances ProductionVariance[]
   @@map("saas_tenants")
 }
 
@@ -628,6 +631,7 @@ model Item {
   boms               Bom[]               @relation("BomParentItem")
   bomComponents      BomComponent[]
   arInvoiceLines ArInvoiceLine[]
+  moMaterialActuals MoMaterialActual[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -847,6 +851,9 @@ model ProductionOrder {
   deletedBy String?   @map("deleted_by") @db.Uuid
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  laborActuals      MoLaborActual[]
+  materialActuals   MoMaterialActual[]
+  variances         ProductionVariance[]
 
   @@unique([tenantId, poNumber])
   @@index([tenantId])
@@ -1053,6 +1060,7 @@ model JournalEntry {
   lines  JournalEntryLine[]
   arInvoices  ArInvoice[]  @relation("ArInvoiceJe")
   arPayments  ArPayment[]  @relation("ArPaymentJe")
+  productionVariances ProductionVariance[] @relation("VarianceJe")
 
   @@unique([tenantId, entryNumber])
   @@index([tenantId])
@@ -1341,6 +1349,98 @@ model ArPayment {
   @@index([invoiceId])
   @@index([paymentDate])
   @@map("ar_payments")
+}
+
+// ============================================================================
+// MANUFACTURING ACTUALS TABLES (mfg_*)
+// Sprint 6 — Production Completeness
+// ============================================================================
+
+model MoLaborActual {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  moId         String    @map("mo_id") @db.Uuid
+  workDate     DateTime? @map("work_date") @db.Date
+  employeeId   String?   @map("employee_id") @db.VarChar(100)
+  employeeName String?   @map("employee_name") @db.VarChar(255)
+  hoursPlanned Decimal?  @map("hours_planned") @db.Decimal(8, 2)
+  hoursActual  Decimal   @map("hours_actual") @db.Decimal(8, 2)
+  laborRate    Decimal?  @map("labor_rate") @db.Decimal(10, 4)
+  laborCost    Decimal?  @map("labor_cost") @db.Decimal(15, 2)
+  notes        String?   @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([moId])
+  @@index([workDate])
+  @@map("mfg_mo_labor_actuals")
+}
+
+model MoMaterialActual {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  moId         String  @map("mo_id") @db.Uuid
+  itemId       String  @map("item_id") @db.Uuid
+  qtyPlanned   Decimal @map("qty_planned") @db.Decimal(15, 4)
+  qtyActual    Decimal @map("qty_actual") @db.Decimal(15, 4)
+  unitCost     Decimal @default(0) @map("unit_cost") @db.Decimal(10, 4)
+  varianceCost Decimal @default(0) @map("variance_cost") @db.Decimal(15, 2)
+  notes        String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  productionOrder ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
+  item            Item            @relation(fields: [itemId], references: [id])
+
+  @@index([tenantId])
+  @@index([moId])
+  @@index([itemId])
+  @@map("mfg_mo_material_actuals")
+}
+
+model ProductionVariance {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  moId         String   @map("mo_id") @db.Uuid
+  // merma | surplus | labor | material | overhead
+  varianceType String   @map("variance_type") @db.VarChar(50)
+  description  String?  @db.Text
+  quantity     Decimal? @db.Decimal(15, 4)
+  unitCost     Decimal? @map("unit_cost") @db.Decimal(10, 4)
+  totalCost    Decimal? @map("total_cost") @db.Decimal(15, 2)
+  // open | je_posted | closed
+  status       String   @default("open") @db.VarChar(20)
+  jeId         String?  @map("je_id") @db.Uuid
+  notes        String?  @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  productionOrder ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
+  journalEntry    JournalEntry?   @relation("VarianceJe", fields: [jeId], references: [id])
+
+  @@index([tenantId])
+  @@index([moId])
+  @@index([status])
+  @@index([varianceType])
+  @@map("mfg_production_variances")
 }
 
 // ============================================================================

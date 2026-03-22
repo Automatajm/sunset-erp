@@ -761,6 +761,64 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "mfg_mo_labor_actuals" {
+    String id "🗝️"
+    String tenant_id 
+    String mo_id 
+    DateTime work_date "❓"
+    String employee_id "❓"
+    String employee_name "❓"
+    Decimal hours_planned "❓"
+    Decimal hours_actual 
+    Decimal labor_rate "❓"
+    Decimal labor_cost "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "mfg_mo_material_actuals" {
+    String id "🗝️"
+    String tenant_id 
+    String mo_id 
+    String item_id 
+    Decimal qty_planned 
+    Decimal qty_actual 
+    Decimal unit_cost 
+    Decimal variance_cost 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "mfg_production_variances" {
+    String id "🗝️"
+    String tenant_id 
+    String mo_id 
+    String variance_type 
+    String description "❓"
+    Decimal quantity "❓"
+    Decimal unit_cost "❓"
+    Decimal total_cost "❓"
+    String status 
+    String je_id "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -837,4 +895,12 @@ erDiagram
     "ar_payments" }o--|| saas_tenants : "tenant"
     "ar_payments" }o--|| ar_invoices : "invoice"
     "ar_payments" }o--|o ac_journal_entries : "journalEntry"
+    "mfg_mo_labor_actuals" }o--|| saas_tenants : "tenant"
+    "mfg_mo_labor_actuals" }o--|| mfg_production_orders : "productionOrder"
+    "mfg_mo_material_actuals" }o--|| saas_tenants : "tenant"
+    "mfg_mo_material_actuals" }o--|| mfg_production_orders : "productionOrder"
+    "mfg_mo_material_actuals" }o--|| in_items : "item"
+    "mfg_production_variances" }o--|| saas_tenants : "tenant"
+    "mfg_production_variances" }o--|| mfg_production_orders : "productionOrder"
+    "mfg_production_variances" }o--|o ac_journal_entries : "journalEntry"
 ```
