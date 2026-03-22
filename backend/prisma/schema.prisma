@@ -123,6 +123,8 @@ model Tenant {
   moLaborActuals    MoLaborActual[]
   moMaterialActuals MoMaterialActual[]
   productionVariances ProductionVariance[]
+  bomRoutings BomRouting[]
+
   @@map("saas_tenants")
 }
 
@@ -767,6 +769,8 @@ model Bom {
   tenant     Tenant         @relation(fields: [tenantId], references: [id])
   parentItem Item           @relation("BomParentItem", fields: [parentItemId], references: [id])
   components BomComponent[]
+  routings  BomRouting[]
+
 
   @@unique([tenantId, bomNumber, version])
   @@index([tenantId])
@@ -821,6 +825,7 @@ model WorkCenter {
   deletedBy String?   @map("deleted_by") @db.Uuid
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  routings  BomRouting[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1441,6 +1446,40 @@ model ProductionVariance {
   @@index([status])
   @@index([varianceType])
   @@map("mfg_production_variances")
+}
+
+// ============================================================================
+// BOM ROUTING (mfg_*)
+// ============================================================================
+
+model BomRouting {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  bomId          String    @map("bom_id") @db.Uuid
+  stepNumber     Int       @map("step_number")
+  workCenterId   String    @map("work_center_id") @db.Uuid
+  description    String?   @db.Text
+  setupTime      Decimal   @default(0) @map("setup_time") @db.Decimal(8, 2)
+  runTimePerUnit Decimal   @default(0) @map("run_time_per_unit") @db.Decimal(10, 6)
+  isActive       Boolean   @default(true) @map("is_active")
+  notes          String?   @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  bom        Bom        @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@unique([bomId, stepNumber])
+  @@index([tenantId])
+  @@index([bomId])
+  @@index([workCenterId])
+  @@map("mfg_bom_routings")
 }
 
 // ============================================================================

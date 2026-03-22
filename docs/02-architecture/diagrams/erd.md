@@ -819,6 +819,26 @@ erDiagram
     String updated_by 
     }
   
+
+  "mfg_bom_routings" {
+    String id "🗝️"
+    String tenant_id 
+    String bom_id 
+    Int step_number 
+    String work_center_id 
+    String description "❓"
+    Decimal setup_time 
+    Decimal run_time_per_unit 
+    Boolean is_active 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -903,4 +923,7 @@ erDiagram
     "mfg_production_variances" }o--|| saas_tenants : "tenant"
     "mfg_production_variances" }o--|| mfg_production_orders : "productionOrder"
     "mfg_production_variances" }o--|o ac_journal_entries : "journalEntry"
+    "mfg_bom_routings" }o--|| saas_tenants : "tenant"
+    "mfg_bom_routings" }o--|| mfg_boms : "bom"
+    "mfg_bom_routings" }o--|| mfg_work_centers : "workCenter"
 ```
