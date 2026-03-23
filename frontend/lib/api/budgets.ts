@@ -9,12 +9,9 @@ import {
   CreateBudgetLineDto,
   BudgetStatus,
 } from './types';
- 
+
 export const budgetsApi = {
-  getAll: async (params?: {
-    fiscalYear?: string;
-    status?: BudgetStatus;
-  }): Promise<Budget[]> => {
+  getAll: async (params?: { fiscalYear?: string; status?: BudgetStatus }): Promise<Budget[]> => {
     const res = await apiClient.get('/budgets', { params });
     return res.data;
   },
@@ -34,10 +31,7 @@ export const budgetsApi = {
     const res = await apiClient.patch(`/budgets/${id}/approve`);
     return res.data;
   },
-  getVsActual: async (
-    id: string,
-    params?: { startPeriod?: string; endPeriod?: string }
-  ) => {
+  getVsActual: async (id: string, params?: { startPeriod?: string; endPeriod?: string }) => {
     const res = await apiClient.get(`/budgets/${id}/vs-actual`, { params });
     return res.data;
   },
@@ -54,5 +48,15 @@ export const budgetsApi = {
   },
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`/budgets/${id}`);
+  },
+  generateFromSo: async (id: string, data: {
+    soStatuses: string[];
+    overwrite?: boolean;
+    defaultMaterialAccount?: string;
+    defaultLaborAccount?: string;
+    defaultRevenueAccount?: string;
+  }) => {
+    const res = await apiClient.post(`/budgets/${id}/generate-from-so`, data);
+    return res.data;
   },
 };

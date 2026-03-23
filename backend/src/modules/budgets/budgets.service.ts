@@ -20,10 +20,20 @@ export class BudgetsService {
   // ============================================================================
 
   async create(tenantId: string, userId: string, createBudgetDto: CreateBudgetDto) {
+    // Check including soft-deleted to avoid unique constraint violation
     const existing = await this.prisma.budget.findFirst({
-      where: { tenantId, budgetCode: createBudgetDto.budgetCode, deletedAt: null },
+      where: { tenantId, budgetCode: createBudgetDto.budgetCode },
     });
-    if (existing) throw new ConflictException(`Budget code ${createBudgetDto.budgetCode} already exists`);
+
+    if (existing) {
+      if (existing.deletedAt) {
+        // Was soft-deleted — permanently delete to free the code
+        await this.prisma.budgetLine.deleteMany({ where: { budgetId: existing.id } });
+        await this.prisma.budget.delete({ where: { id: existing.id } });
+      } else {
+        throw new ConflictException(`Budget code ${createBudgetDto.budgetCode} already exists`);
+      }
+    }
 
     return this.prisma.budget.create({
       data: {
@@ -196,8 +206,8 @@ export class BudgetsService {
       });
       const debit  = actuals._sum.debitAmount  || new Decimal(0);
       const credit = actuals._sum.creditAmount || new Decimal(0);
-      const actualAmount = debit.minus(credit);
-      const variance = actualAmount.minus(line.budgetAmount);
+      const actualAmount   = debit.minus(credit);
+      const variance       = actualAmount.minus(line.budgetAmount);
       const variancePercent = line.budgetAmount.equals(0) ? new Decimal(0) : variance.dividedBy(line.budgetAmount).times(100);
 
       return {
@@ -223,7 +233,6 @@ export class BudgetsService {
     const budget = await this.findOne(tenantId, budgetId);
     if (budget.status === 'approved') throw new BadRequestException('Cannot generate lines for approved budgets');
 
-    // ── Resolve default GL accounts ──────────────────────────────────────────
     const resolveAccount = async (accountNumber: string) => {
       const acct = await this.prisma.account.findFirst({
         where: { tenantId, accountNumber, deletedAt: null, isActive: true },
@@ -236,13 +245,8 @@ export class BudgetsService {
     const defaultLaborAcct    = await resolveAccount(dto.defaultLaborAccount    ?? '5.1.03');
     const defaultRevenueAcct  = await resolveAccount(dto.defaultRevenueAccount  ?? '4.1.01');
 
-    // ── Load Sales Orders ─────────────────────────────────────────────────────
     const salesOrders = await this.prisma.salesOrder.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        status: { in: dto.soStatuses },
-      },
+      where: { tenantId, deletedAt: null, status: { in: dto.soStatuses } },
       include: {
         lines: {
           where: { deletedAt: null },
@@ -274,14 +278,10 @@ export class BudgetsService {
     if (salesOrders.length === 0) {
       return {
         message: `No Sales Orders found with status: ${dto.soStatuses.join(', ')}`,
-        linesGenerated: 0,
-        linesSkipped: 0,
-        detail: [],
+        linesGenerated: 0, linesSkipped: 0, detail: [],
       };
     }
 
-    // ── Accumulate budget amounts by account + period ─────────────────────────
-    // Map key: `${accountId}|${fiscalPeriod}`
     const accumulator = new Map<string, { accountId: string; fiscalPeriod: string; amount: number; label: string }>();
 
     const addAmount = (accountId: string, fiscalPeriod: string, amount: number, label: string) => {
@@ -303,74 +303,46 @@ export class BudgetsService {
         const qty = Number(line.orderedQuantity);
         if (qty <= 0) continue;
 
-        // ── Date calculation with backward scheduling ──────────────────────
         const promisedDate = line.deliveryDate
           ? new Date(line.deliveryDate)
           : so.promisedDate
           ? new Date(so.promisedDate)
           : new Date(so.orderDate);
 
-        const leadTimeDays   = line.item?.leadTimeDays ?? 0;
+        const leadTimeDays        = line.item?.leadTimeDays ?? 0;
         const productionStartDate = new Date(promisedDate);
         productionStartDate.setDate(productionStartDate.getDate() - leadTimeDays);
 
-        const revenuePeriod  = toFiscalPeriod(promisedDate);
-        const costPeriod     = toFiscalPeriod(productionStartDate);
+        const revenuePeriod = toFiscalPeriod(promisedDate);
+        const costPeriod    = toFiscalPeriod(productionStartDate);
 
-        // ── 1. Revenue budget line ──────────────────────────────────────────
+        // Revenue
         const revenueAmount = Number(line.lineTotal);
         if (revenueAmount > 0) {
           addAmount(defaultRevenueAcct.id, revenuePeriod, revenueAmount, 'Revenue');
-          detail.push({
-            so: so.soNumber, line: line.lineNumber, item: line.item?.code,
-            type: 'revenue', period: revenuePeriod, amount: revenueAmount,
-          });
+          detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'revenue', period: revenuePeriod, amount: revenueAmount });
         }
 
-        // ── 2. Material budget lines (from BOM) ────────────────────────────
         const bom = line.item?.boms?.[0];
         if (bom) {
+          // Materials
           for (const comp of bom.components) {
-            const compItem    = comp.componentItem;
-            const qtyRequired = Number(comp.quantityPer) * qty;
-            const scrapFactor = 1 + Number(comp.scrapPercent) / 100;
-            const totalQty    = qtyRequired * scrapFactor;
-            const unitCost    = compItem.standardCost ? Number(compItem.standardCost) : 0;
+            const totalQty    = Number(comp.quantityPer) * qty * (1 + Number(comp.scrapPercent) / 100);
+            const unitCost    = comp.componentItem.standardCost ? Number(comp.componentItem.standardCost) : 0;
             const matAmount   = totalQty * unitCost;
-
             if (matAmount <= 0) continue;
-
-            // Use item-level cost account if configured, else default
-            // (Item doesn't have a direct costAccountId — use default)
-            const matAcctId = defaultMaterialAcct.id;
-
-            addAmount(matAcctId, costPeriod, matAmount, `Material: ${compItem.code}`);
-            detail.push({
-              so: so.soNumber, line: line.lineNumber, item: line.item?.code,
-              type: 'material', component: compItem.code,
-              period: costPeriod, qty: totalQty, unitCost, amount: matAmount,
-            });
+            addAmount(defaultMaterialAcct.id, costPeriod, matAmount, `Material: ${comp.componentItem.code}`);
+            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'material', component: comp.componentItem.code, period: costPeriod, qty: totalQty, unitCost, amount: matAmount });
           }
 
-          // ── 3. Labor budget lines (from BOM Routing) ─────────────────────
+          // Labor
           for (const step of bom.routings) {
-            const setupHours  = Number(step.setupTime);
-            const runHours    = Number(step.runTimePerUnit) * qty;
-            const totalHours  = setupHours + runHours;
+            const totalHours  = Number(step.setupTime) + Number(step.runTimePerUnit) * qty;
             const costPerHour = step.workCenter.costPerHour ? Number(step.workCenter.costPerHour) : 0;
             const laborAmount = totalHours * costPerHour;
-
             if (laborAmount <= 0) continue;
-
-            // Use work center cost account if configured, else default
-            const laborAcctId = defaultLaborAcct.id;
-
-            addAmount(laborAcctId, costPeriod, laborAmount, `Labor: ${step.workCenter.code} step ${step.stepNumber}`);
-            detail.push({
-              so: so.soNumber, line: line.lineNumber, item: line.item?.code,
-              type: 'labor', workCenter: step.workCenter.code, step: step.stepNumber,
-              period: costPeriod, hours: totalHours, costPerHour, amount: laborAmount,
-            });
+            addAmount(defaultLaborAcct.id, costPeriod, laborAmount, `Labor: ${step.workCenter.code} step ${step.stepNumber}`);
+            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'labor', workCenter: step.workCenter.code, step: step.stepNumber, period: costPeriod, hours: totalHours, costPerHour, amount: laborAmount });
           }
         }
       }
@@ -378,24 +350,18 @@ export class BudgetsService {
 
     if (accumulator.size === 0) {
       return {
-        message: 'No budget amounts calculated — check that items have BOMs with components and routing, and standardCost is set',
-        linesGenerated: 0,
-        linesSkipped: 0,
-        detail,
+        message: 'No budget amounts calculated — check that items have BOMs with components/routing and standardCost is set',
+        linesGenerated: 0, linesSkipped: 0, detail,
       };
     }
 
-    // ── Upsert budget lines ──────────────────────────────────────────────────
     let linesGenerated = 0;
     let linesSkipped   = 0;
     const upsertedLines: any[] = [];
 
     for (const [, entry] of accumulator) {
       const existing = await this.prisma.budgetLine.findFirst({
-        where: {
-          budgetId, accountId: entry.accountId,
-          fiscalPeriod: entry.fiscalPeriod, deletedAt: null,
-        },
+        where: { budgetId, accountId: entry.accountId, fiscalPeriod: entry.fiscalPeriod, deletedAt: null },
       });
 
       if (existing) {
@@ -425,18 +391,17 @@ export class BudgetsService {
       }
     }
 
-    // ── Return summary ────────────────────────────────────────────────────────
     const updatedBudget = await this.findOne(tenantId, budgetId);
 
     return {
-      message:        `Budget generation complete — ${linesGenerated} lines generated, ${linesSkipped} skipped`,
+      message:              `Budget generation complete — ${linesGenerated} lines generated, ${linesSkipped} skipped`,
       linesGenerated,
       linesSkipped,
       salesOrdersProcessed: salesOrders.length,
-      soLineItems:    detail.length,
+      soLineItems:          detail.length,
       upsertedLines,
       detail,
-      budget:         updatedBudget,
+      budget:               updatedBudget,
     };
   }
 }
