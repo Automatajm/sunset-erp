@@ -4,8 +4,6 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
-// ─── Navigation structure ─────────────────────────────────────────────────────
-
 interface NavLeaf  { label: string; href: string; }
 interface NavGroup { label: string; items: NavLeaf[]; }
 interface NavItem  { label: string; href?: string; groups?: NavGroup[]; }
@@ -23,7 +21,7 @@ const NAV: NavItem[] = [
     label: 'Sales',
     groups: [
       { label: 'Customers', items: [{ label: 'Customers', href: '/sales/customers' }] },
-      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' },{ label: 'AR Invoices',  href: '/sales/invoices' }] },
+      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' }, { label: 'AR Invoices', href: '/sales/invoices' }] },
     ],
   },
   {
@@ -51,7 +49,7 @@ const NAV: NavItem[] = [
       {
         label: 'Setup',
         items: [
-          { label: 'Work Centers',    href: '/manufacturing/work-centers' },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
           { label: 'Bill of Materials', href: '/manufacturing/bom' },
         ],
       },
@@ -73,14 +71,21 @@ const NAV: NavItem[] = [
         ],
       },
       {
+        label: 'Automation',
+        items: [
+          { label: 'JE Review Queue',   href: '/accounting/je-queue' },
+          { label: 'Automation Config', href: '/accounting/automation' },
+        ],
+      },
+      {
         label: 'Reports',
         items: [{ label: 'Financial Reports', href: '/accounting/reports' }],
       },
       {
         label: 'Planning',
         items: [
-          { label: 'Budgets',    href: '/accounting/budgets' },
-          { label: 'Cash Flow',  href: '/accounting/cash-flow' },
+          { label: 'Budgets',   href: '/accounting/budgets' },
+          { label: 'Cash Flow', href: '/accounting/cash-flow' },
         ],
       },
     ],
@@ -108,10 +113,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
 
   if (!item.groups) {
     return (
-      <div
-        className={`ni${isActive ? ' ni-active' : ''}`}
-        onClick={() => router.push(item.href!)}
-      >
+      <div className={`ni${isActive ? ' ni-active' : ''}`} onClick={() => router.push(item.href!)}>
         {item.label}
       </div>
     );
@@ -129,12 +131,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
       </svg>
 
       {open && (
-        <div
-          className="dd-panel"
-          onMouseEnter={open_}
-          onMouseLeave={close_}
-        >
-          {/* Left: group list */}
+        <div className="dd-panel" onMouseEnter={open_} onMouseLeave={close_}>
           <div className="dd-left">
             {item.groups.map(g => (
               <div
@@ -150,7 +147,6 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
             ))}
           </div>
 
-          {/* Right: items for hovered group */}
           {currentGroup && (
             <div className="dd-right">
               <div className="dd-right-hdr">{currentGroup.label}</div>
@@ -214,7 +210,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           display: flex; flex-direction: column;
         }
 
-        /* ── Brand bar ── */
         .shell-brand {
           height: 42px;
           background: rgba(8,6,14,0.97);
@@ -273,7 +268,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .shell-signout:hover { color: #fb923c; background: rgba(251,146,60,0.08); }
 
-        /* ── Nav bar ── */
         .shell-nav {
           height: 34px;
           background: rgba(18,12,26,0.97);
@@ -286,7 +280,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .shell-nav::-webkit-scrollbar { display: none; }
 
-        /* ── Nav item ── */
         .ni {
           display: flex; align-items: center; gap: 4px;
           padding: 0 11px; font-size: 12px;
@@ -299,7 +292,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .ni:hover, .ni-open { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
         .ni-active { color: #fb923c !important; border-bottom-color: #fb923c !important; background: rgba(251,146,60,0.05) !important; }
 
-        /* ── Bridge: invisible area that keeps hover alive between nav item and panel ── */
         .ni-dd::after {
           content: "";
           position: absolute;
@@ -308,7 +300,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           background: transparent;
         }
 
-        /* ── Dropdown panel ── */
         .dd-panel {
           position: absolute;
           top: 100%; left: 0;
@@ -328,7 +319,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Left: group list ── */
         .dd-left {
           width: 150px; flex-shrink: 0;
           background: rgba(255,255,255,0.02);
@@ -350,7 +340,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           border: 0.5px solid rgba(251,146,60,0.22);
         }
 
-        /* ── Right: items ── */
         .dd-right {
           flex: 1; padding: 8px 8px 8px 6px;
           display: flex; flex-direction: column; gap: 1px;
@@ -373,7 +362,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .dd-leaf:hover { background: rgba(255,255,255,0.06); color: #f1ede8; }
 
-        /* ── Subheader / breadcrumbs ── */
         .shell-sub { display: flex; align-items: center; padding: 10px 18px 6px; flex-shrink: 0; }
         .shell-bc  { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.3); }
         .shell-bc-sep  { color: rgba(255,255,255,0.15); }
@@ -386,8 +374,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
       `}</style>
 
       <div className="shell-root">
-
-        {/* Brand bar */}
         <div className="shell-brand">
           <div className="shell-mark" onClick={() => router.push('/')}>
             <svg viewBox="0 0 26 26" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -400,18 +386,13 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
               <line x1="4"   y1="19"  x2="22"   y2="19" strokeWidth="2.2"/>
             </svg>
           </div>
-
-          <span className="shell-wordmark" onClick={() => router.push('/')}>
-            Sun<span>set</span>
-          </span>
-
+          <span className="shell-wordmark" onClick={() => router.push('/')}>Sun<span>set</span></span>
           <input
             className="shell-search"
             placeholder="Search…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-
           <div className="shell-user">
             <div>
               <div className="shell-uname">{user?.name || user?.email || 'Admin'}</div>
@@ -422,14 +403,12 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           </div>
         </div>
 
-        {/* Nav bar */}
         <div className="shell-nav">
           {NAV.map(item => (
             <NavDropdown key={item.label} item={item} isActive={isActive(item)} />
           ))}
         </div>
 
-        {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <div className="shell-sub">
             <div className="shell-bc">
@@ -446,7 +425,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         )}
 
         {title && <div className="shell-title">{title}</div>}
-
         <div className="shell-content">{children}</div>
       </div>
     </>
