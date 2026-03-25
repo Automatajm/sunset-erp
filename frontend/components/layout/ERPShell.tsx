@@ -18,13 +18,6 @@ const NAV: NavItem[] = [
     ],
   },
   {
-    label: 'Sales',
-    groups: [
-      { label: 'Customers', items: [{ label: 'Customers', href: '/sales/customers' }] },
-      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' }, { label: 'AR Invoices', href: '/sales/invoices' }] },
-    ],
-  },
-  {
     label: 'Inventory',
     groups: [
       {
@@ -60,6 +53,13 @@ const NAV: NavItem[] = [
     ],
   },
   {
+    label: 'Sales',
+    groups: [
+      { label: 'Customers', items: [{ label: 'Customers', href: '/sales/customers' }] },
+      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' }, { label: 'AR Invoices', href: '/sales/invoices' }] },
+    ],
+  },
+  {
     label: 'Financial',
     groups: [
       {
@@ -86,6 +86,36 @@ const NAV: NavItem[] = [
         items: [
           { label: 'Budgets',   href: '/accounting/budgets' },
           { label: 'Cash Flow', href: '/accounting/cash-flow' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Settings',
+    groups: [
+      {
+        label: 'Data Management',
+        items: [
+          { label: 'Bulk Import', href: '/settings/bulk-import' },
+        ],
+      },
+      {
+        label: 'Master Data',
+        items: [
+          { label: 'Items',             href: '/inventory/items' },
+          { label: 'Customers',         href: '/sales/customers' },
+          { label: 'Suppliers',         href: '/procurement/suppliers' },
+          { label: 'Warehouses',        href: '/inventory/warehouses' },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
+          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
+        ],
+      },
+      {
+        label: 'Configuration',
+        items: [
+          { label: 'Fiscal Periods',    href: '/accounting/fiscal-periods' },
+          { label: 'Automation Config', href: '/accounting/automation' },
+          { label: 'Bill of Materials', href: '/manufacturing/bom' },
         ],
       },
     ],
@@ -190,6 +220,8 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
   const isActive = (item: NavItem) => {
     if (item.href) return pathname === item.href;
+    // Settings only activates on /settings/* — never on cross-module links
+    if (item.label === 'Settings') return pathname.startsWith('/settings');
     return item.groups?.some(g => g.items.some(i => pathname.startsWith(i.href))) ?? false;
   };
 
@@ -389,7 +421,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           <span className="shell-wordmark" onClick={() => router.push('/')}>Sun<span>set</span></span>
           <input
             className="shell-search"
-            placeholder="Search…"
+            placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />

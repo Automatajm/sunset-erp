@@ -312,6 +312,7 @@
     "which-collection": "^1.0.2",
     "which-typed-array": "^1.1.20",
     "word-wrap": "^1.2.5",
+    "xlsx": "^0.18.5",
     "yallist": "^3.1.1",
     "yocto-queue": "^0.1.0",
     "zod": "^4.3.6",
