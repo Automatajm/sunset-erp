@@ -20,6 +20,9 @@ export class BulkImportService {
       case 'warehouses':   return this.importWarehouses(tenantId, userId, records, dryRun, upsert);
       case 'work-centers': return this.importWorkCenters(tenantId, userId, records, dryRun, upsert);
       case 'accounts':     return this.importAccounts(tenantId, userId, records, dryRun, upsert);
+      case 'sales-orders':    return this.importSalesOrders(tenantId, userId, records, dryRun, upsert);
+      case 'purchase-orders': return this.importPurchaseOrders(tenantId, userId, records, dryRun, upsert);
+      case 'budget-lines':    return this.importBudgetLines(tenantId, userId, records, dryRun, upsert);
       default: throw new BadRequestException(`Unsupported entity: ${entity}`);
     }
   }
@@ -416,5 +419,376 @@ export class BulkImportService {
       inserted++;
     }
     return this.buildResult('accounts', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+
+  // ============================================================================
+  // SALES ORDERS (flat format — grouped by customerCode+orderDate)
+  // ============================================================================
+
+  async importSalesOrders(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    // ── Group rows by customerCode + orderDate ──────────────────────────────
+    const groups = new Map<string, Record<string, any>[]>();
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      const customerCode = this.req(row, r, 'customerCode', rowErrors);
+      const orderDate    = this.req(row, r, 'orderDate',    rowErrors);
+      const itemCode     = this.req(row, r, 'itemCode',     rowErrors);
+      const qty          = this.req(row, r, 'qty',          rowErrors);
+      const unitPrice    = this.req(row, r, 'unitPrice',    rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      const key = `${customerCode}||${orderDate}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push({ ...r, _row: row });
+    }
+
+    // ── Process each group as one Sales Order ───────────────────────────────
+    for (const [key, rows] of groups) {
+      const first = rows[0];
+      const row   = first._row;
+      const customerCode = String(first.customerCode).trim();
+
+      // Resolve customer by code
+      const customer = await this.prisma.customer.findFirst({
+        where: { tenantId, code: customerCode, deletedAt: null },
+      });
+      if (!customer) {
+        errors.push({ row, field: 'customerCode', message: `Customer code ${customerCode} not found` });
+        continue;
+      }
+
+      // Resolve items for all lines
+      const lines: any[] = [];
+      let hasLineError = false;
+      let subtotal = 0;
+
+      for (const r of rows) {
+        const itemCode = String(r.itemCode).trim();
+        const item = await this.prisma.item.findFirst({
+          where: { tenantId, code: itemCode, deletedAt: null },
+        });
+        if (!item) {
+          errors.push({ row: r._row, field: 'itemCode', message: `Item code ${itemCode} not found` });
+          hasLineError = true; continue;
+        }
+
+        const qty          = Number(r.qty)       || 0;
+        const unitPrice    = Number(r.unitPrice)  || 0;
+        const discount     = Number(r.discount)   || 0;
+        const lineTotal    = qty * unitPrice * (1 - discount / 100);
+        subtotal          += lineTotal;
+
+        lines.push({
+          tenantId,
+          lineNumber:       lines.length + 1,
+          itemId:           item.id,
+          description:      this.str(r, 'notes') ?? item.name,
+          orderedQuantity:  qty,
+          reservedQuantity: 0,
+          shippedQuantity:  0,
+          uom:              this.str(r, 'uom') ?? item.baseUom,
+          unitPrice,
+          discountPercent:  discount,
+          lineTotal,
+          deliveryDate:     this.str(r, 'promisedDate') ? new Date(this.str(r, 'promisedDate')!) : null,
+          status:           'open',
+          createdBy:        userId,
+          updatedBy:        userId,
+        });
+      }
+
+      if (hasLineError) continue;
+
+      // Check if SO with same customer+date already exists (by soNumber pattern)
+      const orderDateStr = String(first.orderDate).trim();
+      const existingSo = await this.prisma.salesOrder.findFirst({
+        where: {
+          tenantId,
+          customerId: customer.id,
+          orderDate: { gte: new Date(orderDateStr + 'T00:00:00'), lte: new Date(orderDateStr + 'T23:59:59') },
+          deletedAt: null,
+        },
+      });
+
+      if (existingSo) {
+        if (upsert) {
+          if (!dryRun) {
+            // Add new lines to existing SO
+            for (const line of lines) {
+              const lastLine = await this.prisma.salesOrderLine.findFirst({
+                where: { salesOrderId: existingSo.id, deletedAt: null },
+                orderBy: { lineNumber: 'desc' },
+              });
+              const nextLine = (lastLine?.lineNumber ?? 0) + 1;
+              await this.prisma.salesOrderLine.create({
+                data: { ...line, salesOrderId: existingSo.id, lineNumber: nextLine },
+              });
+            }
+            await this.prisma.salesOrder.update({
+              where: { id: existingSo.id },
+              data: { subtotal: { increment: subtotal }, total: { increment: subtotal }, updatedBy: userId },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      if (!dryRun) {
+        // Generate SO number
+        const year   = new Date().getFullYear();
+        const prefix = `SO-${year}`;
+        const lastSo = await this.prisma.salesOrder.findFirst({
+          where: { tenantId, soNumber: { startsWith: prefix } },
+          orderBy: { soNumber: 'desc' },
+        });
+        const nextNum  = lastSo ? (parseInt(lastSo.soNumber.split('-')[2]) + 1).toString().padStart(4, '0') : '0001';
+        const soNumber = `${prefix}-${nextNum}`;
+
+        await this.prisma.salesOrder.create({
+          data: {
+            tenantId, soNumber,
+            customerId:   customer.id,
+            orderDate:    new Date(orderDateStr),
+            promisedDate: this.str(first, 'promisedDate') ? new Date(this.str(first, 'promisedDate')!) : null,
+            paymentTerms: this.str(first, 'paymentTerms'),
+            currency:     this.str(first, 'currency') ?? 'USD',
+            exchangeRate: 1,
+            subtotal, discountAmount: 0, taxAmount: 0, total: subtotal,
+            status: 'draft',
+            notes:  this.str(first, 'notes'),
+            createdBy: userId, updatedBy: userId,
+            lines: { create: lines },
+          },
+        });
+      }
+      inserted++;
+    }
+
+    return this.buildResult('sales-orders', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+
+  // ============================================================================
+  // PURCHASE ORDERS (flat format — grouped by supplierCode+poDate)
+  // ============================================================================
+
+  async importPurchaseOrders(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    const groups = new Map<string, Record<string, any>[]>();
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      this.req(row, r, 'supplierCode', rowErrors);
+      this.req(row, r, 'poDate',       rowErrors);
+      this.req(row, r, 'itemCode',     rowErrors);
+      this.req(row, r, 'qty',          rowErrors);
+      this.req(row, r, 'unitPrice',    rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      const key = `${String(r.supplierCode).trim()}||${String(r.poDate).trim()}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push({ ...r, _row: row });
+    }
+
+    for (const [key, rows] of groups) {
+      const first        = rows[0];
+      const row          = first._row;
+      const supplierCode = String(first.supplierCode).trim();
+
+      const supplier = await this.prisma.supplier.findFirst({
+        where: { tenantId, code: supplierCode, deletedAt: null },
+      });
+      if (!supplier) {
+        errors.push({ row, field: 'supplierCode', message: `Supplier code ${supplierCode} not found` });
+        continue;
+      }
+
+      const lines: any[] = [];
+      let hasLineError = false;
+      let subtotal = 0;
+
+      for (const r of rows) {
+        const itemCode = String(r.itemCode).trim();
+        const item = await this.prisma.item.findFirst({
+          where: { tenantId, code: itemCode, deletedAt: null },
+        });
+        if (!item) {
+          errors.push({ row: r._row, field: 'itemCode', message: `Item code ${itemCode} not found` });
+          hasLineError = true; continue;
+        }
+
+        const qty       = Number(r.qty)      || 0;
+        const unitPrice = Number(r.unitPrice) || 0;
+        const discount  = Number(r.discount)  || 0;
+        const lineTotal = qty * unitPrice * (1 - discount / 100);
+        subtotal       += lineTotal;
+
+        lines.push({
+          tenantId,
+          lineNumber:       lines.length + 1,
+          itemId:           item.id,
+          description:      this.str(r, 'notes') ?? item.name,
+          orderedQuantity:  qty,
+          receivedQuantity: 0,
+          uom:              this.str(r, 'uom') ?? item.baseUom,
+          unitPrice,
+          discountPercent:  discount,
+          lineTotal,
+          expectedDate:     this.str(r, 'expectedDate') ? new Date(this.str(r, 'expectedDate')!) : null,
+          status:           'open',
+          createdBy:        userId,
+          updatedBy:        userId,
+        });
+      }
+
+      if (hasLineError) continue;
+
+      const poDateStr = String(first.poDate).trim();
+      const existingPo = await this.prisma.purchaseOrder.findFirst({
+        where: {
+          tenantId,
+          supplierId: supplier.id,
+          poDate: { gte: new Date(poDateStr + 'T00:00:00'), lte: new Date(poDateStr + 'T23:59:59') },
+          deletedAt: null,
+        },
+      });
+
+      if (existingPo) {
+        if (upsert) {
+          if (!dryRun) {
+            for (const line of lines) {
+              const lastLine = await this.prisma.purchaseOrderLine.findFirst({
+                where: { purchaseOrderId: existingPo.id, deletedAt: null },
+                orderBy: { lineNumber: 'desc' },
+              });
+              await this.prisma.purchaseOrderLine.create({
+                data: { ...line, purchaseOrderId: existingPo.id, lineNumber: (lastLine?.lineNumber ?? 0) + 1 },
+              });
+            }
+            await this.prisma.purchaseOrder.update({
+              where: { id: existingPo.id },
+              data: { subtotal: { increment: subtotal }, total: { increment: subtotal }, updatedBy: userId },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      if (!dryRun) {
+        const year   = new Date().getFullYear();
+        const prefix = `PO-${year}`;
+        const lastPo = await this.prisma.purchaseOrder.findFirst({
+          where: { tenantId, poNumber: { startsWith: prefix } },
+          orderBy: { poNumber: 'desc' },
+        });
+        const nextNum  = lastPo ? (parseInt(lastPo.poNumber.split('-')[2]) + 1).toString().padStart(4, '0') : '0001';
+        const poNumber = `${prefix}-${nextNum}`;
+
+        await this.prisma.purchaseOrder.create({
+          data: {
+            tenantId, poNumber,
+            supplierId:      supplier.id,
+            poDate:          new Date(poDateStr),
+            expectedDate:    this.str(first, 'expectedDate') ? new Date(this.str(first, 'expectedDate')!) : null,
+            deliveryAddress: this.str(first, 'deliveryAddress'),
+            paymentTerms:    this.str(first, 'paymentTerms'),
+            currency:        this.str(first, 'currency') ?? 'USD',
+            exchangeRate:    1,
+            subtotal, discountAmount: 0, taxAmount: 0, total: subtotal,
+            status: 'draft',
+            notes:  this.str(first, 'notes'),
+            createdBy: userId, updatedBy: userId,
+            lines: { create: lines },
+          },
+        });
+      }
+      inserted++;
+    }
+
+    return this.buildResult('purchase-orders', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+
+  // ============================================================================
+  // BUDGET LINES (flat — budgetCode must exist)
+  // ============================================================================
+
+  async importBudgetLines(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      const budgetCode    = this.req(row, r, 'budgetCode',    rowErrors);
+      const accountNumber = this.req(row, r, 'accountNumber', rowErrors);
+      const fiscalPeriod  = this.req(row, r, 'fiscalPeriod',  rowErrors);
+      const amount        = this.req(row, r, 'amount',        rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      // Resolve budget
+      const budget = await this.prisma.budget.findFirst({
+        where: { tenantId, budgetCode: budgetCode!, deletedAt: null },
+      });
+      if (!budget) {
+        errors.push({ row, field: 'budgetCode', message: `Budget code ${budgetCode} not found` });
+        continue;
+      }
+      if (budget.status === 'approved') {
+        errors.push({ row, field: 'budgetCode', message: `Budget ${budgetCode} is approved — cannot add lines` });
+        continue;
+      }
+
+      // Resolve account
+      const account = await this.prisma.account.findFirst({
+        where: { tenantId, accountNumber: accountNumber!, deletedAt: null },
+      });
+      if (!account) {
+        errors.push({ row, field: 'accountNumber', message: `Account ${accountNumber} not found` });
+        continue;
+      }
+
+      // Check existing line
+      const existing = await this.prisma.budgetLine.findFirst({
+        where: { budgetId: budget.id, accountId: account.id, fiscalPeriod: fiscalPeriod!, deletedAt: null },
+      });
+
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.budgetLine.update({
+              where: { id: existing.id },
+              data: { budgetAmount: Number(amount), notes: this.str(r, 'notes') ?? existing.notes ?? undefined, updatedBy: userId },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      if (!dryRun) {
+        await this.prisma.budgetLine.create({
+          data: {
+            tenantId,
+            budgetId:     budget.id,
+            accountId:    account.id,
+            fiscalPeriod: fiscalPeriod!,
+            budgetAmount: Number(amount),
+            notes:        this.str(r, 'notes'),
+            createdBy:    userId,
+            updatedBy:    userId,
+          },
+        });
+      }
+      inserted++;
+    }
+
+    return this.buildResult('budget-lines', records.length, inserted, updated, skipped, errors, dryRun, upsert);
   }
 }

@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import apiClient from '@/lib/api/client';
 
-type Entity  = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'work-centers' | 'accounts';
+type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines';
 type Channel = 'file' | 'url' | 'api';
 type Mode    = 'import' | 'export';
 
@@ -63,6 +63,27 @@ const ENTITIES: {
     optionalFields:  ['accountCategory', 'currency', 'isSystem', 'allowManualPosting', 'requireReconciliation'],
     sampleRow: { accountNumber:'1.1.01', name:'Cash and Equivalents', accountType:'asset', accountCategory:'Current Assets', currency:'USD', isSystem:'false', allowManualPosting:'true', requireReconciliation:'false' },
     exportEndpoint: '/chart-of-accounts',
+  },
+  {
+    value: 'sales-orders', label: 'Sales Orders', color: '#34d399',
+    requiredFields: ['customerCode', 'orderDate', 'itemCode', 'qty', 'unitPrice'],
+    optionalFields:  ['currency', 'paymentTerms', 'promisedDate', 'uom', 'discount', 'notes'],
+    sampleRow: { customerCode:'CUST001', orderDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', promisedDate:'2026-04-15', itemCode:'FG-BURG', qty:'500', unitPrice:'8.50', uom:'PCS', discount:'0', notes:'Bulk order' },
+    exportEndpoint: '/sales-orders',
+  },
+  {
+    value: 'purchase-orders', label: 'Purchase Orders', color: '#818cf8',
+    requiredFields: ['supplierCode', 'poDate', 'itemCode', 'qty', 'unitPrice'],
+    optionalFields:  ['currency', 'paymentTerms', 'expectedDate', 'uom', 'discount', 'notes'],
+    sampleRow: { supplierCode:'SUP001', poDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', expectedDate:'2026-04-01', itemCode:'RM-BEEF', qty:'1000', unitPrice:'3.50', uom:'KG', discount:'0', notes:'' },
+    exportEndpoint: '/purchase-orders',
+  },
+  {
+    value: 'budget-lines', label: 'Budget Lines', color: '#fb7185',
+    requiredFields: ['budgetCode', 'accountNumber', 'fiscalPeriod', 'amount'],
+    optionalFields:  ['notes'],
+    sampleRow: { budgetCode:'BUDGET-2026', accountNumber:'4.1.01', fiscalPeriod:'2026-01', amount:'500000', notes:'Q1 Revenue target' },
+    exportEndpoint: '/budgets',
   },
 ];
 

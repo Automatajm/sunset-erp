@@ -1,8 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export const BULK_IMPORT_ENTITIES = [
   'items', 'customers', 'suppliers', 'warehouses', 'work-centers', 'accounts',
+  'sales-orders', 'purchase-orders', 'budget-lines',
 ] as const;
 
 export type BulkImportEntity = typeof BULK_IMPORT_ENTITIES[number];
@@ -28,7 +29,7 @@ export class BulkImportDto {
   @IsBoolean()
   dryRun?: boolean;
 
-  @ApiPropertyOptional({ description: 'If true, update existing records instead of skipping them', default: false })
+  @ApiPropertyOptional({ description: 'If true, update existing records instead of skipping', default: false })
   @IsOptional()
   @IsBoolean()
   upsert?: boolean;
