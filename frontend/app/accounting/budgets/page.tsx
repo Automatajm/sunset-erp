@@ -52,8 +52,6 @@ function StatusBadge({ status }: { status: BudgetStatus }) {
   );
 }
 
-// ─── MRP Generate Modal ───────────────────────────────────────────────────────
-
 function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     soStatuses:             ['confirmed', 'shipped', 'delivered'],
@@ -76,18 +74,13 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
   const handleRun = async () => {
     if (form.soStatuses.length === 0) { setError('Select at least one SO status'); return; }
     setBusy(true); setError('');
-    console.log('MRP calling budget ID:', budget.id); // ← agrega esta línea
     try {
       const res = await budgetsApi.generateFromSo(budget.id, form);
       setResult(res);
       onSaved();
     } catch (err) {
-    console.error('MRP full error:', err);
-    console.error('MRP error response:', (err as any)?.response);
-    console.error('MRP error message:', (err as any)?.message);
-    const msg = (err as any).response?.data?.message || (err as any).message || 'MRP generation failed';
-    setError(msg);
-  } finally { setBusy(false); }
+      setError((err as any).response?.data?.message || 'MRP generation failed');
+    } finally { setBusy(false); }
   };
 
   const SO_STATUSES = ['draft', 'confirmed', 'shipped', 'delivered'];
@@ -97,7 +90,7 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
       <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(167,139,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#f1ede8' }}>⚡ Generate from Sales Orders</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#f1ede8' }}>Generate from Sales Orders</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{budget.budgetCode} — MRP auto-generation</div>
           </div>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
@@ -106,15 +99,14 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
         <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
 
-          {/* Result panel */}
           {result && (
             <div style={{ background: 'rgba(74,222,128,0.06)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 8, padding: '10px 14px' }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#4ade80', marginBottom: 8 }}>✓ {result.message}</div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: '#4ade80', marginBottom: 8 }}>{result.message}</div>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 {[
-                  { label: 'SOs Processed',    value: result.salesOrdersProcessed },
-                  { label: 'Lines Generated',   value: result.linesGenerated },
-                  { label: 'Lines Skipped',     value: result.linesSkipped },
+                  { label: 'SOs Processed',  value: result.salesOrdersProcessed },
+                  { label: 'Lines Generated', value: result.linesGenerated },
+                  { label: 'Lines Skipped',   value: result.linesSkipped },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -125,7 +117,6 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
             </div>
           )}
 
-          {/* SO Statuses */}
           <Field label="Include Sales Orders with status">
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {SO_STATUSES.map(s => {
@@ -140,7 +131,6 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
             </div>
           </Field>
 
-          {/* GL Accounts */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <Field label="Revenue Account">
               <input style={{ ...INPUT, fontSize: 12 }} value={form.defaultRevenueAccount} onChange={e => setForm(f => ({ ...f, defaultRevenueAccount: e.target.value }))} placeholder="4.1.01" />
@@ -153,20 +143,18 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
             </Field>
           </div>
 
-          {/* Overwrite toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => setForm(f => ({ ...f, overwrite: !f.overwrite }))}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: form.overwrite ? '#fbbf24' : 'rgba(255,255,255,0.35)', background: form.overwrite ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${form.overwrite ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
-              {form.overwrite ? '✓ Overwrite existing lines' : 'Skip existing lines'}
+              {form.overwrite ? 'Overwrite existing lines' : 'Skip existing lines'}
             </button>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
               {form.overwrite ? 'Replaces existing budget lines for same account+period' : 'Keeps existing lines, only adds new ones'}
             </span>
           </div>
 
-          {/* Info */}
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'rgba(255,255,255,0.5)' }}>How it works:</strong> Revenue is budgeted in the delivery period (promisedDate). Materials and labor are budgeted in the production start period (promisedDate − item leadTime). Quantities use BOM components × scrap% and routing steps × work center rates.
+            <strong style={{ color: 'rgba(255,255,255,0.5)' }}>How it works:</strong> Revenue is budgeted in the delivery period (promisedDate). Materials and labor are budgeted in the production start period (promisedDate minus item leadTime). Quantities use BOM components x scrap% and routing steps x work center rates.
           </div>
         </div>
 
@@ -177,7 +165,7 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
           {!result && (
             <button onClick={handleRun} disabled={busy || form.soStatuses.length === 0}
               style={{ background: 'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: busy || form.soStatuses.length === 0 ? 0.5 : 1 }}>
-              {busy ? 'Generating…' : '⚡ Run MRP'}
+              {busy ? 'Generating...' : 'Run MRP'}
             </button>
           )}
         </div>
@@ -185,8 +173,6 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
     </div>
   );
 }
-
-// ─── Create Budget Modal ──────────────────────────────────────────────────────
 
 function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({ budgetCode: '', budgetName: '', fiscalYear: '', description: '' });
@@ -216,7 +202,7 @@ function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose:
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8' }}>New Budget</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
+          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>x</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -225,7 +211,7 @@ function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose:
               { key: 'budgetCode',  label: 'Budget Code *',  placeholder: 'BUDGET-2026' },
               { key: 'budgetName',  label: 'Budget Name *',  placeholder: '2026 Annual Budget' },
               { key: 'fiscalYear',  label: 'Fiscal Year *',  placeholder: '2026' },
-              { key: 'description', label: 'Description',    placeholder: 'Annual operating budget…' },
+              { key: 'description', label: 'Description',    placeholder: 'Annual operating budget' },
             ].map(f => (
               <Field key={f.key} label={f.label}>
                 <input placeholder={f.placeholder} value={form[f.key as keyof typeof form]} onChange={set(f.key as keyof typeof form)} style={INPUT} />
@@ -235,7 +221,7 @@ function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose:
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}>
-              {submitting ? 'Creating…' : 'Create Budget'}
+              {submitting ? 'Creating...' : 'Create Budget'}
             </button>
           </div>
         </form>
@@ -243,8 +229,6 @@ function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose:
     </div>
   );
 }
-
-// ─── Add Line Modal ───────────────────────────────────────────────────────────
 
 function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: boolean; onClose: () => void; onSaved: () => void; budgetId: string; accounts: Account[] }) {
   const [form, setForm] = useState({ accountId: '', fiscalPeriod: '', budgetAmount: '', notes: '' });
@@ -271,15 +255,15 @@ function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: bo
       <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8' }}>Add Budget Line</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
+          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>x</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
             <Field label="Account *">
               <select value={form.accountId} onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))} style={{ ...INPUT, cursor: 'pointer' }}>
-                <option value="">— Select account —</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.accountNumber} — {a.name}</option>)}
+                <option value="">Select account</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.accountNumber} - {a.name}</option>)}
               </select>
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -297,7 +281,7 @@ function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: bo
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}>
-              {submitting ? 'Adding…' : 'Add Line'}
+              {submitting ? 'Adding...' : 'Add Line'}
             </button>
           </div>
         </form>
@@ -306,16 +290,14 @@ function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: bo
   );
 }
 
-// ─── Budget Detail Panel ──────────────────────────────────────────────────────
-
 function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; accounts: Account[]; onRefresh: () => void }) {
-  const [view,       setView]       = useState<'lines' | 'vsactual'>('lines');
-  const [vsActual,   setVsActual]   = useState<VsActualReport | null>(null);
-  const [loadingVA,  setLoadingVA]  = useState(false);
+  const [view,        setView]        = useState<'lines' | 'vsactual'>('lines');
+  const [vsActual,    setVsActual]    = useState<VsActualReport | null>(null);
+  const [loadingVA,   setLoadingVA]   = useState(false);
   const [addLineOpen, setAddLineOpen] = useState(false);
-  const [mrpOpen,    setMrpOpen]    = useState(false);
-  const [approving,  setApproving]  = useState(false);
-  const [error,      setError]      = useState('');
+  const [mrpOpen,     setMrpOpen]     = useState(false);
+  const [approving,   setApproving]   = useState(false);
+  const [error,       setError]       = useState('');
 
   const loadVsActual = async () => {
     setLoadingVA(true);
@@ -337,13 +319,12 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
     <div>
       {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 14px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{error}</div>}
 
-      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 0, background: 'rgba(255,255,255,0.04)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
           {(['lines', 'vsactual'] as const).map(v => (
             <button key={v} onClick={() => v === 'vsactual' ? loadVsActual() : setView('lines')}
               style={{ padding: '5px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer', border: 'none', background: view === v ? 'rgba(251,146,60,0.15)' : 'transparent', color: view === v ? '#fb923c' : 'rgba(255,255,255,0.45)', transition: 'background 0.15s, color 0.15s' }}>
-              {v === 'lines' ? 'Budget Lines' : loadingVA ? 'Loading…' : 'vs Actual'}
+              {v === 'lines' ? 'Budget Lines' : loadingVA ? 'Loading...' : 'vs Actual'}
             </button>
           ))}
         </div>
@@ -352,7 +333,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
           <>
             <button onClick={() => setMrpOpen(true)}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '0.5px solid rgba(167,139,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500 }}>
-              ⚡ Generate from SO
+              Generate from SO
             </button>
             <button onClick={() => setAddLineOpen(true)}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
@@ -360,7 +341,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
             </button>
             <button onClick={handleApprove} disabled={approving || budget.budgetLines.length === 0}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: (approving || budget.budgetLines.length === 0) ? 0.5 : 1 }}>
-              {approving ? 'Approving…' : 'Approve'}
+              {approving ? 'Approving...' : 'Approve'}
             </button>
           </>
         )}
@@ -370,7 +351,6 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
         </span>
       </div>
 
-      {/* Lines view */}
       {view === 'lines' && (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -380,7 +360,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
           </thead>
           <tbody>
             {budget.budgetLines.length === 0 ? (
-              <tr><td colSpan={4} style={{ padding: '24px 12px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No lines yet. Click ⚡ Generate from SO or + Add Line.</td></tr>
+              <tr><td colSpan={4} style={{ padding: '24px 12px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No lines yet. Click Generate from SO or + Add Line.</td></tr>
             ) : budget.budgetLines.map(line => (
               <tr key={line.id}>
                 <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
@@ -389,14 +369,13 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
                 </td>
                 <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: 'rgba(255,255,255,0.55)' }}>{line.fiscalPeriod}</td>
                 <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', ...MONO, color: '#e2dfd8' }}>{fmtAmt(Number(line.budgetAmount))}</td>
-                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{line.notes || '—'}</td>
+                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{line.notes || '-'}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      {/* vs Actual view */}
       {view === 'vsactual' && vsActual && (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -430,8 +409,6 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
     </div>
   );
 }
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BudgetsPage() {
   const [budgets,      setBudgets]      = useState<Budget[]>([]);
@@ -468,10 +445,10 @@ export default function BudgetsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .bg-page { padding: 0 18px 24px; }
-        .bg-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+        .bg-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:nowrap; }
         .bg-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; }
         .bg-filter option { background:#0e0b1a; color:#f1ede8; }
-        .bg-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,#c2410c,#ea580c,#f97316); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; }
+        .bg-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,#c2410c,#ea580c,#f97316); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; white-space:nowrap; }
         .bg-list { display:flex; flex-direction:column; gap:10px; }
         .bg-card { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .bg-card-hdr { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; transition:background 0.15s; }
@@ -505,7 +482,7 @@ export default function BudgetsPage() {
         {error && <div className="bg-error">{error}</div>}
 
         {loading ? (
-          <div className="bg-loading"><div className="bg-spinner" />Loading budgets…</div>
+          <div className="bg-loading"><div className="bg-spinner" />Loading budgets...</div>
         ) : filtered.length === 0 ? (
           <div className="bg-empty">{yearFilter || statusFilter ? 'No budgets match your filters.' : 'No budgets yet.'}</div>
         ) : (
@@ -516,7 +493,7 @@ export default function BudgetsPage() {
               return (
                 <div key={budget.id} className="bg-card">
                   <div className="bg-card-hdr" onClick={() => setExpanded(isOpen ? null : budget.id)}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', transform: isOpen ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>▶</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', transform: isOpen ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>&#9658;</span>
                     <span style={{ ...MONO, color: '#fb923c', fontWeight: 500, flexShrink: 0 }}>{budget.budgetCode}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8' }}>{budget.budgetName}</div>
