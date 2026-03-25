@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsIn, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export const BULK_IMPORT_ENTITIES = [
   'items', 'customers', 'suppliers', 'warehouses', 'work-centers', 'accounts',
@@ -24,10 +23,15 @@ export class BulkImportDto {
   @IsString()
   sourceToken?: string;
 
-  @ApiPropertyOptional({ description: 'If true, validate only — do not insert', default: false })
+  @ApiPropertyOptional({ description: 'If true, validate only — do not insert or update', default: false })
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
+
+  @ApiPropertyOptional({ description: 'If true, update existing records instead of skipping them', default: false })
+  @IsOptional()
+  @IsBoolean()
+  upsert?: boolean;
 }
 
 export interface BulkImportError {
@@ -38,11 +42,13 @@ export interface BulkImportError {
 }
 
 export interface BulkImportResult {
-  entity: string;
-  total: number;
-  valid: number;
+  entity:   string;
+  total:    number;
+  valid:    number;
   inserted: number;
-  skipped: number;
-  errors: BulkImportError[];
-  dryRun: boolean;
+  updated:  number;
+  skipped:  number;
+  errors:   BulkImportError[];
+  dryRun:   boolean;
+  upsert:   boolean;
 }

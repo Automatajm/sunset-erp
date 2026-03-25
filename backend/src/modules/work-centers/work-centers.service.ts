@@ -27,14 +27,14 @@ export class WorkCentersService {
         code: createWorkCenterDto.code,
         name: createWorkCenterDto.name,
         workCenterType: createWorkCenterDto.workCenterType || 'machine',
-        capacityPerHour: createWorkCenterDto.capacityPerHour 
-          ? new Decimal(createWorkCenterDto.capacityPerHour) 
+        capacityPerHour: createWorkCenterDto.capacityPerHour
+          ? new Decimal(createWorkCenterDto.capacityPerHour)
           : new Decimal(0),
-        efficiencyPercent: createWorkCenterDto.efficiencyPercent 
-          ? new Decimal(createWorkCenterDto.efficiencyPercent) 
+        efficiencyPercent: createWorkCenterDto.efficiencyPercent
+          ? new Decimal(createWorkCenterDto.efficiencyPercent)
           : new Decimal(100),
-        costPerHour: createWorkCenterDto.costPerHour 
-          ? new Decimal(createWorkCenterDto.costPerHour) 
+        costPerHour: createWorkCenterDto.costPerHour
+          ? new Decimal(createWorkCenterDto.costPerHour)
           : new Decimal(0),
         isActive: createWorkCenterDto.isActive ?? true,
         createdBy: userId,
@@ -93,20 +93,19 @@ export class WorkCentersService {
       }
     }
 
-    const updateData: any = {
-      updatedBy: userId,
-    };
+    const updateData: any = { updatedBy: userId };
 
-    if (updateWorkCenterDto.code) updateData.code = updateWorkCenterDto.code;
-    if (updateWorkCenterDto.name) updateData.name = updateWorkCenterDto.name;
+    if (updateWorkCenterDto.code)           updateData.code           = updateWorkCenterDto.code;
+    if (updateWorkCenterDto.name)           updateData.name           = updateWorkCenterDto.name;
     if (updateWorkCenterDto.workCenterType) updateData.workCenterType = updateWorkCenterDto.workCenterType;
-    if (updateWorkCenterDto.capacityPerHour !== undefined) 
-      updateData.capacityPerHour = new Decimal(updateWorkCenterDto.capacityPerHour);
-    if (updateWorkCenterDto.efficiencyPercent !== undefined) 
+    if (updateWorkCenterDto.capacityPerHour !== undefined)
+      updateData.capacityPerHour   = new Decimal(updateWorkCenterDto.capacityPerHour);
+    if (updateWorkCenterDto.efficiencyPercent !== undefined)
       updateData.efficiencyPercent = new Decimal(updateWorkCenterDto.efficiencyPercent);
-    if (updateWorkCenterDto.costPerHour !== undefined) 
-      updateData.costPerHour = new Decimal(updateWorkCenterDto.costPerHour);
-    if (updateWorkCenterDto.isActive !== undefined) updateData.isActive = updateWorkCenterDto.isActive;
+    if (updateWorkCenterDto.costPerHour !== undefined)
+      updateData.costPerHour       = new Decimal(updateWorkCenterDto.costPerHour);
+    if (updateWorkCenterDto.isActive !== undefined)
+      updateData.isActive = updateWorkCenterDto.isActive;
 
     const workCenter = await this.prisma.workCenter.update({
       where: { id },
@@ -127,18 +126,15 @@ export class WorkCentersService {
       },
     });
 
-    return {
-      message: 'Work center deleted successfully',
-      id,
-    };
+    return { message: 'Work center deleted successfully', id };
   }
 
   private formatWorkCenterResponse(workCenter: any) {
     return {
       ...workCenter,
-      capacityPerHour: workCenter.capacityPerHour.toNumber(),
-      efficiencyPercent: workCenter.efficiencyPercent.toNumber(),
-      costPerHour: workCenter.costPerHour.toNumber(),
+      capacityPerHour:   workCenter.capacityPerHour   ? workCenter.capacityPerHour.toNumber()   : null,
+      efficiencyPercent: workCenter.efficiencyPercent ? workCenter.efficiencyPercent.toNumber() : 100,
+      costPerHour:       workCenter.costPerHour       ? workCenter.costPerHour.toNumber()       : null,
     };
   }
 }
