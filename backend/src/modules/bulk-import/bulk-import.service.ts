@@ -23,6 +23,9 @@ export class BulkImportService {
       case 'sales-orders':    return this.importSalesOrders(tenantId, userId, records, dryRun, upsert);
       case 'purchase-orders': return this.importPurchaseOrders(tenantId, userId, records, dryRun, upsert);
       case 'budget-lines':    return this.importBudgetLines(tenantId, userId, records, dryRun, upsert);
+      case 'fiscal-periods': return this.importFiscalPeriods(tenantId, userId, records, dryRun, upsert);
+      case 'boms':           return this.importBoms(tenantId, userId, records, dryRun, upsert);
+      case 'bom-routings':   return this.importBomRoutings(tenantId, userId, records, dryRun, upsert);
       default: throw new BadRequestException(`Unsupported entity: ${entity}`);
     }
   }
@@ -790,5 +793,268 @@ export class BulkImportService {
     }
 
     return this.buildResult('budget-lines', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+  // ============================================================================
+  // FISCAL PERIODS
+  // ============================================================================
+
+  async importFiscalPeriods(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      const periodCode    = this.req(row, r, 'periodCode',    rowErrors);
+      const periodName    = this.req(row, r, 'periodName',    rowErrors);
+      const startDate     = this.req(row, r, 'startDate',     rowErrors);
+      const endDate       = this.req(row, r, 'endDate',       rowErrors);
+      const fiscalYear    = this.req(row, r, 'fiscalYear',    rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      const existing = await this.prisma.fiscalPeriod.findFirst({
+        where: { tenantId, periodCode: periodCode!, deletedAt: null },
+      });
+
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.fiscalPeriod.update({
+              where: { id: existing.id },
+              data: {
+                periodName:    periodName!,
+                startDate:     new Date(startDate!),
+                endDate:       new Date(endDate!),
+                fiscalYear:    fiscalYear!,
+                fiscalQuarter: this.str(r, 'fiscalQuarter') ?? existing.fiscalQuarter ?? undefined,
+                status:        this.str(r, 'status')        ?? existing.status,
+                isCurrent:     this.bool(r, 'isCurrent',    existing.isCurrent),
+                updatedBy:     userId,
+              },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      if (!dryRun) {
+        const isCurrent = this.bool(r, 'isCurrent', false);
+        if (isCurrent) {
+          await this.prisma.fiscalPeriod.updateMany({
+            where: { tenantId, isCurrent: true, deletedAt: null },
+            data:  { isCurrent: false },
+          });
+        }
+        await this.prisma.fiscalPeriod.create({
+          data: {
+            tenantId,
+            periodCode:    periodCode!,
+            periodName:    periodName!,
+            startDate:     new Date(startDate!),
+            endDate:       new Date(endDate!),
+            fiscalYear:    fiscalYear!,
+            fiscalQuarter: this.str(r, 'fiscalQuarter'),
+            status:        this.str(r, 'status') ?? 'open',
+            isCurrent,
+            createdBy:     userId,
+            updatedBy:     userId,
+          },
+        });
+      }
+      inserted++;
+    }
+    return this.buildResult('fiscal-periods', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+
+  // ============================================================================
+  // BOMs (with components)
+  // ============================================================================
+
+  async importBoms(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+    const { Decimal } = await import('@prisma/client/runtime/library');
+
+    // Group rows by bomNumber + parentItemCode
+    const groups = new Map<string, Record<string, any>[]>();
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      this.req(row, r, 'bomNumber',       rowErrors);
+      this.req(row, r, 'parentItemCode',  rowErrors);
+      this.req(row, r, 'componentCode',   rowErrors);
+      this.req(row, r, 'quantityPer',     rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      const key = String(r.bomNumber).trim();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push({ ...r, _row: row });
+    }
+
+    for (const [bomNumber, rows] of groups) {
+      const first           = rows[0];
+      const row             = first._row;
+      const parentItemCode  = String(first.parentItemCode).trim();
+
+      // Resolve parent item
+      const parentItem = await this.prisma.item.findFirst({
+        where: { tenantId, code: parentItemCode, deletedAt: null },
+      });
+      if (!parentItem) {
+        errors.push({ row, field: 'parentItemCode', message: `Item ${parentItemCode} not found` });
+        continue;
+      }
+
+      // Check existing BOM
+      const existing = await this.prisma.bom.findFirst({
+        where: { tenantId, bomNumber, deletedAt: null },
+      });
+
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            // Delete existing components and recreate
+            await this.prisma.bomComponent.deleteMany({ where: { bomId: existing.id } });
+            for (let idx = 0; idx < rows.length; idx++) {
+              const r         = rows[idx];
+              const compCode  = String(r.componentCode).trim();
+              const compItem  = await this.prisma.item.findFirst({ where: { tenantId, code: compCode, deletedAt: null } });
+              if (!compItem) { errors.push({ row: r._row, field: 'componentCode', message: `Item ${compCode} not found` }); continue; }
+              await this.prisma.bomComponent.create({
+                data: {
+                  tenantId, bomId: existing.id,
+                  componentItemId: compItem.id,
+                  lineNumber:      idx + 1,
+                  quantityPer:     new Decimal(Number(r.quantityPer) || 1),
+                  uom:             this.str(r, 'uom') ?? compItem.baseUom,
+                  scrapPercent:    new Decimal(Number(r.scrapPercent) || 0),
+                  createdBy: userId, updatedBy: userId,
+                },
+              });
+            }
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      // Resolve all component items first
+      const components: any[] = [];
+      let hasError = false;
+      for (let idx = 0; idx < rows.length; idx++) {
+        const r        = rows[idx];
+        const compCode = String(r.componentCode).trim();
+        const compItem = await this.prisma.item.findFirst({ where: { tenantId, code: compCode, deletedAt: null } });
+        if (!compItem) {
+          errors.push({ row: r._row, field: 'componentCode', message: `Item ${compCode} not found` });
+          hasError = true; continue;
+        }
+        components.push({
+          tenantId,
+          componentItemId: compItem.id,
+          lineNumber:      idx + 1,
+          quantityPer:     new Decimal(Number(r.quantityPer) || 1),
+          uom:             this.str(r, 'uom') ?? compItem.baseUom,
+          scrapPercent:    new Decimal(Number(r.scrapPercent) || 0),
+          createdBy: userId, updatedBy: userId,
+        });
+      }
+      if (hasError) continue;
+
+      if (!dryRun) {
+        await this.prisma.bom.create({
+          data: {
+            tenantId,
+            bomNumber,
+            parentItemId: parentItem.id,
+            version:      Number(this.str(first, 'version')) || 1,
+            isActive:     this.bool(first, 'isActive', true),
+            createdBy:    userId,
+            updatedBy:    userId,
+            components:   { create: components },
+          },
+        });
+      }
+      inserted++;
+    }
+    return this.buildResult('boms', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+  }
+
+  // ============================================================================
+  // BOM ROUTINGS
+  // ============================================================================
+
+  async importBomRoutings(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+    const { Decimal } = await import('@prisma/client/runtime/library');
+
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i]; const row = i + 1;
+      const rowErrors: BulkImportError[] = [];
+      const bomNumber      = this.req(row, r, 'bomNumber',      rowErrors);
+      const stepNumber     = this.req(row, r, 'stepNumber',     rowErrors);
+      const workCenterCode = this.req(row, r, 'workCenterCode', rowErrors);
+      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+
+      // Resolve BOM
+      const bom = await this.prisma.bom.findFirst({
+        where: { tenantId, bomNumber: bomNumber!, deletedAt: null },
+      });
+      if (!bom) { errors.push({ row, field: 'bomNumber', message: `BOM ${bomNumber} not found` }); continue; }
+
+      // Resolve work center
+      const wc = await this.prisma.workCenter.findFirst({
+        where: { tenantId, code: workCenterCode!, deletedAt: null },
+      });
+      if (!wc) { errors.push({ row, field: 'workCenterCode', message: `Work center ${workCenterCode} not found` }); continue; }
+
+      const step = Number(stepNumber);
+
+      // Check existing routing step
+      const existing = await this.prisma.bomRouting.findFirst({
+        where: { bomId: bom.id, stepNumber: step, deletedAt: null },
+      });
+
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.bomRouting.update({
+              where: { id: existing.id },
+              data: {
+                workCenterId:   wc.id,
+                description:    this.str(r, 'description')    ?? existing.description ?? undefined,
+                setupTime:      new Decimal(this.num(r, 'setupTime')      ?? Number(existing.setupTime)),
+                runTimePerUnit: new Decimal(this.num(r, 'runTimePerUnit') ?? Number(existing.runTimePerUnit)),
+                notes:          this.str(r, 'notes')          ?? existing.notes       ?? undefined,
+                updatedBy:      userId,
+              },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+
+      if (!dryRun) {
+        await this.prisma.bomRouting.create({
+          data: {
+            tenantId,
+            bomId:          bom.id,
+            stepNumber:     step,
+            workCenterId:   wc.id,
+            description:    this.str(r, 'description'),
+            setupTime:      new Decimal(this.num(r, 'setupTime')      ?? 0),
+            runTimePerUnit: new Decimal(this.num(r, 'runTimePerUnit') ?? 0),
+            notes:          this.str(r, 'notes'),
+            createdBy:      userId,
+            updatedBy:      userId,
+          },
+        });
+      }
+      inserted++;
+    }
+    return this.buildResult('bom-routings', records.length, inserted, updated, skipped, errors, dryRun, upsert);
   }
 }

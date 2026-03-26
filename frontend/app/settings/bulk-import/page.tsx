@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import apiClient from '@/lib/api/client';
 
-type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines';
+type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines' | 'fiscal-periods' | 'boms' | 'bom-routings';
 type Channel = 'file' | 'url' | 'api';
 type Mode    = 'import' | 'export';
 
@@ -84,6 +84,27 @@ const ENTITIES: {
     optionalFields:  ['notes'],
     sampleRow: { budgetCode:'BUDGET-2026', accountNumber:'4.1.01', fiscalPeriod:'2026-01', amount:'500000', notes:'Q1 Revenue target' },
     exportEndpoint: '/budgets',
+  },
+  {
+    value: 'fiscal-periods', label: 'Fiscal Periods', color: '#38bdf8',
+    requiredFields: ['periodCode', 'periodName', 'startDate', 'endDate', 'fiscalYear'],
+    optionalFields:  ['fiscalQuarter', 'status', 'isCurrent'],
+    sampleRow: { periodCode:'2025-01', periodName:'January 2025', startDate:'2025-01-01', endDate:'2025-01-31', fiscalYear:'2025', fiscalQuarter:'Q1', status:'open', isCurrent:'false' },
+    exportEndpoint: '/fiscal-periods',
+  },
+  {
+    value: 'boms', label: 'BOMs', color: '#e879f9',
+    requiredFields: ['bomNumber', 'parentItemCode', 'componentCode', 'quantityPer'],
+    optionalFields:  ['uom', 'scrapPercent', 'version', 'isActive'],
+    sampleRow: { bomNumber:'BOM-PROD-001', parentItemCode:'FG-001', componentCode:'RM-001', quantityPer:'2.5', uom:'KG', scrapPercent:'2', version:'1', isActive:'true' },
+    exportEndpoint: '/bom',
+  },
+  {
+    value: 'bom-routings', label: 'BOM Routings', color: '#fb923c',
+    requiredFields: ['bomNumber', 'stepNumber', 'workCenterCode'],
+    optionalFields:  ['description', 'setupTime', 'runTimePerUnit', 'notes'],
+    sampleRow: { bomNumber:'BOM-PROD-001', stepNumber:'10', workCenterCode:'WC-CUT', description:'Cutting operation', setupTime:'0.5', runTimePerUnit:'0.002', notes:'' },
+    exportEndpoint: '/bom',
   },
 ];
 

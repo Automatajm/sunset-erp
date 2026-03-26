@@ -4,6 +4,7 @@ import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 export const BULK_IMPORT_ENTITIES = [
   'items', 'customers', 'suppliers', 'warehouses', 'work-centers', 'accounts',
   'sales-orders', 'purchase-orders', 'budget-lines',
+  'fiscal-periods', 'boms', 'bom-routings',
 ] as const;
 
 export type BulkImportEntity = typeof BULK_IMPORT_ENTITIES[number];
