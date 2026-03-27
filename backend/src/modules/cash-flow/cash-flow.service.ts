@@ -422,4 +422,147 @@ export class CashFlowService {
 
     return summary;
   }
+  // ============================================================================
+  // GENERATE FROM DATA — auto-populate from AR invoices, POs, budget lines
+  // ============================================================================
+  async generateFromData(
+    tenantId: string,
+    userId: string,
+    projectionId: string,
+    options: {
+      startDate?: string;
+      endDate?: string;
+      includeAR?: boolean;
+      includePO?: boolean;
+      includeBudget?: boolean;
+    } = {},
+  ) {
+    const projection = await this.findOne(tenantId, projectionId);
+    const {
+      includeAR     = true,
+      includePO     = true,
+      includeBudget = true,
+    } = options;
+
+    const startDate = options.startDate
+      ? new Date(options.startDate)
+      : projection.startDate;
+    const endDate = options.endDate
+      ? new Date(options.endDate)
+      : projection.endDate;
+
+    const linesToCreate: any[] = [];
+
+    // ── AR Invoices → inflows ─────────────────────────────────────────────────
+    if (includeAR) {
+      const arInvoices = await this.prisma.arInvoice.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          status: { in: ['sent', 'paid', 'partial'] },
+          invoiceDate: { gte: startDate, lte: endDate },
+        },
+        include: { customer: { select: { name: true } } },
+      });
+
+      for (const inv of arInvoices) {
+        linesToCreate.push({
+          tenantId,
+          cashFlowProjectionId: projectionId,
+          lineDate:    new Date(inv.invoiceDate),
+          lineType:    'inflow',
+          category:    'ar_collection',
+          amount:      new Decimal(inv.totalAmount),
+          description: `AR ${inv.invoiceNumber} - ${inv.customer?.name ?? ''}`,
+          createdBy:   userId,
+          updatedBy:   userId,
+        });
+      }
+    }
+
+    // ── Purchase Orders → outflows ────────────────────────────────────────────
+    if (includePO) {
+      const pos = await this.prisma.purchaseOrder.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          status: { in: ['confirmed', 'received', 'partial'] },
+          poDate: { gte: startDate, lte: endDate },
+        },
+        include: { supplier: { select: { name: true } } },
+      });
+
+      for (const po of pos) {
+        const payDate = po.expectedDate
+          ? new Date(po.expectedDate)
+          : new Date(new Date(po.poDate).getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        linesToCreate.push({
+          tenantId,
+          cashFlowProjectionId: projectionId,
+          lineDate:    payDate,
+          lineType:    'outflow',
+          category:    'ap_payment',
+          amount:      new Decimal(po.total),
+          description: `PO ${po.poNumber} - ${po.supplier?.name ?? ''}`,
+          createdBy:   userId,
+          updatedBy:   userId,
+        });
+      }
+    }
+
+    // ── Budget lines (expense accounts 5.x.xx) → outflows ────────────────────
+    if (includeBudget) {
+      const budgetLines = await this.prisma.budgetLine.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          account: { accountNumber: { startsWith: '5' } },
+          fiscalPeriod: {
+            gte: startDate.toISOString().substring(0, 7),
+            lte: endDate.toISOString().substring(0, 7),
+          },
+        },
+        include: {
+          account: { select: { accountNumber: true, name: true } },
+          budget:  { select: { budgetCode: true } },
+        },
+      });
+
+      for (const bl of budgetLines) {
+        const [year, month] = bl.fiscalPeriod.split('-').map(Number);
+        const lineDate = new Date(year, month - 1, 1);
+
+        linesToCreate.push({
+          tenantId,
+          cashFlowProjectionId: projectionId,
+          lineDate,
+          lineType:    'outflow',
+          category:    'opex_budget',
+          amount:      new Decimal(bl.budgetAmount),
+          description: `Budget ${bl.account.accountNumber} ${bl.account.name} ${bl.fiscalPeriod}`,
+          accountId:   bl.accountId,
+          createdBy:   userId,
+          updatedBy:   userId,
+        });
+      }
+    }
+
+    // Bulk insert
+    if (linesToCreate.length === 0) {
+      return { message: 'No data found for the given date range', linesCreated: 0 };
+    }
+
+    await this.prisma.cashFlowLine.createMany({ data: linesToCreate });
+
+    return {
+      message:      `Cash flow populated from data`,
+      linesCreated: linesToCreate.length,
+      breakdown: {
+        arInflows:     includeAR     ? linesToCreate.filter(l => l.category === 'ar_collection').length : 0,
+        poOutflows:    includePO     ? linesToCreate.filter(l => l.category === 'ap_payment').length    : 0,
+        budgetOutflows: includeBudget ? linesToCreate.filter(l => l.category === 'opex_budget').length  : 0,
+      },
+    };
+  }
 }

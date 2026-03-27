@@ -187,4 +187,27 @@ export class CashFlowController {
   async getCashFlowSummary(@Request() req, @Param('id') id: string) {
     return this.cashFlowService.getCashFlowSummary(req.user.tenantId, id);
   }
+  @Post(':id/generate-from-data')
+  @RequirePermissions('ACCOUNTING:CREATE')
+  @ApiOperation({ summary: 'Auto-populate cash flow from AR invoices, POs and budget lines' })
+  @ApiParam({ name: 'id', description: 'Projection UUID' })
+  @ApiResponse({ status: 201, description: 'Lines generated from data' })
+  async generateFromData(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() options: {
+      startDate?: string;
+      endDate?: string;
+      includeAR?: boolean;
+      includePO?: boolean;
+      includeBudget?: boolean;
+    } = {},
+  ) {
+    return this.cashFlowService.generateFromData(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      options,
+    );
+  }
 }
