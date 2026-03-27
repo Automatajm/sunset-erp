@@ -83,6 +83,32 @@ export class StockTransactionsController {
     });
   }
 
+  @Get('ledger')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Stock ledger — enriched movements with running balance, reference numbers and totals' })
+  @ApiQuery({ name: 'itemId',          required: false })
+  @ApiQuery({ name: 'warehouseId',     required: false })
+  @ApiQuery({ name: 'itemType',        required: false, description: 'finished_good | raw_material | consumable' })
+  @ApiQuery({ name: 'movementType',    required: false, description: 'receipt | issue | transfer | adjustment | opening_balance' })
+  @ApiQuery({ name: 'referenceNumber', required: false, description: 'Filter by document number (INV-2026-0001)' })
+  @ApiQuery({ name: 'dateFrom',        required: false, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'dateTo',          required: false, description: 'YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Stock ledger with running balance and totals' })
+  async getLedger(
+    @Request() req,
+    @Query('itemId')          itemId?:          string,
+    @Query('warehouseId')     warehouseId?:     string,
+    @Query('itemType')        itemType?:        string,
+    @Query('movementType')    movementType?:    string,
+    @Query('referenceNumber') referenceNumber?: string,
+    @Query('dateFrom')        dateFrom?:        string,
+    @Query('dateTo')          dateTo?:          string,
+  ) {
+    return this.stockTransactionsService.getLedger(req.user.tenantId, {
+      itemId, warehouseId, itemType, movementType, referenceNumber, dateFrom, dateTo,
+    });
+  }
+
   @Get('valuation')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Inventory valuation — onHand × WAC unit cost per item/warehouse' })

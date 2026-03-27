@@ -380,7 +380,173 @@ export class StockTransactionsService {
     }
   }
 
+  // ============================================================================
+  // LEDGER — enriched stock movement report with running balance
+  // ============================================================================
+
+  async getLedger(tenantId: string, filters?: {
+    itemId?:         string;
+    warehouseId?:    string;
+    itemType?:       string;
+    movementType?:   string;
+    referenceNumber?: string;
+    dateFrom?:       string;
+    dateTo?:         string;
+  }) {
+    const where: any = { tenantId };
+
+    if (filters?.itemId)       where.itemId      = filters.itemId;
+    if (filters?.movementType) where.movementType = filters.movementType;
+
+    // Warehouse filter — check both from and to
+    if (filters?.warehouseId) {
+      where.OR = [
+        { fromWarehouseId: filters.warehouseId },
+        { toWarehouseId:   filters.warehouseId },
+      ];
+    }
+
+    // Date range
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.movementDate = {};
+      if (filters.dateFrom) where.movementDate.gte = new Date(filters.dateFrom);
+      if (filters.dateTo)   where.movementDate.lte = new Date(filters.dateTo + 'T23:59:59Z');
+    }
+
+    // Item type filter via item relation
+    const itemWhere: any = { tenantId, deletedAt: null };
+    if (filters?.itemType) itemWhere.itemType = filters.itemType;
+
+    const movements = await this.prisma.stockMovement.findMany({
+      where,
+      include: {
+        item:          { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
+        fromWarehouse: { select: { id: true, code: true, name: true } },
+      },
+      orderBy: { movementDate: 'asc' },
+    });
+
+    // Apply itemType filter in memory (Prisma nested where on include)
+    let filtered = movements.filter(m =>
+      !filters?.itemType || m.item?.itemType === filters.itemType
+    );
+
+    // ── Resolve reference numbers ────────────────────────────────────────────
+    // Batch lookup by referenceType to avoid N+1
+    const arIds  = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice' && m.referenceId).map(m => m.referenceId!))];
+    const apIds  = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice' && m.referenceId).map(m => m.referenceId!))];
+
+    const [arInvoices, apInvoices] = await Promise.all([
+      arIds.length > 0
+        ? this.prisma.arInvoice.findMany({ where: { id: { in: arIds } }, select: { id: true, invoiceNumber: true } })
+        : [],
+      apIds.length > 0
+        ? this.prisma.apInvoice.findMany({ where: { id: { in: apIds } }, select: { id: true, invoiceNumber: true } })
+        : [],
+    ]);
+
+    const arMap = new Map<string, string>(arInvoices.map(i => [i.id, i.invoiceNumber] as [string, string]));
+    const apMap = new Map<string, string>(apInvoices.map(i => [i.id, i.invoiceNumber] as [string, string]));
+
+    const resolveRef = (m: any): string => {
+      if (!m.referenceType || !m.referenceId) return '—';
+      if (m.referenceType === 'ar_invoice')    return arMap.get(m.referenceId) ?? m.referenceId;
+      if (m.referenceType === 'ap_invoice')    return apMap.get(m.referenceId) ?? m.referenceId;
+      if (m.referenceType === 'opening_balance') return 'Opening Balance';
+      return m.referenceId ?? '—';
+    };
+
+    // ── Filter by referenceNumber if provided ────────────────────────────────
+    if (filters?.referenceNumber) {
+      const q = filters.referenceNumber.toLowerCase();
+      filtered = filtered.filter(m => resolveRef(m).toLowerCase().includes(q));
+    }
+
+    // ── Calculate running balance per item/warehouse ──────────────────────────
+    // Build running balance map: key = itemId:warehouseId
+    const balanceMap: Record<string, number> = {};
+
+    // Get opening balances BEFORE dateFrom for each item/warehouse combo
+    if (filters?.dateFrom) {
+      const beforeMovements = await this.prisma.stockMovement.findMany({
+        where: {
+          tenantId,
+          ...(filters.itemId       ? { itemId: filters.itemId } : {}),
+          ...(filters.warehouseId  ? { OR: [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }] } : {}),
+          movementDate: { lt: new Date(filters.dateFrom) },
+        },
+        select: { itemId: true, fromWarehouseId: true, toWarehouseId: true, movementType: true, quantity: true },
+      });
+
+      for (const m of beforeMovements) {
+        const whId = m.toWarehouseId ?? m.fromWarehouseId ?? 'unknown';
+        const key  = `${m.itemId}:${whId}`;
+        if (!balanceMap[key]) balanceMap[key] = 0;
+        const isOut = ['issue'].includes(m.movementType);
+        balanceMap[key] += isOut ? -Number(m.quantity) : Number(m.quantity);
+      }
+    }
+
+    // Build ledger rows with running balance
+    const rows = filtered.map(m => {
+      const whId       = m.toWarehouseId ?? m.fromWarehouseId ?? 'unknown';
+      const key        = `${m.itemId}:${whId}`;
+      const isOut      = ['issue'].includes(m.movementType);
+      const qty        = Number(m.quantity);
+      const signedQty  = isOut ? -qty : qty;
+      const unitCost   = Number(m.unitCost ?? 0);
+      const totalValue = Math.round(Math.abs(signedQty) * unitCost * 100) / 100;
+
+      if (!balanceMap[key]) balanceMap[key] = 0;
+      const openingBalance = balanceMap[key];
+      balanceMap[key]     += signedQty;
+      const closingBalance = balanceMap[key];
+
+      return {
+        id:              m.id,
+        movementNumber:  m.movementNumber,
+        movementType:    m.movementType,
+        movementDate:    m.movementDate,
+        item:            m.item,
+        warehouse:       m.fromWarehouse ?? null,
+        warehouseId:     whId,
+        referenceType:   m.referenceType,
+        referenceNumber: resolveRef(m),
+        quantity:        qty,
+        signedQuantity:  signedQty,
+        uom:             m.uom,
+        unitCost,
+        totalValue:      isOut ? -totalValue : totalValue,
+        openingBalance:  Math.round(openingBalance * 1000) / 1000,
+        closingBalance:  Math.round(closingBalance * 1000) / 1000,
+        notes:           m.notes,
+      };
+    });
+
+    // ── Totals ───────────────────────────────────────────────────────────────
+    const totalIn       = rows.filter(r => r.signedQuantity > 0).reduce((s, r) => s + r.quantity,    0);
+    const totalOut      = rows.filter(r => r.signedQuantity < 0).reduce((s, r) => s + r.quantity,    0);
+    const totalInValue  = rows.filter(r => r.signedQuantity > 0).reduce((s, r) => s + r.totalValue,  0);
+    const totalOutValue = rows.filter(r => r.signedQuantity < 0).reduce((s, r) => s + Math.abs(r.totalValue), 0);
+
+    return {
+      rows,
+      totals: {
+        totalIn:        Math.round(totalIn * 1000) / 1000,
+        totalOut:       Math.round(totalOut * 1000) / 1000,
+        netMovement:    Math.round((totalIn - totalOut) * 1000) / 1000,
+        totalInValue:   Math.round(totalInValue * 100) / 100,
+        totalOutValue:  Math.round(totalOutValue * 100) / 100,
+        netValue:       Math.round((totalInValue - totalOutValue) * 100) / 100,
+        openingBalance: rows.length > 0 ? rows[0].openingBalance : 0,
+        closingBalance: rows.length > 0 ? rows[rows.length - 1].closingBalance : 0,
+      },
+      count: rows.length,
+    };
+  }
+
   /**
+   * Inventory valuation report.  /**
    * Inventory valuation report.
    * Returns onHandQuantity × unitCost per item/warehouse.
    */
