@@ -23,6 +23,7 @@ import { CashFlowModule } from './modules/cash-flow/cash-flow.module';
 import { ArInvoicesModule } from './modules/ar-invoices/ar-invoices.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
+import { ApInvoicesModule } from './modules/ap-invoices/ap-invoices.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -49,6 +50,7 @@ import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
     ArInvoicesModule,
     AutomationModule,
     BulkImportModule,
+    ApInvoicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

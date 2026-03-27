@@ -126,6 +126,9 @@ model Tenant {
   bomRoutings BomRouting[]
   automationConfigs AutomationConfig[]
   autoJeQueue       AutoJeQueue[]
+  apInvoices     ApInvoice[]
+  apInvoiceLines ApInvoiceLine[]
+  apPayments     ApPayment[]
 
   @@map("saas_tenants")
 }
@@ -486,6 +489,7 @@ model Supplier {
   createdByUser  User            @relation("SupplierCreatedBy", fields: [createdBy], references: [id])
   updatedByUser  User            @relation("SupplierUpdatedBy", fields: [updatedBy], references: [id])
   purchaseOrders PurchaseOrder[]
+  apInvoices     ApInvoice[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -529,6 +533,7 @@ model PurchaseOrder {
   createdByUser User                @relation("PurchaseOrderCreatedBy", fields: [createdBy], references: [id])
   updatedByUser User                @relation("PurchaseOrderUpdatedBy", fields: [updatedBy], references: [id])
   lines         PurchaseOrderLine[]
+  apInvoices     ApInvoice[]
 
   @@unique([tenantId, poNumber])
   @@index([tenantId])
@@ -571,6 +576,7 @@ model PurchaseOrderLine {
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
+  apInvoiceLines ApInvoiceLine[]
 
   @@index([tenantId])
   @@index([purchaseOrderId])
@@ -636,6 +642,7 @@ model Item {
   bomComponents      BomComponent[]
   arInvoiceLines ArInvoiceLine[]
   moMaterialActuals MoMaterialActual[]
+  apInvoiceLines ApInvoiceLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1036,6 +1043,8 @@ model Account {
 
   arInvoiceLinesRevenue ArInvoiceLine[] @relation("ArLineRevenueAccount")
   arInvoiceLinesCogs    ArInvoiceLine[] @relation("ArLineCogsAccount")
+  apInvoiceLinesInventory ApInvoiceLine[] @relation("ApLineInventoryAccount")
+  apInvoiceLinesExpense   ApInvoiceLine[] @relation("ApLineExpenseAccount")
 
   @@unique([tenantId, accountNumber])
   @@index([tenantId])
@@ -1067,6 +1076,8 @@ model JournalEntry {
   lines  JournalEntryLine[]
   arInvoices  ArInvoice[]  @relation("ArInvoiceJe")
   arPayments  ArPayment[]  @relation("ArPaymentJe")
+  apInvoices  ApInvoice[]  @relation("ApInvoiceJe")
+  apPayments  ApPayment[]  @relation("ApPaymentJe")
   productionVariances ProductionVariance[] @relation("VarianceJe")
   autoJeQueue AutoJeQueue[] @relation("AutoJeQueueJe")
 
@@ -1540,6 +1551,119 @@ model AutoJeQueue {
   @@index([tenantId, eventType])
   @@index([jeId])
   @@map("auto_je_queue")
+}
+
+// ============================================================================
+// ACCOUNTS PAYABLE TABLES (ap_*)
+// Sprint 10A — AP Cycle
+// ============================================================================
+
+model ApInvoice {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  poId          String?   @map("po_id") @db.Uuid
+  supplierId    String    @map("supplier_id") @db.Uuid
+  invoiceNumber String    @map("invoice_number") @db.VarChar(50)
+  supplierRef   String?   @map("supplier_ref") @db.VarChar(100)
+  invoiceDate   DateTime  @default(dbgenerated("CURRENT_DATE")) @map("invoice_date") @db.Date
+  dueDate       DateTime  @map("due_date") @db.Date
+  status        String    @default("draft") @db.VarChar(20)
+  subtotal      Decimal   @default(0) @db.Decimal(15, 2)
+  taxAmount     Decimal   @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  totalAmount   Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
+  paidAmount    Decimal   @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  jeId          String?   @map("je_id") @db.Uuid
+  currency      String    @default("USD") @db.VarChar(3)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  updatedBy     String    @map("updated_by") @db.Uuid
+  deletedBy     String?   @map("deleted_by") @db.Uuid
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  supplier      Supplier        @relation(fields: [supplierId], references: [id])
+  purchaseOrder PurchaseOrder?  @relation(fields: [poId], references: [id])
+  journalEntry  JournalEntry?   @relation("ApInvoiceJe", fields: [jeId], references: [id])
+  lines         ApInvoiceLine[]
+  payments      ApPayment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, poId])
+  @@index([tenantId, status])
+  @@index([invoiceDate])
+  @@index([dueDate])
+  @@map("ap_invoices")
+}
+
+model ApInvoiceLine {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  invoiceId          String    @map("invoice_id") @db.Uuid
+  poLineId           String?   @map("po_line_id") @db.Uuid
+  lineNumber         Int       @map("line_number")
+  itemId             String?   @map("item_id") @db.Uuid
+  description        String?   @db.Text
+  quantity           Decimal   @db.Decimal(15, 3)
+  uom                String?   @db.VarChar(20)
+  unitPrice          Decimal   @map("unit_price") @db.Decimal(15, 4)
+  originalPoPrice    Decimal?  @map("original_po_price") @db.Decimal(15, 4)
+  discountPercent    Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  lineTotal          Decimal   @map("line_total") @db.Decimal(15, 2)
+  priceVariance      Decimal?  @map("price_variance") @db.Decimal(15, 2)
+  inventoryAccountId String?   @map("inventory_account_id") @db.Uuid
+  expenseAccountId   String?   @map("expense_account_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdBy          String    @map("created_by") @db.Uuid
+  updatedBy          String    @map("updated_by") @db.Uuid
+  deletedBy          String?   @map("deleted_by") @db.Uuid
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  invoice           ApInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item              Item?              @relation(fields: [itemId], references: [id])
+  purchaseOrderLine PurchaseOrderLine? @relation(fields: [poLineId], references: [id])
+  inventoryAccount  Account?           @relation("ApLineInventoryAccount", fields: [inventoryAccountId], references: [id])
+  expenseAccount    Account?           @relation("ApLineExpenseAccount", fields: [expenseAccountId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([itemId])
+  @@index([poLineId])
+  @@map("ap_invoice_lines")
+}
+
+model ApPayment {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  invoiceId     String    @map("invoice_id") @db.Uuid
+  paymentNumber String    @map("payment_number") @db.VarChar(50)
+  paymentDate   DateTime  @default(dbgenerated("CURRENT_DATE")) @map("payment_date") @db.Date
+  amount        Decimal   @db.Decimal(15, 2)
+  paymentMethod String?   @map("payment_method") @db.VarChar(50)
+  reference     String?   @db.VarChar(255)
+  jeId          String?   @map("je_id") @db.Uuid
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  updatedBy     String    @map("updated_by") @db.Uuid
+  deletedBy     String?   @map("deleted_by") @db.Uuid
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  invoice      ApInvoice     @relation(fields: [invoiceId], references: [id])
+  journalEntry JournalEntry? @relation("ApPaymentJe", fields: [jeId], references: [id])
+
+  @@unique([tenantId, paymentNumber])
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("ap_payments")
 }
 // ============================================================================
 // END OF SCHEMA

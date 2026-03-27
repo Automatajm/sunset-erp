@@ -870,6 +870,78 @@ erDiagram
     String created_by "❓"
     }
   
+
+  "ap_invoices" {
+    String id "🗝️"
+    String tenant_id 
+    String po_id "❓"
+    String supplier_id 
+    String invoice_number 
+    String supplier_ref "❓"
+    DateTime invoice_date 
+    DateTime due_date 
+    String status 
+    Decimal subtotal 
+    Decimal tax_amount 
+    Decimal total_amount 
+    Decimal paid_amount 
+    String je_id "❓"
+    String currency 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ap_invoice_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String invoice_id 
+    String po_line_id "❓"
+    Int line_number 
+    String item_id "❓"
+    String description "❓"
+    Decimal quantity 
+    String uom "❓"
+    Decimal unit_price 
+    Decimal original_po_price "❓"
+    Decimal discount_percent 
+    Decimal line_total 
+    Decimal price_variance "❓"
+    String inventory_account_id "❓"
+    String expense_account_id "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "ap_payments" {
+    String id "🗝️"
+    String tenant_id 
+    String invoice_id 
+    String payment_number 
+    DateTime payment_date 
+    Decimal amount 
+    String payment_method "❓"
+    String reference "❓"
+    String je_id "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -960,4 +1032,17 @@ erDiagram
     "auto_automation_configs" }o--|| saas_tenants : "tenant"
     "auto_je_queue" }o--|| saas_tenants : "tenant"
     "auto_je_queue" }o--|| ac_journal_entries : "journalEntry"
+    "ap_invoices" }o--|| saas_tenants : "tenant"
+    "ap_invoices" }o--|| po_suppliers : "supplier"
+    "ap_invoices" }o--|o po_purchase_orders : "purchaseOrder"
+    "ap_invoices" }o--|o ac_journal_entries : "journalEntry"
+    "ap_invoice_lines" }o--|| saas_tenants : "tenant"
+    "ap_invoice_lines" }o--|| ap_invoices : "invoice"
+    "ap_invoice_lines" }o--|o in_items : "item"
+    "ap_invoice_lines" }o--|o po_purchase_order_lines : "purchaseOrderLine"
+    "ap_invoice_lines" }o--|o ac_accounts : "inventoryAccount"
+    "ap_invoice_lines" }o--|o ac_accounts : "expenseAccount"
+    "ap_payments" }o--|| saas_tenants : "tenant"
+    "ap_payments" }o--|| ap_invoices : "invoice"
+    "ap_payments" }o--|o ac_journal_entries : "journalEntry"
 ```

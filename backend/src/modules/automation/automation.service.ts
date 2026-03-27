@@ -7,6 +7,9 @@ export const AUTOMATION_MODULES = [
   'ar_invoice',
   'ar_payment',
   'ar_reversal',
+  'ap_invoice',      // ← NEW
+  'ap_payment',      // ← NEW
+  'ap_reversal',     // ← NEW
   'fg_delivery',
   'production_variance',
   'po_receipt',

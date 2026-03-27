@@ -123,22 +123,32 @@ export class ArInvoicesService {
     const dueDate = new Date(so.orderDate);
     dueDate.setDate(dueDate.getDate() + 30);
 
-    const linesData = so.lines.map((line, i) => ({
-      tenantId,
-      lineNumber: i + 1,
-      itemId: line.itemId,
-      description: line.description ?? line.item?.name ?? null,
-      quantity: Number(line.orderedQuantity),
-      uom: line.uom,
-      unitPrice: Number(line.unitPrice),
-      discountPercent: Number(line.discountPercent),
-      lineTotal: Number(line.lineTotal),
-      cogsAmount: null,
-      revenueAccountId: null,
-      cogsAccountId: null,
-      createdBy: userId,
-      updatedBy: userId,
-    }));
+   // ── Calculate COGS from BOM standard cost per line ──────────────────────
+    const linesData: any[] = [];
+    for (let i = 0; i < so.lines.length; i++) {
+      const line = so.lines[i];
+      const cogsAmount = await this.calculateBomStandardCost(
+        tenantId,
+        line.itemId,
+        Number(line.orderedQuantity),
+      );
+      linesData.push({
+        tenantId,
+        lineNumber: i + 1,
+        itemId: line.itemId,
+        description: line.description ?? line.item?.name ?? null,
+        quantity: Number(line.orderedQuantity),
+        uom: line.uom,
+        unitPrice: Number(line.unitPrice),
+        discountPercent: Number(line.discountPercent),
+        lineTotal: Number(line.lineTotal),
+        cogsAmount,
+        revenueAccountId: null,
+        cogsAccountId: null,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    }
 
     const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
@@ -554,6 +564,41 @@ export class ArInvoicesService {
   }
 
   // ── Number generators — date-aware ──────────────────────────────────────────
+
+  /**
+   * Calculate standard cost for an item from its active BOM.
+   * Returns: Σ (component.quantityPer × component.item.standardCost) × quantity
+   * Returns null if no BOM or no standardCost on components.
+   */
+  private async calculateBomStandardCost(
+    tenantId: string,
+    itemId: string,
+    quantity: number,
+  ): Promise<number | null> {
+    const bom = await this.prisma.bom.findFirst({
+      where: { tenantId, parentItemId: itemId, isActive: true, deletedAt: null },
+    });
+
+    if (!bom) return null;
+
+    const components = await this.prisma.bomComponent.findMany({
+      where: { bomId: bom.id, deletedAt: null },
+      include: { componentItem: { select: { standardCost: true } } },
+    });
+
+    if (components.length === 0) return null;
+
+    const hasAllCosts = components.every(
+      c => c.componentItem.standardCost !== null,
+    );
+    if (!hasAllCosts) return null;
+
+    const unitCost = components.reduce((sum, comp) => {
+      return sum + Number(comp.quantityPer) * Number(comp.componentItem.standardCost);
+    }, 0);
+
+    return Math.round(unitCost * quantity * 100) / 100;
+  }
 
   private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `INV-${(date ?? new Date()).getFullYear()}`;
