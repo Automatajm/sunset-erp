@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -81,6 +81,20 @@ export class StockTransactionsController {
       itemId,
       warehouseId,
     });
+  }
+
+  @Get('valuation')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Inventory valuation — onHand × WAC unit cost per item/warehouse' })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiResponse({ status: 200, description: 'Inventory valuation report' })
+  async getValuation(
+    @Request() req,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType')    itemType?: string,
+  ) {
+    return this.stockTransactionsService.getValuation(req.user.tenantId, { warehouseId, itemType });
   }
 
   @Get(':id')

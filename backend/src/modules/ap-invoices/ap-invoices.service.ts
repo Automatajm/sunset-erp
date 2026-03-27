@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateApInvoiceDto } from './dto/create-ap-invoice.dto';
 import { UpdateApInvoiceDto, ApplyApPaymentDto } from './dto/update-ap-invoice.dto';
 import { AutomationService } from '../automation/automation.service';
+import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ApInvoicesService {
   constructor(
     private prisma: PrismaService,
     private automation: AutomationService,
+    private stockService: StockTransactionsService,
   ) {}
 
   // ============================================================================
@@ -262,6 +264,23 @@ export class ApInvoicesService {
     }
 
     const je = await this.createInvoiceJe(tenantId, userId, invoice);
+
+    // ── Stock IN — raw materials received ────────────────────────────────────
+    try {
+      await this.stockService.receiveFromApInvoice(tenantId, userId, {
+        id:            invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        lines:         invoice.lines.map((l: any) => ({
+          itemId:      l.itemId,
+          quantity:    Number(l.quantity),
+          uom:         l.uom,
+          unitPrice:   Number(l.unitPrice),
+          description: l.description,
+        })),
+      });
+    } catch (err) {
+      console.error('❌ receiveFromApInvoice failed:', err.message);
+    }
 
     const updated = await this.prisma.apInvoice.update({
       where: { id },

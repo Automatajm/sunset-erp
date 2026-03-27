@@ -7,12 +7,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateArInvoiceDto } from './dto/create-ar-invoice.dto';
 import { UpdateArInvoiceDto, ApplyPaymentDto } from './dto/update-ar-invoice.dto';
 import { AutomationService } from '../automation/automation.service';
+import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 
 @Injectable()
 export class ArInvoicesService {
   constructor(
     private prisma: PrismaService,
     private automation: AutomationService,
+    private stockService: StockTransactionsService,
   ) {}
 
   async create(tenantId: string, userId: string, dto: CreateArInvoiceDto) {
@@ -228,6 +230,22 @@ export class ArInvoicesService {
       throw new BadRequestException(`Cannot send invoice in status "${invoice.status}"`);
     }
     const je = await this.createInvoiceJe(tenantId, userId, invoice);
+
+    // ── Stock OUT — finished goods shipped ───────────────────────────────────
+    try {
+      await this.stockService.shipFromArInvoice(tenantId, userId, {
+        id:            invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        lines:         invoice.lines.map((l: any) => ({
+          itemId:      l.itemId,
+          quantity:    Number(l.quantity),
+          uom:         l.uom,
+          description: l.description,
+        })),
+      });
+    } catch (err) {
+      console.error('❌ shipFromArInvoice failed:', err.message);
+    }
 
     const updated = await this.prisma.arInvoice.update({
       where: { id },
