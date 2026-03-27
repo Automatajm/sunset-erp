@@ -239,3 +239,53 @@ Key technical notes:
 
 Start with Sprint 10A — AP Cycle. I need the complete ap-invoices module (service, controller, module, DTOs) and the goods receipt endpoint on purchase-orders. Show me what files to create/modify.
 ```
+
+---
+
+## Sprint 10E — Cash Flow Population
+
+### Backend already exists:
+- `POST /api/cash-flow` — create projection
+- `GET /api/cash-flow/:id/summary` — monthly summary with running balance
+- `POST /api/cash-flow/:id/lines` — add line manually
+
+### What needs building:
+**New endpoint:** `POST /api/cash-flow/:id/generate-from-data`
+
+Pulls automatically from existing data:
+```
+Inflows:
+  - AR Invoices (paid/sent) → lineType: 'inflow', category: 'ar_collection'
+    amount = totalAmount, lineDate = invoiceDate
+
+Outflows:
+  - Purchase Orders (confirmed) → lineType: 'outflow', category: 'ap_payment'
+    amount = total, lineDate = expectedDate ?? poDate + 30
+  - Budget lines (expense accounts 5.x.xx) → lineType: 'outflow', category: 'opex'
+    amount = budgetAmount, lineDate = first day of fiscalPeriod
+
+Optional params: { startDate, endDate, includeAR, includePO, includeBudget }
+```
+
+### Quick simulation script (PowerShell — can run now):
+```powershell
+# 1. Create projection
+$proj = Invoke-RestMethod -Uri "$base/cash-flow" -Method POST -Headers $h -Body (@{
+    projectionCode = "CF-2026"
+    projectionName = "Cash Flow 2026 — Mesa Manufacturing"
+    startDate      = "2026-01-01"
+    endDate        = "2026-12-31"
+    scenario       = "realistic"
+    description    = "Generated from AR invoices and PO data"
+} | ConvertTo-Json)
+
+# 2. Add AR inflows (from invoices already paid/sent)
+# 3. Add PO outflows (from purchase orders)
+# 4. GET /api/cash-flow/$($proj.id)/summary → monthly view
+```
+
+### Frontend screen needed:
+- Financial → Cash Flow menu item
+- Table: Period | Inflows | Outflows | Net | Running Balance
+- Chart: waterfall or line showing running balance over 12 months
+- Filter by scenario (optimistic/realistic/pessimistic)
