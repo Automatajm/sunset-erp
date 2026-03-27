@@ -74,6 +74,26 @@ export class BulkImportService {
     return ['true', '1', 'yes', 'y'].includes(String(val).toLowerCase());
   }
 
+  // ── Date parser — handles YYYY-MM-DD, Excel serials, JS Dates ──────────────
+  private parseDate(val: any): string | null {
+    if (!val) return null;
+    if (val instanceof Date) {
+      if (isNaN(val.getTime())) return null;
+      return val.toISOString().slice(0, 10);
+    }
+    const s = String(val).trim().replace(/[\u00a0\u200b\ufeff]/g, '');
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const n = Number(s);
+    if (!isNaN(n) && n > 40000 && n < 60000) {
+      return new Date((n - 25569) * 86400 * 1000).toISOString().slice(0, 10);
+    }
+    if (s.includes('T')) return s.slice(0, 10);
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    return null;
+  }
+
   private buildResult(entity: string, total: number, inserted: number, updated: number, skipped: number, errors: BulkImportError[], dryRun: boolean, upsert: boolean): BulkImportResult {
     return {
       entity, total,
@@ -444,9 +464,11 @@ export class BulkImportService {
       const unitPrice    = this.req(row, r, 'unitPrice',    rowErrors);
       if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
 
-      const key = `${customerCode}||${orderDate}`;
+      const parsedOrderDate = this.parseDate(orderDate);
+      if (!parsedOrderDate) { errors.push({ row, field: 'orderDate', message: `Invalid date: ${orderDate}` }); continue; }
+      const key = `${customerCode}||${parsedOrderDate}`;
       if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push({ ...r, _row: row });
+      groups.get(key)!.push({ ...r, _row: row, _parsedDate: parsedOrderDate });
     }
 
     // ── Process each group as one Sales Order ───────────────────────────────
@@ -507,7 +529,7 @@ export class BulkImportService {
       if (hasLineError) continue;
 
       // Check if SO with same customer+date already exists (by soNumber pattern)
-      const orderDateStr = String(first.orderDate).trim();
+      const orderDateStr = first._parsedDate as string;
       const existingSo = await this.prisma.salesOrder.findFirst({
         where: {
           tenantId,
@@ -543,7 +565,7 @@ export class BulkImportService {
 
       if (!dryRun) {
         // Generate SO number
-        const year   = new Date().getFullYear();
+        const year   = new Date(orderDateStr).getFullYear();
         const prefix = `SO-${year}`;
         const lastSo = await this.prisma.salesOrder.findFirst({
           where: { tenantId, soNumber: { startsWith: prefix } },
@@ -594,9 +616,11 @@ export class BulkImportService {
       this.req(row, r, 'unitPrice',    rowErrors);
       if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
 
-      const key = `${String(r.supplierCode).trim()}||${String(r.poDate).trim()}`;
+      const parsedPoDate = this.parseDate(r.poDate);
+      if (!parsedPoDate) { errors.push({ row, field: 'poDate', message: `Invalid date: ${r.poDate}` }); continue; }
+      const key = `${String(r.supplierCode).trim()}||${parsedPoDate}`;
       if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push({ ...r, _row: row });
+      groups.get(key)!.push({ ...r, _row: row, _parsedDate: parsedPoDate });
     }
 
     for (const [key, rows] of groups) {
@@ -652,7 +676,7 @@ export class BulkImportService {
 
       if (hasLineError) continue;
 
-      const poDateStr = String(first.poDate).trim();
+      const poDateStr = first._parsedDate as string;
       const existingPo = await this.prisma.purchaseOrder.findFirst({
         where: {
           tenantId,
@@ -685,7 +709,7 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        const year   = new Date().getFullYear();
+        const year   = new Date(poDateStr).getFullYear();
         const prefix = `PO-${year}`;
         const lastPo = await this.prisma.purchaseOrder.findFirst({
           where: { tenantId, poNumber: { startsWith: prefix } },

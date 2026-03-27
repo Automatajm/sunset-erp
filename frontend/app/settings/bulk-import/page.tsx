@@ -121,9 +121,37 @@ function parseCsv(text: string): Record<string, any>[] {
 }
 
 function parseExcel(buffer: ArrayBuffer): Record<string, any>[] {
-  const wb = XLSX.read(buffer, { type: 'array' });
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
+  const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { 
+    defval: '',
+    raw: false,  // convierte fechas a strings YYYY-MM-DD automáticamente
+  });
+  // Limpia espacios ocultos y normaliza fechas en todos los campos
+  return data.map(row => {
+    const clean: Record<string, any> = {};
+    for (const [key, val] of Object.entries(row)) {
+      const k = key.trim();
+      if (val instanceof Date) {
+        // fecha nativa → YYYY-MM-DD
+        clean[k] = val.toISOString().slice(0, 10);
+      } else if (typeof val === 'string') {
+        const v = val.trim().replace(/[\u00a0\u200b\ufeff]/g, ''); // nbsp, zero-width, BOM
+        // Si parece fecha Excel serial (número grande como 45678)
+        const n = Number(v);
+        if (!isNaN(n) && n > 40000 && n < 55000 && v.length <= 6) {
+          // Convertir serial Excel a fecha
+          const date = new Date((n - 25569) * 86400 * 1000);
+          clean[k] = date.toISOString().slice(0, 10);
+        } else {
+          clean[k] = v;
+        }
+      } else {
+        clean[k] = val;
+      }
+    }
+    return clean;
+  });
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };

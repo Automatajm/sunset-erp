@@ -60,7 +60,7 @@ export class ArInvoicesService {
       });
     }
 
-    const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+    const invoiceNumber = await this.generateInvoiceNumber(tenantId, new Date(dto.invoiceDate));
 
     return this.prisma.arInvoice.create({
       data: {
@@ -107,8 +107,20 @@ export class ArInvoicesService {
       );
     }
 
-    const invoiceDate = new Date();
-    const dueDate = new Date();
+    // ── Use SO orderDate as invoiceDate (retroactive support) ───────────────
+    const invoiceDate = new Date(so.orderDate);
+
+    // ── Guard: cannot invoice beyond end of current month ───────────────────
+    const now = new Date();
+    const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    if (invoiceDate > endOfCurrentMonth) {
+      throw new BadRequestException(
+        `Cannot invoice SO with date ${invoiceDate.toISOString().slice(0, 10)} — beyond end of current month (${endOfCurrentMonth.toISOString().slice(0, 10)})`,
+      );
+    }
+
+    // ── Due date: orderDate + 30 days ────────────────────────────────────────
+    const dueDate = new Date(so.orderDate);
     dueDate.setDate(dueDate.getDate() + 30);
 
     const linesData = so.lines.map((line, i) => ({
@@ -128,7 +140,7 @@ export class ArInvoicesService {
       updatedBy: userId,
     }));
 
-    const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+    const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
     return this.prisma.arInvoice.create({
       data: {
@@ -207,7 +219,6 @@ export class ArInvoicesService {
     }
     const je = await this.createInvoiceJe(tenantId, userId, invoice);
 
-    // If manual mode, je is null — invoice goes to sent without JE
     const updated = await this.prisma.arInvoice.update({
       where: { id },
       data: {
@@ -248,7 +259,7 @@ export class ArInvoicesService {
         `Payment $${dto.amount} exceeds outstanding balance $${remaining.toFixed(2)}`,
       );
     }
-    const paymentNumber = await this.generatePaymentNumber(tenantId);
+    const paymentNumber = await this.generatePaymentNumber(tenantId, new Date(dto.paymentDate));
     const je = await this.createPaymentJe(tenantId, userId, invoice, dto);
 
     const payment = await this.prisma.arPayment.create({
@@ -289,9 +300,9 @@ export class ArInvoicesService {
     });
 
     const buckets = {
-      current: [] as any[],
-      days30: [] as any[],
-      days60: [] as any[],
+      current:  [] as any[],
+      days30:   [] as any[],
+      days60:   [] as any[],
       days90plus: [] as any[],
     };
 
@@ -312,10 +323,10 @@ export class ArInvoicesService {
         outstanding,
         daysOverdue,
       };
-      if (daysOverdue <= 0) buckets.current.push(row);
+      if (daysOverdue <= 0)       buckets.current.push(row);
       else if (daysOverdue <= 30) buckets.days30.push(row);
       else if (daysOverdue <= 60) buckets.days60.push(row);
-      else buckets.days90plus.push(row);
+      else                        buckets.days90plus.push(row);
     }
 
     const sum = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstanding, 0);
@@ -349,20 +360,20 @@ export class ArInvoicesService {
     let totalInvoiced = 0, totalCollected = 0, totalPending = 0, totalOverdue = 0;
     for (const inv of invoices) {
       const total = Number(inv.totalAmount);
-      const paid = Number(inv.paidAmount);
+      const paid  = Number(inv.paidAmount);
       const outstanding = total - paid;
-      totalInvoiced += total;
-      totalCollected += paid;
+      totalInvoiced   += total;
+      totalCollected  += paid;
       if (outstanding > 0) {
         totalPending += outstanding;
         if (new Date(inv.dueDate) < today) totalOverdue += outstanding;
       }
     }
     return {
-      invoiced: totalInvoiced,
-      collected: totalCollected,
-      pending: totalPending,
-      overdue: totalOverdue,
+      invoiced:       totalInvoiced,
+      collected:      totalCollected,
+      pending:        totalPending,
+      overdue:        totalOverdue,
       collectionRate: totalInvoiced > 0 ? (totalCollected / totalInvoiced) * 100 : 0,
     };
   }
@@ -379,7 +390,20 @@ export class ArInvoicesService {
     return { message: 'Invoice deleted', id };
   }
 
-  // ── Private helpers ──────────────────────────────────────
+  // ============================================================================
+  // PRIVATE HELPERS
+  // ============================================================================
+
+  private async assertPeriodOpen(tenantId: string, fiscalPeriod: string): Promise<void> {
+    const period = await this.prisma.fiscalPeriod.findFirst({
+      where: { tenantId, periodCode: fiscalPeriod, deletedAt: null },
+    });
+    if (period && ['closed', 'locked'].includes(period.status)) {
+      throw new BadRequestException(
+        `Fiscal period ${fiscalPeriod} is ${period.status} — cannot post journal entries`,
+      );
+    }
+  }
 
   private async createInvoiceJe(tenantId: string, userId: string, invoice: any) {
     const arAccount = await this.prisma.account.findFirst({
@@ -395,6 +419,9 @@ export class ArInvoicesService {
     const entryNumber  = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(invoice.invoiceDate));
     const totalAmount  = Number(invoice.totalAmount);
+
+    // ── Guard: fiscal period must be open ────────────────────────────────────
+    await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
     const lines: any[] = [
       { lineNumber: 1, accountId: arAccount.id,      description: `AR — Invoice ${invoice.invoiceNumber}`,      debitAmount: totalAmount, creditAmount: 0 },
@@ -447,6 +474,9 @@ export class ArInvoicesService {
 
     const entryNumber  = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(dto.paymentDate));
+
+    // ── Guard: fiscal period must be open ────────────────────────────────────
+    await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
     const result = await this.automation.handleAutoJe({
       tenantId,
@@ -523,8 +553,10 @@ export class ArInvoicesService {
     };
   }
 
-  private async generateInvoiceNumber(tenantId: string): Promise<string> {
-    const prefix = `INV-${new Date().getFullYear()}`;
+  // ── Number generators — date-aware ──────────────────────────────────────────
+
+  private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
+    const prefix = `INV-${(date ?? new Date()).getFullYear()}`;
     const last = await this.prisma.arInvoice.findFirst({
       where: { tenantId, invoiceNumber: { startsWith: prefix } },
       orderBy: { invoiceNumber: 'desc' },
@@ -533,8 +565,8 @@ export class ArInvoicesService {
     return `${prefix}-${(parseInt(last.invoiceNumber.split('-')[2]) + 1).toString().padStart(4, '0')}`;
   }
 
-  private async generatePaymentNumber(tenantId: string): Promise<string> {
-    const prefix = `PAY-${new Date().getFullYear()}`;
+  private async generatePaymentNumber(tenantId: string, date?: Date): Promise<string> {
+    const prefix = `PAY-${(date ?? new Date()).getFullYear()}`;
     const last = await this.prisma.arPayment.findFirst({
       where: { tenantId, paymentNumber: { startsWith: prefix } },
       orderBy: { paymentNumber: 'desc' },
@@ -545,7 +577,7 @@ export class ArInvoicesService {
 
   private async generateJeNumber(tenantId: string): Promise<string> {
     const now = new Date();
-    const year = now.getFullYear();
+    const year  = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const prefix = `JE-${year}${month}`;
     const last = await this.prisma.journalEntry.findFirst({
