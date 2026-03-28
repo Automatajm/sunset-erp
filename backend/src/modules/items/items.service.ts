@@ -30,22 +30,49 @@ const ITEM_INCLUDE = {
   },
 };
 
+// Numeric fields that must be coerced to Number before hitting Prisma
+const NUMERIC_FIELDS = [
+  'standardCost', 'leadTimeDays', 'safetyStock',
+  'reorderPoint', 'reorderQuantity',
+  'purchaseToConsumptionFactor', 'storageToConsumptionFactor',
+];
+
 @Injectable()
 export class ItemsService {
   constructor(private prisma: PrismaService) {}
 
+  // Auto-generate code: ITEM-0001, ITEM-0002, ...
+  private async generateItemCode(tenantId: string): Promise<string> {
+    const PREFIX = 'ITEM-';
+    const items = await this.prisma.item.findMany({
+      where: { tenantId, code: { startsWith: PREFIX } },
+      select: { code: true },
+    });
+    let max = 0;
+    for (const { code } of items) {
+      const n = parseInt(code.slice(PREFIX.length), 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+    return `${PREFIX}${String(max + 1).padStart(4, '0')}`;
+  }
+
   async create(tenantId: string, userId: string, createItemDto: CreateItemDto) {
+    // Use provided code or auto-generate
+    const code = createItemDto.code?.trim()
+      ? createItemDto.code.trim().toUpperCase()
+      : await this.generateItemCode(tenantId);
+
     const existing = await this.prisma.item.findFirst({
-      where: { tenantId, code: createItemDto.code, deletedAt: null },
+      where: { tenantId, code, deletedAt: null },
     });
     if (existing) {
-      throw new ConflictException(`Item with code ${createItemDto.code} already exists`);
+      throw new ConflictException(`Item with code ${code} already exists`);
     }
 
     return this.prisma.item.create({
       data: {
         tenantId,
-        code:             createItemDto.code,
+        code,
         name:             createItemDto.name,
         description:      createItemDto.description,
         itemType:         createItemDto.itemType,
@@ -113,9 +140,18 @@ export class ItemsService {
       }
     }
 
+    // Build clean data object:
+    // - Skip undefined / null / empty string fields (don't overwrite with null)
+    // - Coerce numeric fields to Number (HTTP body may deliver them as strings)
+    const data: any = { updatedBy: userId };
+    for (const [k, v] of Object.entries(updateItemDto)) {
+      if (v === undefined || v === null || v === '') continue;
+      data[k] = NUMERIC_FIELDS.includes(k) ? Number(v) : v;
+    }
+
     return this.prisma.item.update({
       where: { id },
-      data:  { ...updateItemDto, updatedBy: userId },
+      data,
       include: ITEM_INCLUDE,
     });
   }
@@ -138,10 +174,10 @@ export class ItemsService {
       where: { tenantId, deletedAt: null },
       _count: true,
     });
-    const stockable    = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isStockable: true } });
-    const purchasable  = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isPurchasable: true } });
-    const saleable     = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isSaleable: true } });
-    const withCategory = await this.prisma.item.count({ where: { tenantId, deletedAt: null, categoryId: { not: null } } });
+    const stockable     = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isStockable: true } });
+    const purchasable   = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isPurchasable: true } });
+    const saleable      = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isSaleable: true } });
+    const withCategory  = await this.prisma.item.count({ where: { tenantId, deletedAt: null, categoryId: { not: null } } });
     const withUomTriple = await this.prisma.item.count({ where: { tenantId, deletedAt: null, consumptionUomId: { not: null } } });
 
     return {

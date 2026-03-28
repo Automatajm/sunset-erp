@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { itemsApi } from '@/lib/api/items';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
@@ -52,189 +53,6 @@ const FIELD: React.CSSProperties = {
   fontFamily: "'IBM Plex Sans',sans-serif",
   color: '#f1ede8', outline: 'none', width: '100%',
 };
-
-// ─── SearchSelect — panel uses position:fixed to escape any overflow container ─
-
-interface SSOption { value: string; label: string; sublabel?: string; }
-
-function SearchSelect({
-  options, value, onChange,
-  placeholder = 'Search…', clearLabel = '— None —',
-}: {
-  options: SSOption[];
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  clearLabel?: string;
-}) {
-  const [open,  setOpen]  = useState(false);
-  const [query, setQuery] = useState('');
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const panelRef   = useRef<HTMLDivElement>(null);
-  const inputRef   = useRef<HTMLInputElement>(null);
-  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
-
-  // Position panel using fixed coords from trigger bounding rect
-  const openPanel = () => {
-    if (!triggerRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - r.bottom;
-    const panelH = 280; // max panel height
-
-    if (spaceBelow >= panelH || spaceBelow >= 180) {
-      // Open downward
-      setPanelStyle({
-        position: 'fixed',
-        top: r.bottom + 4,
-        left: r.left,
-        width: r.width,
-        zIndex: 9999,
-      });
-    } else {
-      // Open upward
-      setPanelStyle({
-        position: 'fixed',
-        bottom: window.innerHeight - r.top + 4,
-        left: r.left,
-        width: r.width,
-        zIndex: 9999,
-      });
-    }
-    setOpen(true);
-    setQuery('');
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  // Close on outside click — use mousedown on document but check both refs
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      const inTrigger = triggerRef.current?.contains(t);
-      const inPanel   = panelRef.current?.contains(t);
-      if (!inTrigger && !inPanel) {
-        setOpen(false); setQuery('');
-      }
-    };
-    // Use capture phase so we get the event before anything else
-    document.addEventListener('mousedown', handler, true);
-    return () => document.removeEventListener('mousedown', handler, true);
-  }, [open]);
-
-  const selected = options.find(o => o.value === value);
-  const filtered = query.trim()
-    ? options.filter(o =>
-        o.label.toLowerCase().includes(query.toLowerCase()) ||
-        (o.sublabel ?? '').toLowerCase().includes(query.toLowerCase())
-      )
-    : options;
-
-  const select = (v: string) => { onChange(v); setOpen(false); setQuery(''); };
-
-  return (
-    <>
-      {/* Trigger */}
-      <div
-        ref={triggerRef}
-        onClick={() => open ? setOpen(false) : openPanel()}
-        style={{
-          background: '#0e0b1a',
-          border: `0.5px solid ${open ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
-          borderRadius: 7, padding: '9px 12px',
-          fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif",
-          color: selected ? '#f1ede8' : 'rgba(255,255,255,0.25)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 8, userSelect: 'none',
-          boxShadow: open ? '0 0 0 2px rgba(234,88,12,0.1)' : 'none',
-          transition: 'border-color 0.15s, box-shadow 0.15s',
-        }}
-      >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-          {selected ? selected.label : clearLabel}
-        </span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-          style={{ flexShrink: 0, opacity: 0.4, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-          <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-
-      {/* Panel — rendered via fixed position, escapes all overflow containers */}
-      {open && (
-        <div
-          ref={panelRef}
-          onMouseDown={e => e.stopPropagation()}
-          style={{
-            ...panelStyle,
-            background: '#0e0b1a',
-            border: '0.5px solid rgba(251,146,60,0.25)',
-            borderRadius: 8,
-            boxShadow: '0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.04) inset',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Search input */}
-          <div style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={placeholder}
-              style={{
-                width: '100%', background: 'rgba(255,255,255,0.05)',
-                border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6,
-                padding: '6px 10px', fontSize: 12,
-                fontFamily: "'IBM Plex Sans',sans-serif",
-                color: '#f1ede8', outline: 'none',
-              }}
-            />
-          </div>
-
-          {/* Options */}
-          <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-            {/* Clear */}
-            <div
-              onClick={() => select('')}
-              style={{
-                padding: '8px 12px', fontSize: 12, cursor: 'pointer',
-                color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Sans',sans-serif",
-                borderBottom: '0.5px solid rgba(255,255,255,0.04)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              {clearLabel}
-            </div>
-
-            {filtered.length === 0 ? (
-              <div style={{ padding: 12, fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-                No results for &ldquo;{query}&rdquo;
-              </div>
-            ) : filtered.map(o => (
-              <div
-                key={o.value}
-                onClick={() => select(o.value)}
-                style={{
-                  padding: '8px 12px', fontSize: 13, cursor: 'pointer',
-                  fontFamily: "'IBM Plex Sans',sans-serif",
-                  color: value === o.value ? '#fb923c' : '#e2dfd8',
-                  background: value === o.value ? 'rgba(251,146,60,0.08)' : 'transparent',
-                  borderLeft: value === o.value ? '2px solid #fb923c' : '2px solid transparent',
-                }}
-                onMouseEnter={e => { if (value !== o.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                onMouseLeave={e => { if (value !== o.value) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <div>{o.label}</div>
-                {o.sublabel && (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{o.sublabel}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
@@ -313,18 +131,27 @@ function StatsBar({ stats }: { stats: ItemStatistics }) {
   );
 }
 
-// ─── Suppliers Tab — SearchSelect only here ───────────────────────────────────
+// ─── Suppliers Tab ────────────────────────────────────────────────────────────
+
+interface SupplierFormState {
+  supplierId: string; purchaseUomId: string; supplierItemCode: string;
+  lastPrice: string; leadTimeDays: string; moq: string; isPreferred: boolean;
+}
+const EMPTY_SUP_FORM: SupplierFormState = {
+  supplierId: '', purchaseUomId: '', supplierItemCode: '',
+  lastPrice: '', leadTimeDays: '0', moq: '1', isPreferred: false,
+};
 
 function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
   const [supplierItems, setSupplierItems] = useState<SupplierItem[]>([]);
   const [suppliers,     setSuppliers]     = useState<any[]>([]);
   const [loading,       setLoading]       = useState(true);
-  const [addOpen,       setAddOpen]       = useState(false);
-  const [addForm,       setAddForm]       = useState<Partial<CreateSupplierItemDto>>({
-    itemId: item.id, isPreferred: false, isActive: true, packSize: 1, leadTimeDays: 0, moq: 1,
-  });
-  const [adding,   setAdding]   = useState(false);
-  const [addError, setAddError] = useState('');
+  const [addForm,       setAddForm]       = useState<SupplierFormState>(EMPTY_SUP_FORM);
+  const [adding,        setAdding]        = useState(false);
+  const [addError,      setAddError]      = useState('');
+  const [editingId,     setEditingId]     = useState<string | null>(null);
+  const [editForm,      setEditForm]      = useState<Partial<SupplierFormState>>({});
+  const [saving,        setSaving]        = useState(false);
 
   const fetch_ = useCallback(async () => {
     try {
@@ -344,150 +171,203 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
     if (!addForm.supplierId || !addForm.purchaseUomId) { setAddError('Supplier and Purchase UOM are required'); return; }
     setAdding(true); setAddError('');
     try {
-      await supplierItemsApi.create(addForm as CreateSupplierItemDto);
-      setAddOpen(false);
-      setAddForm({ itemId: item.id, isPreferred: false, isActive: true, packSize: 1, leadTimeDays: 0, moq: 1 });
-      fetch_();
+      await supplierItemsApi.create({
+        itemId: item.id, supplierId: addForm.supplierId, purchaseUomId: addForm.purchaseUomId,
+        supplierItemCode: addForm.supplierItemCode || undefined,
+        lastPrice: addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
+        leadTimeDays: Number(addForm.leadTimeDays) || 0,
+        moq: Number(addForm.moq) || 1,
+        isPreferred: addForm.isPreferred, isActive: true, packSize: 1,
+      } as CreateSupplierItemDto);
+      setAddForm(EMPTY_SUP_FORM); // reset form, keep it open
+      await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to add supplier'); }
     finally { setAdding(false); }
   };
 
-  const supplierOpts: SSOption[] = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
-  const uomOpts: SSOption[]      = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
+  const handleEdit = (si: SupplierItem) => {
+    setEditingId(si.id);
+    setEditForm({
+      supplierItemCode: (si as any).supplierItemCode ?? '',
+      lastPrice: si.lastPrice ? String(si.lastPrice) : '',
+      leadTimeDays: String(si.leadTimeDays ?? 0),
+      moq: String((si as any).moq ?? 1),
+      isPreferred: si.isPreferred,
+    });
+  };
 
-  const L: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
+  const handleSaveEdit = async (siId: string) => {
+    setSaving(true);
+    try {
+      await supplierItemsApi.update(siId, {
+        supplierItemCode: (editForm.supplierItemCode as string) || undefined,
+        lastPrice: editForm.lastPrice ? Number(editForm.lastPrice) : undefined,
+        leadTimeDays: Number(editForm.leadTimeDays) || 0,
+        moq: Number(editForm.moq) || 1,
+        isPreferred: editForm.isPreferred,
+      });
+      setEditingId(null); await fetch_();
+    } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to update'); }
+    finally { setSaving(false); }
+  };
+
+  const handleRemove  = async (siId: string) => { try { await supplierItemsApi.remove(siId); await fetch_(); } catch {} };
+  const handlePreferred = async (siId: string) => { try { await supplierItemsApi.update(siId, { isPreferred: true }); await fetch_(); } catch {} };
+
+  const supplierOpts = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
+  const uomOpts = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
+
+  const L: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
+  const INP: React.CSSProperties = { background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>
-          {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} for this item
-        </span>
-        <button type="button" onClick={() => setAddOpen(a => !a)} style={{ background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.3)', borderRadius:7, padding:'5px 12px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'#fb923c', cursor:'pointer' }}>
-          {addOpen ? 'Cancel' : '+ Add Supplier'}
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {/* Add form — always visible */}
+      <div style={{ background: 'rgba(251,146,60,0.04)', border: '0.5px solid rgba(251,146,60,0.15)', borderRadius: 8, padding: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 500, color: '#fb923c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Supplier</div>
+        {addError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5', marginBottom: 10 }}>{addError}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>Supplier *</label>
+              <SearchSelect options={supplierOpts} value={addForm.supplierId} onChange={v => setAddForm(f => ({ ...f, supplierId: v }))} placeholder="Search supplier…" clearLabel="— Select supplier —" />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>Purchase UOM *</label>
+              <SearchSelect options={uomOpts} value={addForm.purchaseUomId} onChange={v => setAddForm(f => ({ ...f, purchaseUomId: v }))} placeholder="Search UOM…" clearLabel="— Select UOM —" />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>Supplier Item Code</label>
+              <input style={INP} placeholder="Supplier ref code" value={addForm.supplierItemCode} onChange={e => setAddForm(f => ({ ...f, supplierItemCode: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>Last Price</label>
+              <input type="number" min="0" step="0.01" style={INP} placeholder="0.00" value={addForm.lastPrice} onChange={e => setAddForm(f => ({ ...f, lastPrice: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>Lead Time (days)</label>
+              <input type="number" min="0" style={INP} value={addForm.leadTimeDays} onChange={e => setAddForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <label style={L}>MOQ</label>
+              <input type="number" min="1" style={INP} value={addForm.moq} onChange={e => setAddForm(f => ({ ...f, moq: e.target.value }))} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={addForm.isPreferred} onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
+              Set as preferred supplier
+            </label>
+            <button type="button" disabled={adding} onClick={handleAdd} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: adding ? 0.5 : 1 }}>
+              {adding ? 'Adding…' : '+ Add Supplier'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {addOpen && (
-        <div style={{ background:'rgba(251,146,60,0.04)', border:'0.5px solid rgba(251,146,60,0.15)', borderRadius:8, padding:14 }}>
-          {addError && (
-            <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:6, padding:'6px 10px', fontSize:12, color:'#fca5a5', marginBottom:10 }}>{addError}</div>
-          )}
-          <form onSubmit={handleAdd} style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-
-              {/* Supplier — SearchSelect */}
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>Supplier *</label>
-                <SearchSelect
-                  options={supplierOpts}
-                  value={addForm.supplierId ?? ''}
-                  onChange={v => setAddForm(f => ({ ...f, supplierId: v || undefined }))}
-                  placeholder="Search supplier…"
-                  clearLabel="— Select supplier —"
-                />
-              </div>
-
-              {/* Purchase UOM — SearchSelect */}
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>Purchase UOM *</label>
-                <SearchSelect
-                  options={uomOpts}
-                  value={addForm.purchaseUomId ?? ''}
-                  onChange={v => setAddForm(f => ({ ...f, purchaseUomId: v || undefined }))}
-                  placeholder="Search UOM…"
-                  clearLabel="— Select UOM —"
-                />
-              </div>
-
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>Supplier Item Code</label>
-                <input style={FIELD} placeholder="Supplier's ref code" value={addForm.supplierItemCode ?? ''} onChange={e => setAddForm(f => ({ ...f, supplierItemCode: e.target.value || undefined }))} />
-              </div>
-
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>Last Price</label>
-                <input type="number" min="0" step="0.01" style={FIELD} placeholder="0.00" value={addForm.lastPrice ?? ''} onChange={e => setAddForm(f => ({ ...f, lastPrice: e.target.value ? Number(e.target.value) : undefined }))} />
-              </div>
-
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>Lead Time (days)</label>
-                <input type="number" min="0" style={FIELD} value={addForm.leadTimeDays ?? 0} onChange={e => setAddForm(f => ({ ...f, leadTimeDays: Number(e.target.value) }))} />
-              </div>
-
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={L}>MOQ</label>
-                <input type="number" min="1" style={FIELD} value={addForm.moq ?? 1} onChange={e => setAddForm(f => ({ ...f, moq: Number(e.target.value) }))} />
-              </div>
-            </div>
-
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4 }}>
-              <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>
-                <input type="checkbox" checked={addForm.isPreferred ?? false} onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
-                Set as preferred supplier
-              </label>
-              <button type="submit" disabled={adding} style={{ background:'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border:'none', borderRadius:7, padding:'7px 16px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', opacity:adding ? 0.5 : 1 }}>
-                {adding ? 'Adding…' : 'Add Supplier'}
-              </button>
-            </div>
-          </form>
+      {/* Supplier list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+          {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} assigned
         </div>
-      )}
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:24, color:'rgba(255,255,255,0.25)', fontSize:12 }}>Loading…</div>
-      ) : supplierItems.length === 0 ? (
-        <div style={{ textAlign:'center', padding:24, color:'rgba(255,255,255,0.2)', fontSize:12 }}>No suppliers assigned to this item yet.</div>
-      ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-          {supplierItems.map(si => (
-            <div key={si.id} style={{ background:si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border:`0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'10px 14px', display:'grid', gridTemplateColumns:'1fr 70px 80px 80px 60px auto', gap:10, alignItems:'center' }}>
-              <div>
-                <div style={{ fontSize:13, fontWeight:500, color:'#e2dfd8', display:'flex', alignItems:'center', gap:8 }}>
-                  {si.supplier?.name}
-                  {si.isPreferred && <span style={{ fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', padding:'1px 7px', borderRadius:20 }}>preferred</span>}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Loading…</div>
+        ) : supplierItems.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>No suppliers yet — use the form above.</div>
+        ) : supplierItems.map(si => {
+          const isEditing = editingId === si.id;
+          return (
+            <div key={si.id} style={{ background: si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
+              {!isEditing ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 80px 80px 60px auto', gap: 10, alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {si.supplier?.name}
+                      {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                      {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
+                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Factor</div>
+                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
+                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {!si.isPreferred && (
+                      <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
+                    )}
+                    <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                    <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
+                  </div>
                 </div>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{si.supplier?.code}{si.supplierItemCode && ` · ref: ${si.supplierItemCode}`}</div>
-              </div>
-              <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2 }}>UOM</div>
-                <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
-              </div>
-              <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2 }}>Factor</div>
-                <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
-              </div>
-              <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2 }}>Price</div>
-                <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
-              </div>
-              <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2 }}>Lead</div>
-                <span style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
-              </div>
-              <div style={{ display:'flex', gap:5 }}>
-                {!si.isPreferred && (
-                  <button type="button" onClick={async () => { try { await supplierItemsApi.update(si.id, { isPreferred: true }); fetch_(); } catch {} }} style={{ padding:'4px 8px', borderRadius:6, fontSize:10, cursor:'pointer', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'#4ade80', fontFamily:"'IBM Plex Sans',sans-serif", whiteSpace:'nowrap' }}>Set preferred</button>
-                )}
-                <button type="button" onClick={async () => { try { await supplierItemsApi.remove(si.id); fetch_(); } catch {} }} style={{ padding:'4px 8px', borderRadius:6, fontSize:10, cursor:'pointer', background:'rgba(239,68,68,0.07)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif" }}>Remove</button>
-              </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#fb923c' }}>Editing — {si.supplier?.name}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={L}>Supplier Ref</label>
+                      <input style={INP} value={editForm.supplierItemCode ?? ''} onChange={e => setEditForm(f => ({ ...f, supplierItemCode: e.target.value }))} placeholder="Ref code" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={L}>Last Price</label>
+                      <input type="number" min="0" step="0.01" style={INP} value={editForm.lastPrice ?? ''} onChange={e => setEditForm(f => ({ ...f, lastPrice: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={L}>Lead Time</label>
+                      <input type="number" min="0" style={INP} value={editForm.leadTimeDays ?? '0'} onChange={e => setEditForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={L}>MOQ</label>
+                      <input type="number" min="1" style={INP} value={editForm.moq ?? '1'} onChange={e => setEditForm(f => ({ ...f, moq: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={editForm.isPreferred ?? false} onChange={e => setEditForm(f => ({ ...f, isPreferred: e.target.checked }))} />
+                      Set as preferred
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={() => setEditingId(null)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
+                      <button type="button" onClick={() => handleSaveEdit(si.id)} disabled={saving} style={{ padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.5 : 1 }}>
+                        {saving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
 
-function ItemModal({ open, onClose, onSaved, initial, categories, macroCategories, uomUnits }: {
+function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, macroCategories, uomUnits }: {
   open: boolean; onClose: () => void; onSaved: () => void;
+  onCreated: (item: Item) => void;
   initial: Item | null;
   categories: Category[]; macroCategories: MacroCategory[]; uomUnits: UomUnit[];
 }) {
   const [form,        setForm]        = useState<CreateItemDto>(EMPTY_FORM);
   const [tab,         setTab]         = useState<'general' | 'uom' | 'suppliers'>('general');
+  const [editMode,    setEditMode]    = useState<Item | null>(null); // set after create
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState('');
   const [macroFilter, setMacroFilter] = useState('');
@@ -495,6 +375,7 @@ function ItemModal({ open, onClose, onSaved, initial, categories, macroCategorie
   useEffect(() => {
     if (open) {
       setError(''); setTab('general');
+      setEditMode(null); // reset create-mode state
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
@@ -534,24 +415,35 @@ function ItemModal({ open, onClose, onSaved, initial, categories, macroCategorie
 
   const buildPayload = (): CreateItemDto => {
     const p: any = { ...form };
-    ['standardCost','leadTimeDays','safetyStock','reorderPoint','reorderQuantity'].forEach(k => {
-      if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k];
-    });
+    // Strip empty UUID fields
     ['categoryId','consumptionGroupId','purchaseUomId','storageUomId','consumptionUomId'].forEach(k => {
       if (!p[k]) delete p[k];
+    });
+    // Numeric fields: delete if empty, coerce to Number if present
+    ['standardCost','leadTimeDays','safetyStock','reorderPoint','reorderQuantity',
+     'purchaseToConsumptionFactor','storageToConsumptionFactor'].forEach(k => {
+      if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k];
+      else p[k] = Number(p[k]);
     });
     return p as CreateItemDto;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required.'); return; }
+    if (!form.name.trim()) { setError('Name is required.'); return; }
     setSubmitting(true); setError('');
     try {
       const payload = buildPayload();
-      if (initial) await itemsApi.update(initial.id, payload);
-      else          await itemsApi.create(payload);
-      onSaved(); onClose();
+      if (initial) {
+        await itemsApi.update(initial.id, payload);
+        onSaved(); onClose();
+      } else {
+        const created = await itemsApi.create(payload);
+        onSaved();
+        setEditMode(created as Item);
+        setTab('suppliers');
+        onCreated(created as Item);
+      }
     } catch (err: any) { setError(err?.response?.data?.message ?? 'Operation failed.'); }
     finally { setSubmitting(false); }
   };
@@ -560,14 +452,17 @@ function ItemModal({ open, onClose, onSaved, initial, categories, macroCategorie
     ? categories.filter(c => c.macroCategoryId === macroFilter || c.macroCategory?.id === macroFilter)
     : categories;
 
+  // After creating a new item, editMode holds the created item
+  const effectiveInitial = editMode ?? initial;
+
   if (!open) return null;
 
-  const anyInit = initial as any;
+  const anyInit = effectiveInitial as any;
   const supCount = anyInit?.supplierItems?.length ?? 0;
   const TABS = [
     { key: 'general',   label: 'General' },
     { key: 'uom',       label: 'Units of Measure' },
-    ...(initial ? [{ key: 'suppliers', label: `Suppliers${supCount ? ` (${supCount})` : ''}` }] : []),
+    ...(effectiveInitial ? [{ key: 'suppliers', label: `Suppliers${supCount ? ` (${supCount})` : ''}` }] : []),
   ];
 
   return (
@@ -634,7 +529,7 @@ function ItemModal({ open, onClose, onSaved, initial, categories, macroCategorie
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Code *</label>
-                        <input className="im-input" placeholder="ITEM001" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} required />
+                        <input className="im-input" placeholder="Auto-generated (e.g. ITEM-0001)" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Item Type *</label>
@@ -800,7 +695,7 @@ function ItemModal({ open, onClose, onSaved, initial, categories, macroCategorie
                 )}
 
                 {/* SUPPLIERS */}
-                {tab === 'suppliers' && initial && <SuppliersTab item={initial} uomUnits={uomUnits} />}
+                {tab === 'suppliers' && effectiveInitial && <SuppliersTab item={effectiveInitial} uomUnits={uomUnits} />}
               </div>
 
               <div className="im-ftr">
@@ -1007,8 +902,11 @@ export default function ItemsPage() {
       </div>
 
       <ItemModal
-        open={modalOpen} onClose={() => setModalOpen(false)}
-        onSaved={fetchAll} initial={editing}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSaved={fetchAll}
+        onCreated={(created) => { setEditing(created); fetchAll(); }}
+        initial={editing}
         categories={categories} macroCategories={macroCategories} uomUnits={uomUnits}
       />
 
