@@ -280,8 +280,8 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
           return (
             <div key={si.id} style={{ background: si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
               {!isEditing ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 80px 80px 60px auto', gap: 10, alignItems: 'center' }}>
-                  <div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 120 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
                       {si.supplier?.name}
                       {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
@@ -290,23 +290,23 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
                       {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ minWidth: 55, textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
                     <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ minWidth: 70, textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Factor</div>
                     <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ minWidth: 70, textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
                     <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ minWidth: 45, textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 5 }}>
+                  <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
                     {!si.isPreferred && (
                       <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
                     )}
