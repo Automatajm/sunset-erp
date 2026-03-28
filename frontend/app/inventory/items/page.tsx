@@ -152,6 +152,7 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
   const [editingId,     setEditingId]     = useState<string | null>(null);
   const [editForm,      setEditForm]      = useState<Partial<SupplierFormState>>({});
   const [saving,        setSaving]        = useState(false);
+  const [supSearch,     setSupSearch]     = useState('');
 
   const fetch_ = useCallback(async () => {
     try {
@@ -179,7 +180,7 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
         moq: Number(addForm.moq) || 1,
         isPreferred: addForm.isPreferred, isActive: true, packSize: 1,
       } as CreateSupplierItemDto);
-      setAddForm(EMPTY_SUP_FORM); // reset form, keep it open
+      setAddForm(EMPTY_SUP_FORM);
       await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to add supplier'); }
     finally { setAdding(false); }
@@ -211,8 +212,16 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
     finally { setSaving(false); }
   };
 
-  const handleRemove  = async (siId: string) => { try { await supplierItemsApi.remove(siId); await fetch_(); } catch {} };
+  const handleRemove    = async (siId: string) => { try { await supplierItemsApi.remove(siId); await fetch_(); } catch {} };
   const handlePreferred = async (siId: string) => { try { await supplierItemsApi.update(siId, { isPreferred: true }); await fetch_(); } catch {} };
+
+  const filteredSuppliers = supSearch.trim()
+    ? supplierItems.filter(si =>
+        si.supplier?.name.toLowerCase().includes(supSearch.toLowerCase()) ||
+        si.supplier?.code.toLowerCase().includes(supSearch.toLowerCase()) ||
+        ((si as any).supplierItemCode ?? '').toLowerCase().includes(supSearch.toLowerCase())
+      )
+    : supplierItems;
 
   const supplierOpts = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
   const uomOpts = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
@@ -268,90 +277,106 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
 
       {/* Supplier list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-          {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} assigned
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} assigned
+          </div>
+          {supplierItems.length > 0 && (
+            <input
+              value={supSearch}
+              onChange={e => setSupSearch(e.target.value)}
+              placeholder="Search supplier…"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', width: 160 }}
+            />
+          )}
         </div>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Loading…</div>
-        ) : supplierItems.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>No suppliers yet — use the form above.</div>
-        ) : supplierItems.map(si => {
-          const isEditing = editingId === si.id;
-          return (
-            <div key={si.id} style={{ background: si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
-              {!isEditing ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, minWidth: 120 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {si.supplier?.name}
-                      {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                      {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
-                    </div>
-                  </div>
-                  <div style={{ minWidth: 55, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
-                  </div>
-                  <div style={{ minWidth: 70, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Factor</div>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
-                  </div>
-                  <div style={{ minWidth: 70, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
-                  </div>
-                  <div style={{ minWidth: 45, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
-                    {!si.isPreferred && (
-                      <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
-                    )}
-                    <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
-                    <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: '#fb923c' }}>Editing — {si.supplier?.name}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <label style={L}>Supplier Ref</label>
-                      <input style={INP} value={editForm.supplierItemCode ?? ''} onChange={e => setEditForm(f => ({ ...f, supplierItemCode: e.target.value }))} placeholder="Ref code" />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <label style={L}>Last Price</label>
-                      <input type="number" min="0" step="0.01" style={INP} value={editForm.lastPrice ?? ''} onChange={e => setEditForm(f => ({ ...f, lastPrice: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <label style={L}>Lead Time</label>
-                      <input type="number" min="0" style={INP} value={editForm.leadTimeDays ?? '0'} onChange={e => setEditForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <label style={L}>MOQ</label>
-                      <input type="number" min="1" style={INP} value={editForm.moq ?? '1'} onChange={e => setEditForm(f => ({ ...f, moq: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={editForm.isPreferred ?? false} onChange={e => setEditForm(f => ({ ...f, isPreferred: e.target.checked }))} />
-                      Set as preferred
-                    </label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => setEditingId(null)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
-                      <button type="button" onClick={() => handleSaveEdit(si.id)} disabled={saving} style={{ padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.5 : 1 }}>
-                        {saving ? 'Saving…' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+
+        {/* Scrollable container — fixed height, own scroll */}
+        <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Loading…</div>
+          ) : filteredSuppliers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>
+              {supSearch ? `No results for "${supSearch}"` : 'No suppliers yet — use the form above.'}
             </div>
-          );
-        })}
+          ) : filteredSuppliers.map(si => {
+            const isEditing = editingId === si.id;
+            return (
+              <div key={si.id} style={{ background: si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
+                {!isEditing ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {si.supplier?.name}
+                        {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                        {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
+                      </div>
+                    </div>
+                    <div style={{ minWidth: 55, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
+                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
+                    </div>
+                    <div style={{ minWidth: 70, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Factor</div>
+                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
+                    </div>
+                    <div style={{ minWidth: 70, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
+                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
+                    </div>
+                    <div style={{ minWidth: 45, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
+                      {!si.isPreferred && (
+                        <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
+                      )}
+                      <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                      <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: '#fb923c' }}>Editing — {si.supplier?.name}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={L}>Supplier Ref</label>
+                        <input style={INP} value={editForm.supplierItemCode ?? ''} onChange={e => setEditForm(f => ({ ...f, supplierItemCode: e.target.value }))} placeholder="Ref code" />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={L}>Last Price</label>
+                        <input type="number" min="0" step="0.01" style={INP} value={editForm.lastPrice ?? ''} onChange={e => setEditForm(f => ({ ...f, lastPrice: e.target.value }))} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={L}>Lead Time</label>
+                        <input type="number" min="0" style={INP} value={editForm.leadTimeDays ?? '0'} onChange={e => setEditForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={L}>MOQ</label>
+                        <input type="number" min="1" style={INP} value={editForm.moq ?? '1'} onChange={e => setEditForm(f => ({ ...f, moq: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={editForm.isPreferred ?? false} onChange={e => setEditForm(f => ({ ...f, isPreferred: e.target.checked }))} />
+                        Set as preferred
+                      </label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button type="button" onClick={() => setEditingId(null)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
+                        <button type="button" onClick={() => handleSaveEdit(si.id)} disabled={saving} style={{ padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.5 : 1 }}>
+                          {saving ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -367,7 +392,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
 }) {
   const [form,        setForm]        = useState<CreateItemDto>(EMPTY_FORM);
   const [tab,         setTab]         = useState<'general' | 'uom' | 'suppliers'>('general');
-  const [editMode,    setEditMode]    = useState<Item | null>(null); // set after create
+  const [editMode,    setEditMode]    = useState<Item | null>(null);
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState('');
   const [macroFilter, setMacroFilter] = useState('');
@@ -375,7 +400,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
   useEffect(() => {
     if (open) {
       setError(''); setTab('general');
-      setEditMode(null); // reset create-mode state
+      setEditMode(null);
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
@@ -415,11 +440,9 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
 
   const buildPayload = (): CreateItemDto => {
     const p: any = { ...form };
-    // Strip empty UUID fields
     ['categoryId','consumptionGroupId','purchaseUomId','storageUomId','consumptionUomId'].forEach(k => {
       if (!p[k]) delete p[k];
     });
-    // Numeric fields: delete if empty, coerce to Number if present
     ['standardCost','leadTimeDays','safetyStock','reorderPoint','reorderQuantity',
      'purchaseToConsumptionFactor','storageToConsumptionFactor'].forEach(k => {
       if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k];
@@ -452,13 +475,14 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     ? categories.filter(c => c.macroCategoryId === macroFilter || c.macroCategory?.id === macroFilter)
     : categories;
 
-  // After creating a new item, editMode holds the created item
   const effectiveInitial = editMode ?? initial;
 
   if (!open) return null;
 
   const anyInit = effectiveInitial as any;
   const supCount = anyInit?.supplierItems?.length ?? 0;
+  const uomOpts = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
+
   const TABS = [
     { key: 'general',   label: 'General' },
     { key: 'uom',       label: 'Units of Measure' },
@@ -503,7 +527,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
       <div className="im-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="im-box">
           <div className="im-hdr">
-            <span className="im-title">{initial ? `Edit — ${initial.code}` : 'New Item'}</span>
+            <span className="im-title">{effectiveInitial ? `Edit — ${effectiveInitial.code}` : 'New Item'}</span>
             <button className="im-close" type="button" onClick={onClose}>×</button>
           </div>
 
@@ -517,7 +541,6 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
             ))}
           </div>
 
-          {/* Scrollable body — separated from header/footer so they stay fixed */}
           <div className="im-scroll">
             <form onSubmit={handleSubmit}>
               <div className="im-body">
@@ -528,7 +551,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                   <>
                     <div className="im-row">
                       <div className="im-field">
-                        <label className="im-label">Code *</label>
+                        <label className="im-label">Code</label>
                         <input className="im-input" placeholder="Auto-generated (e.g. ITEM-0001)" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
                       </div>
                       <div className="im-field">
@@ -634,13 +657,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       <div className="im-field">
                         <label className="im-label">Purchase UOM</label>
                         <p className="im-sublabel">Unit used in POs and supplier quotes</p>
-                        <SearchSelect
-                          options={uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }))}
-                          value={form.purchaseUomId ?? ''}
-                          onChange={v => setForm(f => ({ ...f, purchaseUomId: v || undefined }))}
-                          placeholder="Search UOM…"
-                          clearLabel="— Same as consumption —"
-                        />
+                        <SearchSelect options={uomOpts} value={form.purchaseUomId ?? ''} onChange={v => setForm(f => ({ ...f, purchaseUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Purchase → Consumption Factor</label>
@@ -654,13 +671,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       <div className="im-field">
                         <label className="im-label">Storage UOM</label>
                         <p className="im-sublabel">Unit used for stock counting in warehouse</p>
-                        <SearchSelect
-                          options={uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }))}
-                          value={form.storageUomId ?? ''}
-                          onChange={v => setForm(f => ({ ...f, storageUomId: v || undefined }))}
-                          placeholder="Search UOM…"
-                          clearLabel="— Same as consumption —"
-                        />
+                        <SearchSelect options={uomOpts} value={form.storageUomId ?? ''} onChange={v => setForm(f => ({ ...f, storageUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Storage → Consumption Factor</label>
@@ -673,13 +684,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-field">
                       <label className="im-label">Consumption UOM</label>
                       <p className="im-sublabel">Unit used in BOM and production orders — base for all conversions</p>
-                      <SearchSelect
-                        options={uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }))}
-                        value={form.consumptionUomId ?? ''}
-                        onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))}
-                        placeholder="Search UOM…"
-                        clearLabel="— Select consumption UOM —"
-                      />
+                      <SearchSelect options={uomOpts} value={form.consumptionUomId ?? ''} onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Select consumption UOM —" />
                     </div>
 
                     {form.consumptionUomId && (
