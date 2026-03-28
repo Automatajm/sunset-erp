@@ -3,13 +3,15 @@
   IsOptional,
   IsBoolean,
   IsNumber,
-  IsEnum,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateItemDto {
+  // ── Identity ────────────────────────────────────────────────────────────────
+
   @ApiProperty({ example: 'ITEM001', description: 'Item code' })
   @IsString()
   @MaxLength(50)
@@ -20,20 +22,65 @@ export class CreateItemDto {
   @MaxLength(255)
   name: string;
 
-  @ApiPropertyOptional({ example: 'High-grade steel bolt', description: 'Item description' })
+  @ApiPropertyOptional({ example: 'High-grade steel bolt' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'raw_material', description: 'Item type: raw_material, finished_good, work_in_progress, service' })
+  @ApiProperty({ example: 'raw_material', description: 'raw_material | finished_good | work_in_progress | service' })
   @IsString()
   @MaxLength(50)
   itemType: string;
 
-  @ApiProperty({ example: 'PCS', description: 'Base unit of measure' })
+  // ── Classification ──────────────────────────────────────────────────────────
+
+  @ApiPropertyOptional({ description: 'Category ID (from in_categories)' })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({ description: 'Consumption group ID (from in_consumption_groups)' })
+  @IsOptional()
+  @IsUUID()
+  consumptionGroupId?: string;
+
+  // ── UOM — legacy (kept for backward compatibility) ──────────────────────────
+
+  @ApiProperty({ example: 'PCS', description: 'Base unit of measure (legacy field — use consumptionUomId for new items)' })
   @IsString()
   @MaxLength(20)
   baseUom: string;
+
+  // ── UOM Triple ──────────────────────────────────────────────────────────────
+
+  @ApiPropertyOptional({ description: 'Purchase UOM ID — unit used in POs and supplier quotes' })
+  @IsOptional()
+  @IsUUID()
+  purchaseUomId?: string;
+
+  @ApiPropertyOptional({ example: 3.78541, description: 'How many consumptionUom per 1 purchaseUom. Auto-calculated from catalog when possible.' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  purchaseToConsumptionFactor?: number;
+
+  @ApiPropertyOptional({ description: 'Storage UOM ID — unit used for stock counting in warehouse' })
+  @IsOptional()
+  @IsUUID()
+  storageUomId?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'How many consumptionUom per 1 storageUom.' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  storageToConsumptionFactor?: number;
+
+  @ApiPropertyOptional({ description: 'Consumption UOM ID — unit used in BOM and production orders' })
+  @IsOptional()
+  @IsUUID()
+  consumptionUomId?: string;
+
+  // ── Flags ───────────────────────────────────────────────────────────────────
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()
@@ -65,37 +112,41 @@ export class CreateItemDto {
   @IsBoolean()
   isSerialTracked?: boolean;
 
-  @ApiPropertyOptional({ example: 'average', description: 'Valuation method: average, fifo, standard' })
+  // ── Valuation ───────────────────────────────────────────────────────────────
+
+  @ApiPropertyOptional({ example: 'average', description: 'average | fifo | standard' })
   @IsOptional()
   @IsString()
   @MaxLength(50)
   valuationMethod?: string;
 
-  @ApiPropertyOptional({ example: 10.50, description: 'Standard cost' })
+  @ApiPropertyOptional({ example: 10.50 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   standardCost?: number;
 
-  @ApiPropertyOptional({ example: 7, description: 'Lead time in days' })
+  // ── Planning ────────────────────────────────────────────────────────────────
+
+  @ApiPropertyOptional({ example: 7 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   leadTimeDays?: number;
 
-  @ApiPropertyOptional({ example: 100, description: 'Safety stock quantity' })
+  @ApiPropertyOptional({ example: 100 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   safetyStock?: number;
 
-  @ApiPropertyOptional({ example: 50, description: 'Reorder point' })
+  @ApiPropertyOptional({ example: 50 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   reorderPoint?: number;
 
-  @ApiPropertyOptional({ example: 200, description: 'Reorder quantity' })
+  @ApiPropertyOptional({ example: 200 })
   @IsOptional()
   @IsNumber()
   @Min(0)
