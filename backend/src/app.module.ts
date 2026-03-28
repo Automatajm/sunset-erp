@@ -24,11 +24,16 @@ import { ArInvoicesModule } from './modules/ar-invoices/ar-invoices.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
 import { ApInvoicesModule } from './modules/ap-invoices/ap-invoices.module';
+import { UomModule } from './modules/uom/uom.module';
+import { TenantSettingsModule } from './modules/tenant-settings/tenant-settings.module';
+import { MacroCategoriesModule } from './modules/macro-categories/macro-categories.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { ConsumptionGroupsModule } from './modules/consumption-groups/consumption-groups.module';
+import { SupplierItemsModule } from './modules/supplier-items/supplier-items.module';
+
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
     SuppliersModule,
@@ -51,6 +56,12 @@ import { ApInvoicesModule } from './modules/ap-invoices/ap-invoices.module';
     AutomationModule,
     BulkImportModule,
     ApInvoicesModule,
+    UomModule,
+    TenantSettingsModule,
+    MacroCategoriesModule,
+    CategoriesModule,
+    ConsumptionGroupsModule,
+    SupplierItemsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

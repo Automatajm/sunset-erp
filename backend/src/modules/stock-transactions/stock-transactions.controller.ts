@@ -83,6 +83,25 @@ export class StockTransactionsController {
     });
   }
 
+  @Get('planning')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Stock planning — ATP, alerts, coverage, PO/SO demand' })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({ name: 'itemType',    required: false })
+  @ApiQuery({ name: 'alertOnly',   required: false })
+  async getStockPlanning(
+    @Request() req,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType')    itemType?:    string,
+    @Query('alertOnly')   alertOnly?:   string,
+  ) {
+    return this.stockTransactionsService.getStockPlanning(req.user.tenantId, {
+      warehouseId,
+      itemType,
+      alertOnly: alertOnly === 'true',
+    });
+  }
+
   @Get('ledger')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Stock ledger — enriched movements with running balance, reference numbers and totals' })

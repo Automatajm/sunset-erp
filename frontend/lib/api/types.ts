@@ -748,3 +748,206 @@ export interface CreateCashFlowLineDto {
   description?: string;
   accountId?: string;
 }
+
+// --- APPEND TO types.ts ---
+export interface UomUnit {
+  id: string;
+  code: string;
+  name: string;
+  type: 'volume' | 'mass' | 'count' | 'length' | 'area' | 'time';
+  system: 'metric' | 'imperial' | 'universal';
+  isBase: boolean;
+  isActive: boolean;
+  symbol?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+ 
+export interface UomConversion {
+  id: string;
+  fromUomId: string;
+  toUomId: string;
+  factor: number;
+  isActive: boolean;
+  fromUom: Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
+  toUom:   Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
+}
+ 
+export interface UomConvertResult {
+  fromUom: string; toUom: string;
+  inputQty: number; outputQty: number;
+  factor: number; isAutomatic: boolean;
+}
+ 
+export interface TenantSettings {
+  id: string;
+  tenantId: string;
+  defaultUomSystem: 'metric' | 'imperial';
+  volumeBaseUomId?: string;
+  massBaseUomId?: string;
+  lengthBaseUomId?: string;
+  areaBaseUomId?: string;
+  volumeBaseUom?: UomUnit;
+  massBaseUom?: UomUnit;
+  lengthBaseUom?: UomUnit;
+  areaBaseUom?: UomUnit;
+  updatedAt: string;
+}
+ 
+export interface UpdateTenantSettingsDto {
+  defaultUomSystem?: 'metric' | 'imperial';
+  volumeBaseUomId?: string;
+  massBaseUomId?: string;
+  lengthBaseUomId?: string;
+  areaBaseUomId?: string;
+}
+ 
+export interface MacroCategory {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { categories: number };
+  categories?: Category[];
+}
+ 
+export interface CreateMacroCategoryDto {
+  code: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+ 
+export interface UpdateMacroCategoryDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}
+ 
+export interface Category {
+  id: string;
+  tenantId: string;
+  macroCategoryId: string;
+  code: string;
+  name: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  macroCategory?: Pick<MacroCategory, 'id' | 'code' | 'name'>;
+  inventoryAccount?: { accountNumber: string; name: string };
+  cogsAccount?: { accountNumber: string; name: string };
+  _count?: { items: number };
+}
+ 
+export interface CreateCategoryDto {
+  macroCategoryId: string;
+  code: string;
+  name: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive?: boolean;
+}
+ 
+export interface UpdateCategoryDto {
+  macroCategoryId?: string;
+  code?: string;
+  name?: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive?: boolean;
+}
+ 
+export interface ConsumptionGroup {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description?: string;
+  consumptionUomId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  consumptionUom?: UomUnit;
+  _count?: { items: number };
+  totalConsumptionQty?: number;
+}
+ 
+export interface CreateConsumptionGroupDto {
+  code: string;
+  name: string;
+  description?: string;
+  consumptionUomId: string;
+  isActive?: boolean;
+}
+ 
+export interface UpdateConsumptionGroupDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  consumptionUomId?: string;
+  isActive?: boolean;
+}
+ 
+export interface SupplierItem {
+  id: string;
+  tenantId: string;
+  supplierId: string;
+  itemId: string;
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId: string;
+  packSize: number;
+  conversionFactor: number;
+  lastPrice?: number;
+  leadTimeDays: number;
+  moq: number;
+  isPreferred: boolean;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: { id: string; code: string; name: string };
+  item?: { id: string; code: string; name: string; consumptionUomId?: string; baseUom: string };
+  purchaseUom?: Pick<UomUnit, 'id' | 'code' | 'name' | 'type' | 'system'>;
+  conversionPreview?: string;
+}
+ 
+export interface CreateSupplierItemDto {
+  supplierId: string;
+  itemId: string;
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId: string;
+  packSize?: number;
+  conversionFactor?: number;
+  lastPrice?: number;
+  leadTimeDays?: number;
+  moq?: number;
+  isPreferred?: boolean;
+  isActive?: boolean;
+  notes?: string;
+}
+ 
+export interface UpdateSupplierItemDto {
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId?: string;
+  packSize?: number;
+  conversionFactor?: number;
+  lastPrice?: number;
+  leadTimeDays?: number;
+  moq?: number;
+  isPreferred?: boolean;
+  isActive?: boolean;
+  notes?: string;
+}

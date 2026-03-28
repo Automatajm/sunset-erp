@@ -1,0 +1,1428 @@
+// ============================================================================
+// SUNSET ERP — SPRINT 11 FRONTEND
+// ============================================================================
+// Files to create / modify:
+//
+// MODIFY:
+//   frontend/lib/api/types.ts          — add Sprint 11 types at the end
+//   frontend/components/layout/ERPShell.tsx — update NAV constant only
+//
+// CREATE:
+//   frontend/lib/api/uom.ts
+//   frontend/lib/api/tenant-settings.ts
+//   frontend/lib/api/macro-categories.ts
+//   frontend/lib/api/categories.ts
+//   frontend/lib/api/consumption-groups.ts
+//   frontend/lib/api/supplier-items.ts
+//
+//   frontend/app/settings/general/page.tsx
+//   frontend/app/settings/uom/page.tsx
+//   frontend/app/inventory/macro-categories/page.tsx
+//   frontend/app/inventory/categories/page.tsx
+//   frontend/app/inventory/consumption-groups/page.tsx
+// ============================================================================
+
+// ============================================================================
+// STEP 1 — ADD TO frontend/lib/api/types.ts (append at the end of the file)
+// ============================================================================
+
+// --- APPEND TO types.ts ---
+export interface UomUnit {
+  id: string;
+  code: string;
+  name: string;
+  type: 'volume' | 'mass' | 'count' | 'length' | 'area' | 'time';
+  system: 'metric' | 'imperial' | 'universal';
+  isBase: boolean;
+  isActive: boolean;
+  symbol?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UomConversion {
+  id: string;
+  fromUomId: string;
+  toUomId: string;
+  factor: number;
+  isActive: boolean;
+  fromUom: Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
+  toUom:   Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
+}
+
+export interface UomConvertResult {
+  fromUom: string; toUom: string;
+  inputQty: number; outputQty: number;
+  factor: number; isAutomatic: boolean;
+}
+
+export interface TenantSettings {
+  id: string;
+  tenantId: string;
+  defaultUomSystem: 'metric' | 'imperial';
+  volumeBaseUomId?: string;
+  massBaseUomId?: string;
+  lengthBaseUomId?: string;
+  areaBaseUomId?: string;
+  volumeBaseUom?: UomUnit;
+  massBaseUom?: UomUnit;
+  lengthBaseUom?: UomUnit;
+  areaBaseUom?: UomUnit;
+  updatedAt: string;
+}
+
+export interface UpdateTenantSettingsDto {
+  defaultUomSystem?: 'metric' | 'imperial';
+  volumeBaseUomId?: string;
+  massBaseUomId?: string;
+  lengthBaseUomId?: string;
+  areaBaseUomId?: string;
+}
+
+export interface MacroCategory {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { categories: number };
+  categories?: Category[];
+}
+
+export interface CreateMacroCategoryDto {
+  code: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateMacroCategoryDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface Category {
+  id: string;
+  tenantId: string;
+  macroCategoryId: string;
+  code: string;
+  name: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  macroCategory?: Pick<MacroCategory, 'id' | 'code' | 'name'>;
+  inventoryAccount?: { accountNumber: string; name: string };
+  cogsAccount?: { accountNumber: string; name: string };
+  _count?: { items: number };
+}
+
+export interface CreateCategoryDto {
+  macroCategoryId: string;
+  code: string;
+  name: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateCategoryDto {
+  macroCategoryId?: string;
+  code?: string;
+  name?: string;
+  description?: string;
+  inventoryAccountId?: string;
+  cogsAccountId?: string;
+  isActive?: boolean;
+}
+
+export interface ConsumptionGroup {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description?: string;
+  consumptionUomId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  consumptionUom?: UomUnit;
+  _count?: { items: number };
+  totalConsumptionQty?: number;
+}
+
+export interface CreateConsumptionGroupDto {
+  code: string;
+  name: string;
+  description?: string;
+  consumptionUomId: string;
+  isActive?: boolean;
+}
+
+export interface UpdateConsumptionGroupDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  consumptionUomId?: string;
+  isActive?: boolean;
+}
+
+export interface SupplierItem {
+  id: string;
+  tenantId: string;
+  supplierId: string;
+  itemId: string;
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId: string;
+  packSize: number;
+  conversionFactor: number;
+  lastPrice?: number;
+  leadTimeDays: number;
+  moq: number;
+  isPreferred: boolean;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: { id: string; code: string; name: string };
+  item?: { id: string; code: string; name: string; consumptionUomId?: string; baseUom: string };
+  purchaseUom?: Pick<UomUnit, 'id' | 'code' | 'name' | 'type' | 'system'>;
+  conversionPreview?: string;
+}
+
+export interface CreateSupplierItemDto {
+  supplierId: string;
+  itemId: string;
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId: string;
+  packSize?: number;
+  conversionFactor?: number;
+  lastPrice?: number;
+  leadTimeDays?: number;
+  moq?: number;
+  isPreferred?: boolean;
+  isActive?: boolean;
+  notes?: string;
+}
+
+export interface UpdateSupplierItemDto {
+  supplierItemCode?: string;
+  supplierItemName?: string;
+  purchaseUomId?: string;
+  packSize?: number;
+  conversionFactor?: number;
+  lastPrice?: number;
+  leadTimeDays?: number;
+  moq?: number;
+  isPreferred?: boolean;
+  isActive?: boolean;
+  notes?: string;
+}
+
+// ============================================================================
+// STEP 2 — API CLIENTS
+// ============================================================================
+
+// --- frontend/lib/api/uom.ts ---
+import apiClient from './client';
+import { UomUnit, UomConversion, UomConvertResult } from './types';
+
+export const uomApi = {
+  getUnits: async (params?: { type?: string; system?: string }): Promise<UomUnit[]> => {
+    const res = await apiClient.get('/uom/units', { params });
+    return res.data;
+  },
+  getById: async (id: string): Promise<UomUnit> => {
+    const res = await apiClient.get(`/uom/units/${id}`);
+    return res.data;
+  },
+  getConversions: async (): Promise<UomConversion[]> => {
+    const res = await apiClient.get('/uom/conversions');
+    return res.data;
+  },
+  convert: async (from: string, to: string, qty: number): Promise<UomConvertResult> => {
+    const res = await apiClient.get('/uom/convert', { params: { from, to, qty } });
+    return res.data;
+  },
+};
+
+// --- frontend/lib/api/tenant-settings.ts ---
+import apiClient from './client';
+import { TenantSettings, UpdateTenantSettingsDto } from './types';
+
+export const tenantSettingsApi = {
+  get: async (): Promise<TenantSettings> => {
+    const res = await apiClient.get('/tenant-settings');
+    return res.data;
+  },
+  update: async (data: UpdateTenantSettingsDto): Promise<TenantSettings> => {
+    const res = await apiClient.patch('/tenant-settings', data);
+    return res.data;
+  },
+};
+
+// --- frontend/lib/api/macro-categories.ts ---
+import apiClient from './client';
+import { MacroCategory, CreateMacroCategoryDto, UpdateMacroCategoryDto } from './types';
+
+export const macroCategoriesApi = {
+  getAll: async (): Promise<MacroCategory[]> => {
+    const res = await apiClient.get('/macro-categories');
+    return res.data;
+  },
+  getById: async (id: string): Promise<MacroCategory> => {
+    const res = await apiClient.get(`/macro-categories/${id}`);
+    return res.data;
+  },
+  create: async (data: CreateMacroCategoryDto): Promise<MacroCategory> => {
+    const res = await apiClient.post('/macro-categories', data);
+    return res.data;
+  },
+  update: async (id: string, data: UpdateMacroCategoryDto): Promise<MacroCategory> => {
+    const res = await apiClient.patch(`/macro-categories/${id}`, data);
+    return res.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/macro-categories/${id}`);
+  },
+};
+
+// --- frontend/lib/api/categories.ts ---
+import apiClient from './client';
+import { Category, CreateCategoryDto, UpdateCategoryDto } from './types';
+
+export const categoriesApi = {
+  getAll: async (params?: { macroCategoryId?: string }): Promise<Category[]> => {
+    const res = await apiClient.get('/categories', { params });
+    return res.data;
+  },
+  getById: async (id: string): Promise<Category> => {
+    const res = await apiClient.get(`/categories/${id}`);
+    return res.data;
+  },
+  create: async (data: CreateCategoryDto): Promise<Category> => {
+    const res = await apiClient.post('/categories', data);
+    return res.data;
+  },
+  update: async (id: string, data: UpdateCategoryDto): Promise<Category> => {
+    const res = await apiClient.patch(`/categories/${id}`, data);
+    return res.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/categories/${id}`);
+  },
+};
+
+// --- frontend/lib/api/consumption-groups.ts ---
+import apiClient from './client';
+import { ConsumptionGroup, CreateConsumptionGroupDto, UpdateConsumptionGroupDto } from './types';
+
+export const consumptionGroupsApi = {
+  getAll: async (): Promise<ConsumptionGroup[]> => {
+    const res = await apiClient.get('/consumption-groups');
+    return res.data;
+  },
+  getById: async (id: string): Promise<ConsumptionGroup> => {
+    const res = await apiClient.get(`/consumption-groups/${id}`);
+    return res.data;
+  },
+  create: async (data: CreateConsumptionGroupDto): Promise<ConsumptionGroup> => {
+    const res = await apiClient.post('/consumption-groups', data);
+    return res.data;
+  },
+  update: async (id: string, data: UpdateConsumptionGroupDto): Promise<ConsumptionGroup> => {
+    const res = await apiClient.patch(`/consumption-groups/${id}`, data);
+    return res.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/consumption-groups/${id}`);
+  },
+};
+
+// --- frontend/lib/api/supplier-items.ts ---
+import apiClient from './client';
+import { SupplierItem, CreateSupplierItemDto, UpdateSupplierItemDto } from './types';
+
+export const supplierItemsApi = {
+  getAll: async (params?: { itemId?: string; supplierId?: string; isPreferred?: boolean }): Promise<SupplierItem[]> => {
+    const res = await apiClient.get('/supplier-items', { params });
+    return res.data;
+  },
+  getByItem: async (itemId: string): Promise<SupplierItem[]> => {
+    const res = await apiClient.get(`/supplier-items/by-item/${itemId}`);
+    return res.data;
+  },
+  getBySupplier: async (supplierId: string): Promise<SupplierItem[]> => {
+    const res = await apiClient.get(`/supplier-items/by-supplier/${supplierId}`);
+    return res.data;
+  },
+  getById: async (id: string): Promise<SupplierItem> => {
+    const res = await apiClient.get(`/supplier-items/${id}`);
+    return res.data;
+  },
+  create: async (data: CreateSupplierItemDto): Promise<SupplierItem> => {
+    const res = await apiClient.post('/supplier-items', data);
+    return res.data;
+  },
+  update: async (id: string, data: UpdateSupplierItemDto): Promise<SupplierItem> => {
+    const res = await apiClient.patch(`/supplier-items/${id}`, data);
+    return res.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await apiClient.delete(`/supplier-items/${id}`);
+  },
+};
+
+// ============================================================================
+// STEP 3 — UPDATE NAV IN ERPShell.tsx
+// Find the NAV constant and update these two sections:
+//
+// In the 'Inventory' item, under 'Master Data' group, ADD:
+//   { label: 'Macro Categories',     href: '/inventory/macro-categories' },
+//   { label: 'Categories',           href: '/inventory/categories' },
+//   { label: 'Consumption Groups',   href: '/inventory/consumption-groups' },
+//
+// In the 'Settings' item, under 'Configuration' group, ADD:
+//   { label: 'General Settings',     href: '/settings/general' },
+//   { label: 'Units of Measure',     href: '/settings/uom' },
+// ============================================================================
+
+// Updated NAV sections only (replace the Inventory and Settings items):
+
+/*
+  {
+    label: 'Inventory',
+    groups: [
+      {
+        label: 'Master Data',
+        items: [
+          { label: 'Items',              href: '/inventory/items' },
+          { label: 'Warehouses',         href: '/inventory/warehouses' },
+          { label: 'Macro Categories',   href: '/inventory/macro-categories' },
+          { label: 'Categories',         href: '/inventory/categories' },
+          { label: 'Consumption Groups', href: '/inventory/consumption-groups' },
+        ],
+      },
+      {
+        label: 'Transactions',
+        items: [
+          { label: 'Stock Transactions', href: '/inventory/stock-transactions' },
+          { label: 'Stock Ledger',       href: '/inventory/ledger' },
+          { label: 'Stock Balance',      href: '/inventory/stock-balance' },
+          { label: 'Stock Planning',     href: '/inventory/stock-planning' },
+          { label: 'Inventory Valuation',href: '/inventory/valuation' },
+        ],
+      },
+    ],
+  },
+
+  {
+    label: 'Settings',
+    groups: [
+      {
+        label: 'Configuration',
+        items: [
+          { label: 'General Settings',   href: '/settings/general' },
+          { label: 'Units of Measure',   href: '/settings/uom' },
+          { label: 'Fiscal Periods',     href: '/accounting/fiscal-periods' },
+          { label: 'Automation Config',  href: '/accounting/automation' },
+          { label: 'Bill of Materials',  href: '/manufacturing/bom' },
+        ],
+      },
+      {
+        label: 'Data Management',
+        items: [
+          { label: 'Bulk Import', href: '/settings/bulk-import' },
+        ],
+      },
+      {
+        label: 'Master Data',
+        items: [
+          { label: 'Items',             href: '/inventory/items' },
+          { label: 'Customers',         href: '/sales/customers' },
+          { label: 'Suppliers',         href: '/procurement/suppliers' },
+          { label: 'Warehouses',        href: '/inventory/warehouses' },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
+          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
+        ],
+      },
+    ],
+  },
+*/
+
+// ============================================================================
+// STEP 4 — PAGES
+// ============================================================================
+
+// ============================================================================
+// frontend/app/settings/general/page.tsx
+// ============================================================================
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { tenantSettingsApi } from '@/lib/api/tenant-settings';
+import { uomApi } from '@/lib/api/uom';
+import { TenantSettings, UomUnit, UpdateTenantSettingsDto } from '@/lib/api/types';
+
+export default function GeneralSettingsPage() {
+  const [settings, setSettings]  = useState<TenantSettings | null>(null);
+  const [units,    setUnits]     = useState<UomUnit[]>([]);
+  const [form,     setForm]      = useState<UpdateTenantSettingsDto>({});
+  const [loading,  setLoading]   = useState(true);
+  const [saving,   setSaving]    = useState(false);
+  const [success,  setSuccess]   = useState('');
+  const [error,    setError]     = useState('');
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const [s, u] = await Promise.all([tenantSettingsApi.get(), uomApi.getUnits()]);
+      setSettings(s);
+      setUnits(u);
+      setForm({
+        defaultUomSystem: s.defaultUomSystem,
+        volumeBaseUomId:  s.volumeBaseUomId,
+        massBaseUomId:    s.massBaseUomId,
+        lengthBaseUomId:  s.lengthBaseUomId,
+      });
+    } catch { setError('Failed to load settings'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const handleSave = async () => {
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const updated = await tenantSettingsApi.update(form);
+      setSettings(updated);
+      setSuccess('Settings saved successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch { setError('Failed to save settings'); }
+    finally { setSaving(false); }
+  };
+
+  const volumeUnits = units.filter(u => u.type === 'volume');
+  const massUnits   = units.filter(u => u.type === 'mass');
+  const lengthUnits = units.filter(u => u.type === 'length');
+
+  const uomsBySystem = (list: UomUnit[], system: string) =>
+    list.filter(u => u.system === system || u.system === 'universal');
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Settings', 'General']} title="General Settings">
+      <style>{`
+        .gs-page { padding: 0 18px 24px; max-width: 760px; }
+        .gs-section {
+          background: rgba(10,7,18,0.7); border: 0.5px solid rgba(251,146,60,0.12);
+          border-radius: 10px; margin-bottom: 16px; overflow: hidden;
+        }
+        .gs-section-hdr {
+          padding: 12px 18px; border-bottom: 0.5px solid rgba(255,255,255,0.06);
+          font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+          color: rgba(251,146,60,0.6);
+        }
+        .gs-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+        .gs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .gs-field { display: flex; flex-direction: column; gap: 6px; }
+        .gs-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(251,146,60,0.55); }
+        .gs-sublabel { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: -2px; }
+        .gs-select {
+          background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1);
+          border-radius: 7px; padding: 9px 12px; font-size: 13px;
+          font-family: 'IBM Plex Sans', sans-serif; color: #f1ede8; outline: none;
+          transition: border-color 0.2s;
+        }
+        .gs-select:focus { border-color: rgba(251,146,60,0.45); }
+        .gs-select option { background: #0e0b1a; }
+        .gs-system-toggle { display: flex; gap: 8px; }
+        .gs-sys-btn {
+          flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; text-align: center;
+          font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 500;
+          border: 0.5px solid rgba(255,255,255,0.1); transition: all 0.15s;
+          color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.03);
+        }
+        .gs-sys-btn-active {
+          color: #fb923c; background: rgba(251,146,60,0.1);
+          border-color: rgba(251,146,60,0.4);
+          box-shadow: 0 0 12px rgba(251,146,60,0.15);
+        }
+        .gs-current {
+          background: rgba(255,255,255,0.03); border: 0.5px solid rgba(255,255,255,0.07);
+          border-radius: 8px; padding: 12px 16px; display: flex; gap: 20px; flex-wrap: wrap;
+        }
+        .gs-cur-item { display: flex; flex-direction: column; gap: 3px; }
+        .gs-cur-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.3); }
+        .gs-cur-value { font-size: 14px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: #fb923c; }
+        .gs-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+        .gs-btn-save {
+          background: linear-gradient(135deg,#c2410c,#ea580c,#f97316); border: none;
+          border-radius: 7px; padding: 9px 22px; font-size: 13px; font-weight: 500;
+          font-family: 'IBM Plex Sans', sans-serif; color: white; cursor: pointer;
+          box-shadow: 0 3px 12px rgba(234,88,12,0.35); transition: opacity 0.2s;
+        }
+        .gs-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gs-btn-save:hover:not(:disabled) { opacity: 0.88; }
+        .gs-alert {
+          border-radius: 8px; padding: 9px 14px; font-size: 12px; margin-bottom: 14px;
+        }
+        .gs-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(251,146,60,0.2); border-top-color: #fb923c; animation: gs-spin 0.7s linear infinite; margin: 52px auto; display: block; }
+        @keyframes gs-spin { to { transform: rotate(360deg); } }
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+      `}</style>
+
+      <div className="gs-page">
+        {error   && <div className="gs-alert" style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#fca5a5' }}>{error}</div>}
+        {success && <div className="gs-alert" style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'#4ade80' }}>✓ {success}</div>}
+
+        {loading ? <div className="gs-spinner" /> : (
+          <>
+            {/* Current state */}
+            {settings && (
+              <div className="gs-section">
+                <div className="gs-section-hdr">Current Configuration</div>
+                <div className="gs-body">
+                  <div className="gs-current">
+                    {[
+                      { label: 'UOM System',   value: settings.defaultUomSystem?.toUpperCase() },
+                      { label: 'Volume Base',  value: settings.volumeBaseUom?.code ?? '—' },
+                      { label: 'Mass Base',    value: settings.massBaseUom?.code ?? '—' },
+                      { label: 'Length Base',  value: settings.lengthBaseUom?.code ?? '—' },
+                    ].map(c => (
+                      <div key={c.label} className="gs-cur-item">
+                        <span className="gs-cur-label">{c.label}</span>
+                        <span className="gs-cur-value">{c.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* UOM System */}
+            <div className="gs-section">
+              <div className="gs-section-hdr">Unit of Measure System</div>
+              <div className="gs-body">
+                <div className="gs-field">
+                  <label className="gs-label">Default System</label>
+                  <p className="gs-sublabel">Production always sees quantities in this system. Purchasing can receive any unit regardless of this setting.</p>
+                  <div className="gs-system-toggle" style={{ marginTop: 8 }}>
+                    {(['metric', 'imperial'] as const).map(sys => (
+                      <div
+                        key={sys}
+                        className={`gs-sys-btn${form.defaultUomSystem === sys ? ' gs-sys-btn-active' : ''}`}
+                        onClick={() => setForm(f => ({ ...f, defaultUomSystem: sys }))}
+                      >
+                        {sys === 'metric' ? 'Metric (SI)' : 'Imperial (US)'}
+                        <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.6, marginTop: 3 }}>
+                          {sys === 'metric' ? 'LTR · KG · M' : 'GAL · LB · FT'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="gs-row">
+                  <div className="gs-field">
+                    <label className="gs-label">Volume Base Unit</label>
+                    <select className="gs-select" value={form.volumeBaseUomId ?? ''} onChange={e => setForm(f => ({ ...f, volumeBaseUomId: e.target.value }))}>
+                      <option value="">— Select —</option>
+                      {uomsBySystem(volumeUnits, form.defaultUomSystem ?? 'metric').map(u => (
+                        <option key={u.id} value={u.id}>{u.code} — {u.name}{u.isBase ? ' (base)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="gs-field">
+                    <label className="gs-label">Mass Base Unit</label>
+                    <select className="gs-select" value={form.massBaseUomId ?? ''} onChange={e => setForm(f => ({ ...f, massBaseUomId: e.target.value }))}>
+                      <option value="">— Select —</option>
+                      {uomsBySystem(massUnits, form.defaultUomSystem ?? 'metric').map(u => (
+                        <option key={u.id} value={u.id}>{u.code} — {u.name}{u.isBase ? ' (base)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="gs-field">
+                    <label className="gs-label">Length Base Unit</label>
+                    <select className="gs-select" value={form.lengthBaseUomId ?? ''} onChange={e => setForm(f => ({ ...f, lengthBaseUomId: e.target.value }))}>
+                      <option value="">— Select —</option>
+                      {uomsBySystem(lengthUnits, form.defaultUomSystem ?? 'metric').map(u => (
+                        <option key={u.id} value={u.id}>{u.code} — {u.name}{u.isBase ? ' (base)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="gs-footer">
+              <button className="gs-btn-save" disabled={saving} onClick={handleSave}>
+                {saving ? 'Saving…' : 'Save Settings'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </ERPShell>
+  );
+}
+
+// ============================================================================
+// frontend/app/settings/uom/page.tsx
+// ============================================================================
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { uomApi } from '@/lib/api/uom';
+import { UomUnit, UomConversion } from '@/lib/api/types';
+
+const TYPE_COLORS: Record<string, string> = {
+  volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80',
+  length: '#fbbf24', area: '#fb923c', time: '#f87171',
+};
+const SYS_COLORS: Record<string, string> = {
+  metric: '#4ade80', imperial: '#fbbf24', universal: '#60a5fa',
+};
+
+function Badge({ label, color }: { label: string; color: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+      borderRadius: 20, fontSize: 11, fontWeight: 500,
+      color, background: `${color}15`, border: `0.5px solid ${color}35`,
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      {label}
+    </span>
+  );
+}
+
+export default function UomCatalogPage() {
+  const [units,       setUnits]       = useState<UomUnit[]>([]);
+  const [conversions, setConversions] = useState<UomConversion[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [tab,         setTab]         = useState<'units' | 'conversions'>('units');
+  const [typeFilter,  setTypeFilter]  = useState('');
+  const [sysFilter,   setSysFilter]   = useState('');
+  const [search,      setSearch]      = useState('');
+  const [from,        setFrom]        = useState('GAL');
+  const [to,          setTo]          = useState('LTR');
+  const [qty,         setQty]         = useState('50');
+  const [result,      setResult]      = useState<string>('');
+  const [converting,  setConverting]  = useState(false);
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const [u, c] = await Promise.all([uomApi.getUnits(), uomApi.getConversions()]);
+      setUnits(u); setConversions(c);
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const handleConvert = async () => {
+    setConverting(true); setResult('');
+    try {
+      const r = await uomApi.convert(from, to, Number(qty));
+      setResult(`${qty} ${r.fromUom} = ${r.outputQty} ${r.toUom} (factor: ${r.factor})`);
+    } catch (e: any) {
+      setResult(e?.response?.data?.message ?? 'Conversion not found in catalog');
+    } finally { setConverting(false); }
+  };
+
+  const filteredUnits = units.filter(u => {
+    if (typeFilter && u.type !== typeFilter) return false;
+    if (sysFilter  && u.system !== sysFilter) return false;
+    if (search && !u.code.toLowerCase().includes(search.toLowerCase()) && !u.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const types   = [...new Set(units.map(u => u.type))].sort();
+  const systems = [...new Set(units.map(u => u.system))].sort();
+  const codes   = units.map(u => u.code);
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Settings', 'Units of Measure']} title="UOM Catalog">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+        .uom-page { padding: 0 18px 24px; }
+        .uom-tabs { display:flex; gap:4px; margin-bottom:14px; }
+        .uom-tab { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:0.5px solid transparent; transition:all 0.15s; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.04); }
+        .uom-tab-active { color:#fb923c; background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); }
+        .uom-toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
+        .uom-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; }
+        .uom-input:focus { border-color:rgba(251,146,60,0.4); }
+        .uom-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; cursor:pointer; }
+        .uom-select option { background:#0e0b1a; }
+        .uom-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
+        .uom-table { width:100%; border-collapse:collapse; }
+        .uom-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; }
+        .uom-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); font-size:13px; }
+        .uom-table tbody tr:last-child td { border-bottom:none; }
+        .uom-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
+        .uom-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#fb923c; }
+        .uom-muted { color:rgba(255,255,255,0.4); font-size:12px; }
+        .uom-converter { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
+        .uom-conv-hdr { font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(251,146,60,0.55); margin-bottom:12px; }
+        .uom-conv-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .uom-conv-result { margin-top:10px; font-size:13px; color:#4ade80; font-family:'IBM Plex Mono',monospace; background:rgba(74,222,128,0.06); border:0.5px solid rgba(74,222,128,0.2); border-radius:7px; padding:8px 12px; }
+        .uom-btn { background:linear-gradient(135deg,#c2410c,#ea580c,#f97316); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; transition:opacity 0.2s; }
+        .uom-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .uom-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
+        .uom-loading { text-align:center; padding:52px; color:rgba(255,255,255,0.25); font-size:13px; }
+      `}</style>
+
+      <div className="uom-page">
+        <div className="uom-tabs">
+          {(['units', 'conversions'] as const).map(t => (
+            <button key={t} className={`uom-tab${tab === t ? ' uom-tab-active' : ''}`} onClick={() => setTab(t)}>
+              {t === 'units' ? `Units (${units.length})` : `Conversions (${conversions.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Converter widget */}
+        <div className="uom-converter">
+          <div className="uom-conv-hdr">Quick Converter</div>
+          <div className="uom-conv-row">
+            <input className="uom-input" style={{ width: 80 }} type="number" value={qty} onChange={e => setQty(e.target.value)} />
+            <select className="uom-select" value={from} onChange={e => setFrom(e.target.value)}>
+              {codes.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>→</span>
+            <select className="uom-select" value={to} onChange={e => setTo(e.target.value)}>
+              {codes.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button className="uom-btn" onClick={handleConvert} disabled={converting}>
+              {converting ? '…' : 'Convert'}
+            </button>
+          </div>
+          {result && <div className="uom-conv-result">{result}</div>}
+        </div>
+
+        {tab === 'units' && (
+          <>
+            <div className="uom-toolbar">
+              <input className="uom-input" style={{ width: 220 }} placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
+              <select className="uom-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                <option value="">All types</option>
+                {types.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select className="uom-select" value={sysFilter} onChange={e => setSysFilter(e.target.value)}>
+                <option value="">All systems</option>
+                {systems.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="uom-wrap">
+              {loading ? <div className="uom-loading">Loading…</div> : (
+                <>
+                  <table className="uom-table">
+                    <thead>
+                      <tr>
+                        <th>Code</th><th>Name</th><th>Symbol</th><th>Type</th><th>System</th><th>Base</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUnits.map(u => (
+                        <tr key={u.id}>
+                          <td><span className="uom-code">{u.code}</span></td>
+                          <td style={{ color: '#e2dfd8' }}>{u.name}</td>
+                          <td><span className="uom-muted">{u.symbol ?? '—'}</span></td>
+                          <td><Badge label={u.type} color={TYPE_COLORS[u.type] ?? '#e2dfd8'} /></td>
+                          <td><Badge label={u.system} color={SYS_COLORS[u.system] ?? '#e2dfd8'} /></td>
+                          <td>{u.isBase ? <span style={{ color: '#4ade80', fontSize: 12 }}>✓ base</span> : <span className="uom-muted">—</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="uom-footer">{filteredUnits.length} of {units.length} units</div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === 'conversions' && (
+          <div className="uom-wrap">
+            {loading ? <div className="uom-loading">Loading…</div> : (
+              <>
+                <table className="uom-table">
+                  <thead>
+                    <tr><th>From</th><th>To</th><th>Factor</th><th>Type</th></tr>
+                  </thead>
+                  <tbody>
+                    {conversions.map(c => (
+                      <tr key={c.id}>
+                        <td><span className="uom-code">{c.fromUom.code}</span> <span className="uom-muted">({c.fromUom.name})</span></td>
+                        <td><span className="uom-code">{c.toUom.code}</span> <span className="uom-muted">({c.toUom.name})</span></td>
+                        <td style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#fb923c' }}>{Number(c.factor).toFixed(6)}</td>
+                        <td><Badge label={c.fromUom.type} color={TYPE_COLORS[c.fromUom.type] ?? '#e2dfd8'} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="uom-footer">{conversions.length} conversions</div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </ERPShell>
+  );
+}
+
+// ============================================================================
+// frontend/app/inventory/macro-categories/page.tsx
+// ============================================================================
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { macroCategoriesApi } from '@/lib/api/macro-categories';
+import { MacroCategory, CreateMacroCategoryDto } from '@/lib/api/types';
+
+const EMPTY: CreateMacroCategoryDto = { code: '', name: '', description: '', isActive: true };
+
+function Modal({ open, onClose, onSaved, initial }: {
+  open: boolean; onClose: () => void; onSaved: () => void; initial: MacroCategory | null;
+}) {
+  const [form, setForm] = useState(EMPTY);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setError('');
+      setForm(initial ? { code: initial.code, name: initial.name, description: initial.description ?? '', isActive: initial.isActive } : EMPTY);
+    }
+  }, [open, initial]);
+
+  const set = (k: keyof CreateMacroCategoryDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required'); return; }
+    setSubmitting(true); setError('');
+    try {
+      if (initial) await macroCategoriesApi.update(initial.id, form);
+      else          await macroCategoriesApi.create(form);
+      onSaved(); onClose();
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Operation failed');
+    } finally { setSubmitting(false); }
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{`.mc-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}.mc-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.mc-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06)}.mc-title{font-size:13px;font-weight:500;color:#f1ede8}.mc-close{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.4);font-size:15px;display:flex;align-items:center;justify-content:center}.mc-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px}.mc-field{display:flex;flex-direction:column;gap:5px}.mc-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.55)}.mc-input,.mc-textarea{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}.mc-input:focus,.mc-textarea:focus{border-color:rgba(251,146,60,0.45)}.mc-textarea{resize:vertical;min-height:60px}.mc-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:7px 12px;font-size:12px;color:#fca5a5}.mc-ftr{display:flex;justify-content:flex-end;gap:8px;padding:10px 18px 16px;border-top:0.5px solid rgba(255,255,255,0.06)}.mc-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 14px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.45);cursor:pointer}.mc-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 18px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer}.mc-btn-save:disabled{opacity:0.5;cursor:not-allowed}.mc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}`}</style>
+      <div className="mc-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="mc-box">
+          <div className="mc-hdr">
+            <span className="mc-title">{initial ? 'Edit Macro Category' : 'New Macro Category'}</span>
+            <button className="mc-close" onClick={onClose}>×</button>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="mc-body">
+              {error && <div className="mc-error">{error}</div>}
+              <div className="mc-row">
+                <div className="mc-field">
+                  <label className="mc-label">Code *</label>
+                  <input className="mc-input" placeholder="WOOD" value={form.code} onChange={set('code')} />
+                </div>
+                <div className="mc-field">
+                  <label className="mc-label">Name *</label>
+                  <input className="mc-input" placeholder="Wood & Panels" value={form.name} onChange={set('name')} />
+                </div>
+              </div>
+              <div className="mc-field">
+                <label className="mc-label">Description</label>
+                <textarea className="mc-textarea" placeholder="Optional description…" value={form.description} onChange={set('description')} />
+              </div>
+            </div>
+            <div className="mc-ftr">
+              <button type="button" className="mc-btn-cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="mc-btn-save" disabled={submitting}>
+                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function MacroCategoriesPage() {
+  const [items,      setItems]      = useState<MacroCategory[]>([]);
+  const [filtered,   setFiltered]   = useState<MacroCategory[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [search,     setSearch]     = useState('');
+  const [modalOpen,  setModalOpen]  = useState(false);
+  const [editing,    setEditing]    = useState<MacroCategory | null>(null);
+  const [deleting,   setDeleting]   = useState<MacroCategory | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const fetch_ = useCallback(async () => {
+    try { setLoading(true); const d = await macroCategoriesApi.getAll(); setItems(d); setFiltered(d); }
+    catch { setError('Failed to load macro categories'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  useEffect(() => {
+    const q = search.toLowerCase();
+    setFiltered(q ? items.filter(i => i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q)) : items);
+  }, [search, items]);
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try { await macroCategoriesApi.remove(deleting.id); setDeleting(null); fetch_(); }
+    catch (err: any) { setError(err?.response?.data?.message ?? 'Delete failed'); setDeleting(null); }
+    finally { setDeleteBusy(false); }
+  };
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Inventory', 'Macro Categories']} title="Macro Categories">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+        .mcp-page{padding:0 18px 24px}.mcp-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}.mcp-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:260px}.mcp-search:focus{border-color:rgba(251,146,60,0.4)}.mcp-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s}.mcp-btn-new:hover{opacity:0.88}.mcp-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden}.mcp-table{width:100%;border-collapse:collapse}.mcp-table thead th{padding:9px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left}.mcp-table tbody td{padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle}.mcp-table tbody tr:last-child td{border-bottom:none}.mcp-table tbody tr:hover td{background:rgba(251,146,60,0.03)}.mcp-code{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fb923c}.mcp-muted{color:rgba(255,255,255,0.4);font-size:12px}.mcp-actions{display:flex;gap:6px}.mcp-btn-edit,.mcp-btn-del{padding:4px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;transition:background 0.15s}.mcp-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.1)}.mcp-btn-edit:hover{background:rgba(255,255,255,0.09)}.mcp-btn-del{background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.2)}.mcp-btn-del:hover{background:rgba(239,68,68,0.14)}.mcp-empty,.mcp-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px}.mcp-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 14px;border-top:0.5px solid rgba(255,255,255,0.04)}.mcp-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:#fca5a5}.mcp-count{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;background:rgba(251,146,60,0.08);color:rgba(251,146,60,0.7);border:0.5px solid rgba(251,146,60,0.2)}
+      `}</style>
+      <div className="mcp-page">
+        {error && <div className="mcp-error">{error}</div>}
+        <div className="mcp-toolbar">
+          <input className="mcp-search" placeholder="Search by code or name…" value={search} onChange={e => setSearch(e.target.value)} />
+          <button className="mcp-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+            New Macro Category
+          </button>
+        </div>
+        <div className="mcp-wrap">
+          {loading ? <div className="mcp-loading">Loading…</div>
+          : filtered.length === 0 ? <div className="mcp-empty">{search ? 'No results.' : 'No macro categories yet.'}</div>
+          : (
+            <>
+              <table className="mcp-table">
+                <thead><tr><th>Code</th><th>Name</th><th>Description</th><th>Categories</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {filtered.map(mc => (
+                    <tr key={mc.id}>
+                      <td><span className="mcp-code">{mc.code}</span></td>
+                      <td style={{ color: '#e2dfd8', fontWeight: 500 }}>{mc.name}</td>
+                      <td><span className="mcp-muted">{mc.description || '—'}</span></td>
+                      <td><span className="mcp-count">{mc._count?.categories ?? 0} categories</span></td>
+                      <td>
+                        <span style={{ color: mc.isActive ? '#4ade80' : 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+                          {mc.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="mcp-actions">
+                          <button className="mcp-btn-edit" onClick={() => { setEditing(mc); setModalOpen(true); }}>Edit</button>
+                          <button className="mcp-btn-del"  onClick={() => setDeleting(mc)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mcp-footer">{filtered.length} of {items.length} macro categories</div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={fetch_} initial={editing} />
+
+      {deleting && (
+        <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:380, padding:'22px 22px 18px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', marginBottom:10 }}>Delete macro category?</div>
+            <div style={{ fontSize:13, color:'rgba(255,255,255,0.45)', marginBottom:20, lineHeight:1.5 }}>
+              <strong style={{ color:'#f1ede8' }}>{deleting.name}</strong> ({deleting.code}) will be soft-deleted.
+              {(deleting._count?.categories ?? 0) > 0 && <span style={{ color:'#fca5a5' }}> This macro category has {deleting._count?.categories} categories — delete them first.</span>}
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <button onClick={() => setDeleting(null)} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 14px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' }}>Cancel</button>
+              <button onClick={handleDelete} disabled={deleteBusy || (deleting._count?.categories ?? 0) > 0} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f87171', cursor:'pointer', opacity: deleteBusy || (deleting._count?.categories ?? 0) > 0 ? 0.5 : 1 }}>
+                {deleteBusy ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ERPShell>
+  );
+}
+
+// ============================================================================
+// frontend/app/inventory/categories/page.tsx
+// ============================================================================
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { categoriesApi } from '@/lib/api/categories';
+import { macroCategoriesApi } from '@/lib/api/macro-categories';
+import { Category, MacroCategory, CreateCategoryDto } from '@/lib/api/types';
+
+const EMPTY_FORM: CreateCategoryDto = { macroCategoryId: '', code: '', name: '', description: '', isActive: true };
+
+function CategoryModal({ open, onClose, onSaved, initial, macroCategories }: {
+  open: boolean; onClose: () => void; onSaved: () => void;
+  initial: Category | null; macroCategories: MacroCategory[];
+}) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setError('');
+      setForm(initial ? {
+        macroCategoryId: initial.macroCategoryId,
+        code: initial.code, name: initial.name,
+        description: initial.description ?? '', isActive: initial.isActive,
+        inventoryAccountId: initial.inventoryAccountId, cogsAccountId: initial.cogsAccountId,
+      } : EMPTY_FORM);
+    }
+  }, [open, initial]);
+
+  const set = (k: keyof CreateCategoryDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.macroCategoryId || !form.code.trim() || !form.name.trim()) { setError('Macro category, code and name are required'); return; }
+    setSubmitting(true); setError('');
+    try {
+      if (initial) await categoriesApi.update(initial.id, form);
+      else          await categoriesApi.create(form);
+      onSaved(); onClose();
+    } catch (err: any) { setError(err?.response?.data?.message ?? 'Operation failed'); }
+    finally { setSubmitting(false); }
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{`.catm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}.catm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.catm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06)}.catm-title{font-size:13px;font-weight:500;color:#f1ede8}.catm-close{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.4);font-size:15px;display:flex;align-items:center;justify-content:center}.catm-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px}.catm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.catm-field{display:flex;flex-direction:column;gap:5px}.catm-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.55)}.catm-input,.catm-select,.catm-textarea{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}.catm-input:focus,.catm-select:focus,.catm-textarea:focus{border-color:rgba(251,146,60,0.45)}.catm-select option{background:#0e0b1a}.catm-textarea{resize:vertical;min-height:56px}.catm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:7px 12px;font-size:12px;color:#fca5a5}.catm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:10px 18px 16px;border-top:0.5px solid rgba(255,255,255,0.06)}.catm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 14px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.45);cursor:pointer}.catm-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 18px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer}.catm-btn-save:disabled{opacity:0.5;cursor:not-allowed}`}</style>
+      <div className="catm-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="catm-box">
+          <div className="catm-hdr">
+            <span className="catm-title">{initial ? 'Edit Category' : 'New Category'}</span>
+            <button className="catm-close" onClick={onClose}>×</button>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="catm-body">
+              {error && <div className="catm-error">{error}</div>}
+              <div className="catm-field">
+                <label className="catm-label">Macro Category *</label>
+                <select className="catm-select" value={form.macroCategoryId} onChange={set('macroCategoryId')}>
+                  <option value="">— Select macro category —</option>
+                  {macroCategories.map(mc => <option key={mc.id} value={mc.id}>{mc.code} — {mc.name}</option>)}
+                </select>
+              </div>
+              <div className="catm-row">
+                <div className="catm-field">
+                  <label className="catm-label">Code *</label>
+                  <input className="catm-input" placeholder="FG-FURN" value={form.code} onChange={set('code')} />
+                </div>
+                <div className="catm-field">
+                  <label className="catm-label">Name *</label>
+                  <input className="catm-input" placeholder="Finished Furniture" value={form.name} onChange={set('name')} />
+                </div>
+              </div>
+              <div className="catm-field">
+                <label className="catm-label">Description</label>
+                <textarea className="catm-textarea" placeholder="Optional…" value={form.description} onChange={set('description')} />
+              </div>
+            </div>
+            <div className="catm-ftr">
+              <button type="button" className="catm-btn-cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="catm-btn-save" disabled={submitting}>
+                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function CategoriesPage() {
+  const [items,          setItems]          = useState<Category[]>([]);
+  const [macroCategories, setMacroCategories] = useState<MacroCategory[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState('');
+  const [search,         setSearch]         = useState('');
+  const [filterMacro,    setFilterMacro]    = useState('');
+  const [modalOpen,      setModalOpen]      = useState(false);
+  const [editing,        setEditing]        = useState<Category | null>(null);
+
+  const fetch_ = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [cats, mcs] = await Promise.all([categoriesApi.getAll(), macroCategoriesApi.getAll()]);
+      setItems(cats); setMacroCategories(mcs);
+    } catch { setError('Failed to load categories'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const filtered = items.filter(c => {
+    if (filterMacro && c.macroCategoryId !== filterMacro) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Inventory', 'Categories']} title="Categories">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+        .catp-page{padding:0 18px 24px}.catp-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}.catp-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:220px}.catp-search:focus{border-color:rgba(251,146,60,0.4)}.catp-select{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;cursor:pointer}.catp-select option{background:#0e0b1a}.catp-btn-new{margin-left:auto;display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s}.catp-btn-new:hover{opacity:0.88}.catp-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden}.catp-table{width:100%;border-collapse:collapse}.catp-table thead th{padding:9px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left}.catp-table tbody td{padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle}.catp-table tbody tr:last-child td{border-bottom:none}.catp-table tbody tr:hover td{background:rgba(251,146,60,0.03)}.catp-code{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fb923c}.catp-muted{color:rgba(255,255,255,0.4);font-size:12px}.catp-macro{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;color:#a78bfa;background:rgba(167,139,250,0.1);border:0.5px solid rgba(167,139,250,0.25)}.catp-actions{display:flex;gap:6px}.catp-btn-edit{padding:4px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)}.catp-btn-edit:hover{background:rgba(255,255,255,0.09)}.catp-empty,.catp-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px}.catp-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 14px;border-top:0.5px solid rgba(255,255,255,0.04)}.catp-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:#fca5a5}
+      `}</style>
+      <div className="catp-page">
+        {error && <div className="catp-error">{error}</div>}
+        <div className="catp-toolbar">
+          <input className="catp-search" placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
+          <select className="catp-select" value={filterMacro} onChange={e => setFilterMacro(e.target.value)}>
+            <option value="">All macro categories</option>
+            {macroCategories.map(mc => <option key={mc.id} value={mc.id}>{mc.code} — {mc.name}</option>)}
+          </select>
+          <button className="catp-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+            New Category
+          </button>
+        </div>
+        <div className="catp-wrap">
+          {loading ? <div className="catp-loading">Loading…</div>
+          : filtered.length === 0 ? <div className="catp-empty">{search || filterMacro ? 'No results.' : 'No categories yet.'}</div>
+          : (
+            <>
+              <table className="catp-table">
+                <thead><tr><th>Code</th><th>Name</th><th>Macro Category</th><th>Inventory Account</th><th>COGS Account</th><th>Items</th><th></th></tr></thead>
+                <tbody>
+                  {filtered.map(cat => (
+                    <tr key={cat.id}>
+                      <td><span className="catp-code">{cat.code}</span></td>
+                      <td style={{ color: '#e2dfd8', fontWeight: 500 }}>{cat.name}</td>
+                      <td><span className="catp-macro">{cat.macroCategory?.code}</span></td>
+                      <td><span className="catp-muted">{cat.inventoryAccount?.accountNumber ?? '—'}</span></td>
+                      <td><span className="catp-muted">{cat.cogsAccount?.accountNumber ?? '—'}</span></td>
+                      <td><span style={{ fontSize: 12, color: 'rgba(251,146,60,0.7)' }}>{cat._count?.items ?? 0}</span></td>
+                      <td>
+                        <div className="catp-actions">
+                          <button className="catp-btn-edit" onClick={() => { setEditing(cat); setModalOpen(true); }}>Edit</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="catp-footer">{filtered.length} of {items.length} categories</div>
+            </>
+          )}
+        </div>
+      </div>
+      <CategoryModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={fetch_} initial={editing} macroCategories={macroCategories} />
+    </ERPShell>
+  );
+}
+
+// ============================================================================
+// frontend/app/inventory/consumption-groups/page.tsx
+// ============================================================================
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
+import { uomApi } from '@/lib/api/uom';
+import { ConsumptionGroup, UomUnit, CreateConsumptionGroupDto } from '@/lib/api/types';
+
+const EMPTY_CG: CreateConsumptionGroupDto = { code: '', name: '', description: '', consumptionUomId: '', isActive: true };
+
+function CgModal({ open, onClose, onSaved, initial, uomUnits }: {
+  open: boolean; onClose: () => void; onSaved: () => void;
+  initial: ConsumptionGroup | null; uomUnits: UomUnit[];
+}) {
+  const [form, setForm] = useState(EMPTY_CG);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setError('');
+      setForm(initial ? {
+        code: initial.code, name: initial.name, description: initial.description ?? '',
+        consumptionUomId: initial.consumptionUomId, isActive: initial.isActive,
+      } : EMPTY_CG);
+    }
+  }, [open, initial]);
+
+  const set = (k: keyof CreateConsumptionGroupDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.code.trim() || !form.name.trim() || !form.consumptionUomId) { setError('Code, name and UOM are required'); return; }
+    setSubmitting(true); setError('');
+    try {
+      if (initial) await consumptionGroupsApi.update(initial.id, form);
+      else          await consumptionGroupsApi.create(form);
+      onSaved(); onClose();
+    } catch (err: any) { setError(err?.response?.data?.message ?? 'Operation failed'); }
+    finally { setSubmitting(false); }
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{`.cgm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}.cgm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.cgm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06)}.cgm-title{font-size:13px;font-weight:500;color:#f1ede8}.cgm-close{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.4);font-size:15px;display:flex;align-items:center;justify-content:center}.cgm-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px}.cgm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cgm-field{display:flex;flex-direction:column;gap:5px}.cgm-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.55)}.cgm-sublabel{font-size:10px;color:rgba(255,255,255,0.3)}.cgm-input,.cgm-select,.cgm-textarea{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}.cgm-input:focus,.cgm-select:focus,.cgm-textarea:focus{border-color:rgba(251,146,60,0.45)}.cgm-select option{background:#0e0b1a}.cgm-textarea{resize:vertical;min-height:56px}.cgm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:7px 12px;font-size:12px;color:#fca5a5}.cgm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:10px 18px 16px;border-top:0.5px solid rgba(255,255,255,0.06)}.cgm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 14px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.45);cursor:pointer}.cgm-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 18px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer}.cgm-btn-save:disabled{opacity:0.5;cursor:not-allowed}`}</style>
+      <div className="cgm-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="cgm-box">
+          <div className="cgm-hdr">
+            <span className="cgm-title">{initial ? 'Edit Consumption Group' : 'New Consumption Group'}</span>
+            <button className="cgm-close" onClick={onClose}>×</button>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="cgm-body">
+              {error && <div className="cgm-error">{error}</div>}
+              <div className="cgm-row">
+                <div className="cgm-field">
+                  <label className="cgm-label">Code *</label>
+                  <input className="cgm-input" placeholder="ADH-IND" value={form.code} onChange={set('code')} />
+                </div>
+                <div className="cgm-field">
+                  <label className="cgm-label">Name *</label>
+                  <input className="cgm-input" placeholder="Industrial Adhesives" value={form.name} onChange={set('name')} />
+                </div>
+              </div>
+              <div className="cgm-field">
+                <label className="cgm-label">Consumption UOM *</label>
+                <p className="cgm-sublabel">The unit Production uses — all items in the group must be convertible to this unit.</p>
+                <select className="cgm-select" value={form.consumptionUomId} onChange={set('consumptionUomId')}>
+                  <option value="">— Select UOM —</option>
+                  {uomUnits.map(u => <option key={u.id} value={u.id}>{u.code} — {u.name} ({u.type} · {u.system})</option>)}
+                </select>
+              </div>
+              <div className="cgm-field">
+                <label className="cgm-label">Description</label>
+                <textarea className="cgm-textarea" placeholder="Optional…" value={form.description} onChange={set('description')} />
+              </div>
+            </div>
+            <div className="cgm-ftr">
+              <button type="button" className="cgm-btn-cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" className="cgm-btn-save" disabled={submitting}>
+                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function ConsumptionGroupsPage() {
+  const [items,    setItems]    = useState<ConsumptionGroup[]>([]);
+  const [uomUnits, setUomUnits] = useState<UomUnit[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
+  const [search,   setSearch]   = useState('');
+  const [modal,    setModal]    = useState(false);
+  const [editing,  setEditing]  = useState<ConsumptionGroup | null>(null);
+
+  const fetch_ = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [cg, u] = await Promise.all([consumptionGroupsApi.getAll(), uomApi.getUnits()]);
+      setItems(cg); setUomUnits(u);
+    } catch { setError('Failed to load'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const filtered = search
+    ? items.filter(i => i.code.toLowerCase().includes(search.toLowerCase()) || i.name.toLowerCase().includes(search.toLowerCase()))
+    : items;
+
+  const TYPE_COLORS: Record<string, string> = {
+    volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80', length: '#fbbf24',
+  };
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Inventory', 'Consumption Groups']} title="Consumption Groups">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
+        .cgp-page{padding:0 18px 24px}.cgp-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}.cgp-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:260px}.cgp-search:focus{border-color:rgba(251,146,60,0.4)}.cgp-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s}.cgp-btn-new:hover{opacity:0.88}.cgp-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden}.cgp-table{width:100%;border-collapse:collapse}.cgp-table thead th{padding:9px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left}.cgp-table tbody td{padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle}.cgp-table tbody tr:last-child td{border-bottom:none}.cgp-table tbody tr:hover td{background:rgba(251,146,60,0.03)}.cgp-code{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fb923c}.cgp-muted{color:rgba(255,255,255,0.4);font-size:12px}.cgp-actions{display:flex;gap:6px}.cgp-btn-edit{padding:4px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)}.cgp-btn-edit:hover{background:rgba(255,255,255,0.09)}.cgp-empty,.cgp-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px}.cgp-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 14px;border-top:0.5px solid rgba(255,255,255,0.04)}.cgp-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:#fca5a5}.cgp-uom-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+      `}</style>
+      <div className="cgp-page">
+        {error && <div className="cgp-error">{error}</div>}
+        <div className="cgp-toolbar">
+          <input className="cgp-search" placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
+          <button className="cgp-btn-new" onClick={() => { setEditing(null); setModal(true); }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+            New Group
+          </button>
+        </div>
+        <div className="cgp-wrap">
+          {loading ? <div className="cgp-loading">Loading…</div>
+          : filtered.length === 0 ? <div className="cgp-empty">{search ? 'No results.' : 'No consumption groups yet.'}</div>
+          : (
+            <>
+              <table className="cgp-table">
+                <thead><tr><th>Code</th><th>Name</th><th>Consumption UOM</th><th>Items</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {filtered.map(cg => {
+                    const uom = cg.consumptionUom;
+                    const color = TYPE_COLORS[uom?.type ?? ''] ?? '#e2dfd8';
+                    return (
+                      <tr key={cg.id}>
+                        <td><span className="cgp-code">{cg.code}</span></td>
+                        <td style={{ color: '#e2dfd8', fontWeight: 500 }}>{cg.name}</td>
+                        <td>
+                          {uom ? (
+                            <span className="cgp-uom-badge" style={{ color, background: `${color}15`, border: `0.5px solid ${color}35` }}>
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                              {uom.code} — {uom.name}
+                            </span>
+                          ) : <span className="cgp-muted">—</span>}
+                        </td>
+                        <td><span style={{ fontSize: 12, color: 'rgba(251,146,60,0.7)' }}>{cg._count?.items ?? 0}</span></td>
+                        <td><span style={{ fontSize: 12, color: cg.isActive ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{cg.isActive ? 'Active' : 'Inactive'}</span></td>
+                        <td>
+                          <div className="cgp-actions">
+                            <button className="cgp-btn-edit" onClick={() => { setEditing(cg); setModal(true); }}>Edit</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="cgp-footer">{filtered.length} of {items.length} consumption groups</div>
+            </>
+          )}
+        </div>
+      </div>
+      <CgModal open={modal} onClose={() => setModal(false)} onSaved={fetch_} initial={editing} uomUnits={uomUnits} />
+    </ERPShell>
+  );
+}

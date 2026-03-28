@@ -1,0 +1,1243 @@
+// ============================================================================
+// SUNSET ERP — SPRINT 11 BACKEND MODULES
+// ============================================================================
+// Folder structure to create:
+//
+// backend/src/modules/
+//   uom/
+//     dto/
+//       create-uom.dto.ts          (not needed — read-only catalog)
+//     uom.module.ts
+//     uom.service.ts
+//     uom.controller.ts
+//
+//   tenant-settings/
+//     dto/
+//       update-tenant-settings.dto.ts
+//     tenant-settings.module.ts
+//     tenant-settings.service.ts
+//     tenant-settings.controller.ts
+//
+//   macro-categories/
+//     dto/
+//       create-macro-category.dto.ts
+//       update-macro-category.dto.ts
+//     macro-categories.module.ts
+//     macro-categories.service.ts
+//     macro-categories.controller.ts
+//
+//   categories/
+//     dto/
+//       create-category.dto.ts
+//       update-category.dto.ts
+//     categories.module.ts
+//     categories.service.ts
+//     categories.controller.ts
+//
+//   consumption-groups/
+//     dto/
+//       create-consumption-group.dto.ts
+//       update-consumption-group.dto.ts
+//     consumption-groups.module.ts
+//     consumption-groups.service.ts
+//     consumption-groups.controller.ts
+//
+//   supplier-items/
+//     dto/
+//       create-supplier-item.dto.ts
+//       update-supplier-item.dto.ts
+//     supplier-items.module.ts
+//     supplier-items.service.ts
+//     supplier-items.controller.ts
+// ============================================================================
+
+// ============================================================================
+// MODULE 1 — UOM (read-only catalog)
+// Path: backend/src/modules/uom/
+// Note: No create/update DTOs — catalog is managed via seed scripts only
+// ============================================================================
+
+// --- uom/uom.module.ts ---
+import { Module } from '@nestjs/common';
+import { UomService } from './uom.service';
+import { UomController } from './uom.controller';
+import { PrismaModule } from '../../database/prisma.module';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [UomController],
+  providers: [UomService],
+  exports: [UomService],
+})
+export class UomModule {}
+
+// --- uom/uom.service.ts ---
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+
+@Injectable()
+export class UomService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAllUnits(filters?: { type?: string; system?: string }) {
+    const where: any = { isActive: true };
+    if (filters?.type)   where.type   = filters.type;
+    if (filters?.system) where.system = filters.system;
+    return this.prisma.uomUnit.findMany({
+      where,
+      orderBy: [{ type: 'asc' }, { system: 'asc' }, { isBase: 'desc' }, { code: 'asc' }],
+    });
+  }
+
+  async findOneUnit(id: string) {
+    const unit = await this.prisma.uomUnit.findUnique({ where: { id } });
+    if (!unit) throw new NotFoundException(`UOM unit ${id} not found`);
+    return unit;
+  }
+
+  async findUnitByCode(code: string) {
+    const unit = await this.prisma.uomUnit.findUnique({ where: { code } });
+    if (!unit) throw new NotFoundException(`UOM unit with code ${code} not found`);
+    return unit;
+  }
+
+  async findAllConversions() {
+    return this.prisma.uomConversion.findMany({
+      where: { isActive: true },
+      include: {
+        fromUom: { select: { code: true, name: true, type: true, system: true } },
+        toUom:   { select: { code: true, name: true, type: true, system: true } },
+      },
+      orderBy: [{ fromUom: { type: 'asc' } }, { fromUom: { code: 'asc' } }],
+    });
+  }
+
+  async convert(fromCode: string, toCode: string, quantity: number): Promise<{
+    fromUom: string; toUom: string; inputQty: number;
+    outputQty: number; factor: number; isAutomatic: boolean;
+  }> {
+    if (fromCode === toCode) {
+      return { fromUom: fromCode, toUom: toCode, inputQty: quantity, outputQty: quantity, factor: 1, isAutomatic: true };
+    }
+    const from = await this.findUnitByCode(fromCode);
+    const to   = await this.findUnitByCode(toCode);
+    const conversion = await this.prisma.uomConversion.findUnique({
+      where: { fromUomId_toUomId: { fromUomId: from.id, toUomId: to.id } },
+    });
+    if (!conversion) {
+      throw new NotFoundException(`No conversion found from ${fromCode} to ${toCode}. Manual factor required.`);
+    }
+    const factor    = Number(conversion.factor);
+    const outputQty = Math.round(quantity * factor * 1_000_000) / 1_000_000;
+    return { fromUom: fromCode, toUom: toCode, inputQty: quantity, outputQty, factor, isAutomatic: true };
+  }
+
+  // Used internally by SupplierItemsService to auto-calculate conversion factors
+  async getConversionFactor(fromUomId: string, toUomId: string): Promise<number | null> {
+    if (fromUomId === toUomId) return 1;
+    const conversion = await this.prisma.uomConversion.findUnique({
+      where: { fromUomId_toUomId: { fromUomId, toUomId } },
+    });
+    return conversion ? Number(conversion.factor) : null;
+  }
+}
+
+// --- uom/uom.controller.ts ---
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { UomService } from './uom.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('UOM')
+@Controller('uom')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class UomController {
+  constructor(private readonly uomService: UomService) {}
+
+  @Get('units')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all UOM units' })
+  @ApiQuery({ name: 'type',   required: false, description: 'volume | mass | count | length | area | time' })
+  @ApiQuery({ name: 'system', required: false, description: 'metric | imperial | universal' })
+  async findAllUnits(@Query('type') type?: string, @Query('system') system?: string) {
+    return this.uomService.findAllUnits({ type, system });
+  }
+
+  @Get('units/:id')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get UOM unit by ID' })
+  @ApiParam({ name: 'id', description: 'UOM unit UUID' })
+  async findOneUnit(@Param('id') id: string) {
+    return this.uomService.findOneUnit(id);
+  }
+
+  @Get('conversions')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all UOM conversion factors' })
+  async findAllConversions() {
+    return this.uomService.findAllConversions();
+  }
+
+  @Get('convert')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Convert a quantity between two UOM units' })
+  @ApiQuery({ name: 'from', required: true,  description: 'Source UOM code e.g. GAL' })
+  @ApiQuery({ name: 'to',   required: true,  description: 'Target UOM code e.g. LTR' })
+  @ApiQuery({ name: 'qty',  required: true,  description: 'Quantity to convert' })
+  async convert(@Query('from') from: string, @Query('to') to: string, @Query('qty') qty: string) {
+    return this.uomService.convert(from, to, Number(qty));
+  }
+}
+
+// ============================================================================
+// MODULE 2 — TENANT SETTINGS
+// Path: backend/src/modules/tenant-settings/
+// ============================================================================
+
+// --- tenant-settings/dto/update-tenant-settings.dto.ts ---
+import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
+export class UpdateTenantSettingsDto {
+  @ApiPropertyOptional({ example: 'metric', description: 'metric | imperial' })
+  @IsOptional()
+  @IsString()
+  defaultUomSystem?: string;
+
+  @ApiPropertyOptional({ description: 'Volume base UOM ID (LTR or GAL)' })
+  @IsOptional()
+  @IsUUID()
+  volumeBaseUomId?: string;
+
+  @ApiPropertyOptional({ description: 'Mass base UOM ID (KG or LB)' })
+  @IsOptional()
+  @IsUUID()
+  massBaseUomId?: string;
+
+  @ApiPropertyOptional({ description: 'Length base UOM ID (M or FT)' })
+  @IsOptional()
+  @IsUUID()
+  lengthBaseUomId?: string;
+
+  @ApiPropertyOptional({ description: 'Area base UOM ID (M2 or FT2)' })
+  @IsOptional()
+  @IsUUID()
+  areaBaseUomId?: string;
+}
+
+// --- tenant-settings/tenant-settings.module.ts ---
+import { Module } from '@nestjs/common';
+import { TenantSettingsService } from './tenant-settings.service';
+import { TenantSettingsController } from './tenant-settings.controller';
+import { PrismaModule } from '../../database/prisma.module';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [TenantSettingsController],
+  providers: [TenantSettingsService],
+  exports: [TenantSettingsService],
+})
+export class TenantSettingsModule {}
+
+// --- tenant-settings/tenant-settings.service.ts ---
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+
+const INCLUDE = {
+  volumeBaseUom: true,
+  massBaseUom:   true,
+  lengthBaseUom: true,
+  areaBaseUom:   true,
+};
+
+@Injectable()
+export class TenantSettingsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getOrCreate(tenantId: string) {
+    const existing = await this.prisma.tenantSettings.findUnique({ where: { tenantId }, include: INCLUDE });
+    if (existing) return existing;
+    return this.prisma.tenantSettings.create({ data: { tenantId, defaultUomSystem: 'metric' }, include: INCLUDE });
+  }
+
+  async update(tenantId: string, userId: string, dto: UpdateTenantSettingsDto) {
+    await this.getOrCreate(tenantId);
+    return this.prisma.tenantSettings.update({
+      where:   { tenantId },
+      data:    { ...dto, updatedBy: userId },
+      include: INCLUDE,
+    });
+  }
+}
+
+// --- tenant-settings/tenant-settings.controller.ts ---
+import { Controller, Get, Patch, Body, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { TenantSettingsService } from './tenant-settings.service';
+import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Tenant Settings')
+@Controller('tenant-settings')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class TenantSettingsController {
+  constructor(private readonly tenantSettingsService: TenantSettingsService) {}
+
+  @Get()
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get tenant UOM and configuration settings' })
+  @ApiResponse({ status: 200, description: 'Tenant settings with UOM references' })
+  async get(@Request() req) {
+    return this.tenantSettingsService.getOrCreate(req.user.tenantId);
+  }
+
+  @Patch()
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({ summary: 'Update tenant UOM and configuration settings' })
+  @ApiResponse({ status: 200, description: 'Settings updated' })
+  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  async update(@Request() req, @Body() dto: UpdateTenantSettingsDto) {
+    return this.tenantSettingsService.update(req.user.tenantId, req.user.id, dto);
+  }
+}
+
+// ============================================================================
+// MODULE 3 — MACRO CATEGORIES
+// Path: backend/src/modules/macro-categories/
+// ============================================================================
+
+// --- macro-categories/dto/create-macro-category.dto.ts ---
+import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateMacroCategoryDto {
+  @ApiProperty({ example: 'WOOD', description: 'Unique macro category code' })
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @ApiProperty({ example: 'Wood & Panels', description: 'Macro category name' })
+  @IsString()
+  @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: 'Wood-based raw materials and finished goods' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+// --- macro-categories/dto/update-macro-category.dto.ts ---
+import { PartialType } from '@nestjs/swagger';
+import { CreateMacroCategoryDto } from './create-macro-category.dto';
+
+export class UpdateMacroCategoryDto extends PartialType(CreateMacroCategoryDto) {}
+
+// --- macro-categories/macro-categories.module.ts ---
+import { Module } from '@nestjs/common';
+import { MacroCategoriesService } from './macro-categories.service';
+import { MacroCategoriesController } from './macro-categories.controller';
+import { PrismaModule } from '../../database/prisma.module';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [MacroCategoriesController],
+  providers: [MacroCategoriesService],
+  exports: [MacroCategoriesService],
+})
+export class MacroCategoriesModule {}
+
+// --- macro-categories/macro-categories.service.ts ---
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateMacroCategoryDto } from './dto/create-macro-category.dto';
+import { UpdateMacroCategoryDto } from './dto/update-macro-category.dto';
+
+@Injectable()
+export class MacroCategoriesService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(tenantId: string, userId: string, dto: CreateMacroCategoryDto) {
+    const existing = await this.prisma.macroCategory.findFirst({ where: { tenantId, code: dto.code, deletedAt: null } });
+    if (existing) throw new ConflictException(`MacroCategory code ${dto.code} already exists`);
+    return this.prisma.macroCategory.create({
+      data:    { tenantId, ...dto, isActive: dto.isActive ?? true, createdBy: userId, updatedBy: userId },
+      include: { _count: { select: { categories: true } } },
+    });
+  }
+
+  async findAll(tenantId: string) {
+    return this.prisma.macroCategory.findMany({
+      where:   { tenantId, deletedAt: null },
+      include: { _count: { select: { categories: true } } },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const mc = await this.prisma.macroCategory.findFirst({
+      where:   { id, tenantId, deletedAt: null },
+      include: { categories: { where: { deletedAt: null }, orderBy: { code: 'asc' }, include: { _count: { select: { items: true } } } } },
+    });
+    if (!mc) throw new NotFoundException(`MacroCategory ${id} not found`);
+    return mc;
+  }
+
+  async update(tenantId: string, userId: string, id: string, dto: UpdateMacroCategoryDto) {
+    await this.findOne(tenantId, id);
+    if (dto.code) {
+      const conflict = await this.prisma.macroCategory.findFirst({ where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null } });
+      if (conflict) throw new ConflictException(`MacroCategory code ${dto.code} already exists`);
+    }
+    return this.prisma.macroCategory.update({
+      where:   { id },
+      data:    { ...dto, updatedBy: userId },
+      include: { _count: { select: { categories: true } } },
+    });
+  }
+
+  async remove(tenantId: string, userId: string, id: string) {
+    await this.findOne(tenantId, id);
+    const catCount = await this.prisma.category.count({ where: { macroCategoryId: id, deletedAt: null } });
+    if (catCount > 0) throw new BadRequestException(`Cannot delete: ${catCount} categories still assigned to this macro category`);
+    await this.prisma.macroCategory.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: userId } });
+    return { message: 'Macro category deleted successfully', id };
+  }
+}
+
+// --- macro-categories/macro-categories.controller.ts ---
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { MacroCategoriesService } from './macro-categories.service';
+import { CreateMacroCategoryDto } from './dto/create-macro-category.dto';
+import { UpdateMacroCategoryDto } from './dto/update-macro-category.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Macro Categories')
+@Controller('macro-categories')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class MacroCategoriesController {
+  constructor(private readonly macroCategoriesService: MacroCategoriesService) {}
+
+  @Post()
+  @RequirePermissions('INVENTORY:CREATE')
+  @ApiOperation({ summary: 'Create a new macro category' })
+  @ApiResponse({ status: 201, description: 'Macro category created successfully' })
+  @ApiResponse({ status: 409, description: 'Macro category code already exists' })
+  async create(@Request() req, @Body() dto: CreateMacroCategoryDto) {
+    return this.macroCategoriesService.create(req.user.tenantId, req.user.id, dto);
+  }
+
+  @Get()
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all macro categories' })
+  @ApiResponse({ status: 200, description: 'List of macro categories with category counts' })
+  async findAll(@Request() req) {
+    return this.macroCategoriesService.findAll(req.user.tenantId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get macro category with its child categories' })
+  @ApiParam({ name: 'id', description: 'MacroCategory UUID' })
+  @ApiResponse({ status: 200, description: 'Macro category with child categories' })
+  @ApiResponse({ status: 404, description: 'Macro category not found' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.macroCategoriesService.findOne(req.user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({ summary: 'Update macro category' })
+  @ApiParam({ name: 'id', description: 'MacroCategory UUID' })
+  @ApiResponse({ status: 200, description: 'Macro category updated successfully' })
+  @ApiResponse({ status: 404, description: 'Macro category not found' })
+  @ApiResponse({ status: 409, description: 'Code already exists' })
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateMacroCategoryDto) {
+    return this.macroCategoriesService.update(req.user.tenantId, req.user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('INVENTORY:DELETE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete macro category (soft delete — fails if has categories)' })
+  @ApiParam({ name: 'id', description: 'MacroCategory UUID' })
+  @ApiResponse({ status: 200, description: 'Macro category deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — has child categories' })
+  @ApiResponse({ status: 404, description: 'Macro category not found' })
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.macroCategoriesService.remove(req.user.tenantId, req.user.id, id);
+  }
+}
+
+// ============================================================================
+// MODULE 4 — CATEGORIES
+// Path: backend/src/modules/categories/
+// ============================================================================
+
+// --- categories/dto/create-category.dto.ts ---
+import { IsString, IsOptional, IsBoolean, IsUUID, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateCategoryDto {
+  @ApiProperty({ description: 'Parent macro category ID' })
+  @IsUUID()
+  macroCategoryId: string;
+
+  @ApiProperty({ example: 'FG-FURNITURE', description: 'Unique category code' })
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @ApiProperty({ example: 'Finished Furniture', description: 'Category name' })
+  @IsString()
+  @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: 'Finished goods ready for sale' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'GL account ID for inventory (DR on receipt)' })
+  @IsOptional()
+  @IsUUID()
+  inventoryAccountId?: string;
+
+  @ApiPropertyOptional({ description: 'GL account ID for COGS (DR on shipment)' })
+  @IsOptional()
+  @IsUUID()
+  cogsAccountId?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+// --- categories/dto/update-category.dto.ts ---
+import { PartialType } from '@nestjs/swagger';
+import { CreateCategoryDto } from './create-category.dto';
+
+export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
+
+// --- categories/categories.module.ts ---
+import { Module } from '@nestjs/common';
+import { CategoriesService } from './categories.service';
+import { CategoriesController } from './categories.controller';
+import { PrismaModule } from '../../database/prisma.module';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [CategoriesController],
+  providers: [CategoriesService],
+  exports: [CategoriesService],
+})
+export class CategoriesModule {}
+
+// --- categories/categories.service.ts ---
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+
+const INCLUDE = {
+  macroCategory:    { select: { id: true, code: true, name: true } },
+  inventoryAccount: { select: { accountNumber: true, name: true } },
+  cogsAccount:      { select: { accountNumber: true, name: true } },
+  _count:           { select: { items: true } },
+};
+
+@Injectable()
+export class CategoriesService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(tenantId: string, userId: string, dto: CreateCategoryDto) {
+    const existing = await this.prisma.category.findFirst({ where: { tenantId, code: dto.code, deletedAt: null } });
+    if (existing) throw new ConflictException(`Category code ${dto.code} already exists`);
+    const mc = await this.prisma.macroCategory.findFirst({ where: { id: dto.macroCategoryId, tenantId, deletedAt: null } });
+    if (!mc) throw new NotFoundException(`MacroCategory ${dto.macroCategoryId} not found`);
+    return this.prisma.category.create({
+      data:    { tenantId, ...dto, isActive: dto.isActive ?? true, createdBy: userId, updatedBy: userId },
+      include: INCLUDE,
+    });
+  }
+
+  async findAll(tenantId: string, macroCategoryId?: string) {
+    const where: any = { tenantId, deletedAt: null };
+    if (macroCategoryId) where.macroCategoryId = macroCategoryId;
+    return this.prisma.category.findMany({
+      where,
+      include: INCLUDE,
+      orderBy: [{ macroCategory: { code: 'asc' } }, { code: 'asc' }],
+    });
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const cat = await this.prisma.category.findFirst({
+      where:   { id, tenantId, deletedAt: null },
+      include: { macroCategory: true, inventoryAccount: true, cogsAccount: true, _count: { select: { items: true } } },
+    });
+    if (!cat) throw new NotFoundException(`Category ${id} not found`);
+    return cat;
+  }
+
+  async update(tenantId: string, userId: string, id: string, dto: UpdateCategoryDto) {
+    await this.findOne(tenantId, id);
+    if (dto.code) {
+      const conflict = await this.prisma.category.findFirst({ where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null } });
+      if (conflict) throw new ConflictException(`Category code ${dto.code} already exists`);
+    }
+    return this.prisma.category.update({ where: { id }, data: { ...dto, updatedBy: userId }, include: INCLUDE });
+  }
+
+  async remove(tenantId: string, userId: string, id: string) {
+    await this.findOne(tenantId, id);
+    const itemCount = await this.prisma.item.count({ where: { categoryId: id, deletedAt: null } });
+    if (itemCount > 0) throw new BadRequestException(`Cannot delete: ${itemCount} items still assigned to this category`);
+    await this.prisma.category.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: userId } });
+    return { message: 'Category deleted successfully', id };
+  }
+}
+
+// --- categories/categories.controller.ts ---
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { CategoriesService } from './categories.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Categories')
+@Controller('categories')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class CategoriesController {
+  constructor(private readonly categoriesService: CategoriesService) {}
+
+  @Post()
+  @RequirePermissions('INVENTORY:CREATE')
+  @ApiOperation({ summary: 'Create category (must belong to a MacroCategory)' })
+  @ApiResponse({ status: 201, description: 'Category created successfully' })
+  @ApiResponse({ status: 404, description: 'MacroCategory not found' })
+  @ApiResponse({ status: 409, description: 'Category code already exists' })
+  async create(@Request() req, @Body() dto: CreateCategoryDto) {
+    return this.categoriesService.create(req.user.tenantId, req.user.id, dto);
+  }
+
+  @Get()
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all categories' })
+  @ApiQuery({ name: 'macroCategoryId', required: false, description: 'Filter by macro category' })
+  @ApiResponse({ status: 200, description: 'List of categories with GL accounts and item counts' })
+  async findAll(@Request() req, @Query('macroCategoryId') macroCategoryId?: string) {
+    return this.categoriesService.findAll(req.user.tenantId, macroCategoryId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiParam({ name: 'id', description: 'Category UUID' })
+  @ApiResponse({ status: 200, description: 'Category details' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.categoriesService.findOne(req.user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({ summary: 'Update category' })
+  @ApiParam({ name: 'id', description: 'Category UUID' })
+  @ApiResponse({ status: 200, description: 'Category updated successfully' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  @ApiResponse({ status: 409, description: 'Code already exists' })
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+    return this.categoriesService.update(req.user.tenantId, req.user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('INVENTORY:DELETE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete category (soft delete — fails if has items)' })
+  @ApiParam({ name: 'id', description: 'Category UUID' })
+  @ApiResponse({ status: 200, description: 'Category deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — has items assigned' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.categoriesService.remove(req.user.tenantId, req.user.id, id);
+  }
+}
+
+// ============================================================================
+// MODULE 5 — CONSUMPTION GROUPS
+// Path: backend/src/modules/consumption-groups/
+// ============================================================================
+
+// --- consumption-groups/dto/create-consumption-group.dto.ts ---
+import { IsString, IsOptional, IsBoolean, IsUUID, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateConsumptionGroupDto {
+  @ApiProperty({ example: 'ADH-INDUSTRIAL', description: 'Unique consumption group code' })
+  @IsString()
+  @MaxLength(50)
+  code: string;
+
+  @ApiProperty({ example: 'Industrial Adhesives', description: 'Group name' })
+  @IsString()
+  @MaxLength(255)
+  name: string;
+
+  @ApiPropertyOptional({ example: 'All adhesive materials expressed in LTR for production planning' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ description: 'UOM ID that production uses — all items in group share this unit' })
+  @IsUUID()
+  consumptionUomId: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+// --- consumption-groups/dto/update-consumption-group.dto.ts ---
+import { PartialType } from '@nestjs/swagger';
+import { CreateConsumptionGroupDto } from './create-consumption-group.dto';
+
+export class UpdateConsumptionGroupDto extends PartialType(CreateConsumptionGroupDto) {}
+
+// --- consumption-groups/consumption-groups.module.ts ---
+import { Module } from '@nestjs/common';
+import { ConsumptionGroupsService } from './consumption-groups.service';
+import { ConsumptionGroupsController } from './consumption-groups.controller';
+import { PrismaModule } from '../../database/prisma.module';
+
+@Module({
+  imports: [PrismaModule],
+  controllers: [ConsumptionGroupsController],
+  providers: [ConsumptionGroupsService],
+  exports: [ConsumptionGroupsService],
+})
+export class ConsumptionGroupsModule {}
+
+// --- consumption-groups/consumption-groups.service.ts ---
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateConsumptionGroupDto } from './dto/create-consumption-group.dto';
+import { UpdateConsumptionGroupDto } from './dto/update-consumption-group.dto';
+
+@Injectable()
+export class ConsumptionGroupsService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(tenantId: string, userId: string, dto: CreateConsumptionGroupDto) {
+    const existing = await this.prisma.consumptionGroup.findFirst({ where: { tenantId, code: dto.code, deletedAt: null } });
+    if (existing) throw new ConflictException(`ConsumptionGroup code ${dto.code} already exists`);
+    return this.prisma.consumptionGroup.create({
+      data:    { tenantId, ...dto, isActive: dto.isActive ?? true, createdBy: userId, updatedBy: userId },
+      include: { consumptionUom: true, _count: { select: { items: true } } },
+    });
+  }
+
+  async findAll(tenantId: string) {
+    return this.prisma.consumptionGroup.findMany({
+      where:   { tenantId, deletedAt: null },
+      include: { consumptionUom: true, _count: { select: { items: true } } },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const cg = await this.prisma.consumptionGroup.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: {
+        consumptionUom: true,
+        items: {
+          where:  { deletedAt: null },
+          select: {
+            id: true, code: true, name: true, baseUom: true,
+            purchaseToConsumptionFactor: true, storageToConsumptionFactor: true,
+            stock: { select: { onHandQuantity: true } },
+          },
+        },
+      },
+    });
+    if (!cg) throw new NotFoundException(`ConsumptionGroup ${id} not found`);
+
+    // Aggregate total qty in consumptionUom across all items in the group
+    const totalConsumptionQty = cg.items.reduce((sum, item) => {
+      const onHand = item.stock.reduce((s, st) => s + Number(st.onHandQuantity), 0);
+      return sum + onHand * Number(item.purchaseToConsumptionFactor);
+    }, 0);
+
+    return { ...cg, totalConsumptionQty: Math.round(totalConsumptionQty * 1000) / 1000 };
+  }
+
+  async update(tenantId: string, userId: string, id: string, dto: UpdateConsumptionGroupDto) {
+    await this.findOne(tenantId, id);
+    return this.prisma.consumptionGroup.update({
+      where:   { id },
+      data:    { ...dto, updatedBy: userId },
+      include: { consumptionUom: true, _count: { select: { items: true } } },
+    });
+  }
+
+  async remove(tenantId: string, userId: string, id: string) {
+    await this.findOne(tenantId, id);
+    await this.prisma.consumptionGroup.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: userId } });
+    return { message: 'Consumption group deleted successfully', id };
+  }
+}
+
+// --- consumption-groups/consumption-groups.controller.ts ---
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ConsumptionGroupsService } from './consumption-groups.service';
+import { CreateConsumptionGroupDto } from './dto/create-consumption-group.dto';
+import { UpdateConsumptionGroupDto } from './dto/update-consumption-group.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Consumption Groups')
+@Controller('consumption-groups')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class ConsumptionGroupsController {
+  constructor(private readonly consumptionGroupsService: ConsumptionGroupsService) {}
+
+  @Post()
+  @RequirePermissions('INVENTORY:CREATE')
+  @ApiOperation({ summary: 'Create consumption group' })
+  @ApiResponse({ status: 201, description: 'Consumption group created successfully' })
+  @ApiResponse({ status: 409, description: 'Code already exists' })
+  async create(@Request() req, @Body() dto: CreateConsumptionGroupDto) {
+    return this.consumptionGroupsService.create(req.user.tenantId, req.user.id, dto);
+  }
+
+  @Get()
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all consumption groups' })
+  @ApiResponse({ status: 200, description: 'List of consumption groups with UOM and item counts' })
+  async findAll(@Request() req) {
+    return this.consumptionGroupsService.findAll(req.user.tenantId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get consumption group with items and total ATP in consumption UOM' })
+  @ApiParam({ name: 'id', description: 'ConsumptionGroup UUID' })
+  @ApiResponse({ status: 200, description: 'Consumption group with aggregated stock qty' })
+  @ApiResponse({ status: 404, description: 'Consumption group not found' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.consumptionGroupsService.findOne(req.user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({ summary: 'Update consumption group' })
+  @ApiParam({ name: 'id', description: 'ConsumptionGroup UUID' })
+  @ApiResponse({ status: 200, description: 'Consumption group updated successfully' })
+  @ApiResponse({ status: 404, description: 'Consumption group not found' })
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateConsumptionGroupDto) {
+    return this.consumptionGroupsService.update(req.user.tenantId, req.user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('INVENTORY:DELETE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete consumption group (soft delete)' })
+  @ApiParam({ name: 'id', description: 'ConsumptionGroup UUID' })
+  @ApiResponse({ status: 200, description: 'Consumption group deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Consumption group not found' })
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.consumptionGroupsService.remove(req.user.tenantId, req.user.id, id);
+  }
+}
+
+// ============================================================================
+// MODULE 6 — SUPPLIER ITEMS
+// Path: backend/src/modules/supplier-items/
+// ============================================================================
+
+// --- supplier-items/dto/create-supplier-item.dto.ts ---
+import { IsString, IsOptional, IsBoolean, IsUUID, IsNumber, IsInt, Min, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateSupplierItemDto {
+  @ApiProperty({ description: 'Supplier ID' })
+  @IsUUID()
+  supplierId: string;
+
+  @ApiProperty({ description: 'Item ID' })
+  @IsUUID()
+  itemId: string;
+
+  @ApiPropertyOptional({ example: 'LOC-GAL-001', description: "Supplier's own code for this item" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  supplierItemCode?: string;
+
+  @ApiPropertyOptional({ example: 'Loctite Adhesive 1 Gallon', description: "Supplier's item description" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  supplierItemName?: string;
+
+  @ApiProperty({ description: 'Purchase UOM ID (from cfg_uom_units)' })
+  @IsUUID()
+  purchaseUomId: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'Pack size in purchase UOM units', default: 1 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  packSize?: number;
+
+  @ApiPropertyOptional({
+    example: 3.78541,
+    description: 'Conversion factor: how many consumptionUom per 1 purchaseUom. Auto-calculated from catalog if omitted.',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  conversionFactor?: number;
+
+  @ApiPropertyOptional({ example: 45.99, description: 'Last known price per purchase UOM' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  lastPrice?: number;
+
+  @ApiPropertyOptional({ example: 7, description: 'Lead time in days', default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  leadTimeDays?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'Minimum order quantity in purchase UOM', default: 1 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  moq?: number;
+
+  @ApiPropertyOptional({ default: false, description: 'Mark as preferred supplier for this item' })
+  @IsOptional()
+  @IsBoolean()
+  isPreferred?: boolean;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+// --- supplier-items/dto/update-supplier-item.dto.ts ---
+import { PartialType, OmitType } from '@nestjs/swagger';
+import { CreateSupplierItemDto } from './create-supplier-item.dto';
+
+// supplierId and itemId cannot be changed after creation
+export class UpdateSupplierItemDto extends PartialType(
+  OmitType(CreateSupplierItemDto, ['supplierId', 'itemId'] as const),
+) {}
+
+// --- supplier-items/supplier-items.module.ts ---
+import { Module } from '@nestjs/common';
+import { SupplierItemsService } from './supplier-items.service';
+import { SupplierItemsController } from './supplier-items.controller';
+import { PrismaModule } from '../../database/prisma.module';
+import { UomModule } from '../uom/uom.module';
+
+@Module({
+  imports: [PrismaModule, UomModule],
+  controllers: [SupplierItemsController],
+  providers: [SupplierItemsService],
+  exports: [SupplierItemsService],
+})
+export class SupplierItemsModule {}
+
+// --- supplier-items/supplier-items.service.ts ---
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { UomService } from '../uom/uom.service';
+import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
+import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
+
+const INCLUDE = {
+  supplier:    { select: { id: true, code: true, name: true } },
+  item:        { select: { id: true, code: true, name: true, consumptionUomId: true, baseUom: true } },
+  purchaseUom: { select: { id: true, code: true, name: true, type: true, system: true } },
+};
+
+@Injectable()
+export class SupplierItemsService {
+  constructor(
+    private prisma:      PrismaService,
+    private uomService:  UomService,
+  ) {}
+
+  async create(tenantId: string, userId: string, dto: CreateSupplierItemDto) {
+    const existing = await this.prisma.supplierItem.findFirst({
+      where: { tenantId, supplierId: dto.supplierId, itemId: dto.itemId, deletedAt: null },
+    });
+    if (existing) throw new ConflictException('This supplier already has an entry for this item');
+
+    // Auto-calculate conversion factor from catalog when not explicitly provided
+    let conversionFactor = dto.conversionFactor ?? 1;
+    if (!dto.conversionFactor || dto.conversionFactor === 1) {
+      const item = await this.prisma.item.findFirst({ where: { id: dto.itemId, tenantId } });
+      if (item?.consumptionUomId && dto.purchaseUomId !== item.consumptionUomId) {
+        const autoFactor = await this.uomService.getConversionFactor(dto.purchaseUomId, item.consumptionUomId);
+        if (autoFactor) conversionFactor = autoFactor;
+      }
+    }
+
+    if (dto.isPreferred) {
+      await this.prisma.supplierItem.updateMany({
+        where: { tenantId, itemId: dto.itemId, isPreferred: true, deletedAt: null },
+        data:  { isPreferred: false },
+      });
+    }
+
+    const si = await this.prisma.supplierItem.create({
+      data: {
+        tenantId,
+        supplierId:       dto.supplierId,
+        itemId:           dto.itemId,
+        supplierItemCode: dto.supplierItemCode,
+        supplierItemName: dto.supplierItemName,
+        purchaseUomId:    dto.purchaseUomId,
+        packSize:         dto.packSize ?? 1,
+        conversionFactor,
+        lastPrice:        dto.lastPrice,
+        leadTimeDays:     dto.leadTimeDays ?? 0,
+        moq:              dto.moq ?? 1,
+        isPreferred:      dto.isPreferred ?? false,
+        isActive:         dto.isActive ?? true,
+        notes:            dto.notes,
+        createdBy:        userId,
+        updatedBy:        userId,
+      },
+      include: INCLUDE,
+    });
+
+    if (dto.isPreferred) {
+      await this.prisma.item.update({ where: { id: dto.itemId }, data: { defaultSupplierId: dto.supplierId } });
+    }
+
+    return this.enrich(si);
+  }
+
+  async findAll(tenantId: string, filters?: { itemId?: string; supplierId?: string; isPreferred?: boolean }) {
+    const where: any = { tenantId, deletedAt: null };
+    if (filters?.itemId)                    where.itemId      = filters.itemId;
+    if (filters?.supplierId)                where.supplierId  = filters.supplierId;
+    if (filters?.isPreferred !== undefined)  where.isPreferred = filters.isPreferred;
+
+    const rows = await this.prisma.supplierItem.findMany({
+      where,
+      include: INCLUDE,
+      orderBy: [{ isPreferred: 'desc' }, { supplier: { name: 'asc' } }],
+    });
+    return rows.map(r => this.enrich(r));
+  }
+
+  async findByItem(tenantId: string, itemId: string) {
+    return this.findAll(tenantId, { itemId });
+  }
+
+  async findBySupplier(tenantId: string, supplierId: string) {
+    return this.findAll(tenantId, { supplierId });
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const si = await this.prisma.supplierItem.findFirst({ where: { id, tenantId, deletedAt: null }, include: INCLUDE });
+    if (!si) throw new NotFoundException(`SupplierItem ${id} not found`);
+    return this.enrich(si);
+  }
+
+  async update(tenantId: string, userId: string, id: string, dto: UpdateSupplierItemDto) {
+    const si = await this.findOne(tenantId, id);
+
+    if (dto.isPreferred) {
+      await this.prisma.supplierItem.updateMany({
+        where: { tenantId, itemId: (si as any).itemId, isPreferred: true, id: { not: id }, deletedAt: null },
+        data:  { isPreferred: false },
+      });
+      await this.prisma.item.update({
+        where: { id: (si as any).itemId },
+        data:  { defaultSupplierId: (si as any).supplierId },
+      });
+    }
+
+    let conversionFactor = dto.conversionFactor;
+    if (dto.purchaseUomId && !dto.conversionFactor) {
+      const item = await this.prisma.item.findFirst({ where: { id: (si as any).itemId, tenantId } });
+      if (item?.consumptionUomId) {
+        const autoFactor = await this.uomService.getConversionFactor(dto.purchaseUomId, item.consumptionUomId);
+        if (autoFactor) conversionFactor = autoFactor;
+      }
+    }
+
+    const updated = await this.prisma.supplierItem.update({
+      where:   { id },
+      data:    { ...dto, ...(conversionFactor !== undefined ? { conversionFactor } : {}), updatedBy: userId },
+      include: INCLUDE,
+    });
+    return this.enrich(updated);
+  }
+
+  async remove(tenantId: string, userId: string, id: string) {
+    await this.findOne(tenantId, id);
+    await this.prisma.supplierItem.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: userId } });
+    return { message: 'Supplier item deleted successfully', id };
+  }
+
+  private enrich(si: any) {
+    return {
+      ...si,
+      conversionPreview: `1 ${si.purchaseUom.code} = ${Number(si.conversionFactor)} ${si.item.baseUom}`,
+    };
+  }
+}
+
+// --- supplier-items/supplier-items.controller.ts ---
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { SupplierItemsService } from './supplier-items.service';
+import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
+import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Supplier Items')
+@Controller('supplier-items')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiBearerAuth('JWT-auth')
+export class SupplierItemsController {
+  constructor(private readonly supplierItemsService: SupplierItemsService) {}
+
+  @Post()
+  @RequirePermissions('INVENTORY:CREATE')
+  @ApiOperation({ summary: 'Create supplier-item relationship with auto conversion factor from catalog' })
+  @ApiResponse({ status: 201, description: 'Supplier item created successfully' })
+  @ApiResponse({ status: 409, description: 'Supplier already has an entry for this item' })
+  async create(@Request() req, @Body() dto: CreateSupplierItemDto) {
+    return this.supplierItemsService.create(req.user.tenantId, req.user.id, dto);
+  }
+
+  @Get()
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get supplier-item relationships' })
+  @ApiQuery({ name: 'itemId',      required: false, description: 'Filter by item' })
+  @ApiQuery({ name: 'supplierId',  required: false, description: 'Filter by supplier' })
+  @ApiQuery({ name: 'isPreferred', required: false, description: 'true | false' })
+  @ApiResponse({ status: 200, description: 'List of supplier-item relationships with conversion preview' })
+  async findAll(
+    @Request() req,
+    @Query('itemId')      itemId?:      string,
+    @Query('supplierId')  supplierId?:  string,
+    @Query('isPreferred') isPreferred?: string,
+  ) {
+    return this.supplierItemsService.findAll(req.user.tenantId, {
+      itemId,
+      supplierId,
+      isPreferred: isPreferred === 'true' ? true : isPreferred === 'false' ? false : undefined,
+    });
+  }
+
+  @Get('by-item/:itemId')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all suppliers for a specific item' })
+  @ApiParam({ name: 'itemId', description: 'Item UUID' })
+  @ApiResponse({ status: 200, description: 'Suppliers for this item ordered by preferred first' })
+  async findByItem(@Request() req, @Param('itemId') itemId: string) {
+    return this.supplierItemsService.findByItem(req.user.tenantId, itemId);
+  }
+
+  @Get('by-supplier/:supplierId')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get all items for a specific supplier' })
+  @ApiParam({ name: 'supplierId', description: 'Supplier UUID' })
+  @ApiResponse({ status: 200, description: 'Items sourced from this supplier' })
+  async findBySupplier(@Request() req, @Param('supplierId') supplierId: string) {
+    return this.supplierItemsService.findBySupplier(req.user.tenantId, supplierId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get supplier-item by ID' })
+  @ApiParam({ name: 'id', description: 'SupplierItem UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier item details' })
+  @ApiResponse({ status: 404, description: 'Supplier item not found' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.supplierItemsService.findOne(req.user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({ summary: 'Update supplier-item (setting isPreferred=true clears others for this item)' })
+  @ApiParam({ name: 'id', description: 'SupplierItem UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier item updated successfully' })
+  @ApiResponse({ status: 404, description: 'Supplier item not found' })
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateSupplierItemDto) {
+    return this.supplierItemsService.update(req.user.tenantId, req.user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('INVENTORY:DELETE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete supplier-item (soft delete)' })
+  @ApiParam({ name: 'id', description: 'SupplierItem UUID' })
+  @ApiResponse({ status: 200, description: 'Supplier item deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Supplier item not found' })
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.supplierItemsService.remove(req.user.tenantId, req.user.id, id);
+  }
+}
+
+// ============================================================================
+// app.module.ts — ADD THESE 6 LINES TO IMPORTS
+// ============================================================================
+// import { UomModule }               from './modules/uom/uom.module';
+// import { TenantSettingsModule }    from './modules/tenant-settings/tenant-settings.module';
+// import { MacroCategoriesModule }   from './modules/macro-categories/macro-categories.module';
+// import { CategoriesModule }        from './modules/categories/categories.module';
+// import { ConsumptionGroupsModule } from './modules/consumption-groups/consumption-groups.module';
+// import { SupplierItemsModule }     from './modules/supplier-items/supplier-items.module';
+//
+// Then add to the @Module imports array:
+//   UomModule,
+//   TenantSettingsModule,
+//   MacroCategoriesModule,
+//   CategoriesModule,
+//   ConsumptionGroupsModule,
+//   SupplierItemsModule,
+// ============================================================================

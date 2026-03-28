@@ -1,0 +1,79 @@
+// ============================================================================
+// SPRINT 11 — MODIFICATIONS TO EXISTING MODELS
+// Apply these changes to the corresponding models in schema.prisma
+// ============================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. MODEL: Tenant
+// ADD these relations at the end of the Tenant model, before @@map
+// ─────────────────────────────────────────────────────────────────────────────
+// Find this line in Tenant:
+//   apPayments     ApPayment[]
+// Add AFTER it:
+  macroCategories   MacroCategory[]
+  categories        Category[]
+  consumptionGroups ConsumptionGroup[]
+  supplierItems     SupplierItem[]
+  tenantSettings    TenantSettings?
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. MODEL: Supplier  
+// ADD this relation at the end of Supplier model, before @@unique
+// ─────────────────────────────────────────────────────────────────────────────
+// Find this line in Supplier:
+//   apInvoices     ApInvoice[]
+// Add AFTER it:
+  supplierItems  SupplierItem[]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. MODEL: Account
+// ADD these relations at the end of Account model
+// ─────────────────────────────────────────────────────────────────────────────
+// Find this line in Account:
+//   apInvoiceLinesExpense   ApInvoiceLine[] @relation("ApLineExpenseAccount")
+// Add AFTER it:
+  categoriesInventory Category[] @relation("CategoryInventoryAccount")
+  categoriesCogs      Category[] @relation("CategoryCogsAccount")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. MODEL: Item
+// REPLACE the entire Type section and add new UOM fields + relations
+// ─────────────────────────────────────────────────────────────────────────────
+
+// --- FIND this block in Item: ---
+//   // Type
+//   itemType   String  @map("item_type") @db.VarChar(50)
+//   categoryId String? @map("category_id") @db.Uuid
+//   baseUom    String  @map("base_uom") @db.VarChar(20)
+
+// --- REPLACE WITH: ---
+  // Type & Classification
+  itemType           String  @map("item_type") @db.VarChar(50)
+  categoryId         String? @map("category_id") @db.Uuid           // nullable DB, required UI
+  consumptionGroupId String? @map("consumption_group_id") @db.Uuid  // optional always
+
+  // UOM — legacy (kept for backward compatibility)
+  baseUom String @map("base_uom") @db.VarChar(20)
+
+  // UOM Triple — new (FK to cfg_uom_units)
+  purchaseUomId                String?  @map("purchase_uom_id") @db.Uuid
+  purchaseToConsumptionFactor  Decimal  @default(1) @map("purchase_to_consumption_factor") @db.Decimal(18, 8)
+  storageUomId                 String?  @map("storage_uom_id") @db.Uuid
+  storageToConsumptionFactor   Decimal  @default(1) @map("storage_to_consumption_factor") @db.Decimal(18, 8)
+  consumptionUomId             String?  @map("consumption_uom_id") @db.Uuid
+
+// --- FIND this block in Item relations: ---
+//   apInvoiceLines ApInvoiceLine[]
+
+// --- REPLACE WITH: ---
+  apInvoiceLines     ApInvoiceLine[]
+  supplierItems      SupplierItem[]
+
+  // UOM relations
+  purchaseUom        UomUnit?          @relation("ItemPurchaseUom",    fields: [purchaseUomId],    references: [id])
+  storageUom         UomUnit?          @relation("ItemStorageUom",     fields: [storageUomId],     references: [id])
+  consumptionUom     UomUnit?          @relation("ItemConsumptionUom", fields: [consumptionUomId], references: [id])
+
+  // Category & Group relations
+  category           Category?         @relation(fields: [categoryId],         references: [id])
+  consumptionGroup   ConsumptionGroup? @relation(fields: [consumptionGroupId], references: [id])

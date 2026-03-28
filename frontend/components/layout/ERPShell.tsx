@@ -23,18 +23,21 @@ const NAV: NavItem[] = [
       {
         label: 'Master Data',
         items: [
-          { label: 'Items',      href: '/inventory/items' },
-          { label: 'Warehouses', href: '/inventory/warehouses' },
+          { label: 'Items',              href: '/inventory/items' },
+          { label: 'Warehouses',         href: '/inventory/warehouses' },
+          { label: 'Macro Categories',   href: '/inventory/macro-categories' },
+          { label: 'Categories',         href: '/inventory/categories' },
+          { label: 'Consumption Groups', href: '/inventory/consumption-groups' },
         ],
       },
       {
         label: 'Transactions',
         items: [
           { label: 'Stock Transactions', href: '/inventory/stock-transactions' },
-          { label: 'Stock Ledger', href: '/inventory/ledger' },
+          { label: 'Stock Ledger',       href: '/inventory/ledger' },
           { label: 'Stock Balance',      href: '/inventory/stock-balance' },
-          { label: 'Inventory Valuation', href: '/inventory/valuation' },
-          
+          { label: 'Stock Planning',     href: '/inventory/stock-planning' },
+          { label: 'Inventory Valuation',href: '/inventory/valuation' },
         ],
       },
     ],
@@ -97,6 +100,16 @@ const NAV: NavItem[] = [
     label: 'Settings',
     groups: [
       {
+        label: 'Configuration',
+        items: [
+          { label: 'General Settings',   href: '/settings/general' },
+          { label: 'Units of Measure',   href: '/settings/uom' },
+          { label: 'Fiscal Periods',     href: '/accounting/fiscal-periods' },
+          { label: 'Automation Config',  href: '/accounting/automation' },
+          { label: 'Bill of Materials',  href: '/manufacturing/bom' },
+        ],
+      },
+      {
         label: 'Data Management',
         items: [
           { label: 'Bulk Import', href: '/settings/bulk-import' },
@@ -105,20 +118,15 @@ const NAV: NavItem[] = [
       {
         label: 'Master Data',
         items: [
-          { label: 'Items',             href: '/inventory/items' },
-          { label: 'Customers',         href: '/sales/customers' },
-          { label: 'Suppliers',         href: '/procurement/suppliers' },
-          { label: 'Warehouses',        href: '/inventory/warehouses' },
-          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
-          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
-        ],
-      },
-      {
-        label: 'Configuration',
-        items: [
-          { label: 'Fiscal Periods',    href: '/accounting/fiscal-periods' },
-          { label: 'Automation Config', href: '/accounting/automation' },
-          { label: 'Bill of Materials', href: '/manufacturing/bom' },
+          { label: 'Items',              href: '/inventory/items' },
+          { label: 'Macro Categories',   href: '/inventory/macro-categories' },
+          { label: 'Categories',         href: '/inventory/categories' },
+          { label: 'Consumption Groups', href: '/inventory/consumption-groups' },
+          { label: 'Customers',          href: '/sales/customers' },
+          { label: 'Suppliers',          href: '/procurement/suppliers' },
+          { label: 'Warehouses',         href: '/inventory/warehouses' },
+          { label: 'Work Centers',       href: '/manufacturing/work-centers' },
+          { label: 'Chart of Accounts',  href: '/accounting/chart-of-accounts' },
         ],
       },
     ],

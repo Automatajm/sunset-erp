@@ -294,14 +294,20 @@ erDiagram
   
 
   "in_items" {
-    String id "🗝️"
+    String category_id "🗝️"
     String tenant_id 
     String code 
     String name 
     String description "❓"
     String item_type 
     String category_id "❓"
+    String consumption_group_id "❓"
     String base_uom 
+    String purchase_uom_id "❓"
+    Decimal purchase_to_consumption_factor 
+    String storage_uom_id "❓"
+    Decimal storage_to_consumption_factor 
+    String consumption_uom_id "❓"
     Boolean is_stockable 
     Boolean is_purchasable 
     Boolean is_saleable 
@@ -942,6 +948,121 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "cfg_uom_units" {
+    String id "🗝️"
+    String code 
+    String name 
+    String type 
+    String system 
+    Boolean is_base 
+    Boolean is_active 
+    String symbol "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    }
+  
+
+  "cfg_uom_conversions" {
+    String id "🗝️"
+    String from_uom_id 
+    String to_uom_id 
+    Decimal factor 
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    }
+  
+
+  "cfg_tenant_settings" {
+    String volume_base_uom_id "🗝️"
+    String tenant_id 
+    String default_uom_system 
+    String volume_base_uom_id "❓"
+    String mass_base_uom_id "❓"
+    String length_base_uom_id "❓"
+    String area_base_uom_id "❓"
+    DateTime updated_at 
+    String updated_by "❓"
+    }
+  
+
+  "in_macro_categories" {
+    String id "🗝️"
+    String tenant_id 
+    String code 
+    String name 
+    String description "❓"
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_categories" {
+    String macro_category_id "🗝️"
+    String tenant_id 
+    String macro_category_id 
+    String code 
+    String name 
+    String description "❓"
+    String inventory_account_id "❓"
+    String cogs_account_id "❓"
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_consumption_groups" {
+    String id "🗝️"
+    String tenant_id 
+    String code 
+    String name 
+    String description "❓"
+    String consumption_uom_id 
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_supplier_items" {
+    String purchase_uom_id "🗝️"
+    String tenant_id 
+    String supplier_id 
+    String item_id 
+    String supplier_item_code "❓"
+    String supplier_item_name "❓"
+    String purchase_uom_id 
+    Decimal pack_size 
+    Decimal conversion_factor 
+    Decimal last_price "❓"
+    Int lead_time_days 
+    Decimal moq 
+    Boolean is_preferred 
+    Boolean is_active 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -967,6 +1088,11 @@ erDiagram
     "po_purchase_order_lines" }o--|| saas_tenants : "tenant"
     "po_purchase_order_lines" }o--|| po_purchase_orders : "purchaseOrder"
     "po_purchase_order_lines" }o--|| in_items : "item"
+    "in_items" }o--|o in_categories : "category"
+    "in_items" }o--|o in_consumption_groups : "consumptionGroup"
+    "in_items" }o--|o cfg_uom_units : "purchaseUom"
+    "in_items" }o--|o cfg_uom_units : "storageUom"
+    "in_items" }o--|o cfg_uom_units : "consumptionUom"
     "in_items" }o--|| saas_tenants : "tenant"
     "in_items" }o--|| auth_users : "createdByUser"
     "in_items" }o--|| auth_users : "updatedByUser"
@@ -1045,4 +1171,22 @@ erDiagram
     "ap_payments" }o--|| saas_tenants : "tenant"
     "ap_payments" }o--|| ap_invoices : "invoice"
     "ap_payments" }o--|o ac_journal_entries : "journalEntry"
+    "cfg_uom_conversions" }o--|| cfg_uom_units : "fromUom"
+    "cfg_uom_conversions" }o--|| cfg_uom_units : "toUom"
+    "cfg_tenant_settings" |o--|| saas_tenants : "tenant"
+    "cfg_tenant_settings" }o--|o cfg_uom_units : "volumeBaseUom"
+    "cfg_tenant_settings" }o--|o cfg_uom_units : "massBaseUom"
+    "cfg_tenant_settings" }o--|o cfg_uom_units : "lengthBaseUom"
+    "cfg_tenant_settings" }o--|o cfg_uom_units : "areaBaseUom"
+    "in_macro_categories" }o--|| saas_tenants : "tenant"
+    "in_categories" }o--|| saas_tenants : "tenant"
+    "in_categories" }o--|| in_macro_categories : "macroCategory"
+    "in_categories" }o--|o ac_accounts : "inventoryAccount"
+    "in_categories" }o--|o ac_accounts : "cogsAccount"
+    "in_consumption_groups" }o--|| saas_tenants : "tenant"
+    "in_consumption_groups" }o--|| cfg_uom_units : "consumptionUom"
+    "in_supplier_items" }o--|| saas_tenants : "tenant"
+    "in_supplier_items" }o--|| po_suppliers : "supplier"
+    "in_supplier_items" }o--|| in_items : "item"
+    "in_supplier_items" }o--|| cfg_uom_units : "purchaseUom"
 ```

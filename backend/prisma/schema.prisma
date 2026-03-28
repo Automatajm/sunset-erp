@@ -117,18 +117,24 @@ model Tenant {
   budgetLines         BudgetLine[] // <-- ADD THIS
   cashFlowProjections CashFlowProjection[] // <-- ADD THIS
   cashFlowLines       CashFlowLine[] // <-- ADD THIS
-  arInvoices     ArInvoice[]
-  arInvoiceLines ArInvoiceLine[]
-  arPayments     ArPayment[]
-  moLaborActuals    MoLaborActual[]
-  moMaterialActuals MoMaterialActual[]
+  arInvoices          ArInvoice[]
+  arInvoiceLines      ArInvoiceLine[]
+  arPayments          ArPayment[]
+  moLaborActuals      MoLaborActual[]
+  moMaterialActuals   MoMaterialActual[]
   productionVariances ProductionVariance[]
-  bomRoutings BomRouting[]
-  automationConfigs AutomationConfig[]
-  autoJeQueue       AutoJeQueue[]
-  apInvoices     ApInvoice[]
-  apInvoiceLines ApInvoiceLine[]
-  apPayments     ApPayment[]
+  bomRoutings         BomRouting[]
+  automationConfigs   AutomationConfig[]
+  autoJeQueue         AutoJeQueue[]
+  apInvoices          ApInvoice[]
+  apInvoiceLines      ApInvoiceLine[]
+  apPayments          ApPayment[]
+  macroCategories     MacroCategory[]
+  categories          Category[]
+  consumptionGroups   ConsumptionGroup[]
+  supplierItems       SupplierItem[]
+  
+  tenantSettings      TenantSettings?
 
   @@map("saas_tenants")
 }
@@ -490,6 +496,7 @@ model Supplier {
   updatedByUser  User            @relation("SupplierUpdatedBy", fields: [updatedBy], references: [id])
   purchaseOrders PurchaseOrder[]
   apInvoices     ApInvoice[]
+  supplierItems  SupplierItem[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -596,9 +603,32 @@ model Item {
   description String? @db.Text
 
   // Type
-  itemType   String  @map("item_type") @db.VarChar(50)
-  categoryId String? @map("category_id") @db.Uuid
-  baseUom    String  @map("base_uom") @db.VarChar(20)
+  ///itemType   String  @map("item_type") @db.VarChar(50)
+  ///categoryId String? @map("category_id") @db.Uuid
+  ///baseUom    String  @map("base_uom") @db.VarChar(20)  replaced by SupplierItem for multi-sourcing flexibility
+
+  // Type & Classification
+  
+  itemType                     String  @map("item_type") @db.VarChar(50)
+  categoryId                   String? @map("category_id") @db.Uuid           // nullable DB, required UI
+  consumptionGroupId           String? @map("consumption_group_id") @db.Uuid  // optional always
+  baseUom                      String  @map("base_uom") @db.VarChar(20)  // replaced by SupplierItem for multi-sourcing flexibility
+  purchaseUomId                String?  @map("purchase_uom_id") @db.Uuid
+  purchaseToConsumptionFactor  Decimal  @default(1) @map("purchase_to_consumption_factor") @db.Decimal(18, 8)
+  storageUomId                 String?  @map("storage_uom_id") @db.Uuid
+  storageToConsumptionFactor   Decimal  @default(1) @map("storage_to_consumption_factor") @db.Decimal(18, 8)
+  consumptionUomId             String?  @map("consumption_uom_id") @db.Uuid
+
+  // Category & Group relations
+
+  category           Category?         @relation(fields: [categoryId],         references: [id])
+  consumptionGroup   ConsumptionGroup? @relation(fields: [consumptionGroupId], references: [id])
+
+  // UOM relations
+
+  purchaseUom        UomUnit?          @relation("ItemPurchaseUom",    fields: [purchaseUomId],    references: [id])
+  storageUom         UomUnit?          @relation("ItemStorageUom",     fields: [storageUomId],     references: [id])
+  consumptionUom     UomUnit?          @relation("ItemConsumptionUom", fields: [consumptionUomId], references: [id])
 
   // Flags
   isStockable      Boolean @default(true) @map("is_stockable")
@@ -640,9 +670,10 @@ model Item {
   salesOrderLines    SalesOrderLine[]
   boms               Bom[]               @relation("BomParentItem")
   bomComponents      BomComponent[]
-  arInvoiceLines ArInvoiceLine[]
-  moMaterialActuals MoMaterialActual[]
-  apInvoiceLines ApInvoiceLine[]
+  arInvoiceLines     ArInvoiceLine[]
+  moMaterialActuals  MoMaterialActual[]
+  apInvoiceLines     ApInvoiceLine[]
+  supplierItems      SupplierItem[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1045,6 +1076,8 @@ model Account {
   arInvoiceLinesCogs    ArInvoiceLine[] @relation("ArLineCogsAccount")
   apInvoiceLinesInventory ApInvoiceLine[] @relation("ApLineInventoryAccount")
   apInvoiceLinesExpense   ApInvoiceLine[] @relation("ApLineExpenseAccount")
+  categoriesInventory Category[] @relation("CategoryInventoryAccount")
+  categoriesCogs      Category[] @relation("CategoryCogsAccount")
 
   @@unique([tenantId, accountNumber])
   @@index([tenantId])
@@ -1664,6 +1697,229 @@ model ApPayment {
   @@index([invoiceId])
   @@index([paymentDate])
   @@map("ap_payments")
+}
+
+// ============================================================================
+// CONFIGURATION TABLES (cfg_*)
+// Sprint 11 — UOM Catalog, Tenant Settings
+// ============================================================================
+
+model UomUnit {
+  id       String  @id @default(uuid()) @db.Uuid
+  code     String  @db.VarChar(20)   // LTR, GAL, KG, LB, PCS
+  name     String  @db.VarChar(100)  // Liter, Gallon, Kilogram
+  // volume | mass | count | length | area | time
+  type     String  @db.VarChar(20)
+  // metric | imperial | universal
+  system   String  @db.VarChar(20)
+  // true = base unit for this type+system (LTR=base for volume+metric)
+  isBase   Boolean @default(false) @map("is_base")
+  isActive Boolean @default(true)  @map("is_active")
+  symbol   String? @db.VarChar(10)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  // Relations
+  conversionsFrom    UomConversion[]  @relation("ConversionFrom")
+  conversionsTo      UomConversion[]  @relation("ConversionTo")
+  itemsPurchaseUom   Item[]           @relation("ItemPurchaseUom")
+  itemsStorageUom    Item[]           @relation("ItemStorageUom")
+  itemsConsumptionUom Item[]          @relation("ItemConsumptionUom")
+  consumptionGroups  ConsumptionGroup[]
+  supplierItems      SupplierItem[]
+  tenantSettingsVolume TenantSettings[] @relation("TenantVolumeUom")
+  tenantSettingsMass   TenantSettings[] @relation("TenantMassUom")
+  tenantSettingsLength TenantSettings[] @relation("TenantLengthUom")
+  tenantSettingsArea   TenantSettings[] @relation("TenantAreaUom")
+
+  @@unique([code])
+  @@index([type])
+  @@index([system])
+  @@index([type, system])
+  @@map("cfg_uom_units")
+}
+
+model UomConversion {
+  id         String  @id @default(uuid()) @db.Uuid
+  fromUomId  String  @map("from_uom_id") @db.Uuid
+  toUomId    String  @map("to_uom_id") @db.Uuid
+  // How many toUom units are in 1 fromUom unit
+  // e.g. fromUom=GAL, toUom=LTR, factor=3.78541
+  factor     Decimal @db.Decimal(18, 8)
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  fromUom UomUnit @relation("ConversionFrom", fields: [fromUomId], references: [id])
+  toUom   UomUnit @relation("ConversionTo",   fields: [toUomId],   references: [id])
+
+  @@unique([fromUomId, toUomId])
+  @@index([fromUomId])
+  @@index([toUomId])
+  @@map("cfg_uom_conversions")
+}
+
+model TenantSettings {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+
+  // UOM system preference
+  // metric | imperial
+  defaultUomSystem String @default("metric") @map("default_uom_system") @db.VarChar(20)
+
+  // Base units per dimension (FK to cfg_uom_units)
+  volumeBaseUomId String? @map("volume_base_uom_id") @db.Uuid  // LTR or GAL
+  massBaseUomId   String? @map("mass_base_uom_id")   @db.Uuid  // KG or LB
+  lengthBaseUomId String? @map("length_base_uom_id") @db.Uuid  // M or FT
+  areaBaseUomId   String? @map("area_base_uom_id")   @db.Uuid  // M2 or FT2
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant        Tenant   @relation(fields: [tenantId],       references: [id])
+  volumeBaseUom UomUnit? @relation("TenantVolumeUom", fields: [volumeBaseUomId], references: [id])
+  massBaseUom   UomUnit? @relation("TenantMassUom",   fields: [massBaseUomId],   references: [id])
+  lengthBaseUom UomUnit? @relation("TenantLengthUom", fields: [lengthBaseUomId], references: [id])
+  areaBaseUom   UomUnit? @relation("TenantAreaUom",   fields: [areaBaseUomId],   references: [id])
+
+  @@map("cfg_tenant_settings")
+}
+
+// ============================================================================
+// INVENTORY ENRICHMENT TABLES (in_*)
+// Sprint 11 — Categories, ConsumptionGroup, SupplierItem
+// ============================================================================
+
+model MacroCategory {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  code        String  @db.VarChar(50)
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  categories Category[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("in_macro_categories")
+}
+
+model Category {
+  id              String  @id @default(uuid()) @db.Uuid
+  tenantId        String  @map("tenant_id") @db.Uuid
+  macroCategoryId String  @map("macro_category_id") @db.Uuid  // REQUIRED — no orphan categories
+  code            String  @db.VarChar(50)
+  name            String  @db.VarChar(255)
+  description     String? @db.Text
+
+  // GL accounts for automatic JE routing
+  inventoryAccountId String? @map("inventory_account_id") @db.Uuid  // DR on receipt
+  cogsAccountId      String? @map("cogs_account_id")      @db.Uuid  // DR on shipment
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant            Tenant        @relation(fields: [tenantId], references: [id])
+  macroCategory     MacroCategory @relation(fields: [macroCategoryId], references: [id])
+  inventoryAccount  Account?      @relation("CategoryInventoryAccount", fields: [inventoryAccountId], references: [id])
+  cogsAccount       Account?      @relation("CategoryCogsAccount",      fields: [cogsAccountId],      references: [id])
+  items             Item[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, macroCategoryId])
+  @@map("in_categories")
+}
+
+model ConsumptionGroup {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  code           String  @db.VarChar(50)
+  name           String  @db.VarChar(255)
+  description    String? @db.Text
+  // The unit Production uses — FK to cfg_uom_units
+  consumptionUomId String @map("consumption_uom_id") @db.Uuid
+  isActive       Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant         Tenant  @relation(fields: [tenantId], references: [id])
+  consumptionUom UomUnit @relation(fields: [consumptionUomId], references: [id])
+  items          Item[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("in_consumption_groups")
+}
+
+model SupplierItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  supplierId     String  @map("supplier_id") @db.Uuid
+  itemId         String  @map("item_id")     @db.Uuid
+
+  // Supplier's own reference for this item
+  supplierItemCode String? @map("supplier_item_code") @db.VarChar(100)
+  supplierItemName String? @map("supplier_item_name") @db.VarChar(255)
+
+  // Commercial presentation
+  purchaseUomId     String  @map("purchase_uom_id") @db.Uuid  // FK to cfg_uom_units
+  packSize          Decimal @default(1) @map("pack_size")     @db.Decimal(15, 4)
+
+  // Conversion: how many of item's consumptionUom per 1 purchaseUom
+  // Auto-calculated from cfg_uom_conversions when possible, manual override allowed
+  conversionFactor  Decimal @default(1) @map("conversion_factor") @db.Decimal(18, 8)
+
+  // Commercial conditions
+  lastPrice    Decimal? @map("last_price")    @db.Decimal(15, 4)
+  leadTimeDays Int      @default(0)           @map("lead_time_days")
+  moq          Decimal  @default(1)           @db.Decimal(15, 3)  // minimum order quantity
+
+  isPreferred  Boolean @default(false) @map("is_preferred")
+  isActive     Boolean @default(true)  @map("is_active")
+  notes        String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant      Tenant   @relation(fields: [tenantId],   references: [id])
+  supplier    Supplier @relation(fields: [supplierId],  references: [id])
+  item        Item     @relation(fields: [itemId],      references: [id])
+  purchaseUom UomUnit  @relation(fields: [purchaseUomId], references: [id])
+
+  // One supplier cannot have the same item twice
+  @@unique([tenantId, supplierId, itemId])
+  @@index([tenantId])
+  @@index([tenantId, itemId])
+  @@index([tenantId, supplierId])
+  @@index([isPreferred])
+  @@map("in_supplier_items")
 }
 // ============================================================================
 // END OF SCHEMA

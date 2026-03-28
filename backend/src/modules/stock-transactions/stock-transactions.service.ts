@@ -596,4 +596,251 @@ export class StockTransactionsService {
       totalItems:          rows.length,
     };
   }
+  // ============================================================================
+  // STOCK PLANNING — ATP (Available to Promise) with rupture alerts
+  // ============================================================================
+
+  async getStockPlanning(tenantId: string, filters?: {
+    warehouseId?: string;
+    itemType?: string;
+    alertOnly?: boolean;
+  }) {
+    // 1. Get all active stock positions
+    const stockWhere: any = { tenantId };
+    if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
+
+    const stockPositions = await this.prisma.stock.findMany({
+      where: stockWhere,
+      include: {
+        item: {
+          select: {
+            id: true, code: true, name: true, itemType: true, baseUom: true,
+            reorderPoint: true, safetyStock: true, reorderQuantity: true,
+            leadTimeDays: true, standardCost: true, defaultSupplierId: true,
+            isPurchasable: true, isManufacturable: true,
+          },
+        },
+        warehouse: { select: { id: true, code: true, name: true } },
+      },
+      orderBy: [{ item: { code: 'asc' } }],
+    });
+
+    // Apply itemType filter
+    const filtered = stockPositions.filter(s =>
+      !filters?.itemType || s.item.itemType === filters.itemType
+    );
+
+    // 2. Get all pending PO lines (confirmed/approved, not fully received)
+    const pendingPOLines = await this.prisma.purchaseOrderLine.findMany({
+      where: {
+        tenantId,
+        purchaseOrder: {
+          tenantId,
+          status: { in: ['confirmed', 'approved', 'sent'] },
+          deletedAt: null,
+        },
+      },
+      include: {
+        purchaseOrder: {
+          select: { id: true, poNumber: true, status: true, expectedDate: true },
+        },
+      },
+    });
+
+    // 3. Get all open SO lines (confirmed/shipped, not fully shipped)
+    const openSOLines = await this.prisma.salesOrderLine.findMany({
+      where: {
+        tenantId,
+        salesOrder: {
+          tenantId,
+          status: { in: ['confirmed', 'shipped'] },
+          deletedAt: null,
+        },
+        deletedAt: null,
+      },
+      include: {
+        salesOrder: {
+          select: { id: true, soNumber: true, status: true, promisedDate: true },
+        },
+      },
+    });
+
+    // 4. Build lookup maps
+    // PO supply by itemId: sum of (orderedQty - receivedQty) per item
+    const poSupplyMap = new Map<string, {
+      totalPending: number;
+      orders: Array<{ poNumber: string; pending: number; expectedDate: string | null }>;
+    }>();
+
+    for (const line of pendingPOLines) {
+      const pending = Number(line.orderedQuantity) - Number(line.receivedQuantity);
+      if (pending <= 0 || !line.itemId) continue;
+
+      const existing = poSupplyMap.get(line.itemId) ?? { totalPending: 0, orders: [] };
+      existing.totalPending += pending;
+      existing.orders.push({
+        poNumber: line.purchaseOrder.poNumber,
+        pending,
+        expectedDate: line.purchaseOrder.expectedDate
+          ? line.purchaseOrder.expectedDate.toISOString().split('T')[0]
+          : null,
+      });
+      poSupplyMap.set(line.itemId, existing);
+    }
+
+    // SO demand by itemId: sum of (orderedQty - shippedQty) per item
+    const soDemandMap = new Map<string, {
+      totalDemand: number;
+      orders: Array<{ soNumber: string; demand: number; promisedDate: string | null }>;
+    }>();
+
+    for (const line of openSOLines) {
+      const demand = Number(line.orderedQuantity) - Number(line.shippedQuantity);
+      if (demand <= 0 || !line.itemId) continue;
+
+      const existing = soDemandMap.get(line.itemId) ?? { totalDemand: 0, orders: [] };
+      existing.totalDemand += demand;
+      existing.orders.push({
+        soNumber: line.salesOrder.soNumber,
+        demand,
+        promisedDate: line.salesOrder.promisedDate
+          ? line.salesOrder.promisedDate.toISOString().split('T')[0]
+          : null,
+      });
+      soDemandMap.set(line.itemId, existing);
+    }
+
+    // 5. Calculate ATP and alerts per stock position
+    const now = new Date();
+
+    const rows = filtered.map(s => {
+      const onHand    = Number(s.onHandQuantity);
+      const reserved  = Number(s.reservedQuantity);
+      const available = onHand - reserved;
+      const unitCost  = Number(s.unitCost ?? 0);
+
+      const reorderPoint    = Number(s.item.reorderPoint ?? 0);
+      const safetyStock     = Number(s.item.safetyStock ?? 0);
+      const reorderQty      = Number(s.item.reorderQuantity ?? 0);
+      const leadTimeDays    = Number(s.item.leadTimeDays ?? 0);
+
+      const poData   = poSupplyMap.get(s.itemId);
+      const soData   = soDemandMap.get(s.itemId);
+
+      const poSupply   = poData?.totalPending ?? 0;
+      const soDemand   = soData?.totalDemand  ?? 0;
+
+      // ATP = available + incoming POs - committed SOs
+      const atp = available + poSupply - soDemand;
+
+      // Projected stock (without safety stock consideration)
+      const projectedStock = onHand + poSupply - soDemand;
+
+      // Coverage in days: available ÷ daily demand
+      // Estimate daily demand from SO demand over next 30 days
+      const dailyDemand = soDemand > 0 ? soDemand / 30 : 0;
+      const coverageDays = dailyDemand > 0
+        ? Math.floor(available / dailyDemand)
+        : available > 0 ? 999 : 0;
+
+      // Reorder value: how much to order
+      const shortfall = Math.max(0, reorderPoint + safetyStock - atp);
+      const suggestedOrderQty = shortfall > 0
+        ? Math.max(shortfall, reorderQty)
+        : 0;
+
+      // Alert level
+      let alertLevel: 'ok' | 'warning' | 'critical' | 'overstock' = 'ok';
+      if (atp < 0) {
+        alertLevel = 'critical';  // Already in deficit
+      } else if (atp <= safetyStock) {
+        alertLevel = 'critical';  // Below safety stock
+      } else if (atp <= reorderPoint) {
+        alertLevel = 'warning';   // Below reorder point but above safety
+      } else if (onHand > reorderPoint * 3 && reorderPoint > 0) {
+        alertLevel = 'overstock'; // More than 3x reorder point
+      }
+
+      // Double-order risk: below reorder point BUT PO already placed
+      const hasOpenPO = poSupply > 0;
+      const doubleOrderRisk = atp <= reorderPoint && hasOpenPO;
+
+      // Next expected receipt date
+      const nextReceipt = poData?.orders
+        .filter(o => o.expectedDate)
+        .sort((a, b) => (a.expectedDate ?? '').localeCompare(b.expectedDate ?? ''))[0]
+        ?.expectedDate ?? null;
+
+      // Days until reorder needed (based on lead time)
+      const daysUntilReorder = leadTimeDays > 0 && dailyDemand > 0
+        ? Math.floor((available - reorderPoint) / dailyDemand) - leadTimeDays
+        : null;
+
+      return {
+        itemId:        s.item.id,
+        itemCode:      s.item.code,
+        itemName:      s.item.name,
+        itemType:      s.item.itemType,
+        warehouseId:   s.warehouse.id,
+        warehouseCode: s.warehouse.code,
+        warehouseName: s.warehouse.name,
+        uom:           s.item.baseUom,
+
+        // Stock positions
+        onHandQty:     onHand,
+        reservedQty:   reserved,
+        availableQty:  available,
+        unitCost,
+        stockValue:    Math.round(onHand * unitCost * 100) / 100,
+
+        // Supply & demand
+        poSupplyQty:   Math.round(poSupply * 1000) / 1000,
+        soDemandQty:   Math.round(soDemand * 1000) / 1000,
+
+        // ATP & projection
+        atpQty:            Math.round(atp * 1000) / 1000,
+        projectedStockQty: Math.round(projectedStock * 1000) / 1000,
+
+        // Planning parameters
+        reorderPoint,
+        safetyStock,
+        reorderQty,
+        leadTimeDays,
+        suggestedOrderQty: Math.round(suggestedOrderQty * 1000) / 1000,
+
+        // Coverage
+        coverageDays:       coverageDays > 900 ? null : coverageDays,
+        dailyDemand:        Math.round(dailyDemand * 1000) / 1000,
+        daysUntilReorder,
+
+        // Alerts
+        alertLevel,
+        hasOpenPO,
+        doubleOrderRisk,
+        nextReceiptDate: nextReceipt,
+
+        // Detail
+        openPOs:   poData?.orders  ?? [],
+        openSOs:   soData?.orders  ?? [],
+      };
+    });
+
+    // Apply alertOnly filter
+    const result = filters?.alertOnly
+      ? rows.filter(r => r.alertLevel !== 'ok')
+      : rows;
+
+    // Summary
+    const summary = {
+      total:     result.length,
+      critical:  result.filter(r => r.alertLevel === 'critical').length,
+      warning:   result.filter(r => r.alertLevel === 'warning').length,
+      overstock: result.filter(r => r.alertLevel === 'overstock').length,
+      ok:        result.filter(r => r.alertLevel === 'ok').length,
+      doubleOrderRisk: result.filter(r => r.doubleOrderRisk).length,
+      totalStockValue: Math.round(result.reduce((s, r) => s + r.stockValue, 0) * 100) / 100,
+    };
+
+    return { rows: result, summary };
+  }
 }
