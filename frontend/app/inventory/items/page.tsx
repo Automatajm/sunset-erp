@@ -717,16 +717,12 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
               </div>
 
               <div className="im-ftr">
-                <button type="button" className="im-btn-cancel" onClick={onClose}>{tab === 'suppliers' ? 'Close' : 'Cancel'}</button>
+                <button type="button" className="im-btn-cancel" onClick={onClose}>Cancel</button>
                 {tab !== 'suppliers' ? (
                   <button type="submit" className="im-btn-save" disabled={submitting}>
                     {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
                   </button>
-                ) : (
-                  <button type="button" className="im-btn-save" onClick={() => { onSaved(); onClose(); }}>
-                    Save Changes
-                  </button>
-                )}
+                ) : null}
               </div>
             </form>
           </div>
