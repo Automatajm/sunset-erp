@@ -365,6 +365,7 @@ export function ERPTable<T>({
   const [page,       setPage]       = useState(1);
   const [pageSize,   setPageSize]   = useState(defaultPageSize);
   const [filterVals, setFilterVals] = useState<Record<string, ERPFilterValue>>({});
+  const [search,     setSearch]     = useState('');
 
   // Merge external filters (from stats cards) with internal filter bar values
   const activeFilters = useMemo(() => ({ ...filterVals, ...externalFilters }), [filterVals, externalFilters]);
@@ -429,10 +430,27 @@ export function ERPTable<T>({
     setPage(1);
   }, []);
 
+  const handleSearch = useCallback((val: string) => {
+    setSearch(val);
+    setPage(1);
+  }, []);
+
+  // Search across all columns
+  const searched = useMemo(() => {
+    if (!search.trim()) return data;
+    const q = search.toLowerCase();
+    return data.filter(row =>
+      columns.some(col => {
+        const val = col.value ? col.value(row) : (row as any)[col.key];
+        return val !== null && val !== undefined && String(val).toLowerCase().includes(q);
+      })
+    );
+  }, [data, search, columns]);
+
   const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return filtered;
+    if (!sortKey || !sortDir) return searched;
     const col = columns.find(c => c.key === sortKey);
-    return [...filtered].sort((a, b) => {
+    return [...searched].sort((a, b) => {
       const av = col?.value ? col.value(a) : (a as any)[sortKey] ?? '';
       const bv = col?.value ? col.value(b) : (b as any)[sortKey] ?? '';
       const cmp = typeof av === 'number' && typeof bv === 'number'
@@ -440,7 +458,7 @@ export function ERPTable<T>({
         : String(av).localeCompare(String(bv), undefined, { numeric: true });
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [data, sortKey, sortDir, columns]);
+  }, [searched, sortKey, sortDir, columns]);
 
   // ── Pagination ────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
@@ -554,10 +572,49 @@ export function ERPTable<T>({
 
       {/* ── Toolbar ── */}
       <div style={S.toolbar}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          {/* Search box */}
+          <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.4" strokeLinecap="round"
+              style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+              <circle cx="5.5" cy="5.5" r="4"/>
+              <line x1="8.5" y1="8.5" x2="12" y2="12"/>
+            </svg>
+            <input
+              value={search}
+              onChange={e => handleSearch(e.target.value)}
+              placeholder="Search all columns…"
+              style={{
+                width: '100%', padding: '5px 28px 5px 28px',
+                background: 'rgba(255,255,255,0.04)',
+                border: `0.5px solid ${search ? 'rgba(251,146,60,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                borderRadius: 6, fontSize: 12,
+                fontFamily: "'IBM Plex Sans',sans-serif",
+                color: '#e2dfd8', outline: 'none',
+                transition: 'border-color 0.15s',
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => handleSearch('')}
+                style={{
+                  position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
+                  background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                  width: 15, height: 15, cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
+                  fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1, padding: 0,
+                }}
+              >×</button>
+            )}
+          </div>
+          {search && (
+            <span style={{ fontSize: 11, color: 'rgba(251,146,60,0.7)', whiteSpace: 'nowrap', fontFamily: "'IBM Plex Mono',monospace" }}>
+              {searched.length} of {data.length}
+            </span>
+          )}
           {toolbarLeft}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Rows:</span>
           <select style={S.select} value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
             {pageSizes.map(n => <option key={n} value={n}>{n}</option>)}

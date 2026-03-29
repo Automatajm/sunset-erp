@@ -895,10 +895,11 @@ export default function ItemsPage() {
   // Filter system
   const itemsFilters = useMemo<ERPFilter<Item>[]>(() => [
     {
-      key: 'search', label: 'Search', type: 'search', placeholder: 'Code or name…',
+      key: 'macroCategoryId', label: 'Macro Cat.', type: 'select', placeholder: 'All Macro Categories',
+      options: macroCategories.map(mc => ({ value: mc.id, label: `${mc.code} — ${mc.name}` })),
       filterFn: (row, val) => {
-        const q = String(val).toLowerCase();
-        return row.name.toLowerCase().includes(q) || row.code.toLowerCase().includes(q);
+        const cat = (row as any).category;
+        return cat?.macroCategoryId === val || cat?.macroCategory?.id === val;
       },
     },
     {
@@ -911,11 +912,21 @@ export default function ItemsPage() {
       options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
       filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val),
     },
-    { key: 'hasUomTriple', label: 'UOM Triple',  type: 'boolean', placeholder: 'UOM Triple only', filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
-    { key: 'isStockable',   label: 'Stockable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable   : true },
-    { key: 'isPurchasable', label: 'Purchasable', type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable : true },
-    { key: 'isSaleable',    label: 'Saleable',    type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable    : true },
-  ], [categories, pageSuppliers]);
+    {
+      key: 'valuationMethod', label: 'Valuation', type: 'select', placeholder: 'All Methods',
+      options: [
+        { value: 'average',  label: 'Average' },
+        { value: 'fifo',     label: 'FIFO' },
+        { value: 'standard', label: 'Standard' },
+      ],
+      filterFn: (row, val) => row.valuationMethod === val,
+    },
+    { key: 'hasUomTriple',    label: 'UOM Triple',    type: 'boolean', placeholder: 'UOM Triple only',    filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
+    { key: 'isStockable',     label: 'Stockable',     type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable      : true },
+    { key: 'isPurchasable',   label: 'Purchasable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable    : true },
+    { key: 'isSaleable',      label: 'Saleable',      type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable       : true },
+    { key: 'isManufacturable',label: 'Manufacturable',type: 'boolean', filterFn: (row, val) => val === true ? row.isManufacturable : true },
+  ], [categories, macroCategories, pageSuppliers]);
   const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(itemsFilters);
 
   const filtered = useMemo(() => {
