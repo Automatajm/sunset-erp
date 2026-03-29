@@ -330,6 +330,10 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
                       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
                       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
                     </div>
+                    <div style={{ minWidth: 45, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>MOQ</div>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{(si as any).moq ?? 1}</span>
+                    </div>
                     <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
                       {!si.isPreferred && (
                         <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
