@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { itemsApi } from '@/lib/api/items';
@@ -142,7 +142,13 @@ const EMPTY_SUP_FORM: SupplierFormState = {
   lastPrice: '', leadTimeDays: '0', moq: '1', isPreferred: false,
 };
 
-function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
+interface SuppliersTabHandle {
+  submitAdd: () => Promise<void>;
+  hasUnsavedData: () => boolean;
+}
+
+const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomUnit[] }>(
+  function SuppliersTab({ item, uomUnits }, ref) {
   const [supplierItems, setSupplierItems] = useState<SupplierItem[]>([]);
   const [suppliers,     setSuppliers]     = useState<any[]>([]);
   const [loading,       setLoading]       = useState(true);
@@ -150,9 +156,19 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
   const [adding,        setAdding]        = useState(false);
   const [addError,      setAddError]      = useState('');
   const [editingId,     setEditingId]     = useState<string | null>(null);
-  const [editForm,      setEditForm]      = useState<Partial<SupplierFormState>>({});
   const [saving,        setSaving]        = useState(false);
   const [supSearch,     setSupSearch]     = useState('');
+
+  useImperativeHandle(ref, () => ({
+    handleAdd: async () => {
+      if (!addForm.supplierId || !addForm.purchaseUomId) {
+        setAddError('Supplier and Purchase UOM are required');
+        return;
+      }
+      await handleAdd({ preventDefault: () => {} } as React.FormEvent);
+    },
+    hasUnsavedData: () => !!(addForm.supplierId || addForm.supplierItemCode || addForm.lastPrice),
+  }));
 
   const fetch_ = useCallback(async () => {
     try {
@@ -181,33 +197,47 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
         isPreferred: addForm.isPreferred, isActive: true, packSize: 1,
       } as CreateSupplierItemDto);
       setAddForm(EMPTY_SUP_FORM);
+      setEditingId(null);
       await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to add supplier'); }
     finally { setAdding(false); }
   };
 
+  // Edit loads supplier data into the Add form above
   const handleEdit = (si: SupplierItem) => {
     setEditingId(si.id);
-    setEditForm({
+    setAddForm({
+      supplierId:       si.supplier?.id ?? (si as any).supplierId ?? '',
+      purchaseUomId:    si.purchaseUom?.id ?? (si as any).purchaseUomId ?? '',
       supplierItemCode: (si as any).supplierItemCode ?? '',
-      lastPrice: si.lastPrice ? String(si.lastPrice) : '',
-      leadTimeDays: String(si.leadTimeDays ?? 0),
-      moq: String((si as any).moq ?? 1),
-      isPreferred: si.isPreferred,
+      lastPrice:        si.lastPrice ? String(si.lastPrice) : '',
+      leadTimeDays:     String(si.leadTimeDays ?? 0),
+      moq:              String((si as any).moq ?? 1),
+      isPreferred:      si.isPreferred,
     });
   };
 
-  const handleSaveEdit = async (siId: string) => {
-    setSaving(true);
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setAddForm(EMPTY_SUP_FORM);
+    setAddError('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    setSaving(true); setAddError('');
     try {
-      await supplierItemsApi.update(siId, {
-        supplierItemCode: (editForm.supplierItemCode as string) || undefined,
-        lastPrice: editForm.lastPrice ? Number(editForm.lastPrice) : undefined,
-        leadTimeDays: Number(editForm.leadTimeDays) || 0,
-        moq: Number(editForm.moq) || 1,
-        isPreferred: editForm.isPreferred,
+      await supplierItemsApi.update(editingId, {
+        purchaseUomId:    addForm.purchaseUomId || undefined,
+        supplierItemCode: addForm.supplierItemCode || undefined,
+        lastPrice:        addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
+        leadTimeDays:     Number(addForm.leadTimeDays) || 0,
+        moq:              Number(addForm.moq) || 1,
+        isPreferred:      addForm.isPreferred,
       });
-      setEditingId(null); await fetch_();
+      setEditingId(null);
+      setAddForm(EMPTY_SUP_FORM);
+      await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to update'); }
     finally { setSaving(false); }
   };
@@ -234,7 +264,16 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
 
       {/* Add form — always visible */}
       <div style={{ background: 'rgba(251,146,60,0.04)', border: '0.5px solid rgba(251,146,60,0.15)', borderRadius: 8, padding: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 500, color: '#fb923c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Supplier</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 500, color: editingId ? '#4ade80' : '#fb923c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {editingId ? `Editing — ${suppliers.find(s => s.id === addForm.supplierId)?.name ?? 'Supplier'}` : 'Add Supplier'}
+          </div>
+          {editingId && (
+            <button type="button" onClick={handleCancelEdit} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+              Cancel edit
+            </button>
+          )}
+        </div>
         {addError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5', marginBottom: 10 }}>{addError}</div>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -268,9 +307,15 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
               <input type="checkbox" checked={addForm.isPreferred} onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
               Set as preferred supplier
             </label>
-            <button type="button" disabled={adding} onClick={handleAdd} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: adding ? 0.5 : 1 }}>
-              {adding ? 'Adding…' : '+ Add Supplier'}
-            </button>
+            {editingId ? (
+              <button type="button" disabled={saving} onClick={handleSaveEdit} style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            ) : (
+              <button type="button" disabled={adding} onClick={handleAdd} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: adding ? 0.5 : 1 }}>
+                {adding ? 'Adding…' : '+ Add Supplier'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -300,11 +345,9 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
               {supSearch ? `No results for "${supSearch}"` : 'No suppliers yet — use the form above.'}
             </div>
           ) : filteredSuppliers.map(si => {
-            const isEditing = editingId === si.id;
             return (
-              <div key={si.id} style={{ background: si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
-                {!isEditing ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+              <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1, minWidth: 120 }}>
                       <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
                         {si.supplier?.name}
@@ -342,41 +385,6 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
                       <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
                     </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: '#fb923c' }}>Editing — {si.supplier?.name}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={L}>Supplier Ref</label>
-                        <input style={INP} value={editForm.supplierItemCode ?? ''} onChange={e => setEditForm(f => ({ ...f, supplierItemCode: e.target.value }))} placeholder="Ref code" />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={L}>Last Price</label>
-                        <input type="number" min="0" step="0.01" style={INP} value={editForm.lastPrice ?? ''} onChange={e => setEditForm(f => ({ ...f, lastPrice: e.target.value }))} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={L}>Lead Time</label>
-                        <input type="number" min="0" style={INP} value={editForm.leadTimeDays ?? '0'} onChange={e => setEditForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={L}>MOQ</label>
-                        <input type="number" min="1" style={INP} value={editForm.moq ?? '1'} onChange={e => setEditForm(f => ({ ...f, moq: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={editForm.isPreferred ?? false} onChange={e => setEditForm(f => ({ ...f, isPreferred: e.target.checked }))} />
-                        Set as preferred
-                      </label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" onClick={() => setEditingId(null)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
-                        <button type="button" onClick={() => handleSaveEdit(si.id)} disabled={saving} style={{ padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.5 : 1 }}>
-                          {saving ? 'Saving…' : 'Save'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -384,7 +392,7 @@ function SuppliersTab({ item, uomUnits }: { item: Item; uomUnits: UomUnit[] }) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
 
@@ -397,6 +405,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
   const [form,        setForm]        = useState<CreateItemDto>(EMPTY_FORM);
   const [tab,         setTab]         = useState<'general' | 'uom' | 'suppliers'>('general');
   const [editMode,    setEditMode]    = useState<Item | null>(null);
+  const suppliersTabRef = useRef<SuppliersTabHandle>(null);
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState('');
   const [macroFilter, setMacroFilter] = useState('');
@@ -528,7 +537,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-uom-info{background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.6}
       `}</style>
 
-      <div className="im-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="im-overlay">
         <div className="im-box">
           <div className="im-hdr">
             <span className="im-title">{effectiveInitial ? `Edit — ${effectiveInitial.code}` : 'New Item'}</span>
@@ -704,14 +713,18 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                 )}
 
                 {/* SUPPLIERS */}
-                {tab === 'suppliers' && effectiveInitial && <SuppliersTab item={effectiveInitial} uomUnits={uomUnits} />}
+                {tab === 'suppliers' && effectiveInitial && <SuppliersTab ref={suppliersTabRef} item={effectiveInitial} uomUnits={uomUnits} />}
               </div>
 
               <div className="im-ftr">
                 <button type="button" className="im-btn-cancel" onClick={onClose}>{tab === 'suppliers' ? 'Close' : 'Cancel'}</button>
-                {tab !== 'suppliers' && (
+                {tab !== 'suppliers' ? (
                   <button type="submit" className="im-btn-save" disabled={submitting}>
                     {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
+                  </button>
+                ) : (
+                  <button type="button" className="im-btn-save" onClick={() => { onSaved(); onClose(); }}>
+                    Save Changes
                   </button>
                 )}
               </div>
