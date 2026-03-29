@@ -1,5 +1,6 @@
 ﻿import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { UomService } from '../uom/uom.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 
@@ -39,9 +40,12 @@ const NUMERIC_FIELDS = [
 
 @Injectable()
 export class ItemsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma:      PrismaService,
+    private uomService:  UomService,
+  ) {}
 
-  // Auto-generate code: ITEM-0001, ITEM-0002, ...
+  // ── Auto-code generator ────────────────────────────────────────────────────
   private async generateItemCode(tenantId: string): Promise<string> {
     const PREFIX = 'ITEM-';
     const items = await this.prisma.item.findMany({
@@ -56,51 +60,84 @@ export class ItemsService {
     return `${PREFIX}${String(max + 1).padStart(4, '0')}`;
   }
 
-  async create(tenantId: string, userId: string, createItemDto: CreateItemDto) {
-    // Use provided code or auto-generate
-    const code = createItemDto.code?.trim()
-      ? createItemDto.code.trim().toUpperCase()
+  // ── Auto-calculate UOM conversion factors from catalog ─────────────────────
+  // Returns the factor from `fromUomId` to `toUomId` (consumption base).
+  // Falls back to the provided manual value if catalog lookup fails.
+  private async resolveConversionFactor(
+    fromUomId: string | undefined,
+    toUomId:   string | undefined,
+    manualFactor: number,
+  ): Promise<number> {
+    // If same UOM or missing, factor is always 1
+    if (!fromUomId || !toUomId || fromUomId === toUomId) return 1;
+
+    // Only auto-calculate when manual factor is the default (1) — meaning
+    // the user didn't explicitly set a custom value
+    if (manualFactor !== 1) return manualFactor;
+
+    try {
+      const autoFactor = await this.uomService.getConversionFactor(fromUomId, toUomId);
+      if (autoFactor && autoFactor !== 1) return autoFactor;
+    } catch {
+      // Catalog doesn't have this conversion — keep manual
+    }
+    return manualFactor;
+  }
+
+  async create(tenantId: string, userId: string, dto: CreateItemDto) {
+    const code = dto.code?.trim()
+      ? dto.code.trim().toUpperCase()
       : await this.generateItemCode(tenantId);
 
     const existing = await this.prisma.item.findFirst({
       where: { tenantId, code, deletedAt: null },
     });
-    if (existing) {
-      throw new ConflictException(`Item with code ${code} already exists`);
-    }
+    if (existing) throw new ConflictException(`Item with code ${code} already exists`);
+
+    // Auto-calculate conversion factors from UOM catalog
+    const purchaseFactor = await this.resolveConversionFactor(
+      dto.purchaseUomId,
+      dto.consumptionUomId,
+      dto.purchaseToConsumptionFactor ?? 1,
+    );
+    const storageFactor = await this.resolveConversionFactor(
+      dto.storageUomId,
+      dto.consumptionUomId,
+      dto.storageToConsumptionFactor ?? 1,
+    );
 
     return this.prisma.item.create({
       data: {
         tenantId,
         code,
-        name:             createItemDto.name,
-        description:      createItemDto.description,
-        itemType:         createItemDto.itemType,
-        baseUom:          createItemDto.baseUom,
-        categoryId:       createItemDto.categoryId,
-        consumptionGroupId: createItemDto.consumptionGroupId,
-        // UOM triple
-        purchaseUomId:               createItemDto.purchaseUomId,
-        purchaseToConsumptionFactor: createItemDto.purchaseToConsumptionFactor ?? 1,
-        storageUomId:                createItemDto.storageUomId,
-        storageToConsumptionFactor:  createItemDto.storageToConsumptionFactor ?? 1,
-        consumptionUomId:            createItemDto.consumptionUomId,
+        name:               dto.name,
+        description:        dto.description,
+        itemType:           dto.itemType,
+        baseUom:            dto.baseUom,
+        categoryId:         dto.categoryId,
+        consumptionGroupId: dto.consumptionGroupId,
+        // UOM triple — with auto-calculated factors
+        purchaseUomId:               dto.purchaseUomId,
+        purchaseToConsumptionFactor: purchaseFactor,
+        storageUomId:                dto.storageUomId,
+        storageToConsumptionFactor:  storageFactor,
+        consumptionUomId:            dto.consumptionUomId,
         // Flags
-        isStockable:      createItemDto.isStockable      ?? true,
-        isPurchasable:    createItemDto.isPurchasable    ?? true,
-        isSaleable:       createItemDto.isSaleable       ?? true,
-        isManufacturable: createItemDto.isManufacturable ?? false,
-        isLotTracked:     createItemDto.isLotTracked     ?? false,
-        isSerialTracked:  createItemDto.isSerialTracked  ?? false,
+        isStockable:      dto.isStockable      ?? true,
+        isPurchasable:    dto.isPurchasable    ?? true,
+        isSaleable:       dto.isSaleable       ?? true,
+        isManufacturable: dto.isManufacturable ?? false,
+        isLotTracked:     dto.isLotTracked     ?? false,
+        isSerialTracked:  dto.isSerialTracked  ?? false,
         // Valuation
-        valuationMethod: createItemDto.valuationMethod || 'average',
-        standardCost:    createItemDto.standardCost,
+        valuationMethod: dto.valuationMethod || 'average',
+        standardCost:    dto.standardCost,
         // Planning
-        leadTimeDays:    createItemDto.leadTimeDays    ?? 0,
-        safetyStock:     createItemDto.safetyStock     ?? 0,
-        reorderPoint:    createItemDto.reorderPoint    ?? 0,
-        reorderQuantity: createItemDto.reorderQuantity ?? 0,
-        isActive: true,
+        leadTimeDays:    dto.leadTimeDays    ?? 0,
+        safetyStock:     dto.safetyStock     ?? 0,
+        reorderPoint:    dto.reorderPoint    ?? 0,
+        reorderQuantity: dto.reorderQuantity ?? 0,
+        isActive:  true,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -111,7 +148,6 @@ export class ItemsService {
   async findAll(tenantId: string, itemType?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (itemType) where.itemType = itemType;
-
     return this.prisma.item.findMany({
       where,
       orderBy: { code: 'asc' },
@@ -128,25 +164,52 @@ export class ItemsService {
     return item;
   }
 
-  async update(tenantId: string, userId: string, id: string, updateItemDto: UpdateItemDto) {
-    await this.findOne(tenantId, id);
+  async update(tenantId: string, userId: string, id: string, dto: UpdateItemDto) {
+    const current = await this.findOne(tenantId, id);
 
-    if (updateItemDto.code) {
+    if (dto.code) {
       const existing = await this.prisma.item.findFirst({
-        where: { tenantId, code: updateItemDto.code, id: { not: id }, deletedAt: null },
+        where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null },
       });
-      if (existing) {
-        throw new ConflictException(`Item with code ${updateItemDto.code} already exists`);
-      }
+      if (existing) throw new ConflictException(`Item with code ${dto.code} already exists`);
     }
 
-    // Build clean data object:
-    // - Skip undefined / null / empty string fields (don't overwrite with null)
-    // - Coerce numeric fields to Number (HTTP body may deliver them as strings)
+    // Resolve effective UOM IDs — use incoming or fall back to current saved
+    const a = current as any;
+    const effectivePurchaseUom    = dto.purchaseUomId    ?? a.purchaseUomId;
+    const effectiveStorageUom     = dto.storageUomId     ?? a.storageUomId;
+    const effectiveConsumptionUom = dto.consumptionUomId ?? a.consumptionUomId;
+
+    // Build clean data — skip undefined/null/empty, coerce numerics
     const data: any = { updatedBy: userId };
-    for (const [k, v] of Object.entries(updateItemDto)) {
+    for (const [k, v] of Object.entries(dto)) {
       if (v === undefined || v === null || v === '') continue;
       data[k] = NUMERIC_FIELDS.includes(k) ? Number(v) : v;
+    }
+
+    // Auto-calculate factors when UOM fields are being changed
+    const isPurchaseUomChanging = dto.purchaseUomId !== undefined || dto.consumptionUomId !== undefined;
+    const isStorageUomChanging  = dto.storageUomId  !== undefined || dto.consumptionUomId !== undefined;
+
+    if (isPurchaseUomChanging && effectiveConsumptionUom) {
+      const manualPurchaseFactor = data.purchaseToConsumptionFactor ?? Number(a.purchaseToConsumptionFactor ?? 1);
+      const autoPurchaseFactor = await this.resolveConversionFactor(
+        effectivePurchaseUom,
+        effectiveConsumptionUom,
+        // If user explicitly sent a factor value != 1, respect it; otherwise auto-calc
+        dto.purchaseToConsumptionFactor !== undefined ? manualPurchaseFactor : 1,
+      );
+      data.purchaseToConsumptionFactor = autoPurchaseFactor;
+    }
+
+    if (isStorageUomChanging && effectiveConsumptionUom) {
+      const manualStorageFactor = data.storageToConsumptionFactor ?? Number(a.storageToConsumptionFactor ?? 1);
+      const autoStorageFactor = await this.resolveConversionFactor(
+        effectiveStorageUom,
+        effectiveConsumptionUom,
+        dto.storageToConsumptionFactor !== undefined ? manualStorageFactor : 1,
+      );
+      data.storageToConsumptionFactor = autoStorageFactor;
     }
 
     return this.prisma.item.update({
@@ -166,13 +229,9 @@ export class ItemsService {
   }
 
   async getStatistics(tenantId: string) {
-    const total = await this.prisma.item.count({
-      where: { tenantId, deletedAt: null },
-    });
+    const total = await this.prisma.item.count({ where: { tenantId, deletedAt: null } });
     const byType = await this.prisma.item.groupBy({
-      by: ['itemType'],
-      where: { tenantId, deletedAt: null },
-      _count: true,
+      by: ['itemType'], where: { tenantId, deletedAt: null }, _count: true,
     });
     const stockable     = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isStockable: true } });
     const purchasable   = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isPurchasable: true } });
@@ -182,12 +241,8 @@ export class ItemsService {
 
     return {
       total,
-      byType:       byType.map(i => ({ type: i.itemType, count: i._count })),
-      stockable,
-      purchasable,
-      saleable,
-      withCategory,
-      withUomTriple,
+      byType: byType.map(i => ({ type: i.itemType, count: i._count })),
+      stockable, purchasable, saleable, withCategory, withUomTriple,
     };
   }
 }
