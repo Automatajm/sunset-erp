@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { itemsApi } from '@/lib/api/items';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
@@ -717,7 +718,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
               </div>
 
               <div className="im-ftr">
-                <button type="button" className="im-btn-cancel" onClick={onClose}>Cancel</button>
+                <button type="button" className="im-btn-cancel" onClick={onClose}>{tab === 'suppliers' ? 'Close' : 'Cancel'}</button>
                 {tab !== 'suppliers' ? (
                   <button type="submit" className="im-btn-save" disabled={submitting}>
                     {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
@@ -751,6 +752,91 @@ function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCanc
       </div>
     </div>
   );
+}
+
+
+// ─── Items Table Columns ─────────────────────────────────────────────────────
+
+function ITEMS_COLUMNS(
+  onEdit: (item: Item) => void,
+  onDelete: (item: Item) => void,
+): ERPColumn<Item>[] {
+  return [
+    {
+      key: 'code', header: 'Code', width: 120, sortable: true,
+      value: (r) => r.code,
+      render: (r) => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span>,
+    },
+    {
+      key: 'name', header: 'Name', sortable: true,
+      value: (r) => r.name,
+      render: (r) => (
+        <div>
+          <div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>
+          {r.description && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.description}</div>}
+        </div>
+      ),
+    },
+    {
+      key: 'itemType', header: 'Type', width: 140, sortable: true,
+      value: (r) => r.itemType,
+      render: (r) => <TypeBadge type={r.itemType} />,
+    },
+    {
+      key: 'category', header: 'Category', width: 110, sortable: true,
+      value: (r) => (r as any).category?.code ?? '',
+      render: (r) => {
+        const a = r as any;
+        return a.category
+          ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'#a78bfa', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{a.category.code}</span>
+          : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>;
+      },
+    },
+    {
+      key: 'purchaseUom', header: 'Purchase', width: 90, sortable: true,
+      value: (r) => (r as any).purchaseUom?.code ?? '',
+      render: (r) => <UomBadge unit={(r as any).purchaseUom} />,
+    },
+    {
+      key: 'storageUom', header: 'Storage', width: 90, sortable: true,
+      value: (r) => (r as any).storageUom?.code ?? '',
+      render: (r) => <UomBadge unit={(r as any).storageUom} />,
+    },
+    {
+      key: 'consumptionUom', header: 'Consumption', width: 110, sortable: true,
+      value: (r) => (r as any).consumptionUom?.code ?? '',
+      render: (r) => <UomBadge unit={(r as any).consumptionUom} />,
+    },
+    {
+      key: 'suppliers', header: 'Suppliers', width: 100, sortable: true,
+      value: (r) => (r as any).supplierItems?.length ?? 0,
+      render: (r) => {
+        const count = (r as any).supplierItems?.length ?? 0;
+        return count > 0
+          ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{count} supplier{count !== 1 ? 's' : ''}</span>
+          : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>;
+      },
+    },
+    { key: 'isStockable',   header: 'S',  width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isStockable} /> },
+    { key: 'isPurchasable', header: 'P',  width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isPurchasable} /> },
+    { key: 'isSaleable',    header: 'Sa', width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isSaleable} /> },
+    { key: 'isManufacturable', header: 'M', width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isManufacturable} /> },
+    {
+      key: '_actions', header: '', width: 110, sortable: false,
+      render: (r) => (
+        <div style={{ display:'flex', gap:6 }}>
+          <button
+            className="itm-btn-edit"
+            onClick={e => { e.stopPropagation(); onEdit(r); }}
+          >Edit</button>
+          <button
+            className="itm-btn-del"
+            onClick={e => { e.stopPropagation(); onDelete(r); }}
+          >Delete</button>
+        </div>
+      ),
+    },
+  ];
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -849,72 +935,26 @@ export default function ItemsPage() {
             {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
           <button className="itm-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="6.5" y1="1" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="12" y2="6.5"/>
-            </svg>
-            New Item
+            + New Item
           </button>
         </div>
 
         {error && <div className="itm-error">{error}</div>}
 
-        <div className="itm-wrap">
-          {loading ? (
-            <div className="itm-loading"><div className="itm-spinner" />Loading items…</div>
-          ) : filtered.length === 0 ? (
-            <div className="itm-empty">{search || typeFilter ? 'No items match your filters.' : 'No items yet.'}</div>
-          ) : (
-            <>
-              <table className="itm-table">
-                <thead>
-                  <tr>
-                    <th>Code</th><th>Name</th><th>Type</th><th>Category</th>
-                    <th>Purchase</th><th>Storage</th><th>Consumption</th><th>Suppliers</th>
-                    <th style={{ textAlign:'center' }}>S</th><th style={{ textAlign:'center' }}>P</th>
-                    <th style={{ textAlign:'center' }}>Sa</th><th style={{ textAlign:'center' }}>M</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(item => {
-                    const a = item as any;
-                    return (
-                      <tr key={item.id}>
-                        <td><span className="itm-code">{item.code}</span></td>
-                        <td>
-                          <span className="itm-name">{item.name}</span>
-                          {item.description && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{item.description}</div>}
-                        </td>
-                        <td><TypeBadge type={item.itemType} /></td>
-                        <td>{a.category ? <span className="itm-cat">{a.category.code}</span> : <span className="itm-muted">—</span>}</td>
-                        <td><UomBadge unit={a.purchaseUom} /></td>
-                        <td><UomBadge unit={a.storageUom} /></td>
-                        <td><UomBadge unit={a.consumptionUom} /></td>
-                        <td>{a.supplierItems?.length > 0 ? <span className="itm-sup">{a.supplierItems.length} supplier{a.supplierItems.length !== 1 ? 's' : ''}</span> : <span className="itm-muted">—</span>}</td>
-                        <td style={{ textAlign:'center' }}><BoolDot value={item.isStockable} /></td>
-                        <td style={{ textAlign:'center' }}><BoolDot value={item.isPurchasable} /></td>
-                        <td style={{ textAlign:'center' }}><BoolDot value={item.isSaleable} /></td>
-                        <td style={{ textAlign:'center' }}><BoolDot value={item.isManufacturable} /></td>
-                        <td>
-                          <div className="itm-actions">
-                            <button className="itm-btn-edit" onClick={() => { setEditing(item); setModalOpen(true); }}>Edit</button>
-                            <button className="itm-btn-del"  onClick={() => setDeleting(item)}>Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div className="itm-footer">
-                {filtered.length} of {items.length} item{items.length !== 1 ? 's' : ''}
-                {typeFilter && ` · filtered by ${getTypeConfig(typeFilter as ItemType).label}`}
-              </div>
-            </>
+        <ERPTable<Item>
+          columns={ITEMS_COLUMNS(
+            (item) => { setEditing(item); setModalOpen(true); },
+            (item) => setDeleting(item),
           )}
-        </div>
+          data={filtered}
+          rowKey={row => row.id}
+          loading={loading}
+          exportFilename="items"
+          emptyMessage={search || typeFilter ? 'No items match your filters.' : 'No items yet.'}
+          defaultPageSize={25}
+        />
 
-        <div style={{ marginTop:8, display:'flex', gap:14, fontSize:10, color:'rgba(255,255,255,0.25)' }}>
+        <div style={{ marginTop:6, display:'flex', gap:14, fontSize:10, color:'rgba(255,255,255,0.25)' }}>
           <span>S = Stockable</span><span>P = Purchasable</span><span>Sa = Saleable</span><span>M = Manufacturable</span>
         </div>
       </div>
