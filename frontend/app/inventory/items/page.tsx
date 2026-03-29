@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { itemsApi } from '@/lib/api/items';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
 import { uomApi } from '@/lib/api/uom';
 import { supplierItemsApi } from '@/lib/api/supplier-items';
 import { suppliersApi } from '@/lib/api/suppliers';
+import type { ERPFilter } from '@/components/ui/ERPTable';
 import {
   Item, CreateItemDto, ItemType,
   MacroCategory, Category, UomUnit,
@@ -100,15 +102,31 @@ interface ItemStatistics {
   withCategory?: number; withUomTriple?: number;
 }
 
-function StatsBar({ stats }: { stats: ItemStatistics }) {
+function StatsBar({ stats, activeType, onTypeClick }: {
+  stats: ItemStatistics;
+  activeType?: string;
+  onTypeClick?: (type: string | null) => void;
+}) {
   return (
-    <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+    <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap', flexShrink:0 }}>
       {ITEM_TYPES.map(t => {
         const count = stats.byType.find(b => b.type === t.value)?.count ?? 0;
+        const isActive = activeType === t.value;
         return (
-          <div key={t.value} style={{ background:'rgba(10,7,18,0.7)', border:`0.5px solid ${t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110 }}>
+          <div
+            key={t.value}
+            onClick={() => onTypeClick?.(isActive ? null : t.value)}
+            style={{
+              background: isActive ? t.bg : 'rgba(10,7,18,0.7)',
+              border: `0.5px solid ${isActive ? t.color : t.border}`,
+              borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110,
+              cursor: onTypeClick ? 'pointer' : 'default',
+              transition: 'all 0.15s',
+              boxShadow: isActive ? `0 0 12px ${t.bg}` : 'none',
+            }}
+          >
             <span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span>
-            <span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
+            <span style={{ fontSize:22, fontWeight:500, color: isActive ? t.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
           </div>
         );
       })}
@@ -839,47 +857,72 @@ function ITEMS_COLUMNS(
   ];
 }
 
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ItemsPage() {
   const [items,           setItems]           = useState<Item[]>([]);
-  const [filtered,        setFiltered]        = useState<Item[]>([]);
   const [stats,           setStats]           = useState<ItemStatistics | null>(null);
   const [categories,      setCategories]      = useState<Category[]>([]);
   const [macroCategories, setMacroCategories] = useState<MacroCategory[]>([]);
   const [uomUnits,        setUomUnits]        = useState<UomUnit[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState('');
-  const [search,          setSearch]          = useState('');
-  const [typeFilter,      setTypeFilter]      = useState<ItemType | ''>('');
   const [modalOpen,       setModalOpen]       = useState(false);
   const [editing,         setEditing]         = useState<Item | null>(null);
   const [deleting,        setDeleting]        = useState<Item | null>(null);
+  const [typeFilter,      setTypeFilter]      = useState<string | null>(null);
   const [deleteBusy,      setDeleteBusy]      = useState(false);
+  const [pageSuppliers,   setPageSuppliers]   = useState<any[]>([]);
 
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, statsData, cats, mcs, uoms] = await Promise.all([
+      const [data, statsData, cats, mcs, uoms, sups] = await Promise.all([
         itemsApi.getAll(), itemsApi.getStatistics(),
         categoriesApi.getAll(), macroCategoriesApi.getAll(), uomApi.getUnits(),
+        suppliersApi.getAll(),
       ]);
       setItems(data as Item[]); setStats(statsData);
       setCategories(cats); setMacroCategories(mcs); setUomUnits(uoms);
+      setPageSuppliers(sups as any[]);
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load items.'); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(items.filter(i => {
-      const ms = !q || i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q);
-      const mt = !typeFilter || i.itemType === typeFilter;
-      return ms && mt;
-    }));
-  }, [search, typeFilter, items]);
+  // Filter system
+  const itemsFilters = useMemo<ERPFilter<Item>[]>(() => [
+    {
+      key: 'search', label: 'Search', type: 'search', placeholder: 'Code or name…',
+      filterFn: (row, val) => {
+        const q = String(val).toLowerCase();
+        return row.name.toLowerCase().includes(q) || row.code.toLowerCase().includes(q);
+      },
+    },
+    {
+      key: 'categoryId', label: 'Category', type: 'select', placeholder: 'All Categories',
+      options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` })),
+      filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val,
+    },
+    {
+      key: 'supplierId', label: 'Supplier', type: 'select', placeholder: 'All Suppliers',
+      options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
+      filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val),
+    },
+    { key: 'hasUomTriple', label: 'UOM Triple',  type: 'boolean', placeholder: 'UOM Triple only', filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
+    { key: 'isStockable',   label: 'Stockable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable   : true },
+    { key: 'isPurchasable', label: 'Purchasable', type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable : true },
+    { key: 'isSaleable',    label: 'Saleable',    type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable    : true },
+  ], [categories, pageSuppliers]);
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(itemsFilters);
+
+  const filtered = useMemo(() => {
+    const base = applyERPFilters(items, itemsFilters, filterVals);
+    if (!typeFilter) return base;
+    return base.filter(i => i.itemType === typeFilter);
+  }, [items, itemsFilters, filterVals, typeFilter]);
 
   const handleDelete = async () => {
     if (!deleting) return;
@@ -893,8 +936,8 @@ export default function ItemsPage() {
     <ERPShell breadcrumbs={['Home', 'Inventory', 'Items']} title="Items">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .itm-page{padding:0 18px 24px}
-        .itm-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+        .itm-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;gap:0;overflow:hidden}
+        .itm-toolbar{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
         .itm-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:240px}
         .itm-search:focus{border-color:rgba(251,146,60,0.4)}
         .itm-filter{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none}
@@ -926,14 +969,18 @@ export default function ItemsPage() {
       `}</style>
 
       <div className="itm-page">
-        {stats && <StatsBar stats={stats} />}
+        {stats && <StatsBar stats={stats} activeType={typeFilter} onTypeClick={setTypeFilter} />}
 
         <div className="itm-toolbar">
-          <input className="itm-search" placeholder="Search by code or name…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select className="itm-filter" value={typeFilter} onChange={e => setTypeFilter(e.target.value as ItemType | '')}>
-            <option value="">All Types</option>
-            {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <div style={{ flex: 1 }}>
+            <ERPFilterBar
+              filters={itemsFilters}
+              values={filterVals}
+              onChange={setFilterVal}
+              onReset={() => { resetFilters(); setTypeFilter(null); }}
+              activeCount={filterCount + (typeFilter ? 1 : 0)}
+            />
+          </div>
           <button className="itm-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>
             + New Item
           </button>
@@ -941,20 +988,23 @@ export default function ItemsPage() {
 
         {error && <div className="itm-error">{error}</div>}
 
-        <ERPTable<Item>
-          columns={ITEMS_COLUMNS(
-            (item) => { setEditing(item); setModalOpen(true); },
-            (item) => setDeleting(item),
-          )}
-          data={filtered}
-          rowKey={row => row.id}
-          loading={loading}
-          exportFilename="items"
-          emptyMessage={search || typeFilter ? 'No items match your filters.' : 'No items yet.'}
-          defaultPageSize={25}
-        />
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTable<Item>
+            columns={ITEMS_COLUMNS(
+              (item) => { setEditing(item); setModalOpen(true); },
+              (item) => setDeleting(item),
+            )}
+            data={filtered}
+            rowKey={row => row.id}
+            loading={loading}
+            exportFilename="items"
+            emptyMessage={filterCount || typeFilter ? 'No items match your filters.' : 'No items yet.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+          />
+        </div>
 
-        <div style={{ marginTop:6, display:'flex', gap:14, fontSize:10, color:'rgba(255,255,255,0.25)' }}>
+        <div style={{ marginTop:6, display:'flex', gap:14, fontSize:10, color:'rgba(255,255,255,0.25)', flexShrink:0 }}>
           <span>S = Stockable</span><span>P = Purchasable</span><span>Sa = Saleable</span><span>M = Manufacturable</span>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,33 @@ export interface ERPColumn<T> {
   render?: (row: T, index: number) => React.ReactNode;
   /** Value used for sorting/export when render is a component */
   value?: (row: T) => string | number;
+}
+
+// ─── Filter Types ─────────────────────────────────────────────────────────────
+
+export type ERPFilterValue = string | string[] | boolean | null;
+
+export interface ERPFilterOption {
+  value: string;
+  label: string;
+  color?: string;
+  bg?: string;
+  border?: string;
+}
+
+export type ERPFilterType = 'select' | 'multiselect' | 'boolean' | 'search';
+
+export interface ERPFilter<T = any> {
+  key: string;
+  label: string;
+  type: ERPFilterType;
+  options?: ERPFilterOption[];
+  /** Custom filter function. If omitted, uses default field matching */
+  filterFn?: (row: T, value: ERPFilterValue) => boolean;
+  /** Default value */
+  defaultValue?: ERPFilterValue;
+  /** Placeholder text for search/select */
+  placeholder?: string;
 }
 
 export interface ERPTableProps<T> {
@@ -36,6 +63,10 @@ export interface ERPTableProps<T> {
   toolbarLeft?: React.ReactNode;
   /** Table max height for tbody scroll (default: 'calc(100vh - 340px)') */
   maxHeight?: string;
+  /** Filter definitions */
+  filters?: ERPFilter<T>[];
+  /** External filter values (controlled from outside, e.g. stats card clicks) */
+  externalFilters?: Record<string, ERPFilterValue>;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -113,13 +144,14 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on outside click
-  useState(() => {
+  useEffect(() => {
+    if (!open) return;
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  });
+  }, [open]);
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -172,6 +204,141 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
   );
 }
 
+// ─── Filter Bar ──────────────────────────────────────────────────────────────
+
+function FilterBar<T>({
+  filters,
+  values,
+  onChange,
+  activeCount,
+  onClear,
+}: {
+  filters: ERPFilter<T>[];
+  values: Record<string, ERPFilterValue>;
+  onChange: (key: string, value: ERPFilterValue) => void;
+  activeCount: number;
+  onClear: () => void;
+}) {
+  const SEL: React.CSSProperties = {
+    background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)',
+    borderRadius: 6, padding: '5px 8px', fontSize: 11,
+    fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8',
+    outline: 'none', cursor: 'pointer', colorScheme: 'dark' as any,
+  };
+  const INP: React.CSSProperties = {
+    background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)',
+    borderRadius: 6, padding: '5px 10px', fontSize: 11,
+    fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8',
+    outline: 'none', minWidth: 160,
+  };
+  const LABEL: React.CSSProperties = {
+    fontSize: 10, fontWeight: 500, letterSpacing: '0.08em',
+    textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)',
+    marginBottom: 3,
+  };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap',
+      padding: '10px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+      background: 'rgba(0,0,0,0.15)',
+    }}>
+      {filters.map(f => (
+        <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={LABEL}>{f.label}</span>
+
+          {f.type === 'search' && (
+            <input
+              style={INP}
+              placeholder={f.placeholder ?? `Search ${f.label}…`}
+              value={(values[f.key] as string) ?? ''}
+              onChange={e => onChange(f.key, e.target.value || null)}
+            />
+          )}
+
+          {f.type === 'select' && (
+            <select
+              style={SEL}
+              value={(values[f.key] as string) ?? ''}
+              onChange={e => onChange(f.key, e.target.value || null)}
+            >
+              <option value="">{f.placeholder ?? `All ${f.label}s`}</option>
+              {f.options?.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          )}
+
+          {f.type === 'multiselect' && (
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 300 }}>
+              {f.options?.map(o => {
+                const selected = ((values[f.key] as string[]) ?? []).includes(o.value);
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => {
+                      const curr = (values[f.key] as string[]) ?? [];
+                      const next = selected
+                        ? curr.filter(v => v !== o.value)
+                        : [...curr, o.value];
+                      onChange(f.key, next.length ? next : null);
+                    }}
+                    style={{
+                      padding: '3px 9px', borderRadius: 20, fontSize: 10,
+                      fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
+                      fontWeight: selected ? 500 : 400,
+                      color: selected ? (o.color ?? '#fb923c') : 'rgba(255,255,255,0.4)',
+                      background: selected ? (o.bg ?? 'rgba(251,146,60,0.12)') : 'rgba(255,255,255,0.04)',
+                      border: `0.5px solid ${selected ? (o.border ?? 'rgba(251,146,60,0.3)') : 'rgba(255,255,255,0.09)'}`,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {f.type === 'boolean' && (
+            <button
+              type="button"
+              onClick={() => onChange(f.key, values[f.key] === true ? null : true)}
+              style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 11,
+                fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
+                color: values[f.key] === true ? '#4ade80' : 'rgba(255,255,255,0.4)',
+                background: values[f.key] === true ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
+                border: `0.5px solid ${values[f.key] === true ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.09)'}`,
+                transition: 'all 0.15s', whiteSpace: 'nowrap',
+              }}
+            >
+              {values[f.key] === true ? '✓ ' : ''}{f.label}
+            </button>
+          )}
+        </div>
+      ))}
+
+      {activeCount > 0 && (
+        <button
+          type="button"
+          onClick={onClear}
+          style={{
+            padding: '5px 12px', borderRadius: 6, fontSize: 11,
+            fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
+            color: '#f87171', background: 'rgba(239,68,68,0.08)',
+            border: '0.5px solid rgba(239,68,68,0.2)', alignSelf: 'flex-end',
+            transition: 'all 0.15s', whiteSpace: 'nowrap',
+          }}
+        >
+          ↺ Clear ({activeCount})
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 
@@ -189,12 +356,68 @@ export function ERPTable<T>({
   onRowClick,
   toolbarLeft,
   maxHeight = 'calc(100vh - 340px)',
+  filters: filterDefs = [],
+  externalFilters = {},
 }: ERPTableProps<T>) {
 
-  const [sortKey,  setSortKey]  = useState<string | null>(null);
-  const [sortDir,  setSortDir]  = useState<SortDir>(null);
-  const [page,     setPage]     = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [sortKey,    setSortKey]    = useState<string | null>(null);
+  const [sortDir,    setSortDir]    = useState<SortDir>(null);
+  const [page,       setPage]       = useState(1);
+  const [pageSize,   setPageSize]   = useState(defaultPageSize);
+  const [filterVals, setFilterVals] = useState<Record<string, ERPFilterValue>>({});
+
+  // Merge external filters (from stats cards) with internal filter bar values
+  const activeFilters = useMemo(() => ({ ...filterVals, ...externalFilters }), [filterVals, externalFilters]);
+
+  const handleFilterChange = useCallback((key: string, value: ERPFilterValue) => {
+    setFilterVals(prev => ({ ...prev, [key]: value }));
+    setPage(1);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilterVals({});
+    setPage(1);
+  }, []);
+
+  const activeFilterCount = useMemo(() =>
+    Object.values(activeFilters).filter(v => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)).length,
+  [activeFilters]);
+
+  // Apply filters to data
+  const filtered = useMemo(() => {
+    if (!filterDefs.length && !Object.keys(externalFilters).length) return data;
+    return data.filter(row => {
+      for (const fd of filterDefs) {
+        const val = activeFilters[fd.key];
+        if (val === null || val === undefined || val === '' || (Array.isArray(val) && !val.length)) continue;
+        if (fd.filterFn) {
+          if (!fd.filterFn(row, val)) return false;
+        } else {
+          // Default matching
+          const rowVal = (row as any)[fd.key];
+          if (fd.type === 'boolean') {
+            if (val === true && !rowVal) return false;
+          } else if (fd.type === 'multiselect') {
+            const arr = val as string[];
+            if (!arr.includes(String(rowVal ?? ''))) return false;
+          } else if (fd.type === 'search') {
+            if (!String(rowVal ?? '').toLowerCase().includes(String(val).toLowerCase())) return false;
+          } else {
+            if (String(rowVal ?? '') !== String(val)) return false;
+          }
+        }
+      }
+      // Handle external filters not in filterDefs
+      for (const [key, val] of Object.entries(externalFilters)) {
+        if (val === null || val === undefined || val === '') continue;
+        if (!filterDefs.find(fd => fd.key === key)) {
+          const rowVal = (row as any)[key];
+          if (String(rowVal ?? '') !== String(val)) return false;
+        }
+      }
+      return true;
+    });
+  }, [data, filterDefs, activeFilters, externalFilters]);
 
   // ── Sort ──────────────────────────────────────────────────────────────────
   const handleSort = useCallback((key: string) => {
@@ -207,9 +430,9 @@ export function ERPTable<T>({
   }, []);
 
   const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return data;
+    if (!sortKey || !sortDir) return filtered;
     const col = columns.find(c => c.key === sortKey);
-    return [...data].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const av = col?.value ? col.value(a) : (a as any)[sortKey] ?? '';
       const bv = col?.value ? col.value(b) : (b as any)[sortKey] ?? '';
       const cmp = typeof av === 'number' && typeof bv === 'number'
@@ -246,6 +469,7 @@ export function ERPTable<T>({
       background: 'rgba(10,7,18,0.7)',
       border: '0.5px solid rgba(251,146,60,0.12)',
       borderRadius: 10, overflow: 'hidden',
+      minWidth: 0, flex: 1,
     } as React.CSSProperties,
     toolbar: {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -269,7 +493,7 @@ export function ERPTable<T>({
       padding: '9px 14px',
       fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const,
       color: 'rgba(251,146,60,0.55)',
-      background: 'rgba(251,146,60,0.05)',
+      background: '#0d0a1a',
       borderBottom: '0.5px solid rgba(255,255,255,0.06)',
       textAlign: (col.align ?? 'left') as any,
       whiteSpace: 'nowrap' as const,
@@ -345,10 +569,21 @@ export function ERPTable<T>({
         </div>
       </div>
 
+      {/* ── Filter Bar ── */}
+      {filterDefs.length > 0 && (
+        <FilterBar
+          filters={filterDefs}
+          values={filterVals}
+          onChange={handleFilterChange}
+          activeCount={activeFilterCount}
+          onClear={handleClearFilters}
+        />
+      )}
+
       {/* ── Single table with sticky thead ── */}
-      <div style={{ overflowY: 'auto', maxHeight, flex: 1 }}>
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: maxHeight === '100%' ? undefined : maxHeight, minHeight: maxHeight === '100%' ? undefined : maxHeight, flex: 1, minHeight: 0 }}>
         <table style={{ ...S.table, tableLayout: 'auto' }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
               {columns.map(col => (
                 <th

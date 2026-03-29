@@ -244,7 +244,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
         .shell-root {
           font-family: 'IBM Plex Sans', sans-serif;
-          min-height: 100vh;
+          height: 100vh;
           background-color: #07050e;
           background-image:
             radial-gradient(ellipse 80% 40% at 50% 100%, rgba(234,88,12,0.16) 0%, transparent 60%),
@@ -413,7 +413,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-bc-cur  { color: rgba(255,255,255,0.6); }
 
         .shell-title { font-size: 15px; font-weight: 500; color: #f1ede8; padding: 0 18px 8px; }
-        .shell-content { flex: 1; overflow: auto; }
+        .shell-content { flex: 1; overflow: hidden; min-height: 0; }
       `}</style>
 
       <div className="shell-root">
