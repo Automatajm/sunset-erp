@@ -26,6 +26,7 @@ export class BulkImportService {
       case 'fiscal-periods': return this.importFiscalPeriods(tenantId, userId, records, dryRun, upsert);
       case 'boms':           return this.importBoms(tenantId, userId, records, dryRun, upsert);
       case 'bom-routings':   return this.importBomRoutings(tenantId, userId, records, dryRun, upsert);
+      case 'warehouse-locations': return this.importWarehouseLocations(tenantId, userId, records, dryRun, upsert);
       default: throw new BadRequestException(`Unsupported entity: ${entity}`);
     }
   }
@@ -292,51 +293,84 @@ export class BulkImportService {
 
   // ── WAREHOUSES ────────────────────────────────────────────────────────────
 
-  async importWarehouses(tenantId: string, userId: string, records: Record<string, any>[], dryRun: boolean, upsert: boolean): Promise<BulkImportResult> {
-    const errors: BulkImportError[] = [];
-    let inserted = 0, updated = 0, skipped = 0;
-
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i]; const row = i + 1;
-      const rowErrors: BulkImportError[] = [];
-      const code = this.req(row, r, 'code', rowErrors);
-      const name = this.req(row, r, 'name', rowErrors);
-      if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
-
-      const existing = await this.prisma.warehouse.findFirst({ where: { tenantId, code: code!, deletedAt: null } });
-
-      if (existing) {
-        if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouse.update({
-              where: { id: existing.id },
-              data: {
-                name,
-                warehouseType: this.str(r, 'warehouseType') ?? existing.warehouseType,
-                address:       this.str(r, 'address')       ?? existing.address ?? undefined,
-                updatedBy: userId,
-              },
-            });
-          }
-          updated++;
-        } else { skipped++; }
-        continue;
-      }
-
-      if (!dryRun) {
-        await this.prisma.warehouse.create({
-          data: {
-            tenantId, code: code!, name: name!,
-            warehouseType: this.str(r, 'warehouseType') ?? 'regular',
-            address: this.str(r, 'address'),
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
-      }
-      inserted++;
+  async importWarehouses(
+  tenantId: string, userId: string,
+  records: Record<string, any>[], dryRun: boolean, upsert: boolean,
+): Promise<BulkImportResult> {
+  const errors: BulkImportError[] = [];
+  let inserted = 0, updated = 0, skipped = 0;
+ 
+  // TYPE_PREFIX map for auto-code generation
+  const TYPE_PREFIX: Record<string, string> = {
+    regular: 'REG', consignment: 'CON', transit: 'TRN',
+  };
+ 
+  const generateCode = async (warehouseType: string): Promise<string> => {
+    const prefix = `WH-${TYPE_PREFIX[warehouseType] ?? 'REG'}`;
+    const last = await this.prisma.warehouse.findFirst({
+      where: { tenantId, code: { startsWith: prefix }, deletedAt: null },
+      orderBy: { code: 'desc' },
+    });
+    if (!last) return `${prefix}-001`;
+    const parts = last.code.split('-');
+    const lastNum = parseInt(parts[parts.length - 1], 10);
+    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
+    return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
+  };
+ 
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]; const row = i + 1;
+    const rowErrors: BulkImportError[] = [];
+    const name = this.req(row, r, 'name', rowErrors);
+    if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+ 
+    const warehouseType = this.str(r, 'warehouseType') ?? 'regular';
+    // Code: use provided value or auto-generate
+    const rawCode = this.str(r, 'code');
+    const code = rawCode
+      ? rawCode.toUpperCase()
+      : await generateCode(warehouseType);
+ 
+    const existing = await this.prisma.warehouse.findFirst({
+      where: { tenantId, code, deletedAt: null },
+    });
+ 
+    if (existing) {
+      if (upsert) {
+        if (!dryRun) {
+          await this.prisma.warehouse.update({
+            where: { id: existing.id },
+            data: {
+              name,
+              warehouseType,
+              address:                 this.str(r, 'address')                ?? existing.address  ?? undefined,
+              isActive:                r.isActive !== undefined               ? this.bool(r, 'isActive', existing.isActive) : existing.isActive,
+              locationTrackingEnabled: r.locationTrackingEnabled !== undefined ? this.bool(r, 'locationTrackingEnabled', existing.locationTrackingEnabled) : existing.locationTrackingEnabled,
+              updatedBy: userId,
+            },
+          });
+        }
+        updated++;
+      } else { skipped++; }
+      continue;
     }
-    return this.buildResult('warehouses', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+ 
+    if (!dryRun) {
+      await this.prisma.warehouse.create({
+        data: {
+          tenantId, code, name: name!,
+          warehouseType,
+          address:                 this.str(r, 'address'),
+          isActive:                this.bool(r, 'isActive',                true),
+          locationTrackingEnabled: this.bool(r, 'locationTrackingEnabled', false),
+          createdBy: userId, updatedBy: userId,
+        },
+      });
+    }
+    inserted++;
   }
+  return this.buildResult('warehouses', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+}
 
   // ── WORK CENTERS ──────────────────────────────────────────────────────────
 
@@ -1081,4 +1115,269 @@ export class BulkImportService {
     }
     return this.buildResult('bom-routings', records.length, inserted, updated, skipped, errors, dryRun, upsert);
   }
+  async importWarehouseLocations(
+  tenantId: string, userId: string,
+  records: Record<string, any>[], dryRun: boolean, upsert: boolean,
+): Promise<BulkImportResult> {
+  const errors: BulkImportError[] = [];
+  let inserted = 0, updated = 0, skipped = 0;
+ 
+  const VALID_LEVELS = ['zone', 'aisle', 'rack', 'level', 'bin'];
+ 
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]; const row = i + 1;
+    const rowErrors: BulkImportError[] = [];
+ 
+    const warehouseCode = this.req(row, r, 'warehouseCode', rowErrors);
+    const level         = this.req(row, r, 'level',         rowErrors);
+    const code          = this.req(row, r, 'code',          rowErrors);
+    const name          = this.req(row, r, 'name',          rowErrors);
+ 
+    if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
+    if (!VALID_LEVELS.includes(level!)) {
+      errors.push({ row, field: 'level', message: `Invalid level: ${level}. Must be one of: ${VALID_LEVELS.join(', ')}` });
+      continue;
+    }
+ 
+    // Resolve warehouse
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: { tenantId, code: warehouseCode!, deletedAt: null },
+    });
+    if (!warehouse) {
+      errors.push({ row, field: 'warehouseCode', message: `Warehouse code ${warehouseCode} not found` });
+      continue;
+    }
+ 
+    const parentCode = this.str(r, 'parentCode');
+ 
+    // ── Zone ─────────────────────────────────────────────────────────────
+    if (level === 'zone') {
+      const existing = await this.prisma.warehouseZone.findFirst({
+        where: { tenantId, warehouseId: warehouse.id, code: code!, deletedAt: null },
+      });
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.warehouseZone.update({
+              where: { id: existing.id },
+              data: {
+                name: name!,
+                zoneType:    this.str(r, 'zoneType')    ?? existing.zoneType,
+                description: this.str(r, 'description') ?? existing.description ?? undefined,
+                updatedBy: userId,
+              },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+      if (!dryRun) {
+        await this.prisma.warehouseZone.create({
+          data: {
+            tenantId, warehouseId: warehouse.id,
+            code: code!, name: name!,
+            zoneType:    this.str(r, 'zoneType')    ?? 'storage',
+            description: this.str(r, 'description'),
+            isActive: true, createdBy: userId, updatedBy: userId,
+          },
+        });
+      }
+      inserted++;
+      continue;
+    }
+ 
+    // ── Aisle ─────────────────────────────────────────────────────────────
+    if (level === 'aisle') {
+      if (!parentCode) {
+        errors.push({ row, field: 'parentCode', message: 'parentCode (zone code) required for aisle' });
+        continue;
+      }
+      const zone = await this.prisma.warehouseZone.findFirst({
+        where: { tenantId, warehouseId: warehouse.id, code: parentCode, deletedAt: null },
+      });
+      if (!zone) {
+        errors.push({ row, field: 'parentCode', message: `Zone code ${parentCode} not found in warehouse ${warehouseCode}` });
+        continue;
+      }
+      const fullCode = `${zone.code}-${code}`;
+      const existing = await this.prisma.warehouseAisle.findFirst({
+        where: { zoneId: zone.id, code: code!, deletedAt: null },
+      });
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.warehouseAisle.update({
+              where: { id: existing.id },
+              data: { name: name!, fullCode, updatedBy: userId },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+      if (!dryRun) {
+        await this.prisma.warehouseAisle.create({
+          data: {
+            tenantId, zoneId: zone.id,
+            code: code!, name: name!, fullCode,
+            isActive: true, createdBy: userId, updatedBy: userId,
+          },
+        });
+      }
+      inserted++;
+      continue;
+    }
+ 
+    // ── Rack ──────────────────────────────────────────────────────────────
+    if (level === 'rack') {
+      if (!parentCode) {
+        errors.push({ row, field: 'parentCode', message: 'parentCode (aisle fullCode e.g. STOR-01) required for rack' });
+        continue;
+      }
+      const aisle = await this.prisma.warehouseAisle.findFirst({
+        where: { tenantId, fullCode: parentCode, zone: { warehouseId: warehouse.id }, deletedAt: null },
+      });
+      if (!aisle) {
+        errors.push({ row, field: 'parentCode', message: `Aisle fullCode ${parentCode} not found` });
+        continue;
+      }
+      const fullCode = `${aisle.fullCode}-${code}`;
+      const existing = await this.prisma.warehouseRack.findFirst({
+        where: { aisleId: aisle.id, code: code!, deletedAt: null },
+      });
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.warehouseRack.update({
+              where: { id: existing.id },
+              data: { name: name!, fullCode, updatedBy: userId },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+      if (!dryRun) {
+        await this.prisma.warehouseRack.create({
+          data: {
+            tenantId, aisleId: aisle.id,
+            code: code!, name: name!, fullCode,
+            isActive: true, createdBy: userId, updatedBy: userId,
+          },
+        });
+      }
+      inserted++;
+      continue;
+    }
+ 
+    // ── Level ─────────────────────────────────────────────────────────────
+    if (level === 'level') {
+      if (!parentCode) {
+        errors.push({ row, field: 'parentCode', message: 'parentCode (rack fullCode e.g. STOR-01-01) required for level' });
+        continue;
+      }
+      const rack = await this.prisma.warehouseRack.findFirst({
+        where: { tenantId, fullCode: parentCode, aisle: { zone: { warehouseId: warehouse.id } }, deletedAt: null },
+      });
+      if (!rack) {
+        errors.push({ row, field: 'parentCode', message: `Rack fullCode ${parentCode} not found` });
+        continue;
+      }
+      const fullCode = `${rack.fullCode}-${code}`;
+      const existing = await this.prisma.warehouseLevel.findFirst({
+        where: { rackId: rack.id, code: code!, deletedAt: null },
+      });
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.warehouseLevel.update({
+              where: { id: existing.id },
+              data: {
+                name: name!, fullCode,
+                maxWeightKg:  this.num(r, 'maxWeightKg')  ?? existing.maxWeightKg  ?? undefined,
+                maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined,
+                maxPallets:   this.num(r, 'maxPallets')   != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined,
+                updatedBy: userId,
+              },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+      if (!dryRun) {
+        await this.prisma.warehouseLevel.create({
+          data: {
+            tenantId, rackId: rack.id,
+            code: code!, name: name!, fullCode,
+            maxWeightKg:  this.num(r, 'maxWeightKg'),
+            maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
+            maxPallets:   this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
+            isActive: true, createdBy: userId, updatedBy: userId,
+          },
+        });
+      }
+      inserted++;
+      continue;
+    }
+ 
+    // ── Bin ───────────────────────────────────────────────────────────────
+    if (level === 'bin') {
+      if (!parentCode) {
+        errors.push({ row, field: 'parentCode', message: 'parentCode (level fullCode e.g. STOR-01-01-01) required for bin' });
+        continue;
+      }
+      const lvl = await this.prisma.warehouseLevel.findFirst({
+        where: { tenantId, fullCode: parentCode, rack: { aisle: { zone: { warehouseId: warehouse.id } } }, deletedAt: null },
+      });
+      if (!lvl) {
+        errors.push({ row, field: 'parentCode', message: `Level fullCode ${parentCode} not found` });
+        continue;
+      }
+      const fullCode = `${lvl.fullCode}-${code}`;
+      const existing = await this.prisma.warehouseBin.findFirst({
+        where: { levelId: lvl.id, code: code!, deletedAt: null },
+      });
+      if (existing) {
+        if (upsert) {
+          if (!dryRun) {
+            await this.prisma.warehouseBin.update({
+              where: { id: existing.id },
+              data: {
+                name: name!, fullCode,
+                binType:      this.str(r, 'binType')      ?? existing.binType,
+                maxWeightKg:  this.num(r, 'maxWeightKg')  ?? existing.maxWeightKg  ?? undefined,
+                maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined,
+                maxPallets:   this.num(r, 'maxPallets')   != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined,
+                notes:        this.str(r, 'notes')        ?? existing.notes        ?? undefined,
+                updatedBy: userId,
+              },
+            });
+          }
+          updated++;
+        } else { skipped++; }
+        continue;
+      }
+      if (!dryRun) {
+        await this.prisma.warehouseBin.create({
+          data: {
+            tenantId, levelId: lvl.id,
+            code: code!, name: name!, fullCode,
+            binType:      this.str(r, 'binType') ?? 'standard',
+            maxWeightKg:  this.num(r, 'maxWeightKg'),
+            maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
+            maxPallets:   this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
+            allowMixedItems: this.bool(r, 'allowMixedItems', true),
+            notes:        this.str(r, 'notes'),
+            isActive: true, createdBy: userId, updatedBy: userId,
+          },
+        });
+      }
+      inserted++;
+    }
+  }
+ 
+  return this.buildResult('warehouse-locations', records.length, inserted, updated, skipped, errors, dryRun, upsert);
+}
 }
