@@ -1,36 +1,46 @@
+// ============================================================================
+// FILE: backend/src/modules/warehouses/dto/create-warehouse.dto.ts
+// ============================================================================
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWarehouseDto {
-  @ApiProperty({ example: 'WH-001', description: 'Warehouse code' })
-  @IsString()
-  @MaxLength(50)
-  code: string;
-
-  @ApiProperty({ example: 'Main Warehouse', description: 'Warehouse name' })
-  @IsString()
-  @MaxLength(255)
-  name: string;
-
-  @ApiPropertyOptional({ example: 'regular', description: 'Warehouse type: regular, consignment, transit' })
+  @ApiPropertyOptional({
+    example: 'WH-REG-001',
+    description: 'Warehouse code. If omitted, auto-generated as WH-{TYPE}-{NNN}',
+  })
   @IsOptional()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(30)
+  code?: string;
+
+  @ApiProperty({ example: 'Main Warehouse' })
+  @IsString()
+  @MaxLength(100)
+  name: string;
+
+  @ApiPropertyOptional({
+    example: 'regular',
+    description: 'regular | consignment | transit',
+    default: 'regular',
+  })
+  @IsOptional()
+  @IsString()
   warehouseType?: string;
 
-  @ApiPropertyOptional({ example: '123 Storage St, Industrial Zone', description: 'Address' })
+  @ApiPropertyOptional({ example: 'Zona Industrial Los Minas' })
   @IsOptional()
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ default: true, description: 'Is warehouse active' })
+  @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
   @ApiPropertyOptional({
     default: false,
-    description: 'Enable location tracking (Zone->Aisle->Rack->Level->Bin). When false, stock is balanced at warehouse level only.',
+    description: 'Enable Zone → Aisle → Rack → Level → Bin location tracking',
   })
   @IsOptional()
   @IsBoolean()

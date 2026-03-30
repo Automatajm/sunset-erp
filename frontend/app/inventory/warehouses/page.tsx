@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
-import { ERPTreeTable, ERPTreeColumn, ERPTreeFilter } from '@/components/ui/ERPTreeTable';
+import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { warehouseLocationsApi, WZone, WAisle, WRack, WLevel, WBin } from '@/lib/api/warehouse-locations';
 import { Warehouse, CreateWarehouseDto } from '@/lib/api/types';
@@ -14,8 +14,18 @@ type WarehouseType = 'regular' | 'consignment' | 'transit';
 interface WarehouseStats {
   stockLines: number;
   totalOnHand: string | null;
+  occupancyPct: number | null;
   locations: { zones: number; aisles: number; racks: number; levels: number; bins: number };
-  capacity: { maxWeightKg: string | null; maxVolumeLtr: string | null; maxPallets: number | null };
+  capacity: { maxWeightKg: number | null; maxVolumeLtr: number | null; maxPallets: number | null };
+}
+
+interface WarehouseEnriched extends Warehouse {
+  stockCount:      number;
+  zoneCount:       number;
+  capacityKg:      number | null;
+  capacityLtr:     number | null;
+  capacityPallets: number | null;
+  occupancyPct:    number | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -44,6 +54,14 @@ const EMPTY_WH_FORM: CreateWarehouseDto = {
 function getTypeConfig(t?: string) { return WH_TYPES.find(x => x.value === t) ?? WH_TYPES[0]; }
 function zoneColor(t: string) { return ZONE_TYPES.find(z => z.value === t)?.color ?? '#e2dfd8'; }
 
+// Occupancy color ramp
+function occupancyColor(pct: number): string {
+  if (pct >= 90) return '#f87171'; // red
+  if (pct >= 70) return '#fbbf24'; // yellow
+  if (pct >= 40) return '#4ade80'; // green
+  return '#60a5fa';                 // blue (low)
+}
+
 // ─── Shared Styles ────────────────────────────────────────────────────────────
 const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'6px 10px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
 const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.55)' };
@@ -52,6 +70,65 @@ const BTN_SAVE: React.CSSProperties = { background:'rgba(234,88,12,0.8)', border
 const BTN_CANCEL: React.CSSProperties = { background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' };
 const BTN_EDIT: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.3)', cursor:'pointer', borderRadius:4 };
 const BTN_DEL: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(239,68,68,0.5)', cursor:'pointer', borderRadius:4 };
+
+// ─── Capacity Value — absolute, no % ────────────────────────────────────────
+function CapacityValue({ value, unit, color = '#a78bfa' }: { value: number | null; unit: string; color?: string }) {
+  if (value === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+  return (
+    <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color }}>
+      {value.toLocaleString()} <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{unit}</span>
+    </span>
+  );
+}
+
+// ─── Occupancy Bar — pallets estimate only, clearly labelled ─────────────────
+function OccupancyBar({ pct }: { pct: number | null }) {
+  if (pct === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+  const color = pct >= 90 ? '#f87171' : pct >= 70 ? '#fbbf24' : pct >= 40 ? '#4ade80' : '#60a5fa';
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+        <div style={{ flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.08)', overflow:'hidden' }}>
+          <div style={{ width:`${pct}%`, height:'100%', background:color, borderRadius:2, transition:'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize:10, color, fontFamily:"'IBM Plex Mono',monospace", minWidth:28 }}>{pct}%</span>
+      </div>
+      <span style={{ fontSize:8, color:'rgba(255,255,255,0.2)', letterSpacing:'0.05em' }}>est. lines/pallets</span>
+    </div>
+  );
+}
+
+// ─── Capacity Panel — shown in expanded row ───────────────────────────────────
+function CapacityPanel({ w }: { w: WarehouseEnriched }) {
+  const hasAny = w.capacityKg !== null || w.capacityLtr !== null || w.capacityPallets !== null;
+  if (!hasAny) return null;
+  return (
+    <div style={{ display:'flex', gap:10, padding:'8px 20px', flexWrap:'wrap', alignItems:'center', borderBottom:'0.5px solid rgba(255,255,255,0.04)', background:'rgba(167,139,250,0.03)' }}>
+      <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Capacity:</span>
+      {w.capacityKg !== null && (
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(167,139,250,0.08)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#a78bfa', fontFamily:"'IBM Plex Mono',monospace" }}>
+          ⚖ {w.capacityKg.toLocaleString()} kg
+        </span>
+      )}
+      {w.capacityLtr !== null && (
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(96,165,250,0.08)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#60a5fa', fontFamily:"'IBM Plex Mono',monospace" }}>
+          🧴 {w.capacityLtr.toLocaleString()} L
+        </span>
+      )}
+      {w.capacityPallets !== null && (
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(251,191,36,0.08)', border:'0.5px solid rgba(251,191,36,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#fbbf24', fontFamily:"'IBM Plex Mono',monospace" }}>
+          📦 {w.capacityPallets.toLocaleString()} plt
+        </span>
+      )}
+      {w.occupancyPct !== null && (
+        <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginLeft:4 }}>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Occ.:</span>
+          <OccupancyBar pct={w.occupancyPct} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Inline Form ──────────────────────────────────────────────────────────────
 interface InlineFormProps {
@@ -168,7 +245,7 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
   );
 }
 
-// ─── Location Tree CRUD (for modal) ──────────────────────────────────────────
+// ─── Location Tree CRUD ───────────────────────────────────────────────────────
 interface LocationTreeProps { warehouseId: string; onStatsChange?: () => void; }
 
 function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
@@ -359,8 +436,9 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 }
 
 // ─── Stats Bar ────────────────────────────────────────────────────────────────
-function StatsBar({ warehouses, activeType, onTypeClick }: { warehouses: Warehouse[]; activeType: string | null; onTypeClick: (t: string | null) => void }) {
-  const total = warehouses.length, active = warehouses.filter(w => w.isActive).length, tracked = warehouses.filter(w => (w as any).locationTrackingEnabled).length;
+function StatsBar({ warehouses, activeType, onTypeClick }: { warehouses: WarehouseEnriched[]; activeType: string | null; onTypeClick: (t: string | null) => void }) {
+  const total = warehouses.length, active = warehouses.filter(w => w.isActive).length, tracked = warehouses.filter(w => w.locationTrackingEnabled).length;
+  const withCapacity = warehouses.filter(w => w.capacityPallets !== null).length;
   return (
     <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap', flexShrink:0 }}>
       {WH_TYPES.map(t => { const count = warehouses.filter(w => w.warehouseType === t.value).length; const isActive = activeType === t.value;
@@ -368,6 +446,7 @@ function StatsBar({ warehouses, activeType, onTypeClick }: { warehouses: Warehou
       })}
       <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Active</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{active}</span></div>
       <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Location</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{tracked}</span></div>
+      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#a78bfa', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Cap. Config</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{withCapacity}</span></div>
       <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}><span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span><span style={{ fontSize:22, fontWeight:500, color:'#fb923c', fontFamily:"'IBM Plex Mono',monospace" }}>{total}</span></div>
     </div>
   );
@@ -375,53 +454,67 @@ function StatsBar({ warehouses, activeType, onTypeClick }: { warehouses: Warehou
 
 // ─── Table Columns ────────────────────────────────────────────────────────────
 function buildColumns(
-  onEdit: (w: Warehouse) => void,
-  onDelete: (w: Warehouse) => void,
-): ERPTreeColumn<Warehouse>[] {
+  onEdit: (w: WarehouseEnriched) => void,
+  onDelete: (w: WarehouseEnriched) => void,
+): ERPTreeColumn<WarehouseEnriched>[] {
   return [
     {
-      key: 'code', header: 'Code', width: 110, sortable: true,
+      key:'code', header:'Code', width:110, sortable:true,
       value: r => r.code,
       render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span>,
     },
     {
-      key: 'name', header: 'Name', sortable: true,
+      key:'name', header:'Name', sortable:true,
       value: r => r.name,
       render: r => <div><div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>{r.address && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.address}</div>}</div>,
     },
     {
-      key: 'warehouseType', header: 'Type', width: 130, sortable: true,
+      key:'warehouseType', header:'Type', width:130, sortable:true,
       value: r => r.warehouseType ?? 'regular',
       render: r => <TypeBadge type={r.warehouseType} />,
     },
     {
-      key: 'zoneCount', header: 'Zones', width: 80, sortable: true, align: 'center',
-      value: r => (r as any).zoneCount ?? 0,
-      render: r => (r as any).zoneCount > 0
-        ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#60a5fa' }}>{(r as any).zoneCount}</span>
-        : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      key:'zoneCount', header:'Zones', width:80, sortable:true, align:'center',
+      value: r => r.zoneCount ?? 0,
+      render: r => r.zoneCount > 0 ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#60a5fa' }}>{r.zoneCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
-      key: 'stockCount', header: 'Stock Lines', width: 110, sortable: true, align: 'center',
-      value: r => (r as any).stockCount ?? 0,
-      render: r => (r as any).stockCount > 0
-        ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{(r as any).stockCount}</span>
-        : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      key:'stockCount', header:'Stock Lines', width:100, sortable:true, align:'center',
+      value: r => r.stockCount ?? 0,
+      render: r => r.stockCount > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{r.stockCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
-      key: 'locationTrackingEnabled', header: 'Locations', width: 90, sortable: true, align: 'center',
-      value: r => (r as any).locationTrackingEnabled ? 1 : 0,
-      render: r => (r as any).locationTrackingEnabled
-        ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'#60a5fa' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'#60a5fa' }} />On</span>
-        : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>Off</span>,
+      key:'capacityKg', header:'Cap. kg', width:90, sortable:true, align:'center',
+      value: r => r.capacityKg ?? -1,
+      render: r => <CapacityValue value={r.capacityKg} unit="kg" color="#a78bfa" />,
     },
     {
-      key: 'isActive', header: 'Status', width: 100, sortable: true,
+      key:'capacityLtr', header:'Cap. L', width:85, sortable:true, align:'center',
+      value: r => r.capacityLtr ?? -1,
+      render: r => <CapacityValue value={r.capacityLtr} unit="L" color="#60a5fa" />,
+    },
+    {
+      key:'capacityPallets', header:'Cap. Plt', width:85, sortable:true, align:'center',
+      value: r => r.capacityPallets ?? -1,
+      render: r => <CapacityValue value={r.capacityPallets} unit="plt" color="#fbbf24" />,
+    },
+    {
+      key:'occupancyPct', header:'Occ. (est.)', width:130, sortable:true, align:'center',
+      value: r => r.occupancyPct ?? -1,
+      render: r => <OccupancyBar pct={r.occupancyPct} />,
+    },
+    {
+      key:'locationTrackingEnabled', header:'Locations', width:90, sortable:true, align:'center',
+      value: r => r.locationTrackingEnabled ? 1 : 0,
+      render: r => r.locationTrackingEnabled ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'#60a5fa' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'#60a5fa' }} />On</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>Off</span>,
+    },
+    {
+      key:'isActive', header:'Status', width:100, sortable:true,
       value: r => r.isActive ? 1 : 0,
       render: r => <ActiveBadge active={r.isActive} />,
     },
     {
-      key: '_actions', header: '', width: 120, sortable: false,
+      key:'_actions', header:'', width:120, sortable:false,
       render: r => (
         <div style={{ display:'flex', gap:6 }}>
           <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.55)', border:'0.5px solid rgba(255,255,255,0.1)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onEdit(r); }}>Edit</button>
@@ -432,8 +525,8 @@ function buildColumns(
   ];
 }
 
-// ─── Warehouse Modal ──────────────────────────────────────────────────────────
-function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; onClose: () => void; onSaved: () => void; initial: Warehouse | null }) {
+// ─── Warehouse Modal — NO close on outside click ──────────────────────────────
+function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; onClose: () => void; onSaved: () => void; initial: WarehouseEnriched | null }) {
   const [form, setForm] = useState<CreateWarehouseDto>(EMPTY_WH_FORM);
   const [tab, setTab]   = useState<'general'|'locations'>('general');
   const [submitting, setSubmitting] = useState(false);
@@ -444,7 +537,14 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
   useEffect(() => {
     if (open) {
       setError(''); setTab('general'); setStats(null);
-      setForm(initial ? { code:initial.code, name:initial.name, warehouseType:initial.warehouseType??'regular', address:initial.address??'', isActive:initial.isActive, locationTrackingEnabled:(initial as any).locationTrackingEnabled??false } : EMPTY_WH_FORM);
+      setForm(initial ? {
+        code:                    initial.code,
+        name:                    initial.name,
+        warehouseType:           initial.warehouseType ?? 'regular',
+        address:                 initial.address ?? '',
+        isActive:                initial.isActive,
+        locationTrackingEnabled: initial.locationTrackingEnabled ?? false,
+      } : EMPTY_WH_FORM);
       if (initial) warehousesApi.getStats(initial.id).then(setStats).catch(()=>{});
     }
   }, [open, initial]);
@@ -453,10 +553,11 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required.'); return; }
+    if (!form.name.trim()) { setError('Name is required.'); return; }
     setSubmitting(true); setError('');
     try {
-      if (initial) await warehousesApi.update(initial.id, form); else await warehousesApi.create(form);
+      if (initial) await warehousesApi.update(initial.id, form);
+      else         await warehousesApi.create(form);
       onSaved(); onClose();
     } catch (err: any) { setError(err?.response?.data?.message ?? 'Operation failed.'); }
     finally { setSubmitting(false); }
@@ -476,6 +577,7 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
         .wm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
         .wm-title{font-size:14px;font-weight:500;color:#f1ede8}
         .wm-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
+        .wm-close:hover{background:rgba(255,255,255,0.12);color:#f1ede8}
         .wm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
         .wm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s}
         .wm-tab:hover{color:rgba(255,255,255,0.7)}
@@ -495,11 +597,12 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
         .wm-stat-lbl{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em}
         .wm-stat-val{font-size:16px;font-family:'IBM Plex Mono',monospace;color:#f1ede8;font-weight:500}
       `}</style>
-      <div className="wm-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      {/* ── NO onClick on overlay — modal only closes with X button ── */}
+      <div className="wm-overlay">
         <div className="wm-box">
           <div className="wm-hdr">
             <span className="wm-title">{initial ? `Edit — ${initial.code}` : 'New Warehouse'}</span>
-            <button className="wm-close" type="button" onClick={onClose}>×</button>
+            <button className="wm-close" type="button" onClick={onClose} title="Close">×</button>
           </div>
           <div className="wm-tabs">
             {TABS.map(t => <button key={t.key} type="button" className={`wm-tab${tab===t.key?' wm-tab-active':''}`} onClick={() => setTab(t.key as any)}>{t.label}</button>)}
@@ -510,9 +613,12 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                 {error && <div className="wm-error">{error}</div>}
                 {tab === 'general' && (<>
                   <div className="wm-row">
-                    <div className="wm-field"><label style={FLBL}>Code *</label><input style={FINP} placeholder="WH-001" value={form.code} onChange={e => setForm(f=>({...f,code:e.target.value}))} required /></div>
+                    <div className="wm-field">
+                      <label style={FLBL}>Code <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400, textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
+                      <input style={FINP} placeholder="Auto-generated (e.g. WH-REG-001)" value={form.code ?? ''} onChange={e => setForm(f=>({...f, code: e.target.value || undefined}))} />
+                    </div>
                     <div className="wm-field"><label style={FLBL}>Type</label>
-                      <select style={FINP} value={form.warehouseType} onChange={e => setForm(f=>({...f,warehouseType:e.target.value as any}))}>
+                      <select style={FINP} value={form.warehouseType} onChange={e => setForm(f=>({...f, warehouseType:e.target.value as any}))}>
                         {WH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                       </select>
                     </div>
@@ -522,9 +628,9 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                   <div className="wm-section">Configuration</div>
                   <div style={{ display:'flex', flexDirection:'column', gap:10, background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'12px 14px' }}>
                     <Toggle label="Active" checked={form.isActive??true} onChange={v => setForm(f=>({...f,isActive:v}))} />
-                    <Toggle label="Enable Location Tracking (Zone → Aisle → Rack → Level → Bin)" checked={(form as any).locationTrackingEnabled??false} onChange={v => setForm(f=>({...f,locationTrackingEnabled:v}))} />
+                    <Toggle label="Enable Location Tracking (Zone → Aisle → Rack → Level → Bin)" checked={form.locationTrackingEnabled??false} onChange={v => setForm(f=>({...f,locationTrackingEnabled:v}))} />
                   </div>
-                  {(form as any).locationTrackingEnabled && <div style={{ background:'rgba(96,165,250,0.05)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'rgba(96,165,250,0.8)', lineHeight:1.6 }}>Location tracking enabled — configure zones in the <strong>Location Tree</strong> tab after saving.</div>}
+                  {form.locationTrackingEnabled && <div style={{ background:'rgba(96,165,250,0.05)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'rgba(96,165,250,0.8)', lineHeight:1.6 }}>Location tracking enabled — configure zones in the <strong>Location Tree</strong> tab after saving.</div>}
                   {initial && stats && (<>
                     <div className="wm-section">Stock & Capacity</div>
                     <div className="wm-stat-row">
@@ -532,8 +638,15 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                       <div className="wm-stat"><span className="wm-stat-lbl">Zones</span><span className="wm-stat-val">{stats.locations.zones}</span></div>
                       <div className="wm-stat"><span className="wm-stat-lbl">Levels</span><span className="wm-stat-val">{stats.locations.levels}</span></div>
                       <div className="wm-stat"><span className="wm-stat-lbl">Bins</span><span className="wm-stat-val">{stats.locations.bins}</span></div>
-                      {stats.capacity.maxWeightKg && <div className="wm-stat"><span className="wm-stat-lbl">Cap. Weight</span><span className="wm-stat-val" style={{ fontSize:13 }}>{Number(stats.capacity.maxWeightKg).toLocaleString()}kg</span></div>}
-                      {stats.capacity.maxPallets  && <div className="wm-stat"><span className="wm-stat-lbl">Cap. Pallets</span><span className="wm-stat-val">{stats.capacity.maxPallets}</span></div>}
+                      {stats.capacity.maxWeightKg  && <div className="wm-stat"><span className="wm-stat-lbl">Cap. Weight</span><span className="wm-stat-val" style={{ fontSize:13 }}>{Number(stats.capacity.maxWeightKg).toLocaleString()} kg</span></div>}
+                      {stats.capacity.maxVolumeLtr && <div className="wm-stat"><span className="wm-stat-lbl">Cap. Volume</span><span className="wm-stat-val" style={{ fontSize:13 }}>{Number(stats.capacity.maxVolumeLtr).toLocaleString()} L</span></div>}
+                      {stats.capacity.maxPallets   && <div className="wm-stat"><span className="wm-stat-lbl">Cap. Pallets</span><span className="wm-stat-val">{stats.capacity.maxPallets}</span></div>}
+                      {stats.occupancyPct !== null  && (
+                        <div className="wm-stat" style={{ minWidth:150 }}>
+                          <span className="wm-stat-lbl">Occ. est. (lines/plt)</span>
+                          <OccupancyBar pct={stats.occupancyPct} />
+                        </div>
+                      )}
                     </div>
                   </>)}
                 </>)}
@@ -552,7 +665,7 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
 }
 
 // ─── Delete Confirm ───────────────────────────────────────────────────────────
-function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: Warehouse; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
+function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: WarehouseEnriched; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
@@ -569,27 +682,63 @@ function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: Wa
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function WarehousesPage() {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseEnriched[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
   const [modalOpen,  setModalOpen]  = useState(false);
-  const [editing,    setEditing]    = useState<Warehouse | null>(null);
-  const [deleting,   setDeleting]   = useState<Warehouse | null>(null);
+  const [editing,    setEditing]    = useState<WarehouseEnriched | null>(null);
+  const [deleting,   setDeleting]   = useState<WarehouseEnriched | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    try { setLoading(true); const data = await warehousesApi.getAll(); setWarehouses(data); }
+    try { setLoading(true); const data = await warehousesApi.getAll(); setWarehouses(data as WarehouseEnriched[]); }
     catch (err) { setError(err instanceof Error ? err.message : 'Failed to load warehouses.'); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const whFilters = useMemo<ERPFilter<Warehouse>[]>(() => [
-    { key:'warehouseType', label:'Type', type:'select', placeholder:'All Types', options:WH_TYPES.map(t=>({value:t.value,label:t.label})), filterFn:(row,val)=>row.warehouseType===val },
-    { key:'locationTracking', label:'Locations', type:'boolean', placeholder:'Location Tracking On', filterFn:(row,val)=>val===true?!!(row as any).locationTrackingEnabled:true },
-    { key:'isActive', label:'Active Only', type:'boolean', placeholder:'Active Only', filterFn:(row,val)=>val===true?row.isActive:true },
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const whFilters = useMemo<ERPFilter<WarehouseEnriched>[]>(() => [
+    {
+      key:'warehouseType', label:'Type', type:'select', placeholder:'All Types',
+      options: WH_TYPES.map(t=>({value:t.value, label:t.label})),
+      filterFn:(row,val)=>row.warehouseType===val,
+    },
+    {
+      key:'locationTracking', label:'Locations', type:'boolean', placeholder:'Location Tracking On',
+      filterFn:(row,val)=>val===true?!!row.locationTrackingEnabled:true,
+    },
+    {
+      key:'hasCapacity', label:'Has Capacity', type:'boolean', placeholder:'Capacity Configured',
+      filterFn:(row,val)=>val===true?row.capacityPallets!==null:true,
+    },
+    {
+      key:'occupancy', label:'Occupancy', type:'select', placeholder:'All',
+      options:[
+        { value:'low',     label:'Low (< 40%)'    },
+        { value:'medium',  label:'Medium (40-70%)' },
+        { value:'high',    label:'High (70-90%)'   },
+        { value:'critical',label:'Critical (≥ 90%)'},
+        { value:'none',    label:'No data'         },
+      ],
+      filterFn:(row,val)=>{
+        const pct = row.occupancyPct;
+        switch (val) {
+          case 'low':      return pct !== null && pct < 40;
+          case 'medium':   return pct !== null && pct >= 40 && pct < 70;
+          case 'high':     return pct !== null && pct >= 70 && pct < 90;
+          case 'critical': return pct !== null && pct >= 90;
+          case 'none':     return pct === null;
+          default:         return true;
+        }
+      },
+    },
+    {
+      key:'isActive', label:'Active Only', type:'boolean', placeholder:'Active Only',
+      filterFn:(row,val)=>val===true?row.isActive:true,
+    },
   ], []);
 
   const { values:filterVals, setValue:setFilterVal, reset:resetFilters, activeCount:filterCount } = useERPFilters(whFilters);
@@ -626,14 +775,18 @@ export default function WarehousesPage() {
         <StatsBar warehouses={warehouses} activeType={typeFilter} onTypeClick={setTypeFilter} />
         <div className="wh-toolbar">
           <div style={{ flex:1 }}>
-            <ERPFilterBar filters={whFilters} values={filterVals} onChange={setFilterVal} onReset={() => { resetFilters(); setTypeFilter(null); }} activeCount={filterCount+(typeFilter?1:0)} />
+            <ERPFilterBar
+              filters={whFilters}
+              values={filterVals}
+              onChange={setFilterVal}
+              onReset={() => { resetFilters(); setTypeFilter(null); }}
+              activeCount={filterCount + (typeFilter ? 1 : 0)}
+            />
           </div>
           <button className="wh-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>+ New Warehouse</button>
         </div>
         {error && <div className="wh-error">{error}</div>}
-
-        {/* ── ERPTreeTable replaces WHTable ── */}
-        <ERPTreeTable<Warehouse>
+        <ERPTreeTable<WarehouseEnriched>
           columns={columns}
           data={filtered}
           rowKey={r => r.id}
@@ -641,8 +794,13 @@ export default function WarehousesPage() {
           exportFilename="warehouses"
           defaultPageSize={25}
           emptyMessage="No warehouses found."
-          canExpand={r => !!(r as any).locationTrackingEnabled}
-          expandedRow={r => <LocationTreeReadOnly warehouseId={r.id} />}
+          canExpand={r => !!r.locationTrackingEnabled}
+          expandedRow={r => (
+            <>
+              <CapacityPanel w={r} />
+              <LocationTreeReadOnly warehouseId={r.id} />
+            </>
+          )}
         />
       </div>
       <WarehouseModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={fetchAll} initial={editing} />
