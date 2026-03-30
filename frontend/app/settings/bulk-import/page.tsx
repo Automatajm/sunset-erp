@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import apiClient from '@/lib/api/client';
 
-type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines' | 'fiscal-periods' | 'boms' | 'bom-routings';
+type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'warehouse-locations' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines' | 'fiscal-periods' | 'boms' | 'bom-routings';
 type Channel = 'file' | 'url' | 'api';
 type Mode    = 'import' | 'export';
 
@@ -45,9 +45,16 @@ const ENTITIES: {
   },
   {
     value: 'warehouses', label: 'Warehouses', color: '#a78bfa',
-    requiredFields: ['code', 'name'],
-    optionalFields:  ['warehouseType', 'address'],
-    sampleRow: { code:'WH001', name:'Main Warehouse', warehouseType:'regular', address:'123 Industrial Ave, Miami FL' },
+    requiredFields: ['name'],
+    optionalFields:  ['code', 'warehouseType', 'address', 'isActive', 'locationTrackingEnabled'],
+    sampleRow: { code:'', name:'Almacén Principal', warehouseType:'regular', address:'Zona Industrial Los Minas, Santo Domingo Este', isActive:'true', locationTrackingEnabled:'true' },
+    exportEndpoint: '/warehouses',
+  },
+  {
+    value: 'warehouse-locations', label: 'WH Locations', color: '#c084fc',
+    requiredFields: ['warehouseCode', 'level', 'code', 'name'],
+    optionalFields:  ['parentCode', 'zoneType', 'description', 'maxWeightKg', 'maxVolumeLtr', 'maxPallets', 'binType', 'allowMixedItems', 'notes'],
+    sampleRow: { warehouseCode:'WH-REG-001', level:'zone', code:'STOR', name:'Storage Area', parentCode:'', zoneType:'storage', description:'', maxWeightKg:'', maxVolumeLtr:'', maxPallets:'', binType:'', allowMixedItems:'true', notes:'' },
     exportEndpoint: '/warehouses',
   },
   {
@@ -123,49 +130,205 @@ function parseCsv(text: string): Record<string, any>[] {
 function parseExcel(buffer: ArrayBuffer): Record<string, any>[] {
   const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { 
-    defval: '',
-    raw: false,  // convierte fechas a strings YYYY-MM-DD automáticamente
-  });
-  // Limpia espacios ocultos y normaliza fechas en todos los campos
+  const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '', raw: false });
   return data.map(row => {
     const clean: Record<string, any> = {};
     for (const [key, val] of Object.entries(row)) {
       const k = key.trim();
       if (val instanceof Date) {
-        // fecha nativa → YYYY-MM-DD
         clean[k] = val.toISOString().slice(0, 10);
       } else if (typeof val === 'string') {
-        const v = val.trim().replace(/[\u00a0\u200b\ufeff]/g, ''); // nbsp, zero-width, BOM
-        // Si parece fecha Excel serial (número grande como 45678)
+        const v = val.trim().replace(/[\u00a0\u200b\ufeff]/g, '');
         const n = Number(v);
         if (!isNaN(n) && n > 40000 && n < 55000 && v.length <= 6) {
-          // Convertir serial Excel a fecha
-          const date = new Date((n - 25569) * 86400 * 1000);
-          clean[k] = date.toISOString().slice(0, 10);
-        } else {
-          clean[k] = v;
-        }
-      } else {
-        clean[k] = val;
-      }
+          clean[k] = new Date((n - 25569) * 86400 * 1000).toISOString().slice(0, 10);
+        } else { clean[k] = v; }
+      } else { clean[k] = val; }
     }
     return clean;
   });
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
-const INPUT: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
-  borderRadius: 7, padding: '9px 12px', fontSize: 13,
-  fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%',
-};
-const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 500, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)',
-  fontFamily: "'IBM Plex Sans',sans-serif",
-};
+const INPUT: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+const LABEL: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
+// ─── Dry Run Result Modal ─────────────────────────────────────────────────────
+function DryRunModal({
+  result,
+  entityCfg,
+  onClose,
+  onRunLive,
+  liveRunning,
+}: {
+  result: ImportResult;
+  entityCfg: typeof ENTITIES[0];
+  onClose: () => void;
+  onRunLive: () => void;
+  liveRunning: boolean;
+}) {
+  const hasErrors = result.errors.length > 0;
+  const wouldInsert = result.valid - result.skipped;
+
+  return (
+    <>
+      <style>{`
+        .drm-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
+        .drm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.25);border-radius:14px;width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
+        .drm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
+        .drm-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;flex-shrink:0;border-bottom:0.5px solid rgba(255,255,255,0.06)}
+        .drm-scroll{flex:1;overflow-y:auto;padding:16px 20px;min-height:0}
+        .drm-ftr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;gap:10px}
+        .drm-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+        .drm-stat{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 12px}
+        .drm-err-table{width:100%;border-collapse:collapse;font-size:12px}
+        .drm-err-table th{padding:5px 10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);color:rgba(248,113,113,0.6)}
+        .drm-err-table td{padding:6px 10px;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+        .drm-err-table tr:last-child td{border-bottom:none}
+      `}</style>
+      <div className="drm-overlay">
+        <div className="drm-box">
+
+          {/* Header */}
+          <div className="drm-hdr">
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>
+                Dry Run Result — <span style={{ color:entityCfg.color }}>{entityCfg.label}</span>
+              </span>
+              {hasErrors
+                ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(248,113,113,0.1)', color:'#f87171', border:'0.5px solid rgba(248,113,113,0.25)' }}>{result.errors.length} error{result.errors.length !== 1 ? 's' : ''}</span>
+                : <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(74,222,128,0.1)', color:'#4ade80', border:'0.5px solid rgba(74,222,128,0.25)' }}>All valid</span>
+              }
+            </div>
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="drm-scroll">
+
+            {/* Stats */}
+            <div className="drm-stats">
+              {[
+                { label:'Total',        value:result.total,       color:'#e2dfd8' },
+                { label:'Valid',        value:result.valid,       color:'#4ade80' },
+                { label:'Would Insert', value:wouldInsert,        color:'#4ade80' },
+                { label:'Would Update', value:result.upsert ? result.skipped : 0, color:'#a78bfa' },
+                { label:'Errors',       value:result.errors.length, color: result.errors.length > 0 ? '#f87171' : '#4ade80' },
+              ].map(s => (
+                <div key={s.label} className="drm-stat">
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{s.label}</div>
+                  <div style={{ ...MONO, fontSize:22, fontWeight:500, color:s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Success message */}
+            {!hasErrors && (
+              <div style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'#4ade80', marginBottom:12 }}>
+                ✓ All {result.valid} records passed validation. Click <strong>Run Live Import</strong> to apply changes.
+              </div>
+            )}
+
+            {/* Errors */}
+            {hasErrors && (
+              <>
+                <div style={{ fontSize:10, color:'rgba(248,113,113,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>
+                  {result.errors.length} validation error{result.errors.length !== 1 ? 's' : ''} — fix these before running Live Import
+                </div>
+                <div style={{ border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, overflow:'hidden' }}>
+                  <table className="drm-err-table">
+                    <thead>
+                      <tr><th>Row</th><th>Field</th><th>Message</th></tr>
+                    </thead>
+                    <tbody>
+                      {result.errors.map((e, i) => (
+                        <tr key={i}>
+                          <td style={{ ...MONO, color:'#f87171', width:60 }}>{e.row}</td>
+                          <td style={{ ...MONO, color:'#fbbf24', width:140 }}>{e.field}</td>
+                          <td style={{ color:'rgba(255,255,255,0.6)', fontSize:12 }}>{e.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="drm-ftr">
+            <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>
+              {hasErrors
+                ? 'Fix the errors in your file, then re-upload and validate again.'
+                : `Ready to insert ${wouldInsert} record${wouldInsert !== 1 ? 's' : ''}.`}
+            </span>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={onClose} style={{ padding:'8px 18px', borderRadius:7, fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={onRunLive}
+                disabled={hasErrors || liveRunning}
+                style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background: hasErrors ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor: hasErrors ? 'not-allowed' : 'pointer', opacity: hasErrors || liveRunning ? 0.5 : 1, whiteSpace:'nowrap', boxShadow: hasErrors ? 'none' : '0 3px 12px rgba(22,163,74,0.3)' }}
+              >
+                {liveRunning ? 'Importing…' : `Run Live Import (${wouldInsert})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Live Result Modal ────────────────────────────────────────────────────────
+function LiveResultModal({
+  result,
+  entityCfg,
+  onClose,
+}: {
+  result: ImportResult;
+  entityCfg: typeof ENTITIES[0];
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+        <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.25)', borderRadius:14, width:'100%', maxWidth:480, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)', position:'relative' }}>
+          <div style={{ position:'absolute', top:0, left:30, right:30, height:1, background:'linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent)' }} />
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+            <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>
+              Import Complete — <span style={{ color:entityCfg.color }}>{entityCfg.label}</span>
+            </span>
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
+            {[
+              { label:'Inserted', value:result.inserted, color:'#4ade80' },
+              { label:'Updated',  value:result.updated,  color:'#a78bfa' },
+              { label:'Skipped',  value:result.skipped,  color:'#fbbf24' },
+            ].map(s => (
+              <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
+                <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{s.label}</div>
+                <div style={{ ...MONO, fontSize:26, fontWeight:500, color:s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#4ade80', marginBottom:16 }}>
+            ✓ {result.inserted} record{result.inserted !== 1 ? 's' : ''} inserted successfully.{result.skipped > 0 ? ` ${result.skipped} duplicates skipped.` : ''}
+          </div>
+          <div style={{ display:'flex', justifyContent:'flex-end' }}>
+            <button onClick={onClose} style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor:'pointer', boxShadow:'0 3px 12px rgba(22,163,74,0.3)' }}>
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BulkImportPage() {
   const [mode,        setMode]        = useState<Mode>('import');
   const [entity,      setEntity]      = useState<Entity>('items');
@@ -177,8 +340,10 @@ export default function BulkImportPage() {
   const [sourceToken, setSourceToken] = useState('');
   const [fileName,    setFileName]    = useState('');
   const [busy,        setBusy]        = useState(false);
+  const [liveRunning, setLiveRunning] = useState(false);
   const [exportBusy,  setExportBusy]  = useState(false);
-  const [result,      setResult]      = useState<ImportResult | null>(null);
+  const [dryResult,   setDryResult]   = useState<ImportResult | null>(null);  // shown in dry run modal
+  const [liveResult,  setLiveResult]  = useState<ImportResult | null>(null);  // shown in live result modal
   const [parseError,  setParseError]  = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -218,7 +383,7 @@ export default function BulkImportPage() {
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFileName(file.name); setParseError(''); setResult(null); setRecords([]);
+    setFileName(file.name); setParseError(''); setDryResult(null); setLiveResult(null); setRecords([]);
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
     const reader  = new FileReader();
     const onParsed = (parsed: Record<string, any>[]) => {
@@ -235,24 +400,49 @@ export default function BulkImportPage() {
     }
   }, []);
 
-  const handleRun = async () => {
-    setBusy(true); setResult(null); setParseError('');
+  // Build request body
+  const buildBody = (overrideDryRun?: boolean) => {
+    const body: any = { dryRun: overrideDryRun ?? dryRun, upsert };
+    if (channel === 'file') { body.records = records; }
+    else if (channel === 'url') { body.sourceUrl = sourceUrl; if (sourceToken) body.sourceToken = sourceToken; }
+    else { if (records.length > 0) body.records = records; if (sourceUrl.trim()) body.sourceUrl = sourceUrl; if (sourceToken.trim()) body.sourceToken = sourceToken; }
+    return body;
+  };
+
+  // Validate (dry run) → opens modal
+  const handleValidate = async () => {
+    if (channel === 'file' && records.length === 0) { setParseError('No records loaded. Upload a file first.'); return; }
+    if (channel === 'url' && !sourceUrl.trim()) { setParseError('Source URL is required.'); return; }
+    setBusy(true); setParseError(''); setDryResult(null); setLiveResult(null);
     try {
-      let body: any = { dryRun, upsert };
-      if (channel === 'file') {
-        if (records.length === 0) { setParseError('No records loaded. Upload a file first.'); setBusy(false); return; }
-        body.records = records;
-      } else if (channel === 'url') {
-        if (!sourceUrl.trim()) { setParseError('Source URL is required.'); setBusy(false); return; }
-        body.sourceUrl = sourceUrl; body.sourceToken = sourceToken || undefined;
-      } else {
-        if (records.length > 0) body.records    = records;
-        if (sourceUrl.trim())   body.sourceUrl  = sourceUrl;
-        if (sourceToken.trim()) body.sourceToken = sourceToken;
-        if (!body.records && !body.sourceUrl) { setParseError('Provide records or a source URL.'); setBusy(false); return; }
-      }
-      const res = await apiClient.post(`/bulk-import/${entity}`, body);
-      setResult(res.data);
+      const res = await apiClient.post(`/bulk-import/${entity}`, buildBody(true));
+      setDryResult(res.data);
+    } catch (err: any) {
+      setParseError(err.response?.data?.message || 'Validation failed.');
+    } finally { setBusy(false); }
+  };
+
+  // Live run (from modal) → shows live result modal
+  const handleRunLive = async () => {
+    setLiveRunning(true);
+    try {
+      const res = await apiClient.post(`/bulk-import/${entity}`, buildBody(false));
+      setDryResult(null);
+      setLiveResult(res.data);
+    } catch (err: any) {
+      setParseError(err.response?.data?.message || 'Import failed.');
+      setDryResult(null);
+    } finally { setLiveRunning(false); }
+  };
+
+  // Direct live run (when dryRun toggle is OFF) → shows live result modal directly
+  const handleDirectLive = async () => {
+    if (channel === 'file' && records.length === 0) { setParseError('No records loaded. Upload a file first.'); return; }
+    if (channel === 'url' && !sourceUrl.trim()) { setParseError('Source URL is required.'); return; }
+    setBusy(true); setParseError(''); setDryResult(null); setLiveResult(null);
+    try {
+      const res = await apiClient.post(`/bulk-import/${entity}`, buildBody(false));
+      setLiveResult(res.data);
     } catch (err: any) {
       setParseError(err.response?.data?.message || 'Import failed.');
     } finally { setBusy(false); }
@@ -282,11 +472,6 @@ export default function BulkImportPage() {
         .bi-channel-tab { padding:7px 16px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
         .bi-drop { border:1.5px dashed rgba(255,255,255,0.12); border-radius:8px; padding:28px; text-align:center; cursor:pointer; transition:all 0.15s; }
         .bi-drop:hover { border-color:rgba(251,146,60,0.3); background:rgba(251,146,60,0.02); }
-        .bi-result-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
-        .bi-result-stat { background:rgba(255,255,255,0.03); border-radius:7px; padding:8px 12px; }
-        .bi-error-table { width:100%; border-collapse:collapse; font-size:12px; }
-        .bi-error-table th { padding:5px 10px; font-size:10px; color:rgba(248,113,113,0.6); font-weight:500; text-transform:uppercase; letter-spacing:0.08em; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); }
-        .bi-error-table td { padding:6px 10px; border-bottom:0.5px solid rgba(255,255,255,0.04); }
         .bi-preview { background:rgba(255,255,255,0.02); border:0.5px solid rgba(255,255,255,0.07); border-radius:7px; padding:10px 14px; }
         .bi-format-badge { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; }
         .bi-export-card { display:flex; flex-direction:column; gap:14px; }
@@ -295,67 +480,76 @@ export default function BulkImportPage() {
         .bi-opt-btn { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; font-weight:500; transition:all 0.15s; }
       `}</style>
 
+      {/* ── Dry Run Modal ── */}
+      {dryResult && (
+        <DryRunModal
+          result={dryResult}
+          entityCfg={entityCfg}
+          onClose={() => setDryResult(null)}
+          onRunLive={handleRunLive}
+          liveRunning={liveRunning}
+        />
+      )}
+
+      {/* ── Live Result Modal ── */}
+      {liveResult && (
+        <LiveResultModal
+          result={liveResult}
+          entityCfg={entityCfg}
+          onClose={() => { setLiveResult(null); setRecords([]); setFileName(''); }}
+        />
+      )}
+
       <div className="bi-page">
 
         <div className="bi-mode-tabs">
-          {([
-            { value: 'import' as Mode, label: 'Import' },
-            { value: 'export' as Mode, label: 'Export & Templates' },
-          ]).map(m => (
+          {([{ value:'import' as Mode, label:'Import' }, { value:'export' as Mode, label:'Export & Templates' }]).map(m => (
             <button key={m.value} className="bi-mode-tab"
-              onClick={() => { setMode(m.value); setResult(null); setParseError(''); }}
+              onClick={() => { setMode(m.value); setDryResult(null); setLiveResult(null); setParseError(''); }}
               style={{ background: mode === m.value ? 'rgba(251,146,60,0.12)' : 'transparent', color: mode === m.value ? '#fb923c' : 'rgba(255,255,255,0.4)' }}>
               {m.label}
             </button>
           ))}
         </div>
 
-        {/* Entity selector — shared */}
+        {/* Entity selector */}
         <div className="bi-card">
           <div className="bi-section-title">{mode === 'import' ? '1. Select Entity' : 'Select Entity'}</div>
           <div className="bi-entity-grid">
             {ENTITIES.map(e => (
               <button key={e.value} className="bi-entity-btn"
-                onClick={() => { setEntity(e.value); setResult(null); setRecords([]); setFileName(''); setParseError(''); }}
+                onClick={() => { setEntity(e.value); setDryResult(null); setLiveResult(null); setRecords([]); setFileName(''); setParseError(''); }}
                 style={{ color: entity === e.value ? e.color : 'rgba(255,255,255,0.4)', background: entity === e.value ? `${e.color}15` : 'rgba(255,255,255,0.04)', border: `0.5px solid ${entity === e.value ? `${e.color}40` : 'rgba(255,255,255,0.08)'}` }}>
                 {e.label}
               </button>
             ))}
           </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ marginTop:12, display:'flex', gap:16, flexWrap:'wrap' }}>
             <div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Required fields</div>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {entityCfg.requiredFields.map(f => (
-                  <span key={f} style={{ ...MONO, fontSize: 11, padding: '2px 7px', borderRadius: 4, background: `${entityCfg.color}15`, color: entityCfg.color, border: `0.5px solid ${entityCfg.color}30` }}>{f}</span>
-                ))}
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Required fields</div>
+              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                {entityCfg.requiredFields.map(f => <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:`${entityCfg.color}15`, color:entityCfg.color, border:`0.5px solid ${entityCfg.color}30` }}>{f}</span>)}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Optional fields</div>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {entityCfg.optionalFields.map(f => (
-                  <span key={f} style={{ ...MONO, fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(255,255,255,0.08)' }}>{f}</span>
-                ))}
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Optional fields</div>
+              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                {entityCfg.optionalFields.map(f => <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.4)', border:'0.5px solid rgba(255,255,255,0.08)' }}>{f}</span>)}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── IMPORT MODE ────────────────────────────────────────────────── */}
+        {/* ── IMPORT MODE ── */}
         {mode === 'import' && (
           <>
             {/* Data Source */}
             <div className="bi-card">
               <div className="bi-section-title">2. Data Source</div>
               <div className="bi-channel-tabs">
-                {([
-                  { value: 'file' as Channel, label: 'Upload File' },
-                  { value: 'url'  as Channel, label: 'Fetch from URL' },
-                  { value: 'api'  as Channel, label: 'API Reference' },
-                ]).map(c => (
+                {([{ value:'file' as Channel, label:'Upload File' }, { value:'url' as Channel, label:'Fetch from URL' }, { value:'api' as Channel, label:'API Reference' }]).map(c => (
                   <button key={c.value} className="bi-channel-tab"
-                    onClick={() => { setChannel(c.value); setResult(null); setParseError(''); }}
+                    onClick={() => { setChannel(c.value); setDryResult(null); setLiveResult(null); setParseError(''); }}
                     style={{ background: channel === c.value ? 'rgba(251,146,60,0.12)' : 'transparent', color: channel === c.value ? '#fb923c' : 'rgba(255,255,255,0.4)' }}>
                     {c.label}
                   </button>
@@ -364,52 +558,38 @@ export default function BulkImportPage() {
 
               {channel === 'file' && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {[{ label: 'CSV', color: '#4ade80' }, { label: 'Excel .xlsx', color: '#60a5fa' }, { label: 'Excel .xls', color: '#60a5fa' }].map(f => (
-                        <span key={f.label} className="bi-format-badge" style={{ background: `${f.color}15`, color: f.color, border: `0.5px solid ${f.color}30` }}>{f.label}</span>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {[{ label:'CSV', color:'#4ade80' }, { label:'Excel .xlsx', color:'#60a5fa' }, { label:'Excel .xls', color:'#60a5fa' }].map(f => (
+                        <span key={f.label} className="bi-format-badge" style={{ background:`${f.color}15`, color:f.color, border:`0.5px solid ${f.color}30` }}>{f.label}</span>
                       ))}
                     </div>
-                    <button onClick={downloadTemplate} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)' }}>
-                      Download Template
-                    </button>
+                    <button onClick={downloadTemplate} style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor:'pointer', fontFamily:"'IBM Plex Sans',sans-serif", fontWeight:500, color:'#60a5fa', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.2)' }}>Download Template</button>
                   </div>
                   <div className="bi-drop" onClick={() => fileRef.current?.click()}>
-                    <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={handleFile} onClick={e => { (e.target as HTMLInputElement).value = ''; }} />
+                    <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display:'none' }} onChange={handleFile} onClick={e => { (e.target as HTMLInputElement).value = ''; }} />
                     {fileName ? (
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
-                          <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 500 }}>{fileName}</span>
-                          {fileTypeLabel && (
-                            <span className="bi-format-badge" style={{ background: fileTypeLabel === 'Excel' ? 'rgba(96,165,250,0.15)' : 'rgba(74,222,128,0.15)', color: fileTypeLabel === 'Excel' ? '#60a5fa' : '#4ade80', border: `0.5px solid ${fileTypeLabel === 'Excel' ? 'rgba(96,165,250,0.3)' : 'rgba(74,222,128,0.3)'}` }}>{fileTypeLabel}</span>
-                          )}
+                        <div style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'center', marginBottom:4 }}>
+                          <span style={{ fontSize:13, color:'#4ade80', fontWeight:500 }}>{fileName}</span>
+                          {fileTypeLabel && <span className="bi-format-badge" style={{ background: fileTypeLabel==='Excel'?'rgba(96,165,250,0.15)':'rgba(74,222,128,0.15)', color: fileTypeLabel==='Excel'?'#60a5fa':'#4ade80', border:`0.5px solid ${fileTypeLabel==='Excel'?'rgba(96,165,250,0.3)':'rgba(74,222,128,0.3)'}` }}>{fileTypeLabel}</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{records.length} rows loaded — click to replace</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>{records.length} rows loaded — click to replace</div>
                       </div>
                     ) : (
                       <div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>Click to upload CSV or Excel file</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>Accepts .csv, .xlsx, .xls — max 2,000 rows</div>
+                        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:6 }}>Click to upload CSV or Excel file</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>Accepts .csv, .xlsx, .xls — max 2,000 rows</div>
                       </div>
                     )}
                   </div>
                   {records.length > 0 && (
-                    <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Preview — first {Math.min(5, records.length)} of {records.length} rows</div>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                          <thead>
-                            <tr>{Object.keys(records[0]).map(h => (
-                              <th key={h} style={{ padding: '4px 10px', fontSize: 10, color: entityCfg.color, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
-                            ))}</tr>
-                          </thead>
-                          <tbody>
-                            {records.slice(0, 5).map((row, i) => (
-                              <tr key={i}>{Object.values(row).map((val, j) => (
-                                <td key={j} style={{ padding: '5px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>{String(val)}</td>
-                              ))}</tr>
-                            ))}
-                          </tbody>
+                    <div style={{ marginTop:14 }}>
+                      <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>Preview — first {Math.min(5, records.length)} of {records.length} rows</div>
+                      <div style={{ overflowX:'auto' }}>
+                        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                          <thead><tr>{Object.keys(records[0]).map(h => <th key={h} style={{ padding:'4px 10px', fontSize:10, color:entityCfg.color, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.08em', textAlign:'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>)}</tr></thead>
+                          <tbody>{records.slice(0,5).map((row,i) => <tr key={i}>{Object.values(row).map((val,j) => <td key={j} style={{ padding:'5px 10px', borderBottom:'0.5px solid rgba(255,255,255,0.04)', ...MONO, color:'rgba(255,255,255,0.6)', whiteSpace:'nowrap' }}>{String(val)}</td>)}</tr>)}</tbody>
                         </table>
                       </div>
                     </div>
@@ -418,56 +598,22 @@ export default function BulkImportPage() {
               )}
 
               {channel === 'url' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <label style={LABEL}>Source URL *</label>
-                    <input style={INPUT} placeholder="https://my-old-system.com/api/export/items" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <label style={LABEL}>Auth Token (optional)</label>
-                    <input style={INPUT} placeholder="Bearer eyJ... or plain token" value={sourceToken} onChange={e => setSourceToken(e.target.value)} />
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7 }}>
-                    The URL must return a JSON array in Sunset ERP format. The server fetches and imports directly.
-                  </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Source URL *</label><input style={INPUT} placeholder="https://my-old-system.com/api/export/items" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} /></div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Auth Token (optional)</label><input style={INPUT} placeholder="Bearer eyJ... or plain token" value={sourceToken} onChange={e => setSourceToken(e.target.value)} /></div>
+                  <div style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:7, padding:'8px 12px', fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.7 }}>The URL must return a JSON array in Sunset ERP format.</div>
                 </div>
               )}
 
               {channel === 'api' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, padding: '12px 16px' }}>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Endpoint</div>
-                    <div style={{ ...MONO, fontSize: 13, color: '#4ade80', marginBottom: 12 }}>POST /api/bulk-import/{entity}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Option A — Direct payload</div>
-                    <div className="bi-preview" style={{ marginBottom: 12 }}>
-                      <pre style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>{`{
-  "dryRun": true,
-  "upsert": false,
-  "records": [
-    { ${entityCfg.requiredFields.map(f => `"${f}": "..."`).join(', ')} }
-  ]
-}`}</pre>
-                    </div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Option B — Pull from external URL</div>
-                    <div className="bi-preview">
-                      <pre style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>{`{
-  "dryRun": true,
-  "upsert": true,
-  "sourceUrl": "https://old-system.com/api/items",
-  "sourceToken": "Bearer eyJ..."
-}`}</pre>
-                    </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  <div style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:7, padding:'12px 16px' }}>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Endpoint</div>
+                    <div style={{ ...MONO, fontSize:13, color:'#4ade80', marginBottom:12 }}>POST /api/bulk-import/{entity}</div>
+                    <div className="bi-preview"><pre style={{ ...MONO, fontSize:11, color:'rgba(255,255,255,0.5)', lineHeight:1.7 }}>{`{\n  "dryRun": true,\n  "upsert": false,\n  "records": [\n    { ${entityCfg.requiredFields.map(f => `"${f}": "..."`).join(', ')} }\n  ]\n}`}</pre></div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <label style={LABEL}>Pull from URL (test here)</label>
-                    <input style={INPUT} placeholder="https://my-old-system.com/api/export/items" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} />
-                  </div>
-                  {sourceUrl && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      <label style={LABEL}>Auth Token (optional)</label>
-                      <input style={INPUT} placeholder="Bearer eyJ..." value={sourceToken} onChange={e => setSourceToken(e.target.value)} />
-                    </div>
-                  )}
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Pull from URL (test here)</label><input style={INPUT} placeholder="https://my-old-system.com/api/export/items" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} /></div>
+                  {sourceUrl && <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Auth Token (optional)</label><input style={INPUT} placeholder="Bearer eyJ..." value={sourceToken} onChange={e => setSourceToken(e.target.value)} /></div>}
                 </div>
               )}
             </div>
@@ -476,124 +622,52 @@ export default function BulkImportPage() {
             <div className="bi-card">
               <div className="bi-section-title">3. Options</div>
               <div className="bi-opts">
-                {/* Dry Run toggle */}
                 <button className="bi-opt-btn" onClick={() => setDryRun(v => !v)}
-                  style={{ color: dryRun ? '#fbbf24' : '#4ade80', background: dryRun ? 'rgba(251,191,36,0.1)' : 'rgba(74,222,128,0.1)', border: `0.5px solid ${dryRun ? 'rgba(251,191,36,0.25)' : 'rgba(74,222,128,0.25)'}` }}>
+                  style={{ color:dryRun?'#fbbf24':'#4ade80', background:dryRun?'rgba(251,191,36,0.1)':'rgba(74,222,128,0.1)', border:`0.5px solid ${dryRun?'rgba(251,191,36,0.25)':'rgba(74,222,128,0.25)'}` }}>
                   {dryRun ? 'Dry Run — validate only' : 'Live Run — apply changes'}
                 </button>
-
-                {/* Upsert toggle */}
                 <button className="bi-opt-btn" onClick={() => setUpsert(v => !v)}
-                  style={{ color: upsert ? '#a78bfa' : 'rgba(255,255,255,0.4)', background: upsert ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${upsert ? 'rgba(167,139,250,0.25)' : 'rgba(255,255,255,0.08)'}` }}>
+                  style={{ color:upsert?'#a78bfa':'rgba(255,255,255,0.4)', background:upsert?'rgba(167,139,250,0.1)':'rgba(255,255,255,0.04)', border:`0.5px solid ${upsert?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.08)'}` }}>
                   {upsert ? 'Upsert — update if exists' : 'Skip — ignore duplicates'}
                 </button>
-
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', flex: 1 }}>
-                  {dryRun
-                    ? 'No changes applied — validates data only.'
-                    : upsert
-                    ? 'New records inserted. Existing records updated with new values.'
-                    : 'New records inserted. Existing records skipped.'}
+                <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', flex:1 }}>
+                  {dryRun ? 'Validates data → shows result modal → you decide to run or cancel.' : upsert ? 'New records inserted. Existing records updated.' : 'New records inserted. Duplicates skipped.'}
                 </span>
-
-                <button onClick={handleRun} disabled={busy || !canRun}
-                  style={{ padding: '7px 22px', borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: canRun && !busy ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', background: dryRun ? 'linear-gradient(135deg,#92400e,#d97706,#fbbf24)' : upsert ? 'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)' : 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border: 'none', opacity: busy || !canRun ? 0.5 : 1, whiteSpace: 'nowrap', boxShadow: busy || !canRun ? 'none' : '0 3px 12px rgba(0,0,0,0.3)' }}>
-                  {busy ? 'Running...' : dryRun ? 'Validate' : upsert ? `Upsert ${entityCfg.label}` : `Import ${entityCfg.label}`}
+                <button
+                  onClick={dryRun ? handleValidate : handleDirectLive}
+                  disabled={busy || !canRun}
+                  style={{ padding:'7px 22px', borderRadius:7, fontSize:13, fontWeight:500, cursor: canRun && !busy ? 'pointer' : 'not-allowed', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background: dryRun ? 'linear-gradient(135deg,#92400e,#d97706,#fbbf24)' : upsert ? 'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)' : 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', opacity: busy || !canRun ? 0.5 : 1, whiteSpace:'nowrap', boxShadow: busy || !canRun ? 'none' : '0 3px 12px rgba(0,0,0,0.3)' }}>
+                  {busy ? 'Running…' : dryRun ? 'Validate' : upsert ? `Upsert ${entityCfg.label}` : `Import ${entityCfg.label}`}
                 </button>
               </div>
-              {parseError && (
-                <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{parseError}</div>
-              )}
+              {parseError && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{parseError}</div>}
             </div>
-
-            {/* Result */}
-            {result && (
-              <div className="bi-card">
-                <div className="bi-section-title">
-                  Result — {result.dryRun ? 'Dry Run' : result.upsert ? 'Upsert' : 'Import'}
-                </div>
-                <div className="bi-result-row">
-                  {[
-                    { label: 'Total',    value: result.total,    color: '#e2dfd8' },
-                    { label: 'Valid',    value: result.valid,    color: '#4ade80' },
-                    { label: result.dryRun ? 'Would Insert' : 'Inserted', value: result.dryRun ? result.valid - result.skipped - (result.updated ?? 0) : result.inserted, color: '#4ade80' },
-                    { label: result.dryRun ? 'Would Update' : 'Updated',  value: result.dryRun ? (result.upsert ? result.skipped : 0) : (result.updated ?? 0), color: '#a78bfa' },
-                    { label: 'Skipped', value: result.dryRun ? 0 : result.skipped, color: '#fbbf24' },
-                  ].map(s => (
-                    <div key={s.label} className="bi-result-stat">
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
-                      <div style={{ ...MONO, fontSize: 22, fontWeight: 500, color: s.color }}>{s.value}</div>
-                    </div>
-                  ))}
-                </div>
-                {result.errors.length > 0 ? (
-                  <>
-                    <div style={{ fontSize: 10, color: 'rgba(248,113,113,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                      {result.errors.length} validation error{result.errors.length !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ maxHeight: 240, overflowY: 'auto', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, overflow: 'hidden' }}>
-                      <table className="bi-error-table">
-                        <thead><tr><th>Row</th><th>Field</th><th>Message</th></tr></thead>
-                        <tbody>
-                          {result.errors.map((e, i) => (
-                            <tr key={i}>
-                              <td style={{ ...MONO, color: '#f87171' }}>{e.row}</td>
-                              <td style={{ ...MONO, color: '#fbbf24' }}>{e.field}</td>
-                              <td style={{ color: 'rgba(255,255,255,0.6)' }}>{e.message}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12, color: '#4ade80', padding: '4px 0' }}>
-                    {result.dryRun
-                      ? `All ${result.valid} records valid. Switch to Live Run to apply.`
-                      : result.upsert
-                      ? `${result.inserted} inserted, ${result.updated} updated.${result.skipped > 0 ? ` ${result.skipped} errors skipped.` : ''}`
-                      : `${result.inserted} records inserted.${result.skipped > 0 ? ` ${result.skipped} duplicates skipped.` : ''}`}
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )}
 
-        {/* ── EXPORT MODE ────────────────────────────────────────────────── */}
+        {/* ── EXPORT MODE ── */}
         {mode === 'export' && (
           <div className="bi-card">
             <div className="bi-section-title">Download Options</div>
             <div className="bi-export-card">
               <div className="bi-export-action">
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', marginBottom: 4 }}>Import Template — {entityCfg.label}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-                    Empty Excel file with all columns pre-configured. Fill it in and upload via Import tab.
-                    Required fields: <span style={{ color: entityCfg.color }}>{entityCfg.requiredFields.join(', ')}</span>
-                  </div>
+                  <div style={{ fontSize:13, fontWeight:500, color:'#e2dfd8', marginBottom:4 }}>Import Template — {entityCfg.label}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>Empty Excel with all columns. Required fields: <span style={{ color:entityCfg.color }}>{entityCfg.requiredFields.join(', ')}</span></div>
                 </div>
-                <button onClick={downloadTemplate} style={{ padding: '8px 18px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', whiteSpace: 'nowrap' }}>
-                  Download Template
-                </button>
+                <button onClick={downloadTemplate} style={{ padding:'8px 18px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:"'IBM Plex Sans',sans-serif", color:'#60a5fa', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.2)', whiteSpace:'nowrap' }}>Download Template</button>
               </div>
               <div className="bi-export-action">
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', marginBottom: 4 }}>Export Current Data — {entityCfg.label}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-                    Download all existing {entityCfg.label.toLowerCase()} records as Excel. Use for backups, analysis, or mass updates via Upsert.
-                  </div>
+                  <div style={{ fontSize:13, fontWeight:500, color:'#e2dfd8', marginBottom:4 }}>Export Current Data — {entityCfg.label}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>Download all existing {entityCfg.label.toLowerCase()} records as Excel.</div>
                 </div>
-                <button onClick={handleExport} disabled={exportBusy} style={{ padding: '8px 18px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: exportBusy ? 'not-allowed' : 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', background: 'linear-gradient(135deg,#1e3a5f,#1d4ed8,#3b82f6)', border: 'none', whiteSpace: 'nowrap', opacity: exportBusy ? 0.5 : 1 }}>
-                  {exportBusy ? 'Exporting...' : 'Export to Excel'}
+                <button onClick={handleExport} disabled={exportBusy} style={{ padding:'8px 18px', borderRadius:7, fontSize:12, fontWeight:500, cursor: exportBusy?'not-allowed':'pointer', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#1e3a5f,#1d4ed8,#3b82f6)', border:'none', whiteSpace:'nowrap', opacity:exportBusy?0.5:1 }}>
+                  {exportBusy ? 'Exporting…' : 'Export to Excel'}
                 </button>
               </div>
-              {parseError && (
-                <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{parseError}</div>
-              )}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, padding: '10px 14px', fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7 }}>
-                Export a file, make changes, then re-import with Upsert enabled to apply mass updates across all records at once.
-              </div>
+              {parseError && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{parseError}</div>}
+              <div style={{ background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:7, padding:'10px 14px', fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.7 }}>Export → edit → re-import with Upsert for mass updates.</div>
             </div>
           </div>
         )}

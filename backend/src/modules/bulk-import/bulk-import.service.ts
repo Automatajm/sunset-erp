@@ -1115,30 +1115,41 @@ export class BulkImportService {
     }
     return this.buildResult('bom-routings', records.length, inserted, updated, skipped, errors, dryRun, upsert);
   }
-  async importWarehouseLocations(
+  // ============================================================================
+// REPLACE importWarehouseLocations() in bulk-import.service.ts
+// Fix: dry run now builds an in-memory cache of "would-be-created" nodes
+// so parent references within the same batch resolve correctly
+// ============================================================================
+
+async importWarehouseLocations(
   tenantId: string, userId: string,
   records: Record<string, any>[], dryRun: boolean, upsert: boolean,
 ): Promise<BulkImportResult> {
   const errors: BulkImportError[] = [];
   let inserted = 0, updated = 0, skipped = 0;
- 
+
   const VALID_LEVELS = ['zone', 'aisle', 'rack', 'level', 'bin'];
- 
+
+  // ── In-memory cache for dry run parent resolution ─────────────────────────
+  // Maps fullCode → true for nodes that would be created in this batch
+  // so that child rows can resolve parents even in dry run mode
+  const dryCache = new Set<string>();
+
   for (let i = 0; i < records.length; i++) {
     const r = records[i]; const row = i + 1;
     const rowErrors: BulkImportError[] = [];
- 
+
     const warehouseCode = this.req(row, r, 'warehouseCode', rowErrors);
     const level         = this.req(row, r, 'level',         rowErrors);
     const code          = this.req(row, r, 'code',          rowErrors);
     const name          = this.req(row, r, 'name',          rowErrors);
- 
+
     if (rowErrors.length > 0) { errors.push(...rowErrors); continue; }
     if (!VALID_LEVELS.includes(level!)) {
       errors.push({ row, field: 'level', message: `Invalid level: ${level}. Must be one of: ${VALID_LEVELS.join(', ')}` });
       continue;
     }
- 
+
     // Resolve warehouse
     const warehouse = await this.prisma.warehouse.findFirst({
       where: { tenantId, code: warehouseCode!, deletedAt: null },
@@ -1147,9 +1158,55 @@ export class BulkImportService {
       errors.push({ row, field: 'warehouseCode', message: `Warehouse code ${warehouseCode} not found` });
       continue;
     }
- 
+
     const parentCode = this.str(r, 'parentCode');
- 
+
+    // ── Helper: find zone by code (DB + dryCache) ──────────────────────────
+    const findZone = async (zoneCode: string) => {
+      const db = await this.prisma.warehouseZone.findFirst({
+        where: { tenantId, warehouseId: warehouse.id, code: zoneCode, deletedAt: null },
+      });
+      if (db) return { id: db.id, code: db.code, fullCode: db.code };
+      // Check dry cache
+      if (dryCache.has(`ZONE:${warehouseCode}:${zoneCode}`)) {
+        return { id: `dry:${zoneCode}`, code: zoneCode, fullCode: zoneCode };
+      }
+      return null;
+    };
+
+    const findAisle = async (aisleFullCode: string) => {
+      const db = await this.prisma.warehouseAisle.findFirst({
+        where: { tenantId, fullCode: aisleFullCode, zone: { warehouseId: warehouse.id }, deletedAt: null },
+      });
+      if (db) return { id: db.id, fullCode: db.fullCode };
+      if (dryCache.has(`AISLE:${warehouseCode}:${aisleFullCode}`)) {
+        return { id: `dry:${aisleFullCode}`, fullCode: aisleFullCode };
+      }
+      return null;
+    };
+
+    const findRack = async (rackFullCode: string) => {
+      const db = await this.prisma.warehouseRack.findFirst({
+        where: { tenantId, fullCode: rackFullCode, aisle: { zone: { warehouseId: warehouse.id } }, deletedAt: null },
+      });
+      if (db) return { id: db.id, fullCode: db.fullCode };
+      if (dryCache.has(`RACK:${warehouseCode}:${rackFullCode}`)) {
+        return { id: `dry:${rackFullCode}`, fullCode: rackFullCode };
+      }
+      return null;
+    };
+
+    const findLevel = async (levelFullCode: string) => {
+      const db = await this.prisma.warehouseLevel.findFirst({
+        where: { tenantId, fullCode: levelFullCode, rack: { aisle: { zone: { warehouseId: warehouse.id } } }, deletedAt: null },
+      });
+      if (db) return { id: db.id, fullCode: db.fullCode };
+      if (dryCache.has(`LEVEL:${warehouseCode}:${levelFullCode}`)) {
+        return { id: `dry:${levelFullCode}`, fullCode: levelFullCode };
+      }
+      return null;
+    };
+
     // ── Zone ─────────────────────────────────────────────────────────────
     if (level === 'zone') {
       const existing = await this.prisma.warehouseZone.findFirst({
@@ -1157,227 +1214,112 @@ export class BulkImportService {
       });
       if (existing) {
         if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouseZone.update({
-              where: { id: existing.id },
-              data: {
-                name: name!,
-                zoneType:    this.str(r, 'zoneType')    ?? existing.zoneType,
-                description: this.str(r, 'description') ?? existing.description ?? undefined,
-                updatedBy: userId,
-              },
-            });
-          }
+          if (!dryRun) await this.prisma.warehouseZone.update({ where: { id: existing.id }, data: { name: name!, zoneType: this.str(r, 'zoneType') ?? existing.zoneType, description: this.str(r, 'description') ?? existing.description ?? undefined, updatedBy: userId } });
           updated++;
         } else { skipped++; }
+        // Cache existing for child resolution in this batch
+        dryCache.add(`ZONE:${warehouseCode}:${code}`);
         continue;
       }
       if (!dryRun) {
-        await this.prisma.warehouseZone.create({
-          data: {
-            tenantId, warehouseId: warehouse.id,
-            code: code!, name: name!,
-            zoneType:    this.str(r, 'zoneType')    ?? 'storage',
-            description: this.str(r, 'description'),
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
+        await this.prisma.warehouseZone.create({ data: { tenantId, warehouseId: warehouse.id, code: code!, name: name!, zoneType: this.str(r, 'zoneType') ?? 'storage', description: this.str(r, 'description'), isActive: true, createdBy: userId, updatedBy: userId } });
       }
+      // Add to dry cache so subsequent rows can reference this zone
+      dryCache.add(`ZONE:${warehouseCode}:${code}`);
       inserted++;
       continue;
     }
- 
+
     // ── Aisle ─────────────────────────────────────────────────────────────
     if (level === 'aisle') {
-      if (!parentCode) {
-        errors.push({ row, field: 'parentCode', message: 'parentCode (zone code) required for aisle' });
-        continue;
-      }
-      const zone = await this.prisma.warehouseZone.findFirst({
-        where: { tenantId, warehouseId: warehouse.id, code: parentCode, deletedAt: null },
-      });
-      if (!zone) {
-        errors.push({ row, field: 'parentCode', message: `Zone code ${parentCode} not found in warehouse ${warehouseCode}` });
-        continue;
-      }
-      const fullCode = `${zone.code}-${code}`;
-      const existing = await this.prisma.warehouseAisle.findFirst({
-        where: { zoneId: zone.id, code: code!, deletedAt: null },
-      });
+      if (!parentCode) { errors.push({ row, field: 'parentCode', message: 'parentCode (zone code) required for aisle' }); continue; }
+      const zone = await findZone(parentCode);
+      if (!zone) { errors.push({ row, field: 'parentCode', message: `Zone code ${parentCode} not found in warehouse ${warehouseCode}` }); continue; }
+      const fullCode = `${zone.fullCode}-${code}`;
+      const isDryNode = zone.id.startsWith('dry:');
+      const existing = isDryNode ? null : await this.prisma.warehouseAisle.findFirst({ where: { zoneId: zone.id, code: code!, deletedAt: null } });
       if (existing) {
-        if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouseAisle.update({
-              where: { id: existing.id },
-              data: { name: name!, fullCode, updatedBy: userId },
-            });
-          }
-          updated++;
-        } else { skipped++; }
+        if (upsert) { if (!dryRun) await this.prisma.warehouseAisle.update({ where: { id: existing.id }, data: { name: name!, fullCode, updatedBy: userId } }); updated++; }
+        else { skipped++; }
+        dryCache.add(`AISLE:${warehouseCode}:${fullCode}`);
         continue;
       }
-      if (!dryRun) {
-        await this.prisma.warehouseAisle.create({
-          data: {
-            tenantId, zoneId: zone.id,
-            code: code!, name: name!, fullCode,
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
+      if (!dryRun && !isDryNode) {
+        await this.prisma.warehouseAisle.create({ data: { tenantId, zoneId: zone.id, code: code!, name: name!, fullCode, isActive: true, createdBy: userId, updatedBy: userId } });
       }
+      dryCache.add(`AISLE:${warehouseCode}:${fullCode}`);
       inserted++;
       continue;
     }
- 
+
     // ── Rack ──────────────────────────────────────────────────────────────
     if (level === 'rack') {
-      if (!parentCode) {
-        errors.push({ row, field: 'parentCode', message: 'parentCode (aisle fullCode e.g. STOR-01) required for rack' });
-        continue;
-      }
-      const aisle = await this.prisma.warehouseAisle.findFirst({
-        where: { tenantId, fullCode: parentCode, zone: { warehouseId: warehouse.id }, deletedAt: null },
-      });
-      if (!aisle) {
-        errors.push({ row, field: 'parentCode', message: `Aisle fullCode ${parentCode} not found` });
-        continue;
-      }
+      if (!parentCode) { errors.push({ row, field: 'parentCode', message: 'parentCode (aisle fullCode e.g. STOR-01) required for rack' }); continue; }
+      const aisle = await findAisle(parentCode);
+      if (!aisle) { errors.push({ row, field: 'parentCode', message: `Aisle fullCode ${parentCode} not found` }); continue; }
       const fullCode = `${aisle.fullCode}-${code}`;
-      const existing = await this.prisma.warehouseRack.findFirst({
-        where: { aisleId: aisle.id, code: code!, deletedAt: null },
-      });
+      const isDryNode = aisle.id.startsWith('dry:');
+      const existing = isDryNode ? null : await this.prisma.warehouseRack.findFirst({ where: { aisleId: aisle.id, code: code!, deletedAt: null } });
       if (existing) {
-        if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouseRack.update({
-              where: { id: existing.id },
-              data: { name: name!, fullCode, updatedBy: userId },
-            });
-          }
-          updated++;
-        } else { skipped++; }
+        if (upsert) { if (!dryRun) await this.prisma.warehouseRack.update({ where: { id: existing.id }, data: { name: name!, fullCode, updatedBy: userId } }); updated++; }
+        else { skipped++; }
+        dryCache.add(`RACK:${warehouseCode}:${fullCode}`);
         continue;
       }
-      if (!dryRun) {
-        await this.prisma.warehouseRack.create({
-          data: {
-            tenantId, aisleId: aisle.id,
-            code: code!, name: name!, fullCode,
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
+      if (!dryRun && !isDryNode) {
+        await this.prisma.warehouseRack.create({ data: { tenantId, aisleId: aisle.id, code: code!, name: name!, fullCode, isActive: true, createdBy: userId, updatedBy: userId } });
       }
+      dryCache.add(`RACK:${warehouseCode}:${fullCode}`);
       inserted++;
       continue;
     }
- 
+
     // ── Level ─────────────────────────────────────────────────────────────
     if (level === 'level') {
-      if (!parentCode) {
-        errors.push({ row, field: 'parentCode', message: 'parentCode (rack fullCode e.g. STOR-01-01) required for level' });
-        continue;
-      }
-      const rack = await this.prisma.warehouseRack.findFirst({
-        where: { tenantId, fullCode: parentCode, aisle: { zone: { warehouseId: warehouse.id } }, deletedAt: null },
-      });
-      if (!rack) {
-        errors.push({ row, field: 'parentCode', message: `Rack fullCode ${parentCode} not found` });
-        continue;
-      }
+      if (!parentCode) { errors.push({ row, field: 'parentCode', message: 'parentCode (rack fullCode e.g. STOR-01-01) required for level' }); continue; }
+      const rack = await findRack(parentCode);
+      if (!rack) { errors.push({ row, field: 'parentCode', message: `Rack fullCode ${parentCode} not found` }); continue; }
       const fullCode = `${rack.fullCode}-${code}`;
-      const existing = await this.prisma.warehouseLevel.findFirst({
-        where: { rackId: rack.id, code: code!, deletedAt: null },
-      });
+      const isDryNode = rack.id.startsWith('dry:');
+      const existing = isDryNode ? null : await this.prisma.warehouseLevel.findFirst({ where: { rackId: rack.id, code: code!, deletedAt: null } });
       if (existing) {
         if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouseLevel.update({
-              where: { id: existing.id },
-              data: {
-                name: name!, fullCode,
-                maxWeightKg:  this.num(r, 'maxWeightKg')  ?? existing.maxWeightKg  ?? undefined,
-                maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined,
-                maxPallets:   this.num(r, 'maxPallets')   != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined,
-                updatedBy: userId,
-              },
-            });
-          }
+          if (!dryRun) await this.prisma.warehouseLevel.update({ where: { id: existing.id }, data: { name: name!, fullCode, maxWeightKg: this.num(r, 'maxWeightKg') ?? existing.maxWeightKg ?? undefined, maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined, maxPallets: this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined, updatedBy: userId } });
           updated++;
         } else { skipped++; }
+        dryCache.add(`LEVEL:${warehouseCode}:${fullCode}`);
         continue;
       }
-      if (!dryRun) {
-        await this.prisma.warehouseLevel.create({
-          data: {
-            tenantId, rackId: rack.id,
-            code: code!, name: name!, fullCode,
-            maxWeightKg:  this.num(r, 'maxWeightKg'),
-            maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
-            maxPallets:   this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
+      if (!dryRun && !isDryNode) {
+        await this.prisma.warehouseLevel.create({ data: { tenantId, rackId: rack.id, code: code!, name: name!, fullCode, maxWeightKg: this.num(r, 'maxWeightKg'), maxVolumeLtr: this.num(r, 'maxVolumeLtr'), maxPallets: this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined, isActive: true, createdBy: userId, updatedBy: userId } });
       }
+      dryCache.add(`LEVEL:${warehouseCode}:${fullCode}`);
       inserted++;
       continue;
     }
- 
+
     // ── Bin ───────────────────────────────────────────────────────────────
     if (level === 'bin') {
-      if (!parentCode) {
-        errors.push({ row, field: 'parentCode', message: 'parentCode (level fullCode e.g. STOR-01-01-01) required for bin' });
-        continue;
-      }
-      const lvl = await this.prisma.warehouseLevel.findFirst({
-        where: { tenantId, fullCode: parentCode, rack: { aisle: { zone: { warehouseId: warehouse.id } } }, deletedAt: null },
-      });
-      if (!lvl) {
-        errors.push({ row, field: 'parentCode', message: `Level fullCode ${parentCode} not found` });
-        continue;
-      }
+      if (!parentCode) { errors.push({ row, field: 'parentCode', message: 'parentCode (level fullCode e.g. STOR-01-01-01) required for bin' }); continue; }
+      const lvl = await findLevel(parentCode);
+      if (!lvl) { errors.push({ row, field: 'parentCode', message: `Level fullCode ${parentCode} not found` }); continue; }
       const fullCode = `${lvl.fullCode}-${code}`;
-      const existing = await this.prisma.warehouseBin.findFirst({
-        where: { levelId: lvl.id, code: code!, deletedAt: null },
-      });
+      const isDryNode = lvl.id.startsWith('dry:');
+      const existing = isDryNode ? null : await this.prisma.warehouseBin.findFirst({ where: { levelId: lvl.id, code: code!, deletedAt: null } });
       if (existing) {
         if (upsert) {
-          if (!dryRun) {
-            await this.prisma.warehouseBin.update({
-              where: { id: existing.id },
-              data: {
-                name: name!, fullCode,
-                binType:      this.str(r, 'binType')      ?? existing.binType,
-                maxWeightKg:  this.num(r, 'maxWeightKg')  ?? existing.maxWeightKg  ?? undefined,
-                maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined,
-                maxPallets:   this.num(r, 'maxPallets')   != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined,
-                notes:        this.str(r, 'notes')        ?? existing.notes        ?? undefined,
-                updatedBy: userId,
-              },
-            });
-          }
+          if (!dryRun) await this.prisma.warehouseBin.update({ where: { id: existing.id }, data: { name: name!, fullCode, binType: this.str(r, 'binType') ?? existing.binType, maxWeightKg: this.num(r, 'maxWeightKg') ?? existing.maxWeightKg ?? undefined, maxVolumeLtr: this.num(r, 'maxVolumeLtr') ?? existing.maxVolumeLtr ?? undefined, maxPallets: this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : existing.maxPallets ?? undefined, notes: this.str(r, 'notes') ?? existing.notes ?? undefined, updatedBy: userId } });
           updated++;
         } else { skipped++; }
         continue;
       }
-      if (!dryRun) {
-        await this.prisma.warehouseBin.create({
-          data: {
-            tenantId, levelId: lvl.id,
-            code: code!, name: name!, fullCode,
-            binType:      this.str(r, 'binType') ?? 'standard',
-            maxWeightKg:  this.num(r, 'maxWeightKg'),
-            maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
-            maxPallets:   this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
-            allowMixedItems: this.bool(r, 'allowMixedItems', true),
-            notes:        this.str(r, 'notes'),
-            isActive: true, createdBy: userId, updatedBy: userId,
-          },
-        });
+      if (!dryRun && !isDryNode) {
+        await this.prisma.warehouseBin.create({ data: { tenantId, levelId: lvl.id, code: code!, name: name!, fullCode, binType: this.str(r, 'binType') ?? 'standard', maxWeightKg: this.num(r, 'maxWeightKg'), maxVolumeLtr: this.num(r, 'maxVolumeLtr'), maxPallets: this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined, allowMixedItems: this.bool(r, 'allowMixedItems', true), notes: this.str(r, 'notes'), isActive: true, createdBy: userId, updatedBy: userId } });
       }
       inserted++;
     }
   }
- 
+
   return this.buildResult('warehouse-locations', records.length, inserted, updated, skipped, errors, dryRun, upsert);
 }
 }
