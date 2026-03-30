@@ -1,28 +1,15 @@
 ﻿import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus,
-  Query,
+  Controller, Get, Post, Body, Patch, Param,
+  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
+  ApiTags, ApiOperation, ApiBearerAuth,
+  ApiResponse, ApiParam, ApiQuery,
 } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
+import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -38,22 +25,15 @@ export class PurchaseOrdersController {
   @RequirePermissions('PROCUREMENT:CREATE')
   @ApiOperation({ summary: 'Create a new purchase order' })
   @ApiResponse({ status: 201, description: 'PO created successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Supplier or item not found' })
-  async create(@Request() req, @Body() createPurchaseOrderDto: CreatePurchaseOrderDto) {
-    return this.purchaseOrdersService.create(
-      req.user.tenantId,
-      req.user.id,
-      createPurchaseOrderDto,
-    );
+  async create(@Request() req, @Body() dto: CreatePurchaseOrderDto) {
+    return this.purchaseOrdersService.create(req.user.tenantId, req.user.id, dto);
   }
 
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all purchase orders' })
-  @ApiQuery({ name: 'status', required: false, description: 'Filter by status' })
-  @ApiResponse({ status: 200, description: 'List of purchase orders' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiQuery({ name: 'status', required: false })
   async findAll(@Request() req, @Query('status') status?: string) {
     return this.purchaseOrdersService.findAll(req.user.tenantId, status);
   }
@@ -62,64 +42,51 @@ export class PurchaseOrdersController {
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get purchase order by ID' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
-  @ApiResponse({ status: 200, description: 'Purchase order details' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Purchase order not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.purchaseOrdersService.findOne(req.user.tenantId, id);
   }
 
   @Patch(':id')
   @RequirePermissions('PROCUREMENT:EDIT')
-  @ApiOperation({ summary: 'Update purchase order' })
+  @ApiOperation({ summary: 'Update purchase order (draft only)' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
-  @ApiResponse({ status: 200, description: 'PO updated successfully' })
-  @ApiResponse({ status: 400, description: 'Can only update draft POs' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Purchase order not found' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updatePurchaseOrderDto: UpdatePurchaseOrderDto,
-  ) {
-    return this.purchaseOrdersService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updatePurchaseOrderDto,
-    );
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdatePurchaseOrderDto) {
+    return this.purchaseOrdersService.update(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Patch(':id/status/:status')
   @RequirePermissions('PROCUREMENT:APPROVE')
-  @ApiOperation({ summary: 'Update purchase order status' })
+  @ApiOperation({ summary: 'Transition purchase order status' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
-  @ApiParam({ name: 'status', description: 'New status: approved, rejected, closed' })
-  @ApiResponse({ status: 200, description: 'Status updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Purchase order not found' })
+  @ApiParam({ name: 'status', description: 'confirmed | cancelled | closed' })
   async updateStatus(
     @Request() req,
     @Param('id') id: string,
     @Param('status') status: string,
   ) {
-    return this.purchaseOrdersService.updateStatus(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      status,
-    );
+    return this.purchaseOrdersService.updateStatus(req.user.tenantId, req.user.id, id, status);
+  }
+
+  @Post(':id/receive')
+  @RequirePermissions('PROCUREMENT:EDIT')
+  @ApiOperation({ summary: 'Receive goods against a purchase order — updates stock' })
+  @ApiParam({ name: 'id', description: 'PO UUID' })
+  @ApiResponse({ status: 200, description: 'Goods received, stock updated' })
+  @ApiResponse({ status: 400, description: 'PO not in receivable status or quantity exceeded' })
+  @ApiResponse({ status: 404, description: 'PO, line, or warehouse not found' })
+  async receive(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: ReceivePurchaseOrderDto,
+  ) {
+    return this.purchaseOrdersService.receive(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Delete(':id')
   @RequirePermissions('PROCUREMENT:DELETE')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete purchase order (soft delete)' })
+  @ApiOperation({ summary: 'Delete purchase order (draft only, soft delete)' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
-  @ApiResponse({ status: 200, description: 'PO deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Can only delete draft POs' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Purchase order not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.purchaseOrdersService.remove(req.user.tenantId, req.user.id, id);
   }

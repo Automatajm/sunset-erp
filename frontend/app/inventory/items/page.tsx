@@ -895,7 +895,7 @@ export default function ItemsPage() {
   // Filter system
   const itemsFilters = useMemo<ERPFilter<Item>[]>(() => [
     {
-      key: 'macroCategoryId', label: 'Macro Cat.', type: 'select', placeholder: 'All Macro Categories',
+      key: 'macroCategoryId', label: 'Macro Cat.', type: 'searchselect', placeholder: 'All Macro Categories',
       options: macroCategories.map(mc => ({ value: mc.id, label: `${mc.code} — ${mc.name}` })),
       filterFn: (row, val) => {
         const cat = (row as any).category;
@@ -903,13 +903,13 @@ export default function ItemsPage() {
       },
     },
     {
-      key: 'categoryId', label: 'Category', type: 'select', placeholder: 'All Categories',
-      options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` })),
+      key: 'categoryId', label: 'Category', type: 'searchselect', placeholder: 'All Categories',
+      options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}`, sublabel: (c as any).macroCategory?.name })),
       filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val,
     },
     {
-      key: 'supplierId', label: 'Supplier', type: 'select', placeholder: 'All Suppliers',
-      options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
+      key: 'supplierId', label: 'Supplier', type: 'searchselect', placeholder: 'All Suppliers',
+      options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.category ?? undefined })),
       filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val),
     },
     {

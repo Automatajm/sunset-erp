@@ -1,265 +1,377 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { itemsApi } from '@/lib/api/items';
-import { Supplier, Item, POStatus } from '@/lib/api/types';
+import { warehousesApi } from '@/lib/api/warehouses';
+import { Supplier, Item } from '@/lib/api/types';
 
-// ─── Real backend types ───────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type POStatus = 'draft' | 'confirmed' | 'partially_received' | 'received' | 'cancelled' | 'closed';
 
 interface POLine {
-  id: string;
-  lineNumber: number;
-  itemId: string;
-  item?: { id: string; code: string; name: string; baseUom: string };
+  id: string; lineNumber: number;
+  itemId: string; item?: { id: string; code: string; name: string; baseUom: string };
   description?: string;
-  orderedQuantity: string;
-  receivedQuantity: string;
-  uom: string;
-  unitPrice: string;
-  discountPercent: string;
-  lineTotal: string;
-  expectedDate?: string;
-  status: string;
+  orderedQuantity: string; receivedQuantity: string;
+  uom: string; unitPrice: string; discountPercent: string;
+  lineTotal: string; expectedDate?: string; status: string;
 }
 
 interface PO {
-  id: string;
-  poNumber: string;
-  supplierId: string;
+  id: string; poNumber: string; supplierId: string;
   supplier?: { id: string; code: string; name: string; email?: string; phone?: string };
-  poDate: string;
-  expectedDate?: string;
-  deliveryAddress?: string;
-  paymentTerms?: string;
-  currency?: string;
-  subtotal: string;
-  discountAmount: string;
-  taxAmount: string;
-  total: string;
-  status: POStatus;
-  notes?: string;
-  lines?: POLine[];
-  _count?: { lines: number };
-  createdAt: string;
+  poDate: string; expectedDate?: string; deliveryAddress?: string;
+  paymentTerms?: string; currency?: string;
+  subtotal: string; discountAmount: string; taxAmount: string; total: string;
+  status: POStatus; notes?: string;
+  lines?: POLine[]; _count?: { lines: number }; createdAt: string;
 }
 
-interface NewPOLine {
-  itemId: string;
-  description: string;
-  orderedQuantity: string;
-  uom: string;
-  unitPrice: string;
-  discountPercent: string;
-  expectedDate: string;
-}
+interface Warehouse { id: string; code: string; name: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function extractList(data: unknown): PO[] {
-  if (Array.isArray(data)) return data as PO[];
-  const d = data as Record<string, unknown>;
-  if (d?.value && Array.isArray(d.value)) return d.value as PO[];
-  return [];
-}
-
 function fmtAmt(v: string | number) {
-  const n = Number(v);
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(v));
 }
-
 function fmtDate(d?: string) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+function fmtDateShort(d?: string) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
-const EMPTY_LINE: NewPOLine = {
-  itemId: '', description: '', orderedQuantity: '', uom: '',
-  unitPrice: '', discountPercent: '0', expectedDate: '',
-};
+// ─── Status config ────────────────────────────────────────────────────────────
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<POStatus, { color: string; bg: string; border: string }> = {
-  draft:    { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  approved: { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  rejected: { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
-  closed:   { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+const STATUS_CFG: Record<POStatus, { color: string; bg: string; border: string; label: string }> = {
+  draft:              { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   label: 'Draft' },
+  confirmed:          { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   label: 'Confirmed' },
+  partially_received: { color: '#fb923c', bg: 'rgba(251,146,60,0.1)',   border: 'rgba(251,146,60,0.2)',   label: 'Partial' },
+  received:           { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   label: 'Received' },
+  cancelled:          { color: '#f87171', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  label: 'Cancelled' },
+  closed:             { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)',  label: 'Closed' },
 };
 
 function StatusBadge({ status }: { status: POStatus }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
+  const s = STATUS_CFG[status] ?? STATUS_CFG.draft;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-      color: s.color, background: s.bg, border: `0.5px solid ${s.border}`,
-      whiteSpace: 'nowrap',
-    }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: s.color, background: s.bg, border: `0.5px solid ${s.border}`, whiteSpace: 'nowrap' }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {s.label}
     </span>
   );
 }
 
-// ─── PO row with expandable detail ───────────────────────────────────────────
+// ─── PO Detail drawer ─────────────────────────────────────────────────────────
 
-function PORow({ po, onStatusChange, actionBusy }: {
-  po: PO;
-  onStatusChange: (id: string, status: string) => void;
-  actionBusy: string | null;
+function PODetailDrawer({ po, onClose, onAction }: {
+  po: PO; onClose: () => void; onAction: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [detail, setDetail] = useState<PO | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const busy = actionBusy === po.id;
-  const lineCount = po._count?.lines ?? po.lines?.length ?? 0;
+  const [detail,      setDetail]      = useState<PO | null>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [warehouses,  setWarehouses]  = useState<Warehouse[]>([]);
+  const [receiving,   setReceiving]   = useState(false);
+  const [recvWh,      setRecvWh]      = useState('');
+  const [recvQtys,    setRecvQtys]    = useState<Record<string, string>>({});
+  const [recvBusy,    setRecvBusy]    = useState(false);
+  const [recvError,   setRecvError]   = useState('');
+  const [actionBusy,  setActionBusy]  = useState(false);
 
-  const handleExpand = async () => {
-    if (!expanded && !detail) {
-      setLoadingDetail(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
       try {
-        const d = await purchaseOrdersApi.getById(po.id);
+        const [d, whs] = await Promise.all([
+          purchaseOrdersApi.getById(po.id),
+          warehousesApi.getAll(),
+        ]);
         setDetail(d as PO);
-      } finally { setLoadingDetail(false); }
-    }
-    setExpanded(e => !e);
+        setWarehouses(whs as Warehouse[]);
+        // Init receive quantities to 0
+        const init: Record<string, string> = {};
+        (d as PO).lines?.forEach(l => { init[l.id] = ''; });
+        setRecvQtys(init);
+      } finally { setLoading(false); }
+    })();
+  }, [po.id]);
+
+  const handleStatus = async (status: string) => {
+    setActionBusy(true);
+    try {
+      await purchaseOrdersApi.updateStatus(po.id, status as any);
+      onAction(); onClose();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to update status');
+    } finally { setActionBusy(false); }
   };
 
-  const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.CSSProperties;
+  const handleReceive = async () => {
+    if (!recvWh) { setRecvError('Select a warehouse.'); return; }
+    const lines = Object.entries(recvQtys)
+      .filter(([, qty]) => qty && Number(qty) > 0)
+      .map(([lineId, qty]) => ({ lineId, receivedQuantity: Number(qty) }));
+    if (!lines.length) { setRecvError('Enter at least one quantity to receive.'); return; }
+
+    setRecvBusy(true); setRecvError('');
+    try {
+      await (purchaseOrdersApi as any).receive(po.id, { warehouseId: recvWh, lines });
+      onAction(); onClose();
+    } catch (err: any) {
+      setRecvError(err?.response?.data?.message || 'Receive failed.');
+    } finally { setRecvBusy(false); }
+  };
+
+  const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace" };
+  const canReceive = detail && ['confirmed', 'partially_received'].includes(detail.status);
+  const canConfirm = detail?.status === 'draft';
+  const canCancel  = detail && ['draft', 'confirmed'].includes(detail.status);
 
   return (
-    <>
-      <tr style={{ cursor: 'pointer' }} onClick={handleExpand}>
-        <td>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: '#fb923c', fontWeight: 500 }}>{po.poNumber}</span>
-          </span>
-        </td>
-        <td><span style={{ color: '#e2dfd8', fontWeight: 500 }}>{po.supplier?.name ?? '—'}</span></td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(po.poDate)}</span></td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(po.expectedDate)}</span></td>
-        <td><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{lineCount} line{lineCount !== 1 ? 's' : ''}</span></td>
-        <td style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, color: '#e2dfd8' }}>{fmtAmt(po.total)}</span>
-        </td>
-        <td><span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{po.currency ?? 'USD'}</span></td>
-        <td><StatusBadge status={po.status} /></td>
-        <td onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {po.status === 'draft' && (
-              <>
-                <button onClick={() => onStatusChange(po.id, 'approved')} disabled={busy} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>{busy ? '…' : 'Approve'}</button>
-                <button onClick={() => onStatusChange(po.id, 'rejected')} disabled={busy} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', color: '#f87171', border: '0.5px solid rgba(248,113,113,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>Reject</button>
-              </>
-            )}
-            {po.status === 'approved' && (
-              <button onClick={() => onStatusChange(po.id, 'closed')} disabled={busy} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(96,165,250,0.08)', color: '#60a5fa', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>{busy ? '…' : 'Close'}</button>
-            )}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex' }}>
+      {/* Backdrop */}
+      <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
+      {/* Drawer */}
+      <div style={{ width: 680, background: '#0a0712', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8', fontFamily: "'IBM Plex Mono',monospace" }}>{po.poNumber}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{po.supplier?.name}</div>
           </div>
-        </td>
-      </tr>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <StatusBadge status={po.status} />
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          </div>
+        </div>
 
-      {expanded && (
-        <tr>
-          <td colSpan={9} style={{ padding: 0, background: 'rgba(251,146,60,0.015)' }}>
-            {loadingDetail ? (
-              <div style={{ padding: '16px 40px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading lines…</div>
-            ) : detail?.lines ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+            Loading…
+          </div>
+        ) : detail ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* PO Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {[
+                { label: 'PO Date',       value: fmtDate(detail.poDate) },
+                { label: 'Expected',      value: fmtDate(detail.expectedDate) },
+                { label: 'Payment Terms', value: detail.paymentTerms || '—' },
+                { label: 'Currency',      value: detail.currency || 'USD' },
+              ].map(item => (
+                <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 13, color: '#e2dfd8' }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Lines table */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Order Lines</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr>
-                    {['#', 'Item', 'Description', 'Qty', 'UOM', 'Unit Price', 'Disc%', 'Line Total', 'Expected'].map(h => (
-                      <th key={h} style={{ padding: '6px 14px 6px ' + (h === '#' ? '40px' : '14px'), fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Qty','Unit Price','Disc%','Line Total'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
+                    {['#', 'Item', 'Ordered', 'Received', 'UOM', 'Price', 'Total', 'Status'].map(h => (
+                      <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Ordered','Received','Price','Total'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.lines.map(line => (
-                    <tr key={line.id}>
-                      <td style={{ padding: '7px 14px 7px 40px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                      <td style={{ padding: '7px 14px' }}>
-                        <span style={{ ...MONO, color: '#fb923c' }}>{line.item?.code}</span>
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{line.item?.name}</span>
-                      </td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{line.orderedQuantity}</td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: '#e2dfd8', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(line.expectedDate)}</td>
-                    </tr>
-                  ))}
-                  <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-                    <td colSpan={7} style={{ padding: '8px 14px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', ...MONO, color: '#fb923c', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
+                  {detail.lines?.map(line => {
+                    const pct = Number(line.orderedQuantity) > 0
+                      ? (Number(line.receivedQuantity) / Number(line.orderedQuantity)) * 100
+                      : 0;
+                    return (
+                      <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                        <td style={{ padding: '8px' }}>
+                          <div style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{line.item?.code}</div>
+                          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 }}>{line.item?.name}</div>
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.orderedQuantity).toLocaleString()}</td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <div style={{ ...MONO, color: pct >= 100 ? '#4ade80' : pct > 0 ? '#fb923c' : 'rgba(255,255,255,0.4)' }}>
+                            {Number(line.receivedQuantity).toLocaleString()}
+                          </div>
+                          {pct > 0 && pct < 100 && (
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{pct.toFixed(0)}%</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontSize: 11 }}>{fmtAmt(line.unitPrice)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 500, color: '#e2dfd8' }}>{fmtAmt(line.lineTotal)}</td>
+                        <td style={{ padding: '8px' }}>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: line.status === 'closed' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'closed' ? '#4ade80' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'closed' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                            {line.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <td colSpan={5} style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
+                    <td colSpan={2} style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 600, color: '#fb923c', fontSize: 14 }}>{fmtAmt(detail.total)}</td>
                     <td />
                   </tr>
                 </tbody>
               </table>
-            ) : null}
-          </td>
-        </tr>
-      )}
-    </>
+            </div>
+
+            {/* Receive goods section */}
+            {canReceive && (
+              <div style={{ background: 'rgba(74,222,128,0.04)', border: '0.5px solid rgba(74,222,128,0.15)', borderRadius: 10, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Receive Goods</span>
+                  <button
+                    type="button"
+                    onClick={() => setReceiving(r => !r)}
+                    style={{ fontSize: 11, color: receiving ? '#f87171' : '#4ade80', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}
+                  >
+                    {receiving ? 'Cancel' : 'Enter Receipt'}
+                  </button>
+                </div>
+
+                {receiving && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {recvError && (
+                      <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5' }}>{recvError}</div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Warehouse *</label>
+                      <select
+                        value={recvWh} onChange={e => setRecvWh(e.target.value)}
+                        style={{ background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', colorScheme: 'dark' as any }}
+                      >
+                        <option value="">— Select warehouse —</option>
+                        {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
+                      </select>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'left', fontWeight: 500 }}>Item</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Ordered</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Received</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Pending</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(74,222,128,0.7)', textAlign: 'right', fontWeight: 500 }}>Receive Now</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detail.lines?.filter(l => l.status !== 'closed').map(line => {
+                          const pending = Number(line.orderedQuantity) - Number(line.receivedQuantity);
+                          return (
+                            <tr key={line.id} style={{ borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
+                              <td style={{ padding: '6px' }}>
+                                <span style={{ ...MONO, fontSize: 11, color: '#fb923c' }}>{line.item?.code}</span>
+                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{line.item?.name}</span>
+                              </td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.orderedQuantity).toLocaleString()}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.receivedQuantity).toLocaleString()}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: '#fb923c' }}>{pending.toLocaleString()}</td>
+                              <td style={{ padding: '6px' }}>
+                                <input
+                                  type="number" min="0" max={pending} step="0.001"
+                                  placeholder={`max ${pending}`}
+                                  value={recvQtys[line.id] ?? ''}
+                                  onChange={e => setRecvQtys(q => ({ ...q, [line.id]: e.target.value }))}
+                                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '4px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8', outline: 'none', width: '100%', textAlign: 'right' }}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={handleReceive} disabled={recvBusy}
+                        style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: recvBusy ? 'not-allowed' : 'pointer', opacity: recvBusy ? 0.5 : 1 }}
+                      >
+                        {recvBusy ? 'Processing…' : '✓ Confirm Receipt'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+              {canConfirm && (
+                <button onClick={() => handleStatus('confirmed')} disabled={actionBusy}
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: '#60a5fa', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  ✓ Confirm PO
+                </button>
+              )}
+              {detail?.status === 'received' && (
+                <button onClick={() => handleStatus('closed')} disabled={actionBusy}
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', border: '0.5px solid rgba(167,139,250,0.25)', color: '#a78bfa', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  Close PO
+                </button>
+              )}
+              {canCancel && (
+                <button onClick={() => handleStatus('cancelled')} disabled={actionBusy}
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  Cancel PO
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
 // ─── Create PO modal ──────────────────────────────────────────────────────────
 
+interface NewPOLine { itemId: string; description: string; orderedQuantity: string; uom: string; unitPrice: string; discountPercent: string; expectedDate: string; }
+const EMPTY_LINE: NewPOLine = { itemId: '', description: '', orderedQuantity: '', uom: '', unitPrice: '', discountPercent: '0', expectedDate: '' };
+
 function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
-  open: boolean; onClose: () => void; onSaved: () => void;
-  suppliers: Supplier[]; items: Item[];
+  open: boolean; onClose: () => void; onSaved: () => void; suppliers: Supplier[]; items: Item[];
 }) {
-  const [header, setHeader] = useState({
-    supplierId: '', expectedDate: '', deliveryAddress: '', paymentTerms: '', currency: 'USD', notes: '',
-  });
-  const [lines, setLines] = useState<NewPOLine[]>([{ ...EMPTY_LINE }]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [header, setHeader]     = useState({ supplierId: '', expectedDate: '', deliveryAddress: '', paymentTerms: 'Net 30', currency: 'USD', notes: '' });
+  const [lines,  setLines]      = useState<NewPOLine[]>([{ ...EMPTY_LINE }]);
+  const [submitting, setSub]    = useState(false);
+  const [error, setError]       = useState('');
 
   useEffect(() => {
-    if (open) {
-      setError('');
-      setHeader({ supplierId: '', expectedDate: '', deliveryAddress: '', paymentTerms: 'Net 30', currency: 'USD', notes: '' });
-      setLines([{ ...EMPTY_LINE }]);
-    }
+    if (open) { setError(''); setHeader({ supplierId: '', expectedDate: '', deliveryAddress: '', paymentTerms: 'Net 30', currency: 'USD', notes: '' }); setLines([{ ...EMPTY_LINE }]); }
   }, [open]);
 
-  const setH = (key: keyof typeof header) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-      setHeader(h => ({ ...h, [key]: e.target.value }));
+  const setH = (k: keyof typeof header) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setHeader(h => ({ ...h, [k]: e.target.value }));
 
-  const setLine = (idx: number, key: keyof NewPOLine, value: string) =>
+  const setLine = (idx: number, k: keyof NewPOLine, v: string) =>
     setLines(ls => ls.map((l, i) => {
       if (i !== idx) return l;
-      const updated = { ...l, [key]: value };
-      if (key === 'itemId') {
-        const item = items.find(it => it.id === value);
-        if (item) updated.uom = item.baseUom;
-      }
-      return updated;
+      const upd = { ...l, [k]: v };
+      if (k === 'itemId') { const it = items.find(x => x.id === v); if (it) upd.uom = it.baseUom; }
+      return upd;
     }));
 
-  const calcLineTotal = (line: NewPOLine) => {
-    const qty = Number(line.orderedQuantity) || 0;
-    const price = Number(line.unitPrice) || 0;
-    const disc = Number(line.discountPercent) || 0;
-    return qty * price * (1 - disc / 100);
-  };
-
-  const grandTotal = lines.reduce((s, l) => s + calcLineTotal(l), 0);
+  const lineTotal = (l: NewPOLine) => (Number(l.orderedQuantity) || 0) * (Number(l.unitPrice) || 0) * (1 - (Number(l.discountPercent) || 0) / 100);
+  const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!header.supplierId) { setError('Supplier is required.'); return; }
-    const validLines = lines.filter(l => l.itemId && l.orderedQuantity && l.unitPrice);
-    if (validLines.length === 0) { setError('At least one complete line is required.'); return; }
-    setSubmitting(true); setError('');
+    const valid = lines.filter(l => l.itemId && l.orderedQuantity && l.unitPrice);
+    if (!valid.length) { setError('At least one complete line is required.'); return; }
+    setSub(true); setError('');
     try {
       await purchaseOrdersApi.create({
         supplierId: header.supplierId,
@@ -268,156 +380,129 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
         paymentTerms: header.paymentTerms || undefined,
         currency: header.currency,
         notes: header.notes || undefined,
-        lines: validLines.map(l => ({
-          itemId: l.itemId,
-          description: l.description || undefined,
-          orderedQuantity: Number(l.orderedQuantity),
-          uom: l.uom,
-          unitPrice: Number(l.unitPrice),
-          discountPercent: Number(l.discountPercent) || undefined,
+        lines: valid.map(l => ({
+          itemId: l.itemId, description: l.description || undefined,
+          orderedQuantity: Number(l.orderedQuantity), uom: l.uom,
+          unitPrice: Number(l.unitPrice), discountPercent: Number(l.discountPercent) || undefined,
           expectedDate: l.expectedDate || undefined,
         })),
       });
       onSaved(); onClose();
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(msg || 'Operation failed.');
-    } finally { setSubmitting(false); }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Operation failed.');
+    } finally { setSub(false); }
   };
 
   if (!open) return null;
 
-  const inputCls = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' } as React.CSSProperties;
-  const labelCls = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em' as const, textTransform: 'uppercase' as const, color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
+  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' };
+  const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
 
   return (
     <>
       <style>{`
-        .po-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-        .po-box { background:#0e0b1a; border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
-        .po-box::before { content:''; position:absolute; top:0; left:30px; right:30px; height:1px; background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent); }
-        .po-lines-table { width:100%; border-collapse:collapse; }
-        .po-lines-table th { font-size:10px; color:rgba(251,146,60,0.5); text-transform:uppercase; letter-spacing:0.08em; padding:5px 6px; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); white-space:nowrap; }
-        .po-lines-table td { padding:4px 3px; vertical-align:middle; }
-        .po-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#f1ede8; outline:none; width:100%; }
-        .po-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#f1ede8; outline:none; width:100%; }
-        .po-line-select option { background:#0e0b1a; }
-        .po-section { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.25); padding:6px 0 4px; border-bottom:0.5px solid rgba(255,255,255,0.06); margin-top:4px; display:flex; align-items:center; justify-content:space-between; }
-        .po-btn-add { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,0.5); cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
-        .po-btn-add:hover { background:rgba(255,255,255,0.08); }
-        .po-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:#f87171; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .po-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+        .po-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:860px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .po-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
+        .po-lines-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
+        .po-line-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}
+        .po-line-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}
+        .po-line-sel option{background:#0e0b1a}
+        .po-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .po-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .po-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:#f87171;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
-
       <div className="po-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="po-box">
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:1, borderRadius:'14px 14px 0 0' }}>
-            <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Sans',sans-serif" }}>New Purchase Order</span>
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: '#0e0b1a', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8' }}>New Purchase Order</span>
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
-
           <form onSubmit={handleSubmit}>
-            <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
 
-              {/* Header */}
-              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:10 }}>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Supplier *</label>
-                  <select value={header.supplierId} onChange={setH('supplierId')} style={{ ...inputCls, cursor:'pointer' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={LBL}>Supplier *</label>
+                  <select value={header.supplierId} onChange={setH('supplierId')} style={{ ...INP, cursor: 'pointer' }}>
                     <option value="">— Select supplier —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
                   </select>
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Expected Date</label>
-                  <input type="date" value={header.expectedDate} onChange={setH('expectedDate')} style={inputCls} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={LBL}>Expected Date</label>
+                  <input type="date" value={header.expectedDate} onChange={setH('expectedDate')} style={INP} />
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Currency</label>
-                  <select value={header.currency} onChange={setH('currency')} style={{ ...inputCls, cursor:'pointer' }}>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="DOP">DOP</option>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={LBL}>Currency</label>
+                  <select value={header.currency} onChange={setH('currency')} style={{ ...INP, cursor: 'pointer' }}>
+                    {['USD','EUR','DOP','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Payment Terms</label>
-                  <input placeholder="Net 30" value={header.paymentTerms} onChange={setH('paymentTerms')} style={inputCls} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={LBL}>Payment Terms</label>
+                  <input placeholder="Net 30" value={header.paymentTerms} onChange={setH('paymentTerms')} style={INP} />
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Delivery Address</label>
-                  <input placeholder="123 Main St" value={header.deliveryAddress} onChange={setH('deliveryAddress')} style={inputCls} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={LBL}>Delivery Address</label>
+                  <input placeholder="Address" value={header.deliveryAddress} onChange={setH('deliveryAddress')} style={INP} />
                 </div>
               </div>
 
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={labelCls}>Notes</label>
-                <input placeholder="Additional notes" value={header.notes} onChange={setH('notes')} style={inputCls} />
-              </div>
-
-              {/* Lines */}
               <div className="po-section">
                 <span>Order Lines</span>
                 <button type="button" className="po-btn-add" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])}>+ Add Line</button>
               </div>
 
-              <table className="po-lines-table">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 220 }}>Item *</th>
-                    <th>Description</th>
-                    <th style={{ width: 80 }}>Qty *</th>
-                    <th style={{ width: 60 }}>UOM</th>
-                    <th style={{ width: 90 }}>Price *</th>
-                    <th style={{ width: 60 }}>Disc%</th>
-                    <th style={{ width: 100 }}>Total</th>
-                    <th style={{ width: 110 }}>Exp. Date</th>
-                    <th style={{ width: 24 }}></th>
+                    <th className="po-lines-th" style={{ width: 220 }}>Item *</th>
+                    <th className="po-lines-th">Description</th>
+                    <th className="po-lines-th" style={{ width: 80 }}>Qty *</th>
+                    <th className="po-lines-th" style={{ width: 60 }}>UOM</th>
+                    <th className="po-lines-th" style={{ width: 90 }}>Price *</th>
+                    <th className="po-lines-th" style={{ width: 60 }}>Disc%</th>
+                    <th className="po-lines-th" style={{ width: 100 }}>Total</th>
+                    <th className="po-lines-th" style={{ width: 110 }}>Exp. Date</th>
+                    <th className="po-lines-th" style={{ width: 24 }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((line, idx) => (
                     <tr key={idx}>
-                      <td>
-                        <select className="po-line-select" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
+                      <td style={{ padding: '4px 3px' }}>
+                        <select className="po-line-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
                           <option value="">— Item —</option>
-                          {items.map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
+                          {items.filter(it => it.isPurchasable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
                         </select>
                       </td>
-                      <td><input className="po-line-input" placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
-                      <td><input className="po-line-input" type="number" min="0" step="0.001" placeholder="0" value={line.orderedQuantity} onChange={e => setLine(idx, 'orderedQuantity', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td><input className="po-line-input" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
-                      <td><input className="po-line-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td><input className="po-line-input" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#e2dfd8', textAlign: 'right' }}>
-                        {calcLineTotal(line) > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calcLineTotal(line)) : '—'}
-                      </td>
-                      <td><input className="po-line-input" type="date" value={line.expectedDate} onChange={e => setLine(idx, 'expectedDate', e.target.value)} /></td>
-                      <td>
-                        {lines.length > 1 && (
-                          <button type="button" className="po-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>
-                        )}
-                      </td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" step="0.001" placeholder="0" value={line.orderedQuantity} onChange={e => setLine(idx, 'orderedQuantity', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#e2dfd8', textAlign: 'right' }}>{lineTotal(line) > 0 ? fmtAmt(lineTotal(line)) : '—'}</td>
+                      <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="date" value={line.expectedDate} onChange={e => setLine(idx, 'expectedDate', e.target.value)} /></td>
+                      <td style={{ padding: '4px 3px' }}>{lines.length > 1 && <button type="button" className="po-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              {/* Grand total */}
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:16, padding:'8px 0', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>Grand Total</span>
-                <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:500, color:'#fb923c' }}>
-                  {new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(grandTotal)}
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: '#fb923c' }}>{fmtAmt(grandTotal)}</span>
               </div>
             </div>
 
-            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-              <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background:'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.35)', opacity:submitting?0.5:1 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create Purchase Order'}
               </button>
             </div>
@@ -436,10 +521,37 @@ export default function PurchaseOrdersPage() {
   const [items,       setItems]       = useState<Item[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
-  const [search,      setSearch]      = useState('');
-  const [statusFilter,setStatusFilter]= useState<POStatus | ''>('');
   const [createOpen,  setCreateOpen]  = useState(false);
-  const [actionBusy,  setActionBusy]  = useState<string | null>(null);
+  const [detailPO,    setDetailPO]    = useState<PO | null>(null);
+  const [activeType,  setActiveType]  = useState<POStatus | null>(null);
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const filterDefs = useMemo<ERPFilter<PO>[]>(() => [
+    {
+      key: 'supplierId', label: 'Supplier', type: 'searchselect', placeholder: 'All Suppliers',
+      options: suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.paymentTerms ?? undefined })),
+      filterFn: (row, val) => row.supplierId === val,
+    },
+    {
+      key: 'currency', label: 'Currency', type: 'select', placeholder: 'All',
+      options: ['USD','EUR','DOP'].map(c => ({ value: c, label: c })),
+      filterFn: (row, val) => (row.currency ?? 'USD') === val,
+    },
+  ], [suppliers]);
+
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+
+  const filtered = useMemo(() => {
+    const base = applyERPFilters(orders, filterDefs, filterVals);
+    return activeType ? base.filter(o => o.status === activeType) : base;
+  }, [orders, filterDefs, filterVals, activeType]);
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const s: Partial<Record<POStatus, number>> = {};
+    orders.forEach(o => { s[o.status] = (s[o.status] ?? 0) + 1; });
+    return s;
+  }, [orders]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -449,156 +561,138 @@ export default function PurchaseOrdersPage() {
         suppliersApi.getAll(),
         itemsApi.getAll(),
       ]);
-      setOrders(extractList(raw as unknown));
+      setOrders(Array.isArray(raw) ? raw as PO[] : []);
       setSuppliers(sups);
       setItems(its);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load data.';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filtered = orders.filter(o => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      o.poNumber.toLowerCase().includes(q) ||
-      (o.supplier?.name ?? '').toLowerCase().includes(q) ||
-      (o.notes ?? '').toLowerCase().includes(q);
-    const matchStatus = !statusFilter || o.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const handleStatusChange = async (id: string, status: string) => {
-    setActionBusy(id);
-    try {
-      await purchaseOrdersApi.updateStatus(id, status as 'approved' | 'rejected' | 'closed');
-      fetchAll();
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(msg || 'Status update failed.');
-    } finally { setActionBusy(null); }
-  };
-
-  // Summary counts
-  const counts = {
-    draft:    orders.filter(o => o.status === 'draft').length,
-    approved: orders.filter(o => o.status === 'approved').length,
-    rejected: orders.filter(o => o.status === 'rejected').length,
-    closed:   orders.filter(o => o.status === 'closed').length,
-  };
+  // ── Columns ────────────────────────────────────────────────────────────────
+  const columns = useMemo<ERPColumn<PO>[]>(() => [
+    {
+      key: 'poNumber', header: 'PO Number', width: 140, sortable: true,
+      value: r => r.poNumber,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#fb923c', fontWeight: 500 }}>{r.poNumber}</span>,
+    },
+    {
+      key: 'supplier', header: 'Supplier', sortable: true,
+      value: r => r.supplier?.name ?? '',
+      render: r => <span style={{ color: '#e2dfd8', fontWeight: 500 }}>{r.supplier?.name ?? '—'}</span>,
+    },
+    {
+      key: 'poDate', header: 'Date', width: 100, sortable: true,
+      value: r => r.poDate,
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.poDate)}</span>,
+    },
+    {
+      key: 'expectedDate', header: 'Expected', width: 100, sortable: true,
+      value: r => r.expectedDate ?? '',
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDateShort(r.expectedDate)}</span>,
+    },
+    {
+      key: 'lines', header: 'Lines', width: 60, align: 'center', sortable: true,
+      value: r => r._count?.lines ?? r.lines?.length ?? 0,
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r._count?.lines ?? r.lines?.length ?? 0}</span>,
+    },
+    {
+      key: 'total', header: 'Total', width: 120, align: 'right', sortable: true,
+      value: r => Number(r.total),
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fontWeight: 500, color: '#e2dfd8' }}>{fmtAmt(r.total)}</span>,
+    },
+    {
+      key: 'currency', header: 'Cur.', width: 55, align: 'center', sortable: false,
+      render: r => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.currency ?? 'USD'}</span>,
+    },
+    {
+      key: 'status', header: 'Status', width: 130, sortable: true,
+      value: r => r.status,
+      render: r => <StatusBadge status={r.status} />,
+    },
+    {
+      key: '_actions', header: '', width: 80, sortable: false,
+      render: r => (
+        <button
+          onClick={e => { e.stopPropagation(); setDetailPO(r); }}
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}
+        >
+          View
+        </button>
+      ),
+    },
+  ], []);
 
   return (
     <ERPShell breadcrumbs={['Home', 'Procurement', 'Purchase Orders']} title="Purchase Orders">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .po-page { padding: 0 18px 24px; }
-        .po-stats { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .po-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:8px 14px; display:flex; flex-direction:column; gap:2px; min-width:90px; cursor:pointer; transition:opacity 0.15s; }
-        .po-stat:hover { opacity:0.8; }
-        .po-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .po-stat-value { font-size:22px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:#f1ede8; }
-        .po-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .po-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; width:240px; }
-        .po-search::placeholder { color:rgba(255,255,255,0.2); }
-        .po-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
-        .po-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; }
-        .po-filter option { background:#0e0b1a; color:#f1ede8; }
-        .po-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,#c2410c,#ea580c,#f97316); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
-        .po-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
-        .po-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
-        .po-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
-        .po-table { width:100%; border-collapse:collapse; }
-        .po-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; white-space:nowrap; }
-        .po-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
-        .po-table tbody tr:last-child td { border-bottom:none; }
-        .po-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .po-empty, .po-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .po-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:#fb923c; animation:po-spin 0.7s linear infinite; flex-shrink:0; }
-        @keyframes po-spin { to { transform:rotate(360deg); } }
-        .po-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .po-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#fca5a5; }
+        .po-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+        .po-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
       `}</style>
 
       <div className="po-page">
 
-        {/* Stats */}
-        {orders.length > 0 && (
-          <div className="po-stats">
-            {(Object.entries(counts) as [POStatus, number][]).map(([s, count]) => {
-              const style = STATUS_STYLE[s];
-              return (
-                <div key={s} className="po-stat"
-                  style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }}
-                  onClick={() => setStatusFilter(prev => prev === s ? '' : s)}
-                >
-                  <span className="po-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
-                  <span className="po-stat-value">{count}</span>
-                </div>
-              );
-            })}
-            <div className="po-stat"
-              style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }}
-              onClick={() => setStatusFilter('')}
-            >
-              <span className="po-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
-              <span className="po-stat-value" style={{ color: '#fb923c' }}>{orders.length}</span>
-            </div>
+        {/* Stats cards — clickeable para filtrar */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          {(Object.entries(STATUS_CFG) as [POStatus, typeof STATUS_CFG[POStatus]][]).map(([status, cfg]) => {
+            const count = stats[status] ?? 0;
+            if (!count && status !== 'draft') return null;
+            const isActive = activeType === status;
+            return (
+              <div key={status}
+                onClick={() => setActiveType(prev => prev === status ? null : status)}
+                style={{ background: isActive ? cfg.bg : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? cfg.color : cfg.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 85, cursor: 'pointer', transition: 'all 0.15s', boxShadow: isActive ? `0 0 12px ${cfg.bg}` : 'none' }}
+              >
+                <span style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{cfg.label}</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : '#f1ede8', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+              </div>
+            );
+          })}
+          <div
+            onClick={() => setActiveType(null)}
+            style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer', transition: 'all 0.15s' }}
+          >
+            <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
+            <span style={{ fontSize: 22, fontWeight: 500, color: '#fb923c', fontFamily: "'IBM Plex Mono',monospace" }}>{orders.length}</span>
           </div>
-        )}
+        </div>
 
-        <div className="po-toolbar">
-          <input className="po-search" placeholder="Search by PO#, supplier, notes…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select className="po-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as POStatus | '')}>
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="closed">Closed</option>
-          </select>
-          <button className="po-btn-new" onClick={() => setCreateOpen(true)}>
-            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" />
-            </svg>
-            New PO
+        {/* Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <ERPFilterBar
+              filters={filterDefs}
+              values={filterVals}
+              onChange={setFilterVal}
+              onReset={resetFilters}
+              activeCount={filterCount}
+            />
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}
+          >
+            + New PO
           </button>
         </div>
 
         {error && <div className="po-error">{error}</div>}
 
-        <div className="po-wrap">
-          {loading ? (
-            <div className="po-loading"><div className="po-spinner" />Loading purchase orders…</div>
-          ) : filtered.length === 0 ? (
-            <div className="po-empty">{search || statusFilter ? 'No orders match your filters.' : 'No purchase orders yet.'}</div>
-          ) : (
-            <>
-              <table className="po-table">
-                <thead>
-                  <tr>
-                    <th>PO Number</th>
-                    <th>Supplier</th>
-                    <th>PO Date</th>
-                    <th>Expected</th>
-                    <th>Lines</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                    <th>Currency</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(po => (
-                    <PORow key={po.id} po={po} onStatusChange={handleStatusChange} actionBusy={actionBusy} />
-                  ))}
-                </tbody>
-              </table>
-              <div className="po-footer">
-                {filtered.length} of {orders.length} purchase order{orders.length !== 1 ? 's' : ''}
-              </div>
-            </>
-          )}
+        {/* Table */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTable<PO>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="purchase-orders"
+            emptyMessage={filterCount || activeType ? 'No orders match your filters.' : 'No purchase orders yet.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+            onRowClick={po => setDetailPO(po)}
+          />
         </div>
       </div>
 
@@ -609,6 +703,14 @@ export default function PurchaseOrdersPage() {
         suppliers={suppliers}
         items={items}
       />
+
+      {detailPO && (
+        <PODetailDrawer
+          po={detailPO}
+          onClose={() => setDetailPO(null)}
+          onAction={() => { setDetailPO(null); fetchAll(); }}
+        />
+      )}
     </ERPShell>
   );
 }

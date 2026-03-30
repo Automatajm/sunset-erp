@@ -1,5 +1,7 @@
 "use client";
 
+import SearchSelect from '@/components/ui/SearchSelect';
+
 import { useState, useMemo, useCallback } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -9,6 +11,7 @@ export type ERPFilterValue = string | string[] | boolean | null;
 export interface ERPFilterOption {
   value: string;
   label: string;
+  sublabel?: string;
   color?: string;
   bg?: string;
   border?: string;
@@ -131,6 +134,19 @@ export function ERPFilterBar<T>({
               <option value="">{f.placeholder ?? 'All'}</option>
               {f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
+          </div>
+        );
+
+        if (f.type === 'searchselect') return (
+          <div key={f.key} style={{ display: 'flex', flexDirection: 'column', minWidth: 200 }}>
+            <span style={LBL}>{f.label}</span>
+            <SearchSelect
+              options={f.options?.map(o => ({ value: o.value, label: o.label, sublabel: o.sublabel })) ?? []}
+              value={(val as string) ?? ''}
+              onChange={v => onChange(f.key, v || null)}
+              placeholder={f.placeholder ?? `Search ${f.label}…`}
+              clearLabel={`— All ${f.label}s —`}
+            />
           </div>
         );
 

@@ -1063,6 +1063,48 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "grn_receipts" {
+    String id "🗝️"
+    String tenant_id 
+    String grn_number 
+    String po_id "❓"
+    String warehouse_id 
+    DateTime received_date 
+    String status 
+    String condition 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "grn_receipt_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String grn_id 
+    Int line_number 
+    String po_line_id "❓"
+    String item_id 
+    String warehouse_id 
+    String stock_movement_id "❓"
+    Decimal received_quantity 
+    String uom 
+    Decimal unit_cost "❓"
+    String lot_number "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1103,6 +1145,7 @@ erDiagram
     "in_stock_movements" }o--|| saas_tenants : "tenant"
     "in_stock_movements" }o--|| in_items : "item"
     "in_stock_movements" }o--|o in_warehouses : "fromWarehouse"
+    "in_stock_movements" }o--|o in_warehouses : "toWarehouse"
     "mfg_boms" }o--|| saas_tenants : "tenant"
     "mfg_boms" }o--|| in_items : "parentItem"
     "mfg_bom_components" }o--|| saas_tenants : "tenant"
@@ -1189,4 +1232,13 @@ erDiagram
     "in_supplier_items" }o--|| po_suppliers : "supplier"
     "in_supplier_items" }o--|| in_items : "item"
     "in_supplier_items" }o--|| cfg_uom_units : "purchaseUom"
+    "grn_receipts" }o--|| saas_tenants : "tenant"
+    "grn_receipts" }o--|o po_purchase_orders : "purchaseOrder"
+    "grn_receipts" }o--|| in_warehouses : "warehouse"
+    "grn_receipt_lines" }o--|| saas_tenants : "tenant"
+    "grn_receipt_lines" }o--|| grn_receipts : "goodsReceipt"
+    "grn_receipt_lines" }o--|o po_purchase_order_lines : "purchaseOrderLine"
+    "grn_receipt_lines" }o--|| in_items : "item"
+    "grn_receipt_lines" }o--|| in_warehouses : "warehouse"
+    "grn_receipt_lines" }o--|o in_stock_movements : "stockMovement"
 ```

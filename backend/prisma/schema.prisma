@@ -133,6 +133,8 @@ model Tenant {
   categories          Category[]
   consumptionGroups   ConsumptionGroup[]
   supplierItems       SupplierItem[]
+  goodsReceipts  GoodsReceipt[]
+  grnLines       GoodsReceiptLine[]
   
   tenantSettings      TenantSettings?
 
@@ -541,6 +543,7 @@ model PurchaseOrder {
   updatedByUser User                @relation("PurchaseOrderUpdatedBy", fields: [updatedBy], references: [id])
   lines         PurchaseOrderLine[]
   apInvoices     ApInvoice[]
+  goodsReceipts  GoodsReceipt[]
 
   @@unique([tenantId, poNumber])
   @@index([tenantId])
@@ -584,6 +587,7 @@ model PurchaseOrderLine {
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
   apInvoiceLines ApInvoiceLine[]
+  grnLines       GoodsReceiptLine[]
 
   @@index([tenantId])
   @@index([purchaseOrderId])
@@ -674,6 +678,7 @@ model Item {
   moMaterialActuals  MoMaterialActual[]
   apInvoiceLines     ApInvoiceLine[]
   supplierItems      SupplierItem[]
+  grnLines           GoodsReceiptLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -701,7 +706,10 @@ model Warehouse {
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id])
   stock          Stock[]
-  stockMovements StockMovement[]
+  stockMovementsFrom StockMovement[] @relation("MovementFromWarehouse")
+  stockMovementsTo   StockMovement[] @relation("MovementToWarehouse")
+  goodsReceipts      GoodsReceipt[]
+  grnLines           GoodsReceiptLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -774,7 +782,9 @@ model StockMovement {
 
   tenant        Tenant     @relation(fields: [tenantId], references: [id])
   item          Item       @relation(fields: [itemId], references: [id])
-  fromWarehouse Warehouse? @relation(fields: [fromWarehouseId], references: [id])
+  fromWarehouse Warehouse? @relation("MovementFromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse? @relation("MovementToWarehouse",   fields: [toWarehouseId],   references: [id])
+  grnLines      GoodsReceiptLine[]
 
   @@unique([tenantId, movementNumber])
   @@index([tenantId])
@@ -1921,6 +1931,73 @@ model SupplierItem {
   @@index([isPreferred])
   @@map("in_supplier_items")
 }
+
+model GoodsReceipt {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  grnNumber    String   @map("grn_number") @db.VarChar(50)
+  poId         String?  @map("po_id") @db.Uuid
+  warehouseId  String   @map("warehouse_id") @db.Uuid
+  receivedDate DateTime @default(dbgenerated("CURRENT_DATE")) @map("received_date") @db.Date
+  status       String   @default("posted") @db.VarChar(20)
+  condition    String   @default("complete") @db.VarChar(50)
+  notes        String?  @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt      @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String    @map("created_by") @db.Uuid
+  updatedBy    String    @map("updated_by") @db.Uuid
+  deletedBy    String?   @map("deleted_by") @db.Uuid
+
+  tenant        Tenant             @relation(fields: [tenantId],    references: [id])
+  purchaseOrder PurchaseOrder?     @relation(fields: [poId],        references: [id])
+  warehouse     Warehouse          @relation(fields: [warehouseId], references: [id])
+  lines         GoodsReceiptLine[]
+
+  @@unique([tenantId, grnNumber])
+  @@index([tenantId])
+  @@index([tenantId, poId])
+  @@index([tenantId, status])
+  @@index([receivedDate])
+  @@map("grn_receipts")
+}
+
+model GoodsReceiptLine {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  grnId            String   @map("grn_id") @db.Uuid
+  lineNumber       Int      @map("line_number")
+  poLineId         String?  @map("po_line_id") @db.Uuid
+  itemId           String   @map("item_id") @db.Uuid
+  warehouseId      String   @map("warehouse_id") @db.Uuid
+  stockMovementId  String?  @map("stock_movement_id") @db.Uuid
+  receivedQuantity Decimal  @map("received_quantity") @db.Decimal(15, 3)
+  uom              String   @db.VarChar(20)
+  unitCost         Decimal? @map("unit_cost") @db.Decimal(15, 4)
+  lotNumber        String?  @map("lot_number") @db.VarChar(100)
+  notes            String?  @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt      @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String    @map("created_by") @db.Uuid
+  updatedBy        String    @map("updated_by") @db.Uuid
+  deletedBy        String?   @map("deleted_by") @db.Uuid
+
+  tenant            Tenant             @relation(fields: [tenantId],       references: [id])
+  goodsReceipt      GoodsReceipt       @relation(fields: [grnId],          references: [id], onDelete: Cascade)
+  purchaseOrderLine PurchaseOrderLine? @relation(fields: [poLineId],        references: [id])
+  item              Item               @relation(fields: [itemId],          references: [id])
+  warehouse         Warehouse          @relation(fields: [warehouseId],     references: [id])
+  stockMovement     StockMovement?     @relation(fields: [stockMovementId], references: [id])
+
+  @@index([tenantId])
+  @@index([grnId])
+  @@index([poLineId])
+  @@index([itemId])
+  @@index([stockMovementId])
+  @@map("grn_receipt_lines")
+}
+
 // ============================================================================
 // END OF SCHEMA
 // ============================================================================
