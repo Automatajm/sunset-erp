@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// lib/api/warehouses.ts
+// lib/api/warehouses.ts  ← REPLACE EXISTING FILE
 // ─────────────────────────────────────────────────────────────────────────────
 import apiClient from './client';
 import { Warehouse, CreateWarehouseDto, UpdateWarehouseDto } from './types';
- 
+
 export const warehousesApi = {
   getAll: async (): Promise<Warehouse[]> => {
     const res = await apiClient.get('/warehouses');
@@ -11,6 +11,14 @@ export const warehousesApi = {
   },
   getById: async (id: string): Promise<Warehouse> => {
     const res = await apiClient.get(`/warehouses/${id}`);
+    return res.data;
+  },
+  getLocationTree: async (id: string): Promise<any[]> => {
+    const res = await apiClient.get(`/warehouses/${id}/location-tree`);
+    return res.data;
+  },
+  getStats: async (id: string): Promise<any> => {
+    const res = await apiClient.get(`/warehouses/${id}/stats`);
     return res.data;
   },
   create: async (data: CreateWarehouseDto): Promise<Warehouse> => {
