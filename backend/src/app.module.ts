@@ -30,6 +30,7 @@ import { MacroCategoriesModule } from './modules/macro-categories/macro-categori
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ConsumptionGroupsModule } from './modules/consumption-groups/consumption-groups.module';
 import { SupplierItemsModule } from './modules/supplier-items/supplier-items.module';
+import { WarehouseLocationsModule } from './modules/warehouse-locations/warehouse-locations.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { SupplierItemsModule } from './modules/supplier-items/supplier-items.mod
     CategoriesModule,
     ConsumptionGroupsModule,
     SupplierItemsModule,
+    WarehouseLocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

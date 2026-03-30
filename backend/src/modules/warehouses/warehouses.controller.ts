@@ -1,23 +1,8 @@
-﻿import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-} from '@nestjs/swagger';
+  Controller, Get, Post, Body, Patch, Param,
+  Delete, UseGuards, Request, HttpCode, HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
@@ -35,22 +20,13 @@ export class WarehousesController {
   @Post()
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a new warehouse' })
-  @ApiResponse({ status: 201, description: 'Warehouse created successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 409, description: 'Warehouse code already exists' })
-  async create(@Request() req, @Body() createWarehouseDto: CreateWarehouseDto) {
-    return this.warehousesService.create(
-      req.user.tenantId,
-      req.user.id,
-      createWarehouseDto,
-    );
+  async create(@Request() req, @Body() dto: CreateWarehouseDto) {
+    return this.warehousesService.create(req.user.tenantId, req.user.id, dto);
   }
 
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
-  @ApiOperation({ summary: 'Get all warehouses' })
-  @ApiResponse({ status: 200, description: 'List of warehouses' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiOperation({ summary: 'Get all warehouses with stock and zone counts' })
   async findAll(@Request() req) {
     return this.warehousesService.findAll(req.user.tenantId);
   }
@@ -59,32 +35,32 @@ export class WarehousesController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get warehouse by ID' })
   @ApiParam({ name: 'id', description: 'Warehouse UUID' })
-  @ApiResponse({ status: 200, description: 'Warehouse details' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Warehouse not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.warehousesService.findOne(req.user.tenantId, id);
+  }
+
+  @Get(':id/location-tree')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get full Zone->Aisle->Rack->Level->Bin hierarchy' })
+  @ApiParam({ name: 'id', description: 'Warehouse UUID' })
+  async getLocationTree(@Request() req, @Param('id') id: string) {
+    return this.warehousesService.getLocationTree(req.user.tenantId, id);
+  }
+
+  @Get(':id/stats')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Get warehouse capacity and stock stats' })
+  @ApiParam({ name: 'id', description: 'Warehouse UUID' })
+  async getStats(@Request() req, @Param('id') id: string) {
+    return this.warehousesService.getStats(req.user.tenantId, id);
   }
 
   @Patch(':id')
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update warehouse' })
   @ApiParam({ name: 'id', description: 'Warehouse UUID' })
-  @ApiResponse({ status: 200, description: 'Warehouse updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Warehouse not found' })
-  @ApiResponse({ status: 409, description: 'Warehouse code already exists' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updateWarehouseDto: UpdateWarehouseDto,
-  ) {
-    return this.warehousesService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateWarehouseDto,
-    );
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateWarehouseDto) {
+    return this.warehousesService.update(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Delete(':id')
@@ -92,9 +68,6 @@ export class WarehousesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete warehouse (soft delete)' })
   @ApiParam({ name: 'id', description: 'Warehouse UUID' })
-  @ApiResponse({ status: 200, description: 'Warehouse deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 404, description: 'Warehouse not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.warehousesService.remove(req.user.tenantId, req.user.id, id);
   }
