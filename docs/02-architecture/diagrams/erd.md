@@ -346,6 +346,7 @@ erDiagram
     String created_by 
     String updated_by 
     String deleted_by "❓"
+    Boolean location_tracking_enabled 
     }
   
 
@@ -360,6 +361,8 @@ erDiagram
     String serial_number "❓"
     Decimal unit_cost "❓"
     DateTime updated_at 
+    String level_id "❓"
+    String bin_id "❓"
     }
   
 
@@ -382,6 +385,10 @@ erDiagram
     String notes "❓"
     DateTime created_at 
     String created_by 
+    String from_level_id "❓"
+    String to_level_id "❓"
+    String from_bin_id "❓"
+    String to_bin_id "❓"
     }
   
 
@@ -1105,6 +1112,101 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "in_wh_zones" {
+    String id "🗝️"
+    String tenant_id 
+    String warehouse_id 
+    String code 
+    String name 
+    String zone_type 
+    String description "❓"
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_wh_aisles" {
+    String id "🗝️"
+    String tenant_id 
+    String zone_id 
+    String code 
+    String name "❓"
+    String full_code 
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_wh_racks" {
+    String id "🗝️"
+    String tenant_id 
+    String aisle_id 
+    String code 
+    String name "❓"
+    String full_code 
+    Boolean is_active 
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_wh_levels" {
+    String id "🗝️"
+    String tenant_id 
+    String rack_id 
+    String code 
+    String name "❓"
+    String full_code 
+    Boolean is_active 
+    Decimal max_weight_kg "❓"
+    Decimal max_volume_ltr "❓"
+    Int max_pallets "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_wh_bins" {
+    String id "🗝️"
+    String tenant_id 
+    String level_id 
+    String code 
+    String name "❓"
+    String full_code 
+    String bin_type 
+    Decimal max_weight_kg "❓"
+    Decimal max_volume_ltr "❓"
+    Int max_pallets "❓"
+    Boolean allow_mixed_items 
+    Boolean is_active 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1142,10 +1244,16 @@ erDiagram
     "in_stock" }o--|| saas_tenants : "tenant"
     "in_stock" }o--|| in_items : "item"
     "in_stock" }o--|| in_warehouses : "warehouse"
+    "in_stock" }o--|o in_wh_levels : "level"
+    "in_stock" }o--|o in_wh_bins : "bin"
     "in_stock_movements" }o--|| saas_tenants : "tenant"
     "in_stock_movements" }o--|| in_items : "item"
     "in_stock_movements" }o--|o in_warehouses : "fromWarehouse"
     "in_stock_movements" }o--|o in_warehouses : "toWarehouse"
+    "in_stock_movements" }o--|o in_wh_levels : "fromLevel"
+    "in_stock_movements" }o--|o in_wh_levels : "toLevel"
+    "in_stock_movements" }o--|o in_wh_bins : "fromBin"
+    "in_stock_movements" }o--|o in_wh_bins : "toBin"
     "mfg_boms" }o--|| saas_tenants : "tenant"
     "mfg_boms" }o--|| in_items : "parentItem"
     "mfg_bom_components" }o--|| saas_tenants : "tenant"
@@ -1241,4 +1349,14 @@ erDiagram
     "grn_receipt_lines" }o--|| in_items : "item"
     "grn_receipt_lines" }o--|| in_warehouses : "warehouse"
     "grn_receipt_lines" }o--|o in_stock_movements : "stockMovement"
+    "in_wh_zones" }o--|| saas_tenants : "tenant"
+    "in_wh_zones" }o--|| in_warehouses : "warehouse"
+    "in_wh_aisles" }o--|| saas_tenants : "tenant"
+    "in_wh_aisles" }o--|| in_wh_zones : "zone"
+    "in_wh_racks" }o--|| saas_tenants : "tenant"
+    "in_wh_racks" }o--|| in_wh_aisles : "aisle"
+    "in_wh_levels" }o--|| saas_tenants : "tenant"
+    "in_wh_levels" }o--|| in_wh_racks : "rack"
+    "in_wh_bins" }o--|| saas_tenants : "tenant"
+    "in_wh_bins" }o--|| in_wh_levels : "level"
 ```

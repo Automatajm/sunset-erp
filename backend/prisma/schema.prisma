@@ -133,8 +133,13 @@ model Tenant {
   categories          Category[]
   consumptionGroups   ConsumptionGroup[]
   supplierItems       SupplierItem[]
-  goodsReceipts  GoodsReceipt[]
-  grnLines       GoodsReceiptLine[]
+  goodsReceipts       GoodsReceipt[]
+  grnLines            GoodsReceiptLine[]
+  warehouseZones      WarehouseZone[]
+  warehouseAisles     WarehouseAisle[]
+  warehouseRacks      WarehouseRack[]
+  warehouseLevels     WarehouseLevel[]
+  warehouseBins       WarehouseBin[]
   
   tenantSettings      TenantSettings?
 
@@ -710,6 +715,8 @@ model Warehouse {
   stockMovementsTo   StockMovement[] @relation("MovementToWarehouse")
   goodsReceipts      GoodsReceipt[]
   grnLines           GoodsReceiptLine[]
+  locationTrackingEnabled Boolean @default(false) @map("location_tracking_enabled")
+  zones   WarehouseZone[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -742,7 +749,12 @@ model Stock {
   item      Item      @relation(fields: [itemId], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
-  @@unique([tenantId, itemId, warehouseId, lotNumber, serialNumber])
+  levelId String? @map("level_id") @db.Uuid
+  binId   String? @map("bin_id")   @db.Uuid
+  level   WarehouseLevel? @relation(fields: [levelId], references: [id])
+  bin     WarehouseBin?   @relation(fields: [binId],   references: [id])
+
+  @@unique([tenantId, itemId, warehouseId, levelId, binId, lotNumber, serialNumber])
   @@index([tenantId])
   @@index([tenantId, itemId])
   @@index([tenantId, warehouseId])
@@ -784,6 +796,14 @@ model StockMovement {
   item          Item       @relation(fields: [itemId], references: [id])
   fromWarehouse Warehouse? @relation("MovementFromWarehouse", fields: [fromWarehouseId], references: [id])
   toWarehouse   Warehouse? @relation("MovementToWarehouse",   fields: [toWarehouseId],   references: [id])
+  fromLevelId String? @map("from_level_id") @db.Uuid
+  toLevelId   String? @map("to_level_id")   @db.Uuid
+  fromBinId   String? @map("from_bin_id")   @db.Uuid
+  toBinId     String? @map("to_bin_id")     @db.Uuid
+  fromLevel WarehouseLevel? @relation("MovementFromLevel", fields: [fromLevelId], references: [id])
+  toLevel   WarehouseLevel? @relation("MovementToLevel",   fields: [toLevelId],   references: [id])
+  fromBin   WarehouseBin?   @relation("MovementFromBin",   fields: [fromBinId],   references: [id])
+  toBin     WarehouseBin?   @relation("MovementToBin",     fields: [toBinId],     references: [id])
   grnLines      GoodsReceiptLine[]
 
   @@unique([tenantId, movementNumber])
@@ -1997,6 +2017,193 @@ model GoodsReceiptLine {
   @@index([stockMovementId])
   @@map("grn_receipt_lines")
 }
+
+// ============================================================================
+// WAREHOUSE LOCATION TABLES (in_wh_*)
+// Sprint 14 — Warehouse Location Tracking
+//
+// Hierarchy: Warehouse → Zone → Aisle → Rack → Level → Bin (optional)
+// Location code auto-generated: ZONE-AISLE-RACK-LEVEL[-BIN]
+// Example: STOR-01-02-01-03 (Zone STOR, Aisle 01, Rack 02, Level 01, Bin 03)
+//
+// Tracking mode per warehouse:
+//   locationTrackingEnabled = false → stock balanced at warehouse level (default)
+//   locationTrackingEnabled = true  → stock balanced at bin/level level
+// ============================================================================
+
+// Zone: top-level area within a warehouse
+// Examples: RECV (Receiving), STOR (Storage), QUAR (Quarantine), SHIP (Shipping)
+model WarehouseZone {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  warehouseId String  @map("warehouse_id") @db.Uuid
+  code        String  @db.VarChar(20)   // STOR, RECV, QUAR, SHIP
+  name        String  @db.VarChar(100)
+  zoneType    String  @default("storage") @map("zone_type") @db.VarChar(30)
+  // zone types: storage | receiving | shipping | quarantine | production | returns
+  description String? @db.Text
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant    Tenant    @relation(fields: [tenantId],    references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  aisles    WarehouseAisle[]
+
+  @@unique([tenantId, warehouseId, code])
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@map("in_wh_zones")
+}
+
+// Aisle: corridor within a zone
+// Code: 01, 02, 03 — auto-generates path STOR-01
+model WarehouseAisle {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  zoneId      String  @map("zone_id") @db.Uuid
+  code        String  @db.VarChar(10)   // 01, 02, A, B
+  name        String? @db.VarChar(100)
+  // Auto-generated: ZONE.code + "-" + code  e.g. STOR-01
+  fullCode    String  @map("full_code") @db.VarChar(50)
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  zone   WarehouseZone @relation(fields: [zoneId],  references: [id])
+  racks  WarehouseRack[]
+
+  @@unique([zoneId, code])
+  @@index([tenantId])
+  @@index([zoneId])
+  @@map("in_wh_aisles")
+}
+
+// Rack: physical shelving unit within an aisle
+// Code: 01, 02 — auto-generates path STOR-01-02
+model WarehouseRack {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  aisleId  String  @map("aisle_id") @db.Uuid
+  code     String  @db.VarChar(10)
+  name     String? @db.VarChar(100)
+  // Auto-generated: AISLE.fullCode + "-" + code  e.g. STOR-01-02
+  fullCode String  @map("full_code") @db.VarChar(50)
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id])
+  aisle  WarehouseAisle @relation(fields: [aisleId],  references: [id])
+  levels WarehouseLevel[]
+
+  @@unique([aisleId, code])
+  @@index([tenantId])
+  @@index([aisleId])
+  @@map("in_wh_racks")
+}
+
+// Level: horizontal shelf within a rack
+// Code: 01, 02 — auto-generates path STOR-01-02-01
+// Capacity lives here when bins are NOT used
+model WarehouseLevel {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  rackId   String  @map("rack_id") @db.Uuid
+  code     String  @db.VarChar(10)
+  name     String? @db.VarChar(100)
+  // Auto-generated: RACK.fullCode + "-" + code  e.g. STOR-01-02-01
+  fullCode String  @map("full_code") @db.VarChar(50)
+  isActive Boolean @default(true) @map("is_active")
+
+  // Capacity — used when NO bins exist under this level
+  maxWeightKg  Decimal? @map("max_weight_kg")  @db.Decimal(10, 2)
+  maxVolumeLtr Decimal? @map("max_volume_ltr") @db.Decimal(10, 2)
+  maxPallets   Int?     @map("max_pallets")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  rack   WarehouseRack @relation(fields: [rackId],   references: [id])
+  bins   WarehouseBin[]
+  stock               Stock[]
+  stockMovementsFrom  StockMovement[] @relation("MovementFromLevel")
+  stockMovementsTo    StockMovement[] @relation("MovementToLevel")
+
+  @@unique([rackId, code])
+  @@index([tenantId])
+  @@index([rackId])
+  @@map("in_wh_levels")
+}
+
+// Bin: optional finest granularity within a level
+// Use cases: pallets, big bags, tanks, silos, IBC containers
+// Code: 01, 02, A, B — auto-generates STOR-01-02-01-03
+// Capacity lives here when bins ARE used
+model WarehouseBin {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  levelId  String  @map("level_id") @db.Uuid
+  code     String  @db.VarChar(10)
+  name     String? @db.VarChar(100)
+  // Auto-generated: LEVEL.fullCode + "-" + code  e.g. STOR-01-02-01-03
+  fullCode String  @map("full_code") @db.VarChar(50)
+
+  // Bin type — defines physical container
+  // standard | pallet | big_bag | tank | silo | ibc | container | bulk
+  binType  String  @default("standard") @map("bin_type") @db.VarChar(30)
+
+  // Capacity at bin level (overrides level capacity when bins exist)
+  maxWeightKg  Decimal? @map("max_weight_kg")  @db.Decimal(10, 2)
+  maxVolumeLtr Decimal? @map("max_volume_ltr") @db.Decimal(10, 2)
+  maxPallets   Int?     @map("max_pallets")
+
+  // Mixed storage — false = single SKU per bin (recommended for bulk bins)
+  allowMixedItems Boolean @default(true) @map("allow_mixed_items")
+
+  isActive Boolean @default(true) @map("is_active")
+  notes    String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id])
+  level  WarehouseLevel @relation(fields: [levelId],  references: [id])
+  stock              Stock[]
+  stockMovementsFrom StockMovement[] @relation("MovementFromBin")
+  stockMovementsTo   StockMovement[] @relation("MovementToBin")
+
+  @@unique([levelId, code])
+  @@index([tenantId])
+  @@index([levelId])
+  @@map("in_wh_bins")
+}
+
 
 // ============================================================================
 // END OF SCHEMA
