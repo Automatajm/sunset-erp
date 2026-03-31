@@ -6,3 +6,8 @@ $base = "backend\src\modules\goods-receipts";
  "$base\goods-receipts.service.ts",
 "$base\goods-receipts.controller.ts",
 "$base\goods-receipts.module.ts") | ForEach-Object { New-Item -ItemType File -Force -Path $_ }
+
+
+@("frontend\app\procurement\goods-receipts") | ForEach-Object { New-Item -ItemType Directory -Force -Path $_ };
+@("frontend\lib\api\goods-receipts.ts",
+"frontend\app\procurement\goods-receipts\page.tsx") | ForEach-Object { New-Item -ItemType File -Force -Path $_ }

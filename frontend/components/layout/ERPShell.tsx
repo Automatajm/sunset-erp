@@ -14,7 +14,9 @@ const NAV: NavItem[] = [
     label: 'Procurement',
     groups: [
       { label: 'Suppliers',  items: [{ label: 'Suppliers', href: '/procurement/suppliers' }] },
-      { label: 'Purchasing', items: [{ label: 'Purchase Orders', href: '/procurement/purchase-orders' }, { label: 'AP Invoices',     href: '/procurement/ap-invoices' }] },
+      { label: 'Purchasing', items: [{ label: 'Purchase Orders', href: '/procurement/purchase-orders' }, 
+                                     { label: 'Goods Receipts',  href: '/procurement/goods-receipts' },
+                                     { label: 'AP Invoices',     href: '/procurement/ap-invoices' }] },
     ],
   },
   {
