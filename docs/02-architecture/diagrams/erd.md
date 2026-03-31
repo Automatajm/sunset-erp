@@ -899,6 +899,7 @@ erDiagram
     Decimal total_amount 
     Decimal paid_amount 
     String je_id "❓"
+    String grn_id "❓"
     String currency 
     String notes "❓"
     DateTime created_at 
@@ -925,6 +926,7 @@ erDiagram
     Decimal discount_percent 
     Decimal line_total 
     Decimal price_variance "❓"
+    String grn_line_id "❓"
     String inventory_account_id "❓"
     String expense_account_id "❓"
     DateTime created_at 
@@ -1313,12 +1315,14 @@ erDiagram
     "ap_invoices" }o--|| po_suppliers : "supplier"
     "ap_invoices" }o--|o po_purchase_orders : "purchaseOrder"
     "ap_invoices" }o--|o ac_journal_entries : "journalEntry"
+    "ap_invoices" }o--|o grn_receipts : "goodsReceipt"
     "ap_invoice_lines" }o--|| saas_tenants : "tenant"
     "ap_invoice_lines" }o--|| ap_invoices : "invoice"
     "ap_invoice_lines" }o--|o in_items : "item"
     "ap_invoice_lines" }o--|o po_purchase_order_lines : "purchaseOrderLine"
     "ap_invoice_lines" }o--|o ac_accounts : "inventoryAccount"
     "ap_invoice_lines" }o--|o ac_accounts : "expenseAccount"
+    "ap_invoice_lines" }o--|o grn_receipt_lines : "goodsReceiptLine"
     "ap_payments" }o--|| saas_tenants : "tenant"
     "ap_payments" }o--|| ap_invoices : "invoice"
     "ap_payments" }o--|o ac_journal_entries : "journalEntry"

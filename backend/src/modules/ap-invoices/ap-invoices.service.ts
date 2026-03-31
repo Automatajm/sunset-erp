@@ -1,3 +1,6 @@
+// ============================================================================
+// FILE: backend/src/modules/ap-invoices/ap-invoices.service.ts
+// ============================================================================
 import {
   Injectable,
   NotFoundException,
@@ -40,7 +43,6 @@ export class ApInvoicesService {
     for (let i = 0; i < dto.lines.length; i++) {
       const line = dto.lines[i];
 
-      // Validate item if provided
       if (line.itemId) {
         const item = await this.prisma.item.findFirst({
           where: { id: line.itemId, tenantId, deletedAt: null },
@@ -48,7 +50,6 @@ export class ApInvoicesService {
         if (!item) throw new NotFoundException(`Item ${line.itemId} not found`);
       }
 
-      // Fetch original PO line price for variance tracking
       let originalPoPrice: number | null = null;
       if (line.poLineId) {
         const poLine = await this.prisma.purchaseOrderLine.findFirst({
@@ -75,7 +76,7 @@ export class ApInvoicesService {
         quantity:           line.quantity,
         uom:                line.uom ?? null,
         unitPrice:          line.unitPrice,
-        originalPoPrice:    originalPoPrice,
+        originalPoPrice,
         discountPercent:    line.discountPercent ?? 0,
         lineTotal,
         priceVariance,
@@ -113,16 +114,12 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // CREATE FROM PO — auto-generates draft AP invoice from a confirmed PO
-  // Lines are hybrid: inherit from PO but fully editable before posting
+  // CREATE FROM PO
   // ============================================================================
   async createFromPo(tenantId: string, userId: string, poId: string) {
     const po = await this.prisma.purchaseOrder.findFirst({
       where: { id: poId, tenantId, deletedAt: null },
-      include: {
-        lines: { include: { item: true } },
-        supplier: true,
-      },
+      include: { lines: { include: { item: true } }, supplier: true },
     });
     if (!po) throw new NotFoundException('Purchase Order not found');
 
@@ -132,7 +129,6 @@ export class ApInvoicesService {
       );
     }
 
-    // Block duplicate — one active AP invoice per PO
     const existing = await this.prisma.apInvoice.findFirst({
       where: { tenantId, poId, deletedAt: null, status: { not: 'void' } },
     });
@@ -144,10 +140,10 @@ export class ApInvoicesService {
 
     const invoiceDate = new Date();
     const dueDate     = new Date();
-    dueDate.setDate(dueDate.getDate() + 30); // default Net 30
+    dueDate.setDate(dueDate.getDate() + 30);
 
     const linesData = po.lines.map((line, i) => {
-      const lineTotal      = Number(line.lineTotal);
+      const lineTotal       = Number(line.lineTotal);
       const originalPoPrice = Number(line.unitPrice);
       return {
         tenantId,
@@ -161,7 +157,7 @@ export class ApInvoicesService {
         originalPoPrice,
         discountPercent:    Number(line.discountPercent),
         lineTotal,
-        priceVariance:      0, // zero at creation — recalculated if price edited before post
+        priceVariance:      0,
         inventoryAccountId: null,
         expenseAccountId:   null,
         createdBy:          userId,
@@ -213,9 +209,10 @@ export class ApInvoicesService {
     return this.prisma.apInvoice.findMany({
       where,
       include: {
-        supplier: { select: { id: true, code: true, name: true } },
+        supplier:      { select: { id: true, code: true, name: true } },
         purchaseOrder: { select: { id: true, poNumber: true } },
-        _count: { select: { lines: true, payments: true } },
+        goodsReceipt:  { select: { id: true, grnNumber: true, status: true } },
+        _count:        { select: { lines: true, payments: true } },
       },
       orderBy: { invoiceDate: 'desc' },
     });
@@ -234,7 +231,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // UPDATE — draft only (dueDate, supplierRef, notes)
+  // UPDATE — draft only
   // ============================================================================
   async update(tenantId: string, userId: string, id: string, dto: UpdateApInvoiceDto) {
     const invoice = await this.findOne(tenantId, id);
@@ -244,9 +241,9 @@ export class ApInvoicesService {
     return this.prisma.apInvoice.update({
       where: { id },
       data: {
-        ...(dto.dueDate      && { dueDate:     new Date(dto.dueDate) }),
-        ...(dto.supplierRef  !== undefined && { supplierRef: dto.supplierRef }),
-        ...(dto.notes        !== undefined && { notes:       dto.notes }),
+        ...(dto.dueDate     && { dueDate:     new Date(dto.dueDate) }),
+        ...(dto.supplierRef !== undefined && { supplierRef: dto.supplierRef }),
+        ...(dto.notes       !== undefined && { notes:       dto.notes }),
         updatedBy: userId,
       },
       include: this.defaultInclude(),
@@ -254,8 +251,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // POST — draft → posted, generates JE: Raw Material Inventory DR / AP CR
-  // Mirrors AR send()
+  // POST — draft → posted, generates JE
   // ============================================================================
   async post(tenantId: string, userId: string, id: string) {
     const invoice = await this.findOne(tenantId, id);
@@ -263,9 +259,13 @@ export class ApInvoicesService {
       throw new BadRequestException(`Cannot post AP invoice in status "${invoice.status}"`);
     }
 
+    // ── 3-Way Match validation (if GRN linked) ────────────────────────────────
+    if ((invoice as any).grnId) {
+      await this.validateThreeWayMatch(tenantId, invoice);
+    }
+
     const je = await this.createInvoiceJe(tenantId, userId, invoice);
 
-    // ── Stock IN — raw materials received ────────────────────────────────────
     try {
       await this.stockService.receiveFromApInvoice(tenantId, userId, {
         id:            invoice.id,
@@ -284,11 +284,7 @@ export class ApInvoicesService {
 
     const updated = await this.prisma.apInvoice.update({
       where: { id },
-      data: {
-        status: 'posted',
-        jeId:   je?.id ?? null,
-        updatedBy: userId,
-      },
+      data: { status: 'posted', jeId: je?.id ?? null, updatedBy: userId },
       include: this.defaultInclude(),
     });
 
@@ -300,7 +296,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // VOID — posts reversal JE if already posted
+  // VOID
   // ============================================================================
   async void(tenantId: string, userId: string, id: string) {
     const invoice = await this.findOne(tenantId, id);
@@ -319,7 +315,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // PAY — apply payment (partial or full), generates JE: AP DR / Cash CR
+  // PAY
   // ============================================================================
   async applyPayment(tenantId: string, userId: string, invoiceId: string, dto: ApplyApPaymentDto) {
     const invoice = await this.findOne(tenantId, invoiceId);
@@ -374,7 +370,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // AP AGING — mirrors AR aging
+  // AP AGING
   // ============================================================================
   async getAging(tenantId: string) {
     const today    = new Date();
@@ -470,7 +466,7 @@ export class ApInvoicesService {
   }
 
   // ============================================================================
-  // DELETE — draft only, soft delete
+  // DELETE — draft only
   // ============================================================================
   async remove(tenantId: string, userId: string, id: string) {
     const invoice = await this.findOne(tenantId, id);
@@ -482,6 +478,193 @@ export class ApInvoicesService {
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'AP Invoice deleted', id };
+  }
+
+  // ============================================================================
+  // LINK GRN — associates a GRN with this AP Invoice (header + line auto-match)
+  // ============================================================================
+  async linkGrn(tenantId: string, userId: string, invoiceId: string, grnId: string) {
+    const invoice = await this.findOne(tenantId, invoiceId);
+    if (invoice.status !== 'draft') {
+      throw new BadRequestException('Can only link GRN to a draft AP Invoice');
+    }
+
+    const grn = await this.prisma.goodsReceipt.findFirst({
+      where: { id: grnId, tenantId, deletedAt: null },
+      include: { lines: { where: { deletedAt: null }, include: { item: true } } },
+    });
+    if (!grn) throw new NotFoundException(`GRN ${grnId} not found`);
+    if (grn.status === 'cancelled') throw new BadRequestException('Cannot link a cancelled GRN');
+
+    if ((invoice as any).poId && grn.poId && (invoice as any).poId !== grn.poId) {
+      throw new BadRequestException('GRN and AP Invoice are linked to different Purchase Orders');
+    }
+
+    // Auto-match lines by poLineId
+    const lineUpdates: Promise<any>[] = [];
+    for (const invoiceLine of (invoice as any).lines) {
+      if (!invoiceLine.poLineId) continue;
+      const matchingGrnLine = grn.lines.find((gl: any) => gl.poLineId === invoiceLine.poLineId);
+      if (matchingGrnLine) {
+        lineUpdates.push(
+          this.prisma.apInvoiceLine.update({
+            where: { id: invoiceLine.id },
+            data: { grnLineId: matchingGrnLine.id, updatedBy: userId },
+          })
+        );
+      }
+    }
+
+    const [updated] = await Promise.all([
+      this.prisma.apInvoice.update({
+        where: { id: invoiceId },
+        data: { grnId, updatedBy: userId },
+        include: this.defaultInclude(),
+      }),
+      ...lineUpdates,
+    ]);
+
+    return {
+      message:      `GRN ${grn.grnNumber} linked to invoice ${invoice.invoiceNumber}`,
+      matchedLines: lineUpdates.length,
+      invoice:      updated,
+    };
+  }
+
+  // ============================================================================
+  // UNLINK GRN
+  // ============================================================================
+  async unlinkGrn(tenantId: string, userId: string, invoiceId: string) {
+    const invoice = await this.findOne(tenantId, invoiceId);
+    if (invoice.status !== 'draft') {
+      throw new BadRequestException('Can only unlink GRN from a draft AP Invoice');
+    }
+
+    await this.prisma.apInvoiceLine.updateMany({
+      where: { invoiceId, deletedAt: null },
+      data: { grnLineId: null },
+    });
+
+    const updated = await this.prisma.apInvoice.update({
+      where: { id: invoiceId },
+      data: { grnId: null, updatedBy: userId },
+      include: this.defaultInclude(),
+    });
+
+    return { message: 'GRN unlinked from invoice', invoice: updated };
+  }
+
+  // ============================================================================
+  // GET MATCH STATUS — 3-Way Match analysis per line
+  // ============================================================================
+  async getMatchStatus(tenantId: string, invoiceId: string) {
+    const invoice = await this.prisma.apInvoice.findFirst({
+      where: { id: invoiceId, tenantId, deletedAt: null },
+      include: {
+        supplier:      { select: { code: true, name: true } },
+        purchaseOrder: { select: { poNumber: true, status: true } },
+        goodsReceipt:  { select: { grnNumber: true, status: true, receivedDate: true, condition: true } },
+        lines: {
+          where:   { deletedAt: null },
+          orderBy: { lineNumber: 'asc' },
+          include: {
+            item:              { select: { code: true, name: true } },
+            purchaseOrderLine: { select: { orderedQuantity: true, receivedQuantity: true, unitPrice: true } },
+            goodsReceiptLine:  { select: { receivedQuantity: true, unitCost: true } },
+          },
+        },
+      },
+    });
+    if (!invoice) throw new NotFoundException(`AP Invoice ${invoiceId} not found`);
+
+    const PRICE_TOLERANCE_PCT = 2;
+    const lineResults: any[] = [];
+    let allLinesMatch = true;
+
+    for (const line of invoice.lines) {
+      const invoiceQty   = Number(line.quantity);
+      const invoicePrice = Number(line.unitPrice);
+      const poQty        = line.purchaseOrderLine ? Number(line.purchaseOrderLine.orderedQuantity) : null;
+      const poPrice      = line.purchaseOrderLine ? Number(line.purchaseOrderLine.unitPrice)       : null;
+      const grnQty       = line.goodsReceiptLine  ? Number(line.goodsReceiptLine.receivedQuantity) : null;
+
+      const poQtyOk  = poQty  === null ? null : invoiceQty <= poQty  + 0.001;
+      const grnQtyOk = grnQty === null ? null : invoiceQty <= grnQty + 0.001;
+      const priceDiffPct = poPrice && poPrice > 0
+        ? Math.abs((invoicePrice - poPrice) / poPrice) * 100
+        : null;
+      const priceOk = priceDiffPct === null ? null : priceDiffPct <= PRICE_TOLERANCE_PCT;
+
+      const lineMatches = (poQtyOk !== false) && (grnQtyOk !== false) && (priceOk !== false);
+      if (!lineMatches) allLinesMatch = false;
+
+      lineResults.push({
+        lineNumber:   line.lineNumber,
+        itemCode:     (line.item as any)?.code ?? null,
+        itemName:     (line.item as any)?.name ?? null,
+        invoiceQty,
+        invoicePrice,
+        poQty,
+        poPrice,
+        grnQty,
+        poQtyOk,
+        grnQtyOk,
+        priceOk,
+        priceDiffPct: priceDiffPct ? Number(priceDiffPct.toFixed(2)) : null,
+        lineMatches,
+        issues: [
+          !poQtyOk  && poQtyOk  !== null ? `Invoice qty (${invoiceQty}) exceeds PO qty (${poQty})`         : null,
+          !grnQtyOk && grnQtyOk !== null ? `Invoice qty (${invoiceQty}) exceeds GRN received (${grnQty})`  : null,
+          !priceOk  && priceOk  !== null ? `Price variance ${priceDiffPct?.toFixed(1)}% exceeds ${PRICE_TOLERANCE_PCT}% tolerance` : null,
+        ].filter(Boolean),
+      });
+    }
+
+    const hasGrn = !!(invoice as any).grnId;
+    const hasPo  = !!(invoice as any).poId;
+
+    const matchStatus =
+      !hasPo && !hasGrn              ? 'no_match'           :
+      hasPo  && !hasGrn              ? 'two_way'            :
+      hasPo  && hasGrn && allLinesMatch ? 'three_way_matched' :
+      hasPo  && hasGrn               ? 'three_way_failed'   :
+      'two_way';
+
+    return {
+      invoiceId,
+      invoiceNumber:  invoice.invoiceNumber,
+      invoiceStatus:  invoice.status,
+      supplier:       invoice.supplier,
+      purchaseOrder:  invoice.purchaseOrder,
+      goodsReceipt:   (invoice as any).goodsReceipt,
+      matchStatus,
+      allLinesMatch,
+      priceTolerance: `${PRICE_TOLERANCE_PCT}%`,
+      lines:          lineResults,
+      summary: {
+        total:   lineResults.length,
+        matched: lineResults.filter(l => l.lineMatches).length,
+        failed:  lineResults.filter(l => !l.lineMatches).length,
+      },
+      canPost: invoice.status === 'draft' &&
+        (matchStatus === 'three_way_matched' || matchStatus === 'two_way' || matchStatus === 'no_match'),
+    };
+  }
+
+  // ============================================================================
+  // PRIVATE — validate 3-way match before posting
+  // ============================================================================
+  private async validateThreeWayMatch(tenantId: string, invoice: any): Promise<void> {
+    const match = await this.getMatchStatus(tenantId, invoice.id);
+    if (match.matchStatus === 'three_way_failed') {
+      const failedLines = match.lines
+        .filter((l: any) => !l.lineMatches)
+        .map((l: any) => `Line ${l.lineNumber} (${l.itemCode}): ${l.issues.join('; ')}`)
+        .join(' | ');
+      throw new BadRequestException(
+        `3-Way Match failed — cannot post invoice. Issues: ${failedLines}`,
+      );
+    }
   }
 
   // ============================================================================
@@ -499,11 +682,6 @@ export class ApInvoicesService {
     }
   }
 
-  /**
-   * POST JE: Raw Material Inventory DR / Accounts Payable CR
-   * Per line: uses inventoryAccountId if set, else defaults to 1.1.04
-   * Variance lines posted if price differs from PO
-   */
   private async createInvoiceJe(tenantId: string, userId: string, invoice: any) {
     const apAccount = await this.prisma.account.findFirst({
       where: { tenantId, accountNumber: '2.1.01', deletedAt: null },
@@ -518,7 +696,6 @@ export class ApInvoicesService {
 
     await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
-    // Build debit lines per invoice line (inventory or expense account)
     const debitLines: any[] = [];
     let lineNum = 1;
 
@@ -526,7 +703,6 @@ export class ApInvoicesService {
       const lineTotal = Number(line.lineTotal);
       if (lineTotal === 0) continue;
 
-      // Resolve DR account: explicit > default 1.1.04
       let drAccountId = line.inventoryAccountId ?? line.expenseAccountId ?? null;
       if (!drAccountId) {
         const defaultAcct = await this.prisma.account.findFirst({
@@ -544,10 +720,9 @@ export class ApInvoicesService {
         creditAmount: 0,
       });
 
-      // Price variance line if supplier charged more/less than PO
       if (line.priceVariance && Math.abs(Number(line.priceVariance)) > 0.001) {
         const varianceAcct = await this.prisma.account.findFirst({
-          where: { tenantId, accountNumber: '5.2.01', deletedAt: null }, // Material Purchases / Price Variance
+          where: { tenantId, accountNumber: '5.2.01', deletedAt: null },
         });
         if (varianceAcct) {
           const variance = Number(line.priceVariance);
@@ -562,7 +737,6 @@ export class ApInvoicesService {
       }
     }
 
-    // AP credit line — total invoice
     const lines = [
       ...debitLines,
       {
@@ -575,13 +749,9 @@ export class ApInvoicesService {
     ];
 
     const result = await this.automation.handleAutoJe({
-      tenantId,
-      userId,
-      module:     'ap_invoice',
-      eventType:  'ap_invoice',
-      sourceType: 'ap_invoice',
-      sourceId:   invoice.id,
-      sourceRef:  invoice.invoiceNumber,
+      tenantId, userId,
+      module: 'ap_invoice', eventType: 'ap_invoice',
+      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
         entryDate:    new Date(invoice.invoiceDate),
@@ -596,15 +766,7 @@ export class ApInvoicesService {
     return result.je;
   }
 
-  /**
-   * PAYMENT JE: Accounts Payable DR / Cash CR
-   */
-  private async createPaymentJe(
-    tenantId: string,
-    userId: string,
-    invoice: any,
-    dto: ApplyApPaymentDto,
-  ) {
+  private async createPaymentJe(tenantId: string, userId: string, invoice: any, dto: ApplyApPaymentDto) {
     const apAccount   = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '2.1.01', deletedAt: null } });
     const cashAccount = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.02', deletedAt: null } });
     if (!apAccount || !cashAccount) {
@@ -616,13 +778,9 @@ export class ApInvoicesService {
     await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
     const result = await this.automation.handleAutoJe({
-      tenantId,
-      userId,
-      module:     'ap_payment',
-      eventType:  'ap_payment',
-      sourceType: 'ap_invoice',
-      sourceId:   invoice.id,
-      sourceRef:  invoice.invoiceNumber,
+      tenantId, userId,
+      module: 'ap_payment', eventType: 'ap_payment',
+      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
         entryDate:    new Date(dto.paymentDate),
@@ -631,20 +789,8 @@ export class ApInvoicesService {
         reference:    dto.reference ?? invoice.invoiceNumber,
         description:  `AP Payment — Invoice ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
         lines: [
-          {
-            lineNumber:   1,
-            accountId:    apAccount.id,
-            description:  `AP cleared — Inv ${invoice.invoiceNumber}`,
-            debitAmount:  dto.amount,
-            creditAmount: 0,
-          },
-          {
-            lineNumber:   2,
-            accountId:    cashAccount.id,
-            description:  `Cash paid — Inv ${invoice.invoiceNumber}`,
-            debitAmount:  0,
-            creditAmount: dto.amount,
-          },
+          { lineNumber: 1, accountId: apAccount.id,   description: `AP cleared — Inv ${invoice.invoiceNumber}`, debitAmount: dto.amount,    creditAmount: 0 },
+          { lineNumber: 2, accountId: cashAccount.id, description: `Cash paid — Inv ${invoice.invoiceNumber}`,  debitAmount: 0,             creditAmount: dto.amount },
         ],
       },
     });
@@ -652,9 +798,6 @@ export class ApInvoicesService {
     return result.je;
   }
 
-  /**
-   * REVERSAL JE — swaps DR/CR of original invoice JE
-   */
   private async createReversalJe(tenantId: string, userId: string, invoice: any) {
     const original = await this.prisma.journalEntry.findFirst({
       where: { id: invoice.jeId },
@@ -662,8 +805,8 @@ export class ApInvoicesService {
     });
     if (!original) return;
 
-    const entryNumber  = await this.generateJeNumber(tenantId);
-    const fiscalPeriod = this.toFiscalPeriod(new Date());
+    const entryNumber   = await this.generateJeNumber(tenantId);
+    const fiscalPeriod  = this.toFiscalPeriod(new Date());
     const reversedLines = original.lines.map((line, i) => ({
       lineNumber:   i + 1,
       accountId:    line.accountId,
@@ -673,13 +816,9 @@ export class ApInvoicesService {
     }));
 
     const result = await this.automation.handleAutoJe({
-      tenantId,
-      userId,
-      module:     'ap_reversal',
-      eventType:  'ap_reversal',
-      sourceType: 'ap_invoice',
-      sourceId:   invoice.id,
-      sourceRef:  invoice.invoiceNumber,
+      tenantId, userId,
+      module: 'ap_reversal', eventType: 'ap_reversal',
+      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
         entryDate:    new Date(),
@@ -702,8 +841,12 @@ export class ApInvoicesService {
     return {
       supplier:      { select: { id: true, code: true, name: true, email: true } },
       purchaseOrder: { select: { id: true, poNumber: true } },
+      goodsReceipt:  { select: { id: true, grnNumber: true, status: true, receivedDate: true } },
       lines: {
-        include: { item: { select: { id: true, code: true, name: true } } },
+        include: {
+          item:              { select: { id: true, code: true, name: true } },
+          goodsReceiptLine:  { select: { id: true, receivedQuantity: true, unitCost: true } },
+        },
         orderBy: { lineNumber: 'asc' as const },
       },
       payments: { orderBy: { paymentDate: 'asc' as const } },
@@ -713,8 +856,7 @@ export class ApInvoicesService {
   private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APINV-${(date ?? new Date()).getFullYear()}`;
     const last   = await this.prisma.apInvoice.findFirst({
-      where:   { tenantId, invoiceNumber: { startsWith: prefix } },
-      orderBy: { invoiceNumber: 'desc' },
+      where: { tenantId, invoiceNumber: { startsWith: prefix } }, orderBy: { invoiceNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.invoiceNumber.split('-');
@@ -724,8 +866,7 @@ export class ApInvoicesService {
   private async generatePaymentNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APPAY-${(date ?? new Date()).getFullYear()}`;
     const last   = await this.prisma.apPayment.findFirst({
-      where:   { tenantId, paymentNumber: { startsWith: prefix } },
-      orderBy: { paymentNumber: 'desc' },
+      where: { tenantId, paymentNumber: { startsWith: prefix } }, orderBy: { paymentNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.paymentNumber.split('-');
@@ -734,12 +875,9 @@ export class ApInvoicesService {
 
   private async generateJeNumber(tenantId: string): Promise<string> {
     const now    = new Date();
-    const year   = now.getFullYear();
-    const month  = (now.getMonth() + 1).toString().padStart(2, '0');
-    const prefix = `JE-${year}${month}`;
+    const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
     const last   = await this.prisma.journalEntry.findFirst({
-      where:   { tenantId, entryNumber: { startsWith: prefix } },
-      orderBy: { entryNumber: 'desc' },
+      where: { tenantId, entryNumber: { startsWith: prefix } }, orderBy: { entryNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.entryNumber.split('-');

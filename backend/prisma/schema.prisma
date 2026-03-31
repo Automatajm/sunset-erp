@@ -1636,6 +1636,7 @@ model ApInvoice {
   totalAmount   Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
   paidAmount    Decimal   @default(0) @map("paid_amount") @db.Decimal(15, 2)
   jeId          String?   @map("je_id") @db.Uuid
+  grnId         String?   @map("grn_id") @db.Uuid
   currency      String    @default("USD") @db.VarChar(3)
   notes         String?   @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -1649,6 +1650,7 @@ model ApInvoice {
   supplier      Supplier        @relation(fields: [supplierId], references: [id])
   purchaseOrder PurchaseOrder?  @relation(fields: [poId], references: [id])
   journalEntry  JournalEntry?   @relation("ApInvoiceJe", fields: [jeId], references: [id])
+  goodsReceipt  GoodsReceipt?   @relation("ApInvoiceGrn", fields: [grnId], references: [id])
   lines         ApInvoiceLine[]
   payments      ApPayment[]
 
@@ -1659,6 +1661,7 @@ model ApInvoice {
   @@index([tenantId, status])
   @@index([invoiceDate])
   @@index([dueDate])
+  @@index([tenantId, grnId])
   @@map("ap_invoices")
 }
 
@@ -1677,6 +1680,7 @@ model ApInvoiceLine {
   discountPercent    Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
   lineTotal          Decimal   @map("line_total") @db.Decimal(15, 2)
   priceVariance      Decimal?  @map("price_variance") @db.Decimal(15, 2)
+  grnLineId          String?   @map("grn_line_id") @db.Uuid
   inventoryAccountId String?   @map("inventory_account_id") @db.Uuid
   expenseAccountId   String?   @map("expense_account_id") @db.Uuid
   createdAt          DateTime  @default(now()) @map("created_at")
@@ -1692,11 +1696,13 @@ model ApInvoiceLine {
   purchaseOrderLine PurchaseOrderLine? @relation(fields: [poLineId], references: [id])
   inventoryAccount  Account?           @relation("ApLineInventoryAccount", fields: [inventoryAccountId], references: [id])
   expenseAccount    Account?           @relation("ApLineExpenseAccount", fields: [expenseAccountId], references: [id])
+  goodsReceiptLine  GoodsReceiptLine?  @relation("ApLineGrnLine", fields: [grnLineId], references: [id])
 
   @@index([tenantId])
   @@index([invoiceId])
   @@index([itemId])
   @@index([poLineId])
+  @@index([grnLineId])
   @@map("ap_invoice_lines")
 }
 
@@ -1973,6 +1979,7 @@ model GoodsReceipt {
   purchaseOrder PurchaseOrder?     @relation(fields: [poId],        references: [id])
   warehouse     Warehouse          @relation(fields: [warehouseId], references: [id])
   lines         GoodsReceiptLine[]
+  apInvoices    ApInvoice[]        @relation("ApInvoiceGrn")
 
   @@unique([tenantId, grnNumber])
   @@index([tenantId])
@@ -2009,7 +2016,8 @@ model GoodsReceiptLine {
   item              Item               @relation(fields: [itemId],          references: [id])
   warehouse         Warehouse          @relation(fields: [warehouseId],     references: [id])
   stockMovement     StockMovement?     @relation(fields: [stockMovementId], references: [id])
-
+  apInvoiceLines    ApInvoiceLine[]    @relation("ApLineGrnLine")
+  
   @@index([tenantId])
   @@index([grnId])
   @@index([poLineId])
