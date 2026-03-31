@@ -6,11 +6,15 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
-import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
+import {
+  ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters, dateInSelection,
+} from '@/components/ui/ERPFilterBar';
 import { goodsReceiptsApi, GoodsReceipt, GrnStats, CreateGoodsReceiptDto } from '@/lib/api/goods-receipts';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { itemsApi } from '@/lib/api/items';
+import { suppliersApi } from '@/lib/api/suppliers';
+import { DateSelection } from '@/components/ui/ERPDatePicker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +24,8 @@ interface PO {
   lines?: { id: string; itemId: string; item?: { code: string; name: string; baseUom: string }; orderedQuantity: string; receivedQuantity: string; uom: string; unitPrice: string }[];
 }
 interface Warehouse { id: string; code: string; name: string; }
-interface Item { id: string; code: string; name: string; baseUom: string; }
+interface Item      { id: string; code: string; name: string; baseUom: string; }
+interface Supplier  { id: string; code: string; name: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,17 +41,17 @@ function fmtDateShort(d?: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// ─── Status / Condition config ────────────────────────────────────────────────
 
 const STATUS_CFG = {
-  posted:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Posted' },
+  posted:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Posted'    },
   cancelled: { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
 };
 
 const CONDITION_CFG: Record<string, { color: string; label: string }> = {
   complete:  { color: '#4ade80', label: 'Complete' },
-  partial:   { color: '#fb923c', label: 'Partial' },
-  damaged:   { color: '#f87171', label: 'Damaged' },
+  partial:   { color: '#fb923c', label: 'Partial'  },
+  damaged:   { color: '#f87171', label: 'Damaged'  },
   rejected:  { color: '#f87171', label: 'Rejected' },
 };
 
@@ -79,12 +84,9 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
   const handleCancel = async () => {
     if (!confirm(`Cancel GRN ${grn.grnNumber}? This will reverse all stock movements.`)) return;
     setCancelBusy(true);
-    try {
-      await goodsReceiptsApi.cancel(grn.id);
-      onAction(); onClose();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Cancel failed.');
-    } finally { setCancelBusy(false); }
+    try { await goodsReceiptsApi.cancel(grn.id); onAction(); onClose(); }
+    catch (err: any) { setError(err?.response?.data?.message || 'Cancel failed.'); }
+    finally { setCancelBusy(false); }
   };
 
   const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace" };
@@ -92,7 +94,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
-      <div style={{ width:700, background:'#0a0712', borderLeft:'0.5px solid rgba(251,146,60,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+      <div style={{ width:700, background:'#0a0712', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
 
         {/* Header */}
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
@@ -100,6 +102,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
             <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', ...MONO }}>{grn.grnNumber}</div>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
               {grn.supplierName ? `${grn.supplierName} · ` : ''}{grn.warehouseName}
+              {grn.poNumber && <span style={{ color:'rgba(251,146,60,0.5)', marginLeft:8 }}>· PO {grn.poNumber}</span>}
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -112,13 +115,12 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:16 }}>
-
             {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
 
             {/* Info grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
               {[
-                { label:'Received Date', value:fmtDate(detail.receivedDate) },
+                { label:'Received Date', value: fmtDate(detail.receivedDate) },
                 { label:'Condition',     value: CONDITION_CFG[detail.condition]?.label ?? detail.condition },
                 { label:'PO Number',     value: detail.poNumber ?? '—' },
                 { label:'Warehouse',     value:`${detail.warehouseCode} — ${detail.warehouseName}` },
@@ -132,12 +134,12 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
 
             {/* Lines table */}
             <div>
-              <div style={{ fontSize:11, fontWeight:500, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Receipt Lines</div>
+              <div style={{ fontSize:11, fontWeight:500, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Receipt Lines</div>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>
                     {['#','Item','Qty Received','UOM','Unit Cost','Total','Lot'].map(h => (
-                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(251,146,60,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty Received','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(74,222,128,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty Received','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -158,10 +160,9 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                       <td style={{ padding:'8px', color:'rgba(255,255,255,0.35)', fontSize:11 }}>{line.lotNumber ?? '—'}</td>
                     </tr>
                   ))}
-                  {/* Total row */}
                   <tr style={{ background:'rgba(255,255,255,0.02)' }}>
                     <td colSpan={4} style={{ padding:'8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL VALUE</td>
-                    <td colSpan={2} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'#fb923c', fontSize:14 }}>
+                    <td colSpan={2} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'#4ade80', fontSize:14 }}>
                       {fmtAmt(detail.lines?.reduce((sum, l) => sum + Number(l.receivedQuantity) * Number(l.unitCost ?? 0), 0) ?? 0)}
                     </td>
                     <td />
@@ -170,7 +171,6 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
               </table>
             </div>
 
-            {/* Notes */}
             {detail.notes && (
               <div style={{ background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
                 <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>Notes</div>
@@ -178,7 +178,6 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
               </div>
             )}
 
-            {/* Actions */}
             {detail.status === 'posted' && (
               <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                 <button onClick={handleCancel} disabled={cancelBusy}
@@ -207,16 +206,16 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
   open: boolean; onClose: () => void; onSaved: () => void;
   warehouses: Warehouse[]; items: Item[];
 }) {
-  const [poSearch, setPoSearch] = useState('');
-  const [selectedPo, setSelectedPo] = useState<PO | null>(null);
-  const [poLoading, setPoLoading] = useState(false);
+  const [poSearch,    setPoSearch]    = useState('');
+  const [selectedPo,  setSelectedPo]  = useState<PO | null>(null);
+  const [poLoading,   setPoLoading]   = useState(false);
   const [warehouseId, setWarehouseId] = useState('');
-  const [receivedDate, setReceivedDate] = useState('');
-  const [condition, setCondition] = useState('complete');
-  const [notes, setNotes] = useState('');
-  const [lines, setLines] = useState<NewGrnLine[]>([{ ...EMPTY_LINE }]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [receivedDate,setReceivedDate]= useState('');
+  const [condition,   setCondition]   = useState('complete');
+  const [notes,       setNotes]       = useState('');
+  const [lines,       setLines]       = useState<NewGrnLine[]>([{ ...EMPTY_LINE }]);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [error,       setError]       = useState('');
 
   useEffect(() => {
     if (open) {
@@ -235,12 +234,10 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
       if (!found) { setError(`PO ${poSearch} not found`); return; }
       const detail = await purchaseOrdersApi.getById(found.id) as PO;
       setSelectedPo(detail);
-      // Pre-fill lines from PO
       if (detail.lines?.length) {
         setLines(detail.lines.map(l => ({
           itemId: l.itemId, receivedQuantity: '', uom: l.uom,
-          unitCost: l.unitPrice ?? '', lotNumber: '', notes: '',
-          poLineId: l.id,
+          unitCost: l.unitPrice ?? '', lotNumber: '', notes: '', poLineId: l.id,
         })));
       }
       setError('');
@@ -264,41 +261,35 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
     setSubmitting(true); setError('');
     try {
       const dto: CreateGoodsReceiptDto = {
-        poId:         selectedPo?.id,
-        warehouseId,
+        poId: selectedPo?.id, warehouseId,
         receivedDate: receivedDate || undefined,
-        condition,
-        notes:        notes || undefined,
+        condition, notes: notes || undefined,
         lines: validLines.map(l => ({
-          poLineId:         l.poLineId,
-          itemId:           l.itemId,
-          receivedQuantity: Number(l.receivedQuantity),
-          uom:              l.uom,
-          unitCost:         l.unitCost ? Number(l.unitCost) : undefined,
-          lotNumber:        l.lotNumber || undefined,
-          notes:            l.notes || undefined,
+          poLineId: l.poLineId, itemId: l.itemId,
+          receivedQuantity: Number(l.receivedQuantity), uom: l.uom,
+          unitCost: l.unitCost ? Number(l.unitCost) : undefined,
+          lotNumber: l.lotNumber || undefined, notes: l.notes || undefined,
         })),
       };
       await goodsReceiptsApi.create(dto);
       onSaved(); onClose();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to create GRN.');
-    } finally { setSubmitting(false); }
+    } catch (err: any) { setError(err?.response?.data?.message || 'Failed to create GRN.'); }
+    finally { setSubmitting(false); }
   };
 
   if (!open) return null;
 
   const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
-  const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
+  const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(74,222,128,0.6)' };
   const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
 
   return (
     <>
       <style>{`
         .grn-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .grn-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:900px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
-        .grn-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
-        .grn-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
+        .grn-box{background:#0e0b1a;border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:900px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .grn-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);pointer-events:none}
+        .grn-th{font-size:10px;color:rgba(74,222,128,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
         .grn-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
       `}</style>
       <div className="grn-overlay">
@@ -311,7 +302,6 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
             <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
               {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
 
-              {/* PO Link (optional) */}
               <div className="grn-section"><span>Link to Purchase Order (optional)</span></div>
               <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:5, flex:1 }}>
@@ -333,7 +323,6 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                 )}
               </div>
 
-              {/* Header */}
               <div className="grn-section"><span>Receipt Details</span></div>
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
@@ -359,7 +348,6 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                 </div>
               </div>
 
-              {/* Lines */}
               <div className="grn-section">
                 <span>Receipt Lines</span>
                 {!selectedPo && (
@@ -414,20 +402,10 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                             )}
                           </div>
                         </td>
-                        <td style={{ padding:'4px 3px' }}>
-                          <input style={LINE_INP} placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} />
-                        </td>
-                        <td style={{ padding:'4px 3px' }}>
-                          <input style={{ ...LINE_INP, textAlign:'right' }} type="number" min="0" step="0.0001"
-                            placeholder={poLine ? String(poLine.unitPrice) : '0.00'}
-                            value={line.unitCost} onChange={e => setLine(idx, 'unitCost', e.target.value)} />
-                        </td>
-                        <td style={{ padding:'4px 3px' }}>
-                          <input style={LINE_INP} placeholder="LOT-001" value={line.lotNumber} onChange={e => setLine(idx, 'lotNumber', e.target.value)} />
-                        </td>
-                        <td style={{ padding:'4px 3px' }}>
-                          <input style={LINE_INP} placeholder="Optional…" value={line.notes} onChange={e => setLine(idx, 'notes', e.target.value)} />
-                        </td>
+                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right' }} type="number" min="0" step="0.0001" placeholder={poLine ? String(poLine.unitPrice) : '0.00'} value={line.unitCost} onChange={e => setLine(idx, 'unitCost', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="LOT-001" value={line.lotNumber} onChange={e => setLine(idx, 'lotNumber', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="Optional…" value={line.notes} onChange={e => setLine(idx, 'notes', e.target.value)} /></td>
                         {!selectedPo && (
                           <td style={{ padding:'4px 3px' }}>
                             {lines.length > 1 && (
@@ -463,6 +441,7 @@ export default function GoodsReceiptsPage() {
   const [grns,       setGrns]       = useState<GoodsReceipt[]>([]);
   const [stats,      setStats]      = useState<GrnStats | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [suppliers,  setSuppliers]  = useState<Supplier[]>([]);
   const [items,      setItems]      = useState<Item[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
@@ -473,16 +452,18 @@ export default function GoodsReceiptsPage() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [grnData, statsData, whData, itemData] = await Promise.all([
+      const [grnData, statsData, whData, itemData, supData] = await Promise.all([
         goodsReceiptsApi.getAll(),
         goodsReceiptsApi.getStats(),
         warehousesApi.getAll(),
         itemsApi.getAll(),
+        suppliersApi.getAll(),
       ]);
       setGrns(grnData);
       setStats(statsData);
       setWarehouses(whData as Warehouse[]);
       setItems(itemData as Item[]);
+      setSuppliers(supData as Supplier[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally { setLoading(false); }
@@ -490,23 +471,51 @@ export default function GoodsReceiptsPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Filters ────────────────────────────────────────────────────────────────
+  // ── Filter definitions ─────────────────────────────────────────────────────
   const filterDefs = useMemo<ERPFilter<GoodsReceipt>[]>(() => [
+    // 1. Supplier — searchselect (derived from GRN supplierName)
     {
-      key: 'warehouseId', label: 'Warehouse', type: 'select', placeholder: 'All Warehouses',
+      key: 'supplierId', label: 'Supplier', type: 'searchselect',
+      placeholder: 'Search supplier…', selectWidth: 200,
+      options: suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
+      filterFn: (row, val) => (row as any).supplierId === val || row.supplierName === suppliers.find(s => s.id === val)?.name,
+    },
+    // 2. PO Number — searchselect (derived from linked GRNs)
+    {
+      key: 'poId', label: 'PO Number', type: 'searchselect',
+      placeholder: 'Search PO…', selectWidth: 175,
+      options: Array.from(new Map(grns.filter(g => g.poId && g.poNumber).map(g => [g.poId!, { value: g.poId!, label: g.poNumber!, sublabel: g.supplierName ?? undefined }])).values()),
+      filterFn: (row, val) => row.poId === val,
+    },
+    // 3. Warehouse — searchselect
+    {
+      key: 'warehouseId', label: 'Warehouse', type: 'searchselect',
+      placeholder: 'Search warehouse…', selectWidth: 190,
       options: warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` })),
       filterFn: (row, val) => row.warehouseId === val,
     },
+    // 4. Received Date — daterange
     {
-      key: 'condition', label: 'Condition', type: 'select', placeholder: 'All',
-      options: Object.entries(CONDITION_CFG).map(([v, c]) => ({ value: v, label: c.label })),
-      filterFn: (row, val) => row.condition === val,
+      key: 'receivedDate', label: 'Received Date', type: 'daterange',
+      placeholder: 'Received date…', dateWidth: 195,
+      filterFn: (row, val) => dateInSelection(row.receivedDate, val as DateSelection),
     },
+    // 5. Condition — multiselect
     {
-      key: 'hasSupplier', label: 'Has PO', type: 'boolean', placeholder: 'Linked to PO',
+      key: 'condition', label: 'Condition', type: 'multiselect',
+      options: Object.entries(CONDITION_CFG).map(([v, c]) => ({
+        value: v, label: c.label,
+        color: c.color, bg: `${c.color}15`, border: `${c.color}30`,
+      })),
+      filterFn: (row, val) => (val as string[]).includes(row.condition),
+    },
+    // 6. Has PO — boolean toggle
+    {
+      key: 'hasPo', label: 'Linked to PO', type: 'boolean',
+      placeholder: 'Linked to PO',
       filterFn: (row, val) => val === true ? !!row.poId : true,
     },
-  ], [warehouses]);
+  ], [warehouses, suppliers, grns]);
 
   const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
 
@@ -605,8 +614,7 @@ export default function GoodsReceiptsPage() {
           ].map(s => {
             const isActive = statusFilter === s.key;
             return (
-              <div key={s.key}
-                onClick={() => setStatusFilter(prev => prev === s.key ? null : s.key)}
+              <div key={s.key} onClick={() => setStatusFilter(prev => prev === s.key ? null : s.key)}
                 style={{ background: isActive ? `${s.color}15` : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? s.color : s.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90, cursor:'pointer', transition:'all 0.15s' }}>
                 <span style={{ fontSize:10, color:s.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{s.label}</span>
                 <span style={{ fontSize:22, fontWeight:500, color: isActive ? s.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{s.value}</span>
@@ -620,13 +628,13 @@ export default function GoodsReceiptsPage() {
             </div>
           )}
           <div onClick={() => setStatusFilter(null)}
-            style={{ background: !statusFilter ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border:`0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70, cursor:'pointer', transition:'all 0.15s' }}>
-            <span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span>
-            <span style={{ fontSize:22, fontWeight:500, color:'#fb923c', fontFamily:"'IBM Plex Mono',monospace" }}>{grns.length}</span>
+            style={{ background: !statusFilter ? 'rgba(74,222,128,0.08)' : 'rgba(10,7,18,0.7)', border:`0.5px solid ${!statusFilter ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70, cursor:'pointer', transition:'all 0.15s' }}>
+            <span style={{ fontSize:10, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span>
+            <span style={{ fontSize:22, fontWeight:500, color:'#4ade80', fontFamily:"'IBM Plex Mono',monospace" }}>{grns.length}</span>
           </div>
         </div>
 
-        {/* Toolbar */}
+        {/* Toolbar + filters */}
         <div style={{ display:'flex', alignItems:'flex-end', gap:10, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
           <div style={{ flex:1 }}>
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
@@ -655,20 +663,10 @@ export default function GoodsReceiptsPage() {
         </div>
       </div>
 
-      <CreateGrnModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSaved={fetchAll}
-        warehouses={warehouses}
-        items={items}
-      />
+      <CreateGrnModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={fetchAll} warehouses={warehouses} items={items} />
 
       {detailGrn && (
-        <GrnDetailDrawer
-          grn={detailGrn}
-          onClose={() => setDetailGrn(null)}
-          onAction={() => { setDetailGrn(null); fetchAll(); }}
-        />
+        <GrnDetailDrawer grn={detailGrn} onClose={() => setDetailGrn(null)} onAction={() => { setDetailGrn(null); fetchAll(); }} />
       )}
     </ERPShell>
   );

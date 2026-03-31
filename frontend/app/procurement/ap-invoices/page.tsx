@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/ERPFilterBar';
 import { apInvoicesApi } from '@/lib/api/ap-invoices';
 import { suppliersApi } from '@/lib/api/suppliers';
+import { itemsApi } from '@/lib/api/items';
+import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { goodsReceiptsApi, GoodsReceipt } from '@/lib/api/goods-receipts';
 import apiClient from '@/lib/api/client';
 import { DateSelection } from '@/components/ui/ERPDatePicker';
@@ -44,6 +46,12 @@ interface APInvoice {
 }
 
 interface Supplier { id: string; code: string; name: string; }
+interface Item     { id: string; code: string; name: string; baseUom: string; isPurchasable?: boolean; }
+interface PODetail {
+  id: string; poNumber: string; status: string;
+  supplier?: { id: string; code: string; name: string };
+  lines?: Array<{ id: string; itemId: string; item?: { code: string; name: string; baseUom: string }; orderedQuantity: string; receivedQuantity: string; uom: string; unitPrice: string; discountPercent: string; }>;
+}
 interface PO { id: string; poNumber: string; supplier?: { name: string } }
 interface GRNOption { id: string; grnNumber: string; supplierName?: string; warehouseCode: string; }
 
@@ -324,6 +332,19 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
               ))}
             </div>
 
+            {/* 3-Way Match warning — draft with PO but no GRN */}
+            {detail.status === 'draft' && (detail as any).poId && !(detail as any).grnId && (
+              <div style={{ display:'flex', alignItems:'flex-start', gap:10, background:'rgba(251,191,36,0.06)', border:'0.5px solid rgba(251,191,36,0.25)', borderRadius:8, padding:'10px 14px' }}>
+                <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:500, color:'#fbbf24', marginBottom:3 }}>No GRN linked</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
+                    This invoice has a linked PO but no Goods Receipt. For a full 3-way match, receive the goods first via <strong style={{ color:'rgba(255,255,255,0.6)' }}>Procurement → Goods Receipts</strong>, then link the GRN in the Match tab before posting.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Tabs */}
             <div style={{ display:'flex', gap:0, background:'rgba(255,255,255,0.03)', borderRadius:7, border:'0.5px solid rgba(255,255,255,0.07)', overflow:'hidden', width:'fit-content' }}>
               {([
@@ -498,11 +519,360 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
   );
 }
 
+
+// ─── Create AP Invoice Modal ──────────────────────────────────────────────────
+
+type CreateMode = 'choose' | 'from_po' | 'manual';
+
+interface NewAPLine {
+  itemId: string; description: string;
+  quantity: string; uom: string; unitPrice: string; discountPercent: string;
+  poLineId?: string;
+}
+const EMPTY_AP_LINE: NewAPLine = { itemId:'', description:'', quantity:'', uom:'', unitPrice:'', discountPercent:'0' };
+
+function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
+  suppliers: Supplier[]; items: Item[];
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [mode,        setMode]        = useState<CreateMode>('choose');
+  const [poSearch,    setPoSearch]    = useState('');
+  const [poLoading,   setPoLoading]   = useState(false);
+  const [selectedPo,  setSelectedPo]  = useState<PODetail | null>(null);
+  const [supplierId,  setSupplierId]  = useState('');
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0,10));
+  const [dueDate,     setDueDate]     = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10);
+  });
+  const [supplierRef, setSupplierRef] = useState('');
+  const [currency,    setCurrency]    = useState('USD');
+  const [notes,       setNotes]       = useState('');
+  const [lines,       setLines]       = useState<NewAPLine[]>([{ ...EMPTY_AP_LINE }]);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [error,       setError]       = useState('');
+
+  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(167,139,250,0.7)', fontFamily:"'IBM Plex Sans',sans-serif" };
+  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+
+  const searchPo = async () => {
+    if (!poSearch.trim()) return;
+    setPoLoading(true); setError('');
+    try {
+      const all = await purchaseOrdersApi.getAll();
+      const found = (all as any[]).find(p => p.poNumber.toLowerCase() === poSearch.toLowerCase().trim());
+      if (!found) { setError(`PO "${poSearch}" not found`); return; }
+      const detail = await purchaseOrdersApi.getById(found.id) as PODetail;
+      if (!['confirmed','received','partial'].includes(detail.status)) {
+        setError(`PO is in status "${detail.status}" — needs confirmed, received or partial.`); return;
+      }
+      setSelectedPo(detail);
+      setSupplierId(detail.supplier?.id ?? '');
+      if (detail.lines?.length) {
+        setLines(detail.lines.map(l => ({
+          itemId: l.itemId, description: l.item?.name ?? '',
+          quantity: l.orderedQuantity, uom: l.uom,
+          unitPrice: l.unitPrice, discountPercent: l.discountPercent ?? '0',
+          poLineId: l.id,
+        })));
+      }
+    } catch { setError('Failed to load PO.'); }
+    finally { setPoLoading(false); }
+  };
+
+  const fromPoSubmit = async () => {
+    if (!selectedPo) return;
+    setSubmitting(true); setError('');
+    try {
+      await apInvoicesApi.createFromPo(selectedPo.id);
+      onSaved();
+    } catch (err: any) { setError(err?.response?.data?.message || 'Failed to create from PO.'); }
+    finally { setSubmitting(false); }
+  };
+
+  const setLine = (idx: number, k: keyof NewAPLine, v: string) =>
+    setLines(ls => ls.map((l, i) => {
+      if (i !== idx) return l;
+      const upd = { ...l, [k]: v };
+      if (k === 'itemId') { const it = items.find(x => x.id === v); if (it) { upd.uom = it.baseUom; upd.description = it.name; } }
+      return upd;
+    }));
+
+  const lineTotal = (l: NewAPLine) =>
+    (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0) * (1 - (Number(l.discountPercent) || 0) / 100);
+  const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
+
+  const manualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supplierId)    { setError('Supplier is required.'); return; }
+    if (!invoiceDate)   { setError('Invoice date is required.'); return; }
+    if (!dueDate)       { setError('Due date is required.'); return; }
+    const validLines = lines.filter(l => l.quantity && l.unitPrice && Number(l.quantity) > 0 && Number(l.unitPrice) >= 0);
+    if (!validLines.length) { setError('At least one complete line is required.'); return; }
+    setSubmitting(true); setError('');
+    try {
+      await apInvoicesApi.create({
+        supplierId, poId: selectedPo?.id,
+        invoiceDate, dueDate,
+        supplierRef: supplierRef || undefined,
+        currency: currency || 'USD',
+        notes: notes || undefined,
+        lines: validLines.map(l => ({
+          poLineId:        l.poLineId,
+          itemId:          l.itemId || undefined,
+          description:     l.description || undefined,
+          quantity:        Number(l.quantity),
+          uom:             l.uom || undefined,
+          unitPrice:       Number(l.unitPrice),
+          discountPercent: Number(l.discountPercent) || undefined,
+        })),
+      });
+      onSaved();
+    } catch (err: any) { setError(err?.response?.data?.message || 'Failed to create invoice.'); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <>
+      <style>{`
+        .apci-overlay{position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+        .apci-box{background:#0e0b1a;border:0.5px solid rgba(167,139,250,0.22);border-radius:14px;width:100%;max-width:920px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.75)}
+        .apci-box::before{content:\'\';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,0.45),transparent);pointer-events:none}
+        .apci-th{font-size:10px;color:rgba(167,139,250,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
+        .apci-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+      `}</style>
+      <div className="apci-overlay">
+        <div className="apci-box">
+
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:1, borderRadius:'14px 14px 0 0' }}>
+            <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>New AP Invoice</span>
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          </div>
+
+          <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+
+            {/* ── Mode chooser ── */}
+            {mode === 'choose' && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, padding:'8px 0' }}>
+                {/* From PO */}
+                <div onClick={() => setMode('from_po')}
+                  style={{ background:'rgba(251,146,60,0.05)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:10, padding:'20px 22px', cursor:'pointer', transition:'all 0.15s', display:'flex', flexDirection:'column', gap:8 }}
+                  onMouseEnter={e => (e.currentTarget.style.background='rgba(251,146,60,0.1)')}
+                  onMouseLeave={e => (e.currentTarget.style.background='rgba(251,146,60,0.05)')}>
+                  <div style={{ fontSize:22 }}>📋</div>
+                  <div style={{ fontSize:14, fontWeight:500, color:'#fb923c' }}>From Purchase Order</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
+                    Auto-generate an AP Invoice from a confirmed PO. Lines, prices and supplier are pre-filled automatically.
+                  </div>
+                  <div style={{ fontSize:11, color:'rgba(251,146,60,0.55)', marginTop:4 }}>Recommended for standard procurement flow →</div>
+                </div>
+                {/* Manual */}
+                <div onClick={() => setMode('manual')}
+                  style={{ background:'rgba(167,139,250,0.05)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:10, padding:'20px 22px', cursor:'pointer', transition:'all 0.15s', display:'flex', flexDirection:'column', gap:8 }}
+                  onMouseEnter={e => (e.currentTarget.style.background='rgba(167,139,250,0.1)')}
+                  onMouseLeave={e => (e.currentTarget.style.background='rgba(167,139,250,0.05)')}>
+                  <div style={{ fontSize:22 }}>✏️</div>
+                  <div style={{ fontSize:14, fontWeight:500, color:'#a78bfa' }}>Manual Entry</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
+                    Create an AP Invoice manually. Use for services, expenses or invoices without a linked Purchase Order.
+                  </div>
+                  <div style={{ fontSize:11, color:'rgba(167,139,250,0.55)', marginTop:4 }}>For direct expenses and service invoices →</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── From PO mode ── */}
+            {mode === 'from_po' && (
+              <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <button onClick={() => { setMode('choose'); setSelectedPo(null); setPoSearch(''); setError(''); }}
+                  style={{ alignSelf:'flex-start', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.4)', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", display:'flex', alignItems:'center', gap:4 }}>
+                  ← Back
+                </button>
+
+                <div className="apci-section"><span>Find Purchase Order</span></div>
+                <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5, flex:1 }}>
+                    <label style={LBL}>PO Number</label>
+                    <input style={INP} placeholder="e.g. PO-2026-0001" value={poSearch}
+                      onChange={e => setPoSearch(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchPo())} />
+                  </div>
+                  <button type="button" onClick={searchPo} disabled={poLoading}
+                    style={{ padding:'8px 18px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', color:'#fb923c', fontFamily:"'IBM Plex Sans',sans-serif", whiteSpace:'nowrap', opacity:poLoading?0.5:1 }}>
+                    {poLoading ? 'Searching…' : 'Find PO'}
+                  </button>
+                </div>
+
+                {selectedPo && (
+                  <>
+                    {/* PO summary */}
+                    <div style={{ background:'rgba(251,146,60,0.05)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'12px 16px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:500, color:'#fb923c', fontFamily:"'IBM Plex Mono',monospace" }}>{selectedPo.poNumber}</div>
+                        <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', marginTop:2 }}>{selectedPo.supplier?.name} · {selectedPo.lines?.length} line{selectedPo.lines?.length !== 1 ? 's' : ''}</div>
+                      </div>
+                      <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(74,222,128,0.1)', color:'#4ade80', border:'0.5px solid rgba(74,222,128,0.2)' }}>{selectedPo.status}</span>
+                      <div style={{ marginLeft:'auto', fontSize:11, color:'rgba(255,255,255,0.35)' }}>Invoice will be created in draft with all PO lines pre-filled.</div>
+                    </div>
+
+                    {/* Lines preview */}
+                    <div style={{ border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, overflow:'hidden' }}>
+                      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                        <thead>
+                          <tr style={{ background:'rgba(255,255,255,0.02)' }}>
+                            {['Item','Qty','UOM','Unit Price','Line Total'].map(h => (
+                              <th key={h} style={{ padding:'6px 10px', fontSize:10, color:'rgba(251,146,60,0.5)', fontWeight:500, textTransform:'uppercase', letterSpacing:'0.08em', textAlign: ['Qty','Unit Price','Line Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedPo.lines?.map(l => (
+                            <tr key={l.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
+                              <td style={{ padding:'7px 10px' }}>
+                                <div style={{ fontFamily:"'IBM Plex Mono',monospace", color:'#fb923c', fontSize:11 }}>{l.item?.code}</div>
+                                <div style={{ color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:1 }}>{l.item?.name}</div>
+                              </td>
+                              <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace" }}>{Number(l.orderedQuantity).toLocaleString()}</td>
+                              <td style={{ padding:'7px 10px', color:'rgba(255,255,255,0.4)' }}>{l.uom}</td>
+                              <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace" }}>{fmtAmt(l.unitPrice)}</td>
+                              <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, color:'#e2dfd8' }}>
+                                {fmtAmt(Number(l.orderedQuantity) * Number(l.unitPrice) * (1 - Number(l.discountPercent || 0)/100))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+                      <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+                      <button onClick={fromPoSubmit} disabled={submitting}
+                        style={{ background:'linear-gradient(135deg,#92400e,#d97706,#fb923c)', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(251,146,60,0.3)', opacity:submitting?0.5:1 }}>
+                        {submitting ? 'Creating…' : '📋 Create from PO'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── Manual mode ── */}
+            {mode === 'manual' && (
+              <form onSubmit={manualSubmit} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                <button type="button" onClick={() => { setMode('choose'); setError(''); setSupplierId(''); setLines([{ ...EMPTY_AP_LINE }]); }}
+                  style={{ alignSelf:'flex-start', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.4)', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", display:'flex', alignItems:'center', gap:4 }}>
+                  ← Back
+                </button>
+
+                <div className="apci-section"><span>Invoice Header</span></div>
+                <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Supplier *</label>
+                    <select value={supplierId} onChange={e => setSupplierId(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
+                      <option value="">— Select supplier —</option>
+                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Invoice Date *</label>
+                    <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} style={INP} />
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Due Date *</label>
+                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={INP} />
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Currency</label>
+                    <select value={currency} onChange={e => setCurrency(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
+                      {['USD','EUR','DOP','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Supplier Ref (ext. invoice #)</label>
+                    <input style={INP} placeholder="SUP-INV-2026-042" value={supplierRef} onChange={e => setSupplierRef(e.target.value)} />
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <label style={LBL}>Notes</label>
+                    <input style={INP} placeholder="Optional…" value={notes} onChange={e => setNotes(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="apci-section">
+                  <span>Invoice Lines</span>
+                  <button type="button"
+                    style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'4px 10px', fontSize:11, color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:"'IBM Plex Sans',sans-serif" }}
+                    onClick={() => setLines(ls => [...ls, { ...EMPTY_AP_LINE }])}>+ Add Line</button>
+                </div>
+
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Item','Description','Qty *','UOM','Unit Price *','Disc%','Total',''].map(h => (
+                        <th key={h} className="apci-th" style={{ width: h===''?24:h==='Disc%'?55:h==='UOM'?65:h==='Qty *'?80:h==='Unit Price *'?100:h==='Total'?100:undefined }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((line, idx) => (
+                      <tr key={idx}>
+                        <td style={{ padding:'4px 3px' }}>
+                          <select style={{ ...LINE_INP, cursor:'pointer' }} value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
+                            <option value="">— Item (opt.) —</option>
+                            {items.filter(it => it.isPurchasable !== false).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
+                          </select>
+                        </td>
+                        <td style={{ padding:'4px 3px' }}><input className="apci-th" style={LINE_INP} placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right', borderColor: line.quantity && Number(line.quantity)>0 ? 'rgba(167,139,250,0.3)':'rgba(255,255,255,0.1)' }} type="number" min="0" step="0.001" placeholder="0" value={line.quantity} onChange={e => setLine(idx, 'quantity', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right', borderColor: line.unitPrice ? 'rgba(167,139,250,0.3)':'rgba(255,255,255,0.1)' }} type="number" min="0" step="0.0001" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} /></td>
+                        <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right' }} type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} /></td>
+                        <td style={{ padding:'4px 6px', fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'#e2dfd8', textAlign:'right' }}>
+                          {lineTotal(line) > 0 ? fmtAmt(lineTotal(line)) : '—'}
+                        </td>
+                        <td style={{ padding:'4px 3px' }}>
+                          {lines.length > 1 && (
+                            <button type="button"
+                              style={{ width:20, height:20, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
+                              onClick={() => setLines(ls => ls.filter((_,i) => i !== idx))}>×</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Grand Total</span>
+                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:15, fontWeight:500, color:'#a78bfa' }}>{fmtAmt(grandTotal)}</span>
+                </div>
+
+                <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+                  <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={submitting}
+                    style={{ background:'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(109,40,217,0.35)', opacity:submitting?0.5:1 }}>
+                    {submitting ? 'Creating…' : '✏️ Create AP Invoice'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ApInvoicesPage() {
   const [invoices,     setInvoices]     = useState<APInvoice[]>([]);
   const [suppliers,    setSuppliers]    = useState<Supplier[]>([]);
+  const [items,        setItems]        = useState<Item[]>([]);
+  const [createOpen,   setCreateOpen]   = useState(false);
   const [pos,          setPos]          = useState<PO[]>([]);
   const [grns,         setGrns]         = useState<GRNOption[]>([]);
   const [kpis,         setKpis]         = useState<KPIs | null>(null);
@@ -601,15 +971,17 @@ export default function ApInvoicesPage() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [invData, kpiData, supData, grnData] = await Promise.all([
+      const [invData, kpiData, supData, grnData, itemData] = await Promise.all([
         apInvoicesApi.getAll(),
         apInvoicesApi.getKpis(),
         suppliersApi.getAll(),
         goodsReceiptsApi.getAll(),
+        itemsApi.getAll(),
       ]);
       setInvoices(invData as APInvoice[]);
       setKpis(kpiData as KPIs);
       setSuppliers(supData as Supplier[]);
+      setItems(itemData as Item[]);
       // Build PO list from invoices that have a linked PO (deduped)
       const poMap = new Map<string, PO>();
       (invData as APInvoice[]).forEach(inv => {
@@ -753,15 +1125,21 @@ export default function ApInvoicesPage() {
           </div>
         </div>
 
-        {/* Filter bar */}
-        <div style={{ marginBottom:10, flexShrink:0 }}>
-          <ERPFilterBar
-            filters={filterDefs}
-            values={filterVals}
-            onChange={setFilterVal}
-            onReset={resetFilters}
-            activeCount={filterCount}
-          />
+        {/* Filter bar + New button */}
+        <div style={{ display:'flex', alignItems:'flex-end', gap:10, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
+          <div style={{ flex:1 }}>
+            <ERPFilterBar
+              filters={filterDefs}
+              values={filterVals}
+              onChange={setFilterVal}
+              onReset={resetFilters}
+              activeCount={filterCount}
+            />
+          </div>
+          <button onClick={() => setCreateOpen(true)}
+            style={{ display:'flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)', border:'none', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(109,40,217,0.35)', flexShrink:0, alignSelf:'flex-end', whiteSpace:'nowrap' }}>
+            + New AP Invoice
+          </button>
         </div>
 
         {error && <div className="ap-error">{error}</div>}
@@ -787,6 +1165,15 @@ export default function ApInvoicesPage() {
           inv={detailInv}
           onClose={() => setDetailInv(null)}
           onAction={() => { setDetailInv(null); fetchAll(); }}
+        />
+      )}
+
+      {createOpen && (
+        <CreateApInvoiceModal
+          suppliers={suppliers}
+          items={items}
+          onClose={() => setCreateOpen(false)}
+          onSaved={() => { setCreateOpen(false); fetchAll(); }}
         />
       )}
     </ERPShell>
