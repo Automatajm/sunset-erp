@@ -1,84 +1,137 @@
+// ============================================================================
+// FILE: backend/src/modules/stock-transactions/stock-transactions.service.ts
+// ============================================================================
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { UomService } from '../uom/uom.service';
 import { CreateStockTransactionDto } from './dto/create-stock-transaction.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class StockTransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uom:    UomService,
+  ) {}
 
-  async create(tenantId: string, userId: string, createStockTransactionDto: CreateStockTransactionDto) {
+  // ── Create manual stock adjustment ────────────────────────────────────────
+
+  async create(tenantId: string, userId: string, dto: CreateStockTransactionDto) {
     const item = await this.prisma.item.findFirst({
-      where: { id: createStockTransactionDto.itemId, tenantId, deletedAt: null },
+      where: { id: dto.itemId, tenantId, deletedAt: null },
     });
     if (!item) throw new NotFoundException('Item not found');
 
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { id: createStockTransactionDto.warehouseId, tenantId, deletedAt: null },
+      where: { id: dto.warehouseId, tenantId, deletedAt: null },
     });
     if (!warehouse) throw new NotFoundException('Warehouse not found');
 
     const movementNumber = await this.generateMovementNumber(tenantId);
+    const isReceipt      = dto.transactionType === 'receipt';
+    const isIssue        = dto.transactionType === 'issue';
+    const absQty         = Math.abs(dto.quantity);
+    const signedQty      = isIssue ? -absQty : absQty;
+
+    // Calculate all 3 UOM quantities (ADR-014)
+    // For manual adjustments, dto.quantity is treated as purchaseQty
+    const allQtys = await this.uom.calcAllQties(absQty, dto.itemId, tenantId);
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const isReceipt = createStockTransactionDto.transactionType === 'receipt';
-      const isIssue   = createStockTransactionDto.transactionType === 'issue';
-
       const movement = await tx.stockMovement.create({
         data: {
           tenantId,
           movementNumber,
-          movementType:   createStockTransactionDto.transactionType,
-          movementDate:   createStockTransactionDto.transactionDate
-            ? new Date(createStockTransactionDto.transactionDate)
-            : new Date(),
-          itemId:         createStockTransactionDto.itemId,
-          fromWarehouseId: isIssue   ? createStockTransactionDto.warehouseId : null,
-          toWarehouseId:   isReceipt ? createStockTransactionDto.warehouseId : null,
-          quantity:        new Decimal(Math.abs(createStockTransactionDto.quantity)),
-          uom:             createStockTransactionDto.uom,
-          lotNumber:       createStockTransactionDto.lotNumber,
-          serialNumber:    createStockTransactionDto.serialNumber,
-          referenceType:   createStockTransactionDto.referenceType,
-          referenceId:     createStockTransactionDto.referenceId,
-          notes:           createStockTransactionDto.notes,
+          movementType:    dto.transactionType,
+          movementDate:    dto.transactionDate ? new Date(dto.transactionDate) : new Date(),
+          itemId:          dto.itemId,
+          fromWarehouseId: isIssue   ? dto.warehouseId : null,
+          toWarehouseId:   isReceipt ? dto.warehouseId : null,
+          // Storage UOM (existing fields — backward compat)
+          quantity:        new Decimal(absQty),
+          uom:             dto.uom ?? allQtys.storageUom,
+          // Purchase UOM (financial unit of record)
+          purchaseQty:     allQtys.purchaseQty,
+          purchaseUom:     allQtys.purchaseUom,
+          // Consumption UOM (auxiliary)
+          consumptionQty:  allQtys.consumptionQty,
+          consumptionUom:  allQtys.consumptionUom,
+          lotNumber:       dto.lotNumber,
+          serialNumber:    dto.serialNumber,
+          referenceType:   dto.referenceType,
+          referenceId:     dto.referenceId,
+          notes:           dto.notes,
           createdBy:       userId,
         },
       });
 
-      const existingStock = await tx.stock.findFirst({
-        where: { tenantId, itemId: createStockTransactionDto.itemId, warehouseId: createStockTransactionDto.warehouseId },
+      const existing = await tx.stock.findFirst({
+        where: { tenantId, itemId: dto.itemId, warehouseId: dto.warehouseId },
       });
 
-      if (existingStock) {
-        const newQuantity = existingStock.onHandQuantity.toNumber() + createStockTransactionDto.quantity;
+      if (existing) {
+        const currentPurchaseQty  = Number(existing.purchaseQty ?? existing.onHandQuantity);
+        const currentUnitCost     = Number(existing.unitCost ?? 0);
+
+        // For receipts: recalculate WAC (ADR-019)
+        let newUnitCost = currentUnitCost;
+        let newPurchaseQty = currentPurchaseQty + (isIssue ? -allQtys.purchaseQty : allQtys.purchaseQty);
+
+        if (isReceipt && dto.unitCost) {
+          const wacResult = this.uom.calcNewWAC(
+            currentPurchaseQty, currentUnitCost,
+            allQtys.purchaseQty, dto.unitCost,
+          );
+          newUnitCost    = wacResult.newUnitCost;
+          newPurchaseQty = wacResult.newPurchaseQty;
+        }
+
         await tx.stock.update({
-          where: { id: existingStock.id },
-          data: { onHandQuantity: new Decimal(newQuantity) },
+          where: { id: existing.id },
+          data: {
+            purchaseQty:     Math.max(0, newPurchaseQty),
+            purchaseUom:     allQtys.purchaseUom,
+            onHandQuantity:  { increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty) },
+            storageQty:      { increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty) },
+            storageUom:      allQtys.storageUom,
+            consumptionQty:  { increment: new Decimal(isIssue ? -allQtys.consumptionQty : allQtys.consumptionQty) },
+            consumptionUom:  allQtys.consumptionUom,
+            unitCost:        new Decimal(newUnitCost),
+          },
         });
       } else {
+        const initCost = dto.unitCost ?? 0;
         await tx.stock.create({
           data: {
             tenantId,
-            itemId:          createStockTransactionDto.itemId,
-            warehouseId:     createStockTransactionDto.warehouseId,
-            onHandQuantity:  new Decimal(Math.max(0, createStockTransactionDto.quantity)),
+            itemId:          dto.itemId,
+            warehouseId:     dto.warehouseId,
+            purchaseQty:     new Decimal(Math.max(0, allQtys.purchaseQty)),
+            purchaseUom:     allQtys.purchaseUom,
+            onHandQuantity:  new Decimal(Math.max(0, allQtys.storageQty)),
+            storageQty:      new Decimal(Math.max(0, allQtys.storageQty)),
+            storageUom:      allQtys.storageUom,
+            consumptionQty:  new Decimal(Math.max(0, allQtys.consumptionQty)),
+            consumptionUom:  allQtys.consumptionUom,
             reservedQuantity: new Decimal(0),
-            unitCost:        new Decimal(0),
-            lotNumber:       createStockTransactionDto.lotNumber,
-            serialNumber:    createStockTransactionDto.serialNumber,
+            unitCost:        new Decimal(initCost),
+            lotNumber:       dto.lotNumber,
+            serialNumber:    dto.serialNumber,
           },
         });
       }
+
       return movement;
     });
 
     return this.findOne(tenantId, result.id);
   }
 
+  // ── Find All ───────────────────────────────────────────────────────────────
+
   async findAll(tenantId: string, filters?: { itemId?: string; warehouseId?: string; transactionType?: string }) {
     const where: any = { tenantId };
-    if (filters?.itemId)          where.itemId      = filters.itemId;
+    if (filters?.itemId)          where.itemId       = filters.itemId;
     if (filters?.transactionType) where.movementType = filters.transactionType;
 
     return this.prisma.stockMovement.findMany({
@@ -88,14 +141,24 @@ export class StockTransactionsService {
     });
   }
 
+  // ── Find One ───────────────────────────────────────────────────────────────
+
   async findOne(tenantId: string, id: string) {
     const movement = await this.prisma.stockMovement.findFirst({
-      where: { id, tenantId },
+      where:   { id, tenantId },
       include: { item: true, fromWarehouse: true, toWarehouse: true },
     });
     if (!movement) throw new NotFoundException(`Stock movement with ID ${id} not found`);
-    return { ...movement, quantity: movement.quantity.toNumber() };
+    return {
+      ...movement,
+      quantity:       Number(movement.quantity),
+      purchaseQty:    movement.purchaseQty    ? Number(movement.purchaseQty)    : null,
+      consumptionQty: movement.consumptionQty ? Number(movement.consumptionQty) : null,
+      movementValue:  movement.movementValue  ? Number(movement.movementValue)  : null,
+    };
   }
+
+  // ── Stock Balance (returns all 3 UOM columns) ──────────────────────────────
 
   async getStockBalance(tenantId: string, filters?: { itemId?: string; warehouseId?: string }) {
     const where: any = { tenantId };
@@ -104,17 +167,48 @@ export class StockTransactionsService {
 
     const stock = await this.prisma.stock.findMany({
       where,
-      include: { item: true, warehouse: true },
+      include: {
+        item:      { include: { purchaseUom: true, storageUom: true, consumptionUom: true } },
+        warehouse: true,
+      },
       orderBy: [{ item: { code: 'asc' } }, { warehouse: { code: 'asc' } }],
     });
 
-    return stock.map(s => ({
-      ...s,
-      onHandQuantity:   s.onHandQuantity.toNumber(),
-      reservedQuantity: s.reservedQuantity.toNumber(),
-      unitCost:         s.unitCost?.toNumber() ?? 0,
-    }));
+    return stock.map(s => {
+      const purchaseQty    = Number(s.purchaseQty    ?? s.onHandQuantity);
+      const storageQty     = Number(s.storageQty     ?? s.onHandQuantity);
+      const consumptionQty = Number(s.consumptionQty ?? s.onHandQuantity);
+      const unitCost       = Number(s.unitCost ?? 0);
+
+      // Derived costs (ADR-019 — never stored, always computed at query time)
+      const storageFactor     = Number(s.item.storageToConsumptionFactor     ?? 1);
+      const consumptionFactor = Number(s.item.purchaseToConsumptionFactor    ?? 1);
+      const unitCostStorage     = storageFactor     > 0 ? unitCost / storageFactor     : unitCost;
+      const unitCostConsumption = consumptionFactor > 0 ? unitCost / consumptionFactor : unitCost;
+
+      return {
+        ...s,
+        // Purchase UOM (financial unit of record)
+        purchaseQty,
+        purchaseUom:      s.purchaseUom     || s.item.purchaseUom?.code  || s.item.baseUom,
+        unitCost,
+        totalValue:       Math.round(purchaseQty * unitCost * 100) / 100,
+        // Storage UOM (warehouse operational)
+        onHandQuantity:   storageQty,
+        storageQty,
+        storageUom:       s.storageUom      || s.item.storageUom?.code   || s.item.baseUom,
+        unitCostStorage:  Math.round(unitCostStorage * 10000) / 10000,
+        // Consumption UOM (production operational)
+        consumptionQty,
+        consumptionUom:   s.consumptionUom  || s.item.consumptionUom?.code || s.item.baseUom,
+        unitCostConsumption: Math.round(unitCostConsumption * 10000) / 10000,
+        reservedQuantity: Number(s.reservedQuantity),
+        availableQty:     Math.max(0, storageQty - Number(s.reservedQuantity)),
+      };
+    });
   }
+
+  // ── Movement number generator ──────────────────────────────────────────────
 
   private async generateMovementNumber(tenantId: string): Promise<string> {
     const year   = new Date().getFullYear();
@@ -128,64 +222,105 @@ export class StockTransactionsService {
     return `${prefix}-${(n + 1).toString().padStart(4, '0')}`;
   }
 
-  // ============================================================================
-  // INTERNAL — called by AP and AR services automatically
-  // ============================================================================
+  // ── Internal: receive from AP Invoice ─────────────────────────────────────
+  // Called by ApInvoicesService when posting an invoice without a GRN
 
   async receiveFromApInvoice(
     tenantId: string,
-    userId: string,
+    userId:   string,
     apInvoice: {
-      id: string;
+      id:            string;
       invoiceNumber: string;
-      lines: Array<{ itemId: string | null; quantity: number; uom: string | null; unitPrice: number; description: string | null }>;
+      lines: Array<{
+        itemId:      string | null;
+        quantity:    number;
+        uom:         string | null;
+        unitPrice:   number;
+        description: string | null;
+      }>;
     },
   ): Promise<void> {
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { tenantId, deletedAt: null, isActive: true },
+      where:   { tenantId, deletedAt: null, isActive: true },
       orderBy: { code: 'asc' },
     });
     if (!warehouse) return;
 
     for (const line of apInvoice.lines) {
       if (!line.itemId || line.quantity <= 0) continue;
+
       const item = await this.prisma.item.findFirst({
         where: { id: line.itemId, tenantId, deletedAt: null, isStockable: true },
       });
       if (!item) continue;
+
+      // Calculate all 3 UOM quantities (ADR-014)
+      const allQtys = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
       const movementNumber = await this.generateMovementNumber(tenantId);
 
       await this.prisma.$transaction(async (tx) => {
-        await tx.stockMovement.create({
-          data: {
-            tenantId, movementNumber, movementType: 'receipt', movementDate: new Date(),
-            itemId: line.itemId!, toWarehouseId: warehouse.id,
-            quantity: new Decimal(line.quantity), uom: line.uom ?? item.baseUom,
-            unitCost: new Decimal(line.unitPrice),
-            referenceType: 'ap_invoice', referenceId: apInvoice.id,
-            notes: `AP Receipt — ${apInvoice.invoiceNumber}`, createdBy: userId,
-          },
-        });
-
         const existing = await tx.stock.findFirst({
           where: { tenantId, itemId: line.itemId!, warehouseId: warehouse.id },
         });
 
+        // WAC recalculation (ADR-019)
+        const wacResult = this.uom.calcNewWAC(
+          existing ? Number(existing.purchaseQty ?? existing.onHandQuantity) : 0,
+          existing ? Number(existing.unitCost ?? 0) : 0,
+          allQtys.purchaseQty,
+          line.unitPrice,
+        );
+
+        await tx.stockMovement.create({
+          data: {
+            tenantId, movementNumber, movementType: 'receipt', movementDate: new Date(),
+            itemId:          line.itemId!,
+            toWarehouseId:   warehouse.id,
+            quantity:        new Decimal(allQtys.storageQty),
+            uom:             allQtys.storageUom,
+            purchaseQty:     allQtys.purchaseQty,
+            purchaseUom:     allQtys.purchaseUom,
+            consumptionQty:  allQtys.consumptionQty,
+            consumptionUom:  allQtys.consumptionUom,
+            unitCost:              new Decimal(line.unitPrice),
+            unitCostAtMovement:    new Decimal(line.unitPrice),
+            movementValue:         new Decimal(Math.round(allQtys.purchaseQty * line.unitPrice * 100) / 100),
+            referenceType:   'ap_invoice',
+            referenceId:     apInvoice.id,
+            notes:           `AP Receipt — ${apInvoice.invoiceNumber}`,
+            createdBy:       userId,
+          },
+        });
+
         if (existing) {
-          const oldQty = Number(existing.onHandQuantity);
-          const oldCost = Number(existing.unitCost ?? 0);
-          const totalQty = oldQty + line.quantity;
-          const wac = totalQty > 0 ? (oldQty * oldCost + line.quantity * line.unitPrice) / totalQty : line.unitPrice;
           await tx.stock.update({
             where: { id: existing.id },
-            data: { onHandQuantity: new Decimal(totalQty), unitCost: new Decimal(Math.round(wac * 10000) / 10000) },
+            data: {
+              purchaseQty:     wacResult.newPurchaseQty,
+              purchaseUom:     allQtys.purchaseUom,
+              onHandQuantity:  { increment: new Decimal(allQtys.storageQty) },
+              storageQty:      { increment: new Decimal(allQtys.storageQty) },
+              storageUom:      allQtys.storageUom,
+              consumptionQty:  { increment: new Decimal(allQtys.consumptionQty) },
+              consumptionUom:  allQtys.consumptionUom,
+              unitCost:        new Decimal(wacResult.newUnitCost),
+            },
           });
         } else {
           await tx.stock.create({
             data: {
-              tenantId, itemId: line.itemId!, warehouseId: warehouse.id,
-              onHandQuantity: new Decimal(line.quantity), reservedQuantity: new Decimal(0),
-              unitCost: new Decimal(line.unitPrice),
+              tenantId,
+              itemId:          line.itemId!,
+              warehouseId:     warehouse.id,
+              purchaseQty:     new Decimal(allQtys.purchaseQty),
+              purchaseUom:     allQtys.purchaseUom,
+              onHandQuantity:  new Decimal(allQtys.storageQty),
+              storageQty:      new Decimal(allQtys.storageQty),
+              storageUom:      allQtys.storageUom,
+              consumptionQty:  new Decimal(allQtys.consumptionQty),
+              consumptionUom:  allQtys.consumptionUom,
+              reservedQuantity: new Decimal(0),
+              unitCost:        new Decimal(line.unitPrice),
             },
           });
         }
@@ -193,27 +328,39 @@ export class StockTransactionsService {
     }
   }
 
+  // ── Internal: ship from AR Invoice ────────────────────────────────────────
+
   async shipFromArInvoice(
     tenantId: string,
-    userId: string,
+    userId:   string,
     arInvoice: {
-      id: string;
+      id:            string;
       invoiceNumber: string;
-      lines: Array<{ itemId: string | null; quantity: number; uom: string | null; description: string | null }>;
+      lines: Array<{
+        itemId:      string | null;
+        quantity:    number;
+        uom:         string | null;
+        description: string | null;
+      }>;
     },
   ): Promise<void> {
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { tenantId, deletedAt: null, isActive: true },
+      where:   { tenantId, deletedAt: null, isActive: true },
       orderBy: { code: 'asc' },
     });
     if (!warehouse) return;
 
     for (const line of arInvoice.lines) {
       if (!line.itemId || line.quantity <= 0) continue;
+
       const item = await this.prisma.item.findFirst({
         where: { id: line.itemId, tenantId, deletedAt: null, isStockable: true },
       });
       if (!item) continue;
+
+      // quantity here is in consumptionUom (sales order qty)
+      // Convert to purchaseQty for financial calculation (ADR-019)
+      const allQtys = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
       const movementNumber = await this.generateMovementNumber(tenantId);
 
       await this.prisma.$transaction(async (tx) => {
@@ -222,28 +369,55 @@ export class StockTransactionsService {
         });
         const unitCost = existing ? Number(existing.unitCost ?? 0) : 0;
 
+        // COGS = consumptionQty / consumptionFactor × unitCost (ADR-019)
+        const cogsValue = this.uom.calcFinancialValue(
+          allQtys.consumptionQty,
+          'consumption',
+          {
+            unitCost,
+            purchaseToConsumptionFactor: Number(item.purchaseToConsumptionFactor ?? 1),
+            storageToConsumptionFactor:  Number(item.storageToConsumptionFactor  ?? 1),
+          },
+        );
+
         await tx.stockMovement.create({
           data: {
             tenantId, movementNumber, movementType: 'issue', movementDate: new Date(),
-            itemId: line.itemId!, fromWarehouseId: warehouse.id,
-            quantity: new Decimal(line.quantity), uom: line.uom ?? item.baseUom,
-            unitCost: new Decimal(unitCost),
-            referenceType: 'ar_invoice', referenceId: arInvoice.id,
-            notes: `AR Shipment — ${arInvoice.invoiceNumber}`, createdBy: userId,
+            itemId:          line.itemId!,
+            fromWarehouseId: warehouse.id,
+            quantity:        new Decimal(allQtys.storageQty),
+            uom:             allQtys.storageUom,
+            purchaseQty:     allQtys.purchaseQty,
+            purchaseUom:     allQtys.purchaseUom,
+            consumptionQty:  allQtys.consumptionQty,
+            consumptionUom:  allQtys.consumptionUom,
+            unitCost:              new Decimal(unitCost),
+            unitCostAtMovement:    new Decimal(unitCost),
+            movementValue:         new Decimal(-Math.abs(cogsValue)),
+            referenceType:   'ar_invoice',
+            referenceId:     arInvoice.id,
+            notes:           `AR Shipment — ${arInvoice.invoiceNumber}`,
+            createdBy:       userId,
           },
         });
 
         if (existing) {
-          const newQty = Math.max(0, Number(existing.onHandQuantity) - line.quantity);
-          await tx.stock.update({ where: { id: existing.id }, data: { onHandQuantity: new Decimal(newQty) } });
+          await tx.stock.update({
+            where: { id: existing.id },
+            data: {
+              purchaseQty:    { decrement: new Decimal(allQtys.purchaseQty) },
+              onHandQuantity: { decrement: new Decimal(allQtys.storageQty) },
+              storageQty:     { decrement: new Decimal(allQtys.storageQty) },
+              consumptionQty: { decrement: new Decimal(allQtys.consumptionQty) },
+              // WAC stays the same on issues (ADR-019)
+            },
+          });
         }
       });
     }
   }
 
-  // ============================================================================
-  // LEDGER
-  // ============================================================================
+  // ── Ledger ─────────────────────────────────────────────────────────────────
 
   async getLedger(tenantId: string, filters?: {
     itemId?: string; warehouseId?: string; itemType?: string;
@@ -273,7 +447,7 @@ export class StockTransactionsService {
 
     let filtered = movements.filter(m => !filters?.itemType || m.item?.itemType === filters.itemType);
 
-    // ── Resolve reference numbers ─────────────────────────────────────────────
+    // Resolve reference numbers
     const arIds = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice'     && m.referenceId).map(m => m.referenceId!))];
     const apIds = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice'     && m.referenceId).map(m => m.referenceId!))];
     const poIds = [...new Set(filtered.filter(m => m.referenceType === 'purchase_order' && m.referenceId).map(m => m.referenceId!))];
@@ -281,18 +455,18 @@ export class StockTransactionsService {
     const [arInvoices, apInvoices, poOrders] = await Promise.all([
       arIds.length > 0 ? this.prisma.arInvoice.findMany({     where: { id: { in: arIds } }, select: { id: true, invoiceNumber: true } }) : [],
       apIds.length > 0 ? this.prisma.apInvoice.findMany({     where: { id: { in: apIds } }, select: { id: true, invoiceNumber: true } }) : [],
-      poIds.length > 0 ? this.prisma.purchaseOrder.findMany({ where: { id: { in: poIds } }, select: { id: true, poNumber: true    } }) : [],
+      poIds.length > 0 ? this.prisma.purchaseOrder.findMany({ where: { id: { in: poIds } }, select: { id: true, poNumber:      true } }) : [],
     ]);
 
-    const arMap = new Map<string, string>(arInvoices.map(i => [i.id, i.invoiceNumber]   as [string, string]));
-    const apMap = new Map<string, string>(apInvoices.map(i => [i.id, i.invoiceNumber]   as [string, string]));
+    const arMap = new Map<string, string>(arInvoices.map(i  => [i.id,  i.invoiceNumber] as [string, string]));
+    const apMap = new Map<string, string>(apInvoices.map(i  => [i.id,  i.invoiceNumber] as [string, string]));
     const poMap = new Map<string, string>((poOrders as any[]).map(p => [p.id, p.poNumber] as [string, string]));
 
     const resolveRef = (m: any): string => {
-      if (!m.referenceType || !m.referenceId)    return '—';
-      if (m.referenceType === 'ar_invoice')      return arMap.get(m.referenceId) ?? m.referenceId;
-      if (m.referenceType === 'ap_invoice')      return apMap.get(m.referenceId) ?? m.referenceId;
-      if (m.referenceType === 'purchase_order')  return poMap.get(m.referenceId) ?? m.referenceId;
+      if (!m.referenceType || !m.referenceId)   return '—';
+      if (m.referenceType === 'ar_invoice')     return arMap.get(m.referenceId) ?? m.referenceId;
+      if (m.referenceType === 'ap_invoice')     return apMap.get(m.referenceId) ?? m.referenceId;
+      if (m.referenceType === 'purchase_order') return poMap.get(m.referenceId) ?? m.referenceId;
       if (m.referenceType === 'opening_balance') return 'Opening Balance';
       return m.referenceId ?? '—';
     };
@@ -302,7 +476,7 @@ export class StockTransactionsService {
       filtered = filtered.filter(m => resolveRef(m).toLowerCase().includes(q));
     }
 
-    // ── Running balance ───────────────────────────────────────────────────────
+    // Running balance (in storageQty for backward compat display)
     const balanceMap: Record<string, number> = {};
 
     if (filters?.dateFrom) {
@@ -319,7 +493,7 @@ export class StockTransactionsService {
         const whId = m.toWarehouseId ?? m.fromWarehouseId ?? 'unknown';
         const key  = `${m.itemId}:${whId}`;
         if (!balanceMap[key]) balanceMap[key] = 0;
-        balanceMap[key] += ['issue'].includes(m.movementType) ? -Number(m.quantity) : Number(m.quantity);
+        balanceMap[key] += m.movementType === 'issue' ? -Number(m.quantity) : Number(m.quantity);
       }
     }
 
@@ -347,10 +521,19 @@ export class StockTransactionsService {
         warehouseId:     whId,
         referenceType:   m.referenceType,
         referenceNumber: resolveRef(m),
+        // Storage qty (display)
         quantity:        qty,
         signedQuantity:  signedQty,
         uom:             m.uom,
+        // Purchase qty (financial)
+        purchaseQty:     m.purchaseQty    ? Number(m.purchaseQty)    : qty,
+        purchaseUom:     m.purchaseUom    ?? m.uom,
+        // Consumption qty
+        consumptionQty:  m.consumptionQty ? Number(m.consumptionQty) : qty,
+        consumptionUom:  m.consumptionUom ?? m.uom,
+        // Costing (ADR-019)
         unitCost,
+        movementValue:   m.movementValue  ? Number(m.movementValue)  : (isOut ? -totalValue : totalValue),
         totalValue:      isOut ? -totalValue : totalValue,
         openingBalance:  Math.round(openingBalance * 1000) / 1000,
         closingBalance:  Math.round(closingBalance * 1000) / 1000,
@@ -379,9 +562,7 @@ export class StockTransactionsService {
     };
   }
 
-  // ============================================================================
-  // VALUATION
-  // ============================================================================
+  // ── Valuation (ADR-019: purchaseQty × unitCost) ────────────────────────────
 
   async getValuation(tenantId: string, filters?: { warehouseId?: string; itemType?: string }) {
     const where: any = { tenantId };
@@ -399,13 +580,21 @@ export class StockTransactionsService {
     const rows = stock
       .filter(s => !filters?.itemType || s.item.itemType === filters.itemType)
       .map(s => {
-        const onHand     = Number(s.onHandQuantity);
-        const unitCost   = Number(s.unitCost ?? 0);
-        const totalValue = Math.round(onHand * unitCost * 100) / 100;
+        // ADR-019: totalValue = purchaseQty × unitCost (financial unit of record)
+        const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
+        const unitCost    = Number(s.unitCost ?? 0);
+        const totalValue  = Math.round(purchaseQty * unitCost * 100) / 100;
         return {
           itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
           warehouseId: s.warehouse.id, warehouseCode: s.warehouse.code, warehouseName: s.warehouse.name,
-          onHandQuantity: onHand, unitCost, totalValue, uom: s.item.baseUom,
+          // Purchase UOM (financial)
+          purchaseQty,
+          purchaseUom: s.purchaseUom || s.item.baseUom,
+          unitCost,
+          totalValue,
+          // Storage UOM (display)
+          onHandQuantity: Number(s.storageQty ?? s.onHandQuantity),
+          uom: s.storageUom || s.item.baseUom,
         };
       });
 
@@ -417,9 +606,7 @@ export class StockTransactionsService {
     };
   }
 
-  // ============================================================================
-  // STOCK PLANNING
-  // ============================================================================
+  // ── Stock Planning ─────────────────────────────────────────────────────────
 
   async getStockPlanning(tenantId: string, filters?: { warehouseId?: string; itemType?: string; alertOnly?: boolean }) {
     const stockWhere: any = { tenantId };
@@ -481,14 +668,19 @@ export class StockTransactionsService {
     }
 
     const rows = filtered.map(s => {
-      const onHand    = Number(s.onHandQuantity);
+      // Use storageQty for operational planning (warehouse sees storage units)
+      const onHand    = Number(s.storageQty ?? s.onHandQuantity);
       const reserved  = Number(s.reservedQuantity);
       const available = onHand - reserved;
-      const unitCost  = Number(s.unitCost ?? 0);
-      const reorderPoint = Number(s.item.reorderPoint ?? 0);
-      const safetyStock  = Number(s.item.safetyStock  ?? 0);
+      // Use purchaseQty × unitCost for financial value (ADR-019)
+      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
+      const unitCost    = Number(s.unitCost ?? 0);
+      const stockValue  = Math.round(purchaseQty * unitCost * 100) / 100;
+
+      const reorderPoint = Number(s.item.reorderPoint  ?? 0);
+      const safetyStock  = Number(s.item.safetyStock   ?? 0);
       const reorderQty   = Number(s.item.reorderQuantity ?? 0);
-      const leadTimeDays = Number(s.item.leadTimeDays ?? 0);
+      const leadTimeDays = Number(s.item.leadTimeDays  ?? 0);
 
       const poData   = poSupplyMap.get(s.itemId);
       const soData   = soDemandMap.get(s.itemId);
@@ -502,9 +694,9 @@ export class StockTransactionsService {
       const suggestedOrderQty = shortfall > 0 ? Math.max(shortfall, reorderQty) : 0;
 
       let alertLevel: 'ok' | 'warning' | 'critical' | 'overstock' = 'ok';
-      if      (atp < 0)                                 alertLevel = 'critical';
-      else if (atp <= safetyStock)                      alertLevel = 'critical';
-      else if (atp <= reorderPoint)                     alertLevel = 'warning';
+      if      (atp < 0)                                  alertLevel = 'critical';
+      else if (atp <= safetyStock)                       alertLevel = 'critical';
+      else if (atp <= reorderPoint)                      alertLevel = 'warning';
       else if (onHand > reorderPoint * 3 && reorderPoint > 0) alertLevel = 'overstock';
 
       const hasOpenPO       = poSupply > 0;
@@ -515,9 +707,10 @@ export class StockTransactionsService {
       return {
         itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
         warehouseId: s.warehouse.id, warehouseCode: s.warehouse.code, warehouseName: s.warehouse.name,
-        uom: s.item.baseUom,
-        onHandQty: onHand, reservedQty: reserved, availableQty: available, unitCost,
-        stockValue: Math.round(onHand * unitCost * 100) / 100,
+        uom: s.storageUom || s.item.baseUom,
+        onHandQty: onHand, reservedQty: reserved, availableQty: available,
+        unitCost, stockValue,
+        purchaseQty, purchaseUom: s.purchaseUom || s.item.baseUom,
         poSupplyQty: Math.round(poSupply * 1000) / 1000,
         soDemandQty: Math.round(soDemand * 1000) / 1000,
         atpQty: Math.round(atp * 1000) / 1000,

@@ -230,6 +230,8 @@ erDiagram
     String payment_terms "❓"
     String currency "❓"
     Decimal credit_limit "❓"
+    Decimal minimum_order_amount "❓"
+    String minimum_order_currency "❓"
     String category "❓"
     Boolean is_active 
     String notes "❓"
@@ -278,6 +280,7 @@ erDiagram
     Decimal ordered_quantity 
     Decimal received_quantity 
     String uom 
+    String purchase_uom_id "❓"
     Decimal unit_price 
     Decimal discount_percent 
     String tax_code "❓"
@@ -293,8 +296,97 @@ erDiagram
     }
   
 
+  "po_purchase_requisitions" {
+    String id "🗝️"
+    String tenant_id 
+    String pr_number 
+    String title 
+    String requested_by 
+    String department_id "❓"
+    String priority 
+    DateTime required_date 
+    String justification "❓"
+    String source 
+    String source_ref_id "❓"
+    Decimal estimated_amount "❓"
+    String status 
+    String approved_by "❓"
+    DateTime approved_at "❓"
+    String rejected_by "❓"
+    DateTime rejected_at "❓"
+    String rejection_reason "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "po_purchase_requisition_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String pr_id 
+    Int line_number 
+    String item_id "❓"
+    String item_status 
+    String generic_description "❓"
+    String generic_spec "❓"
+    Decimal quantity 
+    String uom 
+    Decimal unit_estimate "❓"
+    DateTime required_date 
+    String warehouse_id "❓"
+    String notes "❓"
+    String created_item_id "❓"
+    String po_line_id "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "po_consolidation_config" {
+    String id "🗝️"
+    String tenant_id 
+    Int delivery_window_days 
+    Int max_delivery_gap_days 
+    Decimal price_variance_warn_pct 
+    String mrp_separation 
+    Int lead_time_split_days 
+    DateTime updated_at 
+    String updated_by "❓"
+    }
+  
+
+  "po_supplier_scores" {
+    String id "🗝️"
+    String tenant_id 
+    String supplier_id 
+    String item_id "❓"
+    String period_code 
+    String period_type 
+    Decimal price_score 
+    Decimal delivery_score 
+    Decimal quality_score 
+    Decimal lead_time_score 
+    Decimal total_score 
+    Int po_count 
+    Int grn_count 
+    Int on_time_count 
+    Int complete_count 
+    Decimal avg_price "❓"
+    Decimal avg_lead_days "❓"
+    DateTime calculated_at 
+    }
+  
+
   "in_items" {
-    String category_id "🗝️"
+    String id "🗝️"
     String tenant_id 
     String code 
     String name 
@@ -340,13 +432,13 @@ erDiagram
     String warehouse_type 
     String address "❓"
     Boolean is_active 
+    Boolean location_tracking_enabled 
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
     String created_by 
     String updated_by 
     String deleted_by "❓"
-    Boolean location_tracking_enabled 
     }
   
 
@@ -355,7 +447,13 @@ erDiagram
     String tenant_id 
     String item_id 
     String warehouse_id 
+    Decimal purchase_qty 
+    String purchase_uom 
     Decimal on_hand_quantity 
+    Decimal storage_qty 
+    String storage_uom 
+    Decimal consumption_qty 
+    String consumption_uom 
     Decimal reserved_quantity 
     String lot_number "❓"
     String serial_number "❓"
@@ -377,9 +475,15 @@ erDiagram
     String to_warehouse_id "❓"
     Decimal quantity 
     String uom 
+    Decimal purchase_qty "❓"
+    String purchase_uom "❓"
+    Decimal consumption_qty "❓"
+    String consumption_uom "❓"
     String lot_number "❓"
     String serial_number "❓"
     Decimal unit_cost "❓"
+    Decimal unit_cost_at_movement "❓"
+    Decimal movement_value "❓"
     String reference_type "❓"
     String reference_id "❓"
     String notes "❓"
@@ -984,7 +1088,7 @@ erDiagram
   
 
   "cfg_tenant_settings" {
-    String volume_base_uom_id "🗝️"
+    String id "🗝️"
     String tenant_id 
     String default_uom_system 
     String volume_base_uom_id "❓"
@@ -1013,7 +1117,7 @@ erDiagram
   
 
   "in_categories" {
-    String macro_category_id "🗝️"
+    String id "🗝️"
     String tenant_id 
     String macro_category_id 
     String code 
@@ -1049,7 +1153,7 @@ erDiagram
   
 
   "in_supplier_items" {
-    String purchase_uom_id "🗝️"
+    String id "🗝️"
     String tenant_id 
     String supplier_id 
     String item_id 
@@ -1103,6 +1207,10 @@ erDiagram
     String stock_movement_id "❓"
     Decimal received_quantity 
     String uom 
+    Decimal storage_qty "❓"
+    String storage_uom "❓"
+    Decimal consumption_qty "❓"
+    String consumption_uom "❓"
     Decimal unit_cost "❓"
     String lot_number "❓"
     String notes "❓"
@@ -1234,6 +1342,17 @@ erDiagram
     "po_purchase_order_lines" }o--|| saas_tenants : "tenant"
     "po_purchase_order_lines" }o--|| po_purchase_orders : "purchaseOrder"
     "po_purchase_order_lines" }o--|| in_items : "item"
+    "po_purchase_order_lines" }o--|o cfg_uom_units : "purchaseUom"
+    "po_purchase_requisitions" }o--|| saas_tenants : "tenant"
+    "po_purchase_requisition_lines" }o--|| saas_tenants : "tenant"
+    "po_purchase_requisition_lines" }o--|| po_purchase_requisitions : "purchaseRequisition"
+    "po_purchase_requisition_lines" }o--|o in_items : "item"
+    "po_purchase_requisition_lines" }o--|o in_warehouses : "warehouse"
+    "po_purchase_requisition_lines" }o--|o po_purchase_order_lines : "purchaseOrderLine"
+    "po_consolidation_config" |o--|| saas_tenants : "tenant"
+    "po_supplier_scores" }o--|| saas_tenants : "tenant"
+    "po_supplier_scores" }o--|| po_suppliers : "supplier"
+    "po_supplier_scores" }o--|o in_items : "item"
     "in_items" }o--|o in_categories : "category"
     "in_items" }o--|o in_consumption_groups : "consumptionGroup"
     "in_items" }o--|o cfg_uom_units : "purchaseUom"

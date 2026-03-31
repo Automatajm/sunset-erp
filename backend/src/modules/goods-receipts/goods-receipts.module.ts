@@ -5,11 +5,12 @@ import { Module } from '@nestjs/common';
 import { GoodsReceiptsService } from './goods-receipts.service';
 import { GoodsReceiptsController } from './goods-receipts.controller';
 import { PrismaModule } from '../../database/prisma.module';
+import { UomModule } from '../uom/uom.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports:     [PrismaModule, UomModule],
   controllers: [GoodsReceiptsController],
-  providers: [GoodsReceiptsService],
-  exports: [GoodsReceiptsService],
+  providers:   [GoodsReceiptsService],
+  exports:     [GoodsReceiptsService],
 })
 export class GoodsReceiptsModule {}

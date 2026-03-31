@@ -24,6 +24,11 @@ export class CreateStockTransactionDto {
   @MaxLength(20)
   uom: string;
 
+  @ApiPropertyOptional({ example: 45.50, description: 'Unit cost in purchaseUom (used for WAC calculation on receipts)' })
+  @IsOptional()
+  @IsNumber()
+  unitCost?: number;
+
   @ApiPropertyOptional({ description: 'Reference document ID (PO, SO, Production Order, etc.)' })
   @IsOptional()
   @IsUUID()

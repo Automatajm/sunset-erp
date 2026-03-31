@@ -24,14 +24,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Auto-generate ERD as SVG
 generator erd {
   provider = "prisma-erd-generator"
   output   = "../../docs/02-architecture/diagrams/erd.svg"
   theme    = "forest"
 }
 
-// Auto-generate ERD as Mermaid (renders in GitHub)
 generator erd_mermaid {
   provider = "prisma-erd-generator"
   output   = "../../docs/02-architecture/diagrams/erd.md"
@@ -54,17 +52,14 @@ model Tenant {
   taxId     String? @map("tax_id") @db.VarChar(50)
   subdomain String? @unique @db.VarChar(100)
 
-  // Location
-  country     String  @db.VarChar(2) // ISO 3166-1 alpha-2
+  country     String  @db.VarChar(2)
   industry    String? @db.VarChar(100)
   companySize String? @map("company_size") @db.VarChar(50)
 
-  // Branding
   logoUrl        String? @map("logo_url") @db.VarChar(500)
   primaryColor   String? @map("primary_color") @db.VarChar(7)
   secondaryColor String? @map("secondary_color") @db.VarChar(7)
 
-  // Subscription
   subscriptionPlan     String    @default("free") @map("subscription_plan") @db.VarChar(50)
   subscriptionStatus   String    @default("trial") @map("subscription_status") @db.VarChar(20)
   trialStartsAt        DateTime? @map("trial_starts_at")
@@ -72,19 +67,14 @@ model Tenant {
   subscriptionStartsAt DateTime? @map("subscription_starts_at")
   subscriptionEndsAt   DateTime? @map("subscription_ends_at")
 
-  // Settings
   defaultCurrency String @default("USD") @map("default_currency") @db.VarChar(3)
   defaultLanguage String @default("en-US") @map("default_language") @db.VarChar(10)
-  fiscalYearStart Int    @default(1) @map("fiscal_year_start") // Month 1-12
+  fiscalYearStart Int    @default(1) @map("fiscal_year_start")
   timezone        String @default("UTC") @db.VarChar(50)
 
-  // Status
-  status String @default("active") @db.VarChar(20)
-
-  // Metadata
+  status   String @default("active") @db.VarChar(20)
   settings Json?
 
-  // Timestamps
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -113,10 +103,10 @@ model Tenant {
   SalesOrderLine      SalesOrderLine[]
   JournalEntryLine    JournalEntryLine[]
   fiscalPeriods       FiscalPeriod[]
-  budgets             Budget[] // <-- ADD THIS
-  budgetLines         BudgetLine[] // <-- ADD THIS
-  cashFlowProjections CashFlowProjection[] // <-- ADD THIS
-  cashFlowLines       CashFlowLine[] // <-- ADD THIS
+  budgets             Budget[]
+  budgetLines         BudgetLine[]
+  cashFlowProjections CashFlowProjection[]
+  cashFlowLines       CashFlowLine[]
   arInvoices          ArInvoice[]
   arInvoiceLines      ArInvoiceLine[]
   arPayments          ArPayment[]
@@ -140,8 +130,14 @@ model Tenant {
   warehouseRacks      WarehouseRack[]
   warehouseLevels     WarehouseLevel[]
   warehouseBins       WarehouseBin[]
-  
   tenantSettings      TenantSettings?
+  // Sprint 14B
+  purchaseRequisitions    PurchaseRequisition[]
+  prLines                 PurchaseRequisitionLine[]
+  // Sprint 14C
+  consolidationConfig     ConsolidationConfig?
+  // Sprint 14D
+  supplierScores          SupplierScore[]
 
   @@map("saas_tenants")
 }
@@ -151,22 +147,14 @@ model SubscriptionPlan {
   code        String  @unique @db.VarChar(50)
   name        String  @db.VarChar(100)
   description String? @db.Text
-
-  // Pricing
   priceMonthly Decimal @map("price_monthly") @db.Decimal(10, 2)
   priceYearly  Decimal @map("price_yearly") @db.Decimal(10, 2)
-
-  // Limits (JSONB)
-  limits   Json // { users: 5, items: 1000, storage_gb: 10, transactions_per_month: 500 }
+  limits   Json
   features Json?
-
   isActive Boolean @default(true) @map("is_active")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   subscriptions Subscription[]
-
   @@map("saas_subscription_plans")
 }
 
@@ -174,26 +162,19 @@ model Subscription {
   id       String @id @default(uuid()) @db.Uuid
   tenantId String @map("tenant_id") @db.Uuid
   planId   String @map("plan_id") @db.Uuid
-
   status       String @default("active") @db.VarChar(20)
   billingCycle String @default("monthly") @map("billing_cycle") @db.VarChar(20)
-
   currentPeriodStart DateTime @map("current_period_start")
   currentPeriodEnd   DateTime @map("current_period_end")
-
   trialStart DateTime? @map("trial_start")
   trialEnd   DateTime? @map("trial_end")
-
   cancelledAt        DateTime? @map("cancelled_at")
   cancellationReason String?   @map("cancellation_reason") @db.Text
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   tenant   Tenant           @relation(fields: [tenantId], references: [id])
   plan     SubscriptionPlan @relation(fields: [planId], references: [id])
   invoices Invoice[]
-
   @@map("saas_subscriptions")
 }
 
@@ -201,32 +182,21 @@ model Invoice {
   id             String  @id @default(uuid()) @db.Uuid
   tenantId       String  @map("tenant_id") @db.Uuid
   subscriptionId String? @map("subscription_id") @db.Uuid
-
   invoiceNumber String @unique @map("invoice_number") @db.VarChar(50)
   status        String @default("draft") @db.VarChar(20)
-
-  // Amounts
   subtotal Decimal @db.Decimal(12, 2)
   tax      Decimal @default(0) @db.Decimal(12, 2)
   total    Decimal @db.Decimal(12, 2)
-
   currency String @default("USD") @db.VarChar(3)
-
-  // Dates
   invoiceDate DateTime  @default(dbgenerated("CURRENT_DATE")) @map("invoice_date") @db.Date
   dueDate     DateTime  @map("due_date") @db.Date
   paidAt      DateTime? @map("paid_at")
-
-  // Payment
   paymentMethod   String? @map("payment_method") @db.VarChar(50)
   stripeInvoiceId String? @map("stripe_invoice_id") @db.VarChar(255)
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   subscription Subscription? @relation(fields: [subscriptionId], references: [id])
-
   @@map("saas_invoices")
 }
 
@@ -236,9 +206,7 @@ model UsageRecord {
   metricName String   @map("metric_name") @db.VarChar(100)
   quantity   Decimal  @db.Decimal(12, 2)
   recordedAt DateTime @default(now()) @map("recorded_at")
-
   tenant Tenant @relation(fields: [tenantId], references: [id])
-
   @@index([tenantId])
   @@index([tenantId, metricName])
   @@map("saas_usage_records")
@@ -252,34 +220,23 @@ model User {
   id           String @id @default(uuid()) @db.Uuid
   email        String @unique @db.VarChar(255)
   passwordHash String @map("password_hash") @db.VarChar(255)
-
   firstName String  @map("first_name") @db.VarChar(100)
   lastName  String  @map("last_name") @db.VarChar(100)
   phone     String? @db.VarChar(20)
   avatarUrl String? @map("avatar_url") @db.VarChar(500)
-
-  // Preferences
   locale   String @default("en-US") @db.VarChar(10)
   timezone String @default("UTC") @db.VarChar(50)
-
-  // Status
   status            String    @default("active") @db.VarChar(20)
   emailVerifiedAt   DateTime? @map("email_verified_at")
   lastLoginAt       DateTime? @map("last_login_at")
   passwordChangedAt DateTime? @map("password_changed_at")
-
-  // 2FA
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret") @db.VarChar(255)
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
-
   userTenants UserTenant[]
   userRoles   UserRole[]
-
-  // Audit fields (created_by, updated_by references)
   suppliersCreated      Supplier[]      @relation("SupplierCreatedBy")
   suppliersUpdated      Supplier[]      @relation("SupplierUpdatedBy")
   itemsCreated          Item[]          @relation("ItemCreatedBy")
@@ -288,7 +245,6 @@ model User {
   purchaseOrdersUpdated PurchaseOrder[] @relation("PurchaseOrderUpdatedBy")
   salesOrdersCreated    SalesOrder[]    @relation("SalesOrderCreatedBy")
   salesOrdersUpdated    SalesOrder[]    @relation("SalesOrderUpdatedBy")
-
   @@map("auth_users")
 }
 
@@ -298,14 +254,11 @@ model UserTenant {
   tenantId  String  @map("tenant_id") @db.Uuid
   isDefault Boolean @default(false) @map("is_default")
   isActive  Boolean @default(true) @map("is_active")
-
   joinedAt  DateTime @default(now()) @map("joined_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
   @@unique([userId, tenantId])
   @@index([userId])
   @@index([tenantId])
@@ -319,18 +272,15 @@ model Role {
   name        String  @db.VarChar(100)
   description String? @db.Text
   isSystem    Boolean @default(false) @map("is_system")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   rolePermissions RolePermission[]
   userRoles       UserRole[]
-
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("auth_roles")
@@ -342,12 +292,9 @@ model Permission {
   name        String  @db.VarChar(100)
   description String? @db.Text
   module      String  @db.VarChar(50)
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   rolePermissions RolePermission[]
-
   @@index([module])
   @@map("auth_permissions")
 }
@@ -357,10 +304,8 @@ model RolePermission {
   roleId       String   @map("role_id") @db.Uuid
   permissionId String   @map("permission_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at")
-
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
   @@unique([roleId, permissionId])
   @@index([roleId])
   @@index([permissionId])
@@ -373,10 +318,8 @@ model UserRole {
   roleId    String   @map("role_id") @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
   @@unique([userId, roleId, tenantId])
   @@index([userId])
   @@index([roleId])
@@ -390,18 +333,15 @@ model UserRole {
 
 model Currency {
   id            String  @id @default(uuid()) @db.Uuid
-  code          String  @unique @db.VarChar(3) // ISO 4217
+  code          String  @unique @db.VarChar(3)
   name          String  @db.VarChar(100)
   symbol        String  @db.VarChar(10)
   decimalPlaces Int     @default(2) @map("decimal_places") @db.SmallInt
   isActive      Boolean @default(true) @map("is_active")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   exchangeRatesFrom ExchangeRate[] @relation("FromCurrency")
   exchangeRatesTo   ExchangeRate[] @relation("ToCurrency")
-
   @@index([code])
   @@map("mc_currencies")
 }
@@ -412,13 +352,10 @@ model ExchangeRate {
   toCurrency    String   @map("to_currency") @db.VarChar(3)
   rate          Decimal  @db.Decimal(18, 6)
   effectiveDate DateTime @map("effective_date") @db.Date
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   fromCurrencyRelation Currency @relation("FromCurrency", fields: [fromCurrency], references: [code])
   toCurrencyRelation   Currency @relation("ToCurrency", fields: [toCurrency], references: [code])
-
   @@unique([fromCurrency, toCurrency, effectiveDate])
   @@index([fromCurrency])
   @@index([toCurrency])
@@ -432,17 +369,14 @@ model ExchangeRate {
 
 model Language {
   id         String  @id @default(uuid()) @db.Uuid
-  code       String  @unique @db.VarChar(10) // en-US, es-DO
+  code       String  @unique @db.VarChar(10)
   name       String  @db.VarChar(100)
   nativeName String  @map("native_name") @db.VarChar(100)
   isRtl      Boolean @default(false) @map("is_rtl")
   isActive   Boolean @default(true) @map("is_active")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   translations Translation[]
-
   @@index([code])
   @@map("i18n_languages")
 }
@@ -453,12 +387,9 @@ model Translation {
   translationKey   String  @map("translation_key") @db.VarChar(255)
   translationValue String  @map("translation_value") @db.Text
   context          String? @db.VarChar(100)
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   language Language @relation(fields: [languageCode], references: [code])
-
   @@unique([languageCode, translationKey])
   @@index([languageCode])
   @@index([translationKey])
@@ -476,35 +407,31 @@ model Supplier {
   name      String  @db.VarChar(255)
   legalName String? @map("legal_name") @db.VarChar(255)
   taxId     String? @map("tax_id") @db.VarChar(50)
-
-  // Contact
   phone   String? @db.VarChar(20)
   email   String? @db.VarChar(255)
   website String? @db.VarChar(255)
-
-  // Payment
   paymentTerms String?  @map("payment_terms") @db.VarChar(50)
   currency     String?  @db.VarChar(3)
   creditLimit  Decimal? @map("credit_limit") @db.Decimal(15, 2)
-
+  // Sprint 14C — minimum order amount for consolidation engine
+  minimumOrderAmount   Decimal? @map("minimum_order_amount")   @db.Decimal(15, 2)
+  minimumOrderCurrency String?  @map("minimum_order_currency") @db.VarChar(3)
   category String? @db.VarChar(100)
   isActive Boolean @default(true) @map("is_active")
   notes    String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant         Tenant          @relation(fields: [tenantId], references: [id])
   createdByUser  User            @relation("SupplierCreatedBy", fields: [createdBy], references: [id])
   updatedByUser  User            @relation("SupplierUpdatedBy", fields: [updatedBy], references: [id])
   purchaseOrders PurchaseOrder[]
   apInvoices     ApInvoice[]
   supplierItems  SupplierItem[]
-
+  supplierScores SupplierScore[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -520,36 +447,28 @@ model PurchaseOrder {
   poDate          DateTime  @default(dbgenerated("CURRENT_DATE")) @map("po_date") @db.Date
   expectedDate    DateTime? @map("expected_date") @db.Date
   deliveryAddress String?   @map("delivery_address") @db.Text
-
-  // Payment
   paymentTerms String? @map("payment_terms") @db.VarChar(50)
   currency     String? @db.VarChar(3)
   exchangeRate Decimal @default(1) @map("exchange_rate") @db.Decimal(18, 6)
-
-  // Amounts
   subtotal       Decimal @default(0) @map("subtotal") @db.Decimal(15, 2)
   discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(15, 2)
   taxAmount      Decimal @default(0) @map("tax_amount") @db.Decimal(15, 2)
   total          Decimal @default(0) @db.Decimal(15, 2)
-
   status String  @default("draft") @db.VarChar(20)
   notes  String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant              @relation(fields: [tenantId], references: [id])
   supplier      Supplier            @relation(fields: [supplierId], references: [id])
   createdByUser User                @relation("PurchaseOrderCreatedBy", fields: [createdBy], references: [id])
   updatedByUser User                @relation("PurchaseOrderUpdatedBy", fields: [updatedBy], references: [id])
   lines         PurchaseOrderLine[]
-  apInvoices     ApInvoice[]
-  goodsReceipts  GoodsReceipt[]
-
+  apInvoices    ApInvoice[]
+  goodsReceipts GoodsReceipt[]
   @@unique([tenantId, poNumber])
   @@index([tenantId])
   @@index([tenantId, poNumber])
@@ -566,38 +485,174 @@ model PurchaseOrderLine {
   lineNumber      Int     @map("line_number")
   itemId          String  @map("item_id") @db.Uuid
   description     String? @db.Text
-
-  // Quantities
   orderedQuantity  Decimal @map("ordered_quantity") @db.Decimal(15, 3)
   receivedQuantity Decimal @default(0) @map("received_quantity") @db.Decimal(15, 3)
+  // uom: display string (backward compat). purchaseUomId is the FK source of truth.
   uom              String  @db.VarChar(20)
-
-  // Pricing
+  // Sprint 14A — FK to UomUnit catalog (purchaseUom)
+  purchaseUomId    String? @map("purchase_uom_id") @db.Uuid
   unitPrice       Decimal   @map("unit_price") @db.Decimal(15, 4)
   discountPercent Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
   taxCode         String?   @map("tax_code") @db.VarChar(20)
   lineTotal       Decimal   @map("line_total") @db.Decimal(15, 2)
   expectedDate    DateTime? @map("expected_date") @db.Date
-
   status String @default("open") @db.VarChar(20)
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
+  purchaseUom   UomUnit?      @relation("PoLinePurchaseUom", fields: [purchaseUomId], references: [id])
   apInvoiceLines ApInvoiceLine[]
   grnLines       GoodsReceiptLine[]
-
+  prLines        PurchaseRequisitionLine[]
   @@index([tenantId])
   @@index([purchaseOrderId])
   @@index([itemId])
   @@map("po_purchase_order_lines")
+}
+
+// ============================================================================
+// SPRINT 14B — PURCHASE REQUISITION (po_*)
+// ============================================================================
+
+model PurchaseRequisition {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  prNumber        String    @map("pr_number") @db.VarChar(50)  // PR-YYYY-NNNN
+  title           String    @db.VarChar(255)
+  requestedBy     String    @map("requested_by") @db.Uuid
+  departmentId    String?   @map("department_id") @db.VarChar(100)
+  priority        String    @default("normal") @db.VarChar(20)
+  // normal | urgent | critical
+  requiredDate    DateTime  @map("required_date") @db.Date
+  justification   String?   @db.Text
+  source          String    @default("manual") @db.VarChar(20)
+  // manual | mrp | production_plan
+  sourceRefId     String?   @map("source_ref_id") @db.Uuid
+  estimatedAmount Decimal?  @map("estimated_amount") @db.Decimal(15, 2)
+  status          String    @default("draft") @db.VarChar(20)
+  // draft | submitted | approved | in_progress | completed | rejected | cancelled
+  approvedBy      String?   @map("approved_by") @db.Uuid
+  approvedAt      DateTime? @map("approved_at")
+  rejectedBy      String?   @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdBy       String    @map("created_by") @db.Uuid
+  updatedBy       String    @map("updated_by") @db.Uuid
+  deletedBy       String?   @map("deleted_by") @db.Uuid
+  tenant Tenant                    @relation(fields: [tenantId], references: [id])
+  lines  PurchaseRequisitionLine[]
+  @@unique([tenantId, prNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, requestedBy])
+  @@index([requiredDate])
+  @@map("po_purchase_requisitions")
+}
+
+model PurchaseRequisitionLine {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  prId               String    @map("pr_id") @db.Uuid
+  lineNumber         Int       @map("line_number")
+  // Item — real catalog item or generic (pending master data)
+  itemId             String?   @map("item_id") @db.Uuid
+  itemStatus         String    @default("catalog") @map("item_status") @db.VarChar(20)
+  // catalog | pending_item | item_created
+  genericDescription String?   @map("generic_description") @db.Text
+  genericSpec        String?   @map("generic_spec") @db.Text
+  // Quantity always in consumptionUom for MRP alignment
+  quantity           Decimal   @db.Decimal(15, 3)
+  uom                String    @db.VarChar(20)
+  unitEstimate       Decimal?  @map("unit_estimate") @db.Decimal(15, 4)
+  requiredDate       DateTime  @map("required_date") @db.Date
+  warehouseId        String?   @map("warehouse_id") @db.Uuid
+  notes              String?   @db.Text
+  // Set when generic item is created in catalog
+  createdItemId      String?   @map("created_item_id") @db.Uuid
+  // Set when PR line is converted to a PO line
+  poLineId           String?   @map("po_line_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdBy          String    @map("created_by") @db.Uuid
+  updatedBy          String    @map("updated_by") @db.Uuid
+  tenant              Tenant              @relation(fields: [tenantId], references: [id])
+  purchaseRequisition PurchaseRequisition @relation(fields: [prId], references: [id], onDelete: Cascade)
+  item                Item?               @relation(fields: [itemId], references: [id])
+  warehouse           Warehouse?          @relation(fields: [warehouseId], references: [id])
+  purchaseOrderLine   PurchaseOrderLine?  @relation(fields: [poLineId], references: [id])
+  @@index([tenantId])
+  @@index([prId])
+  @@index([itemId])
+  @@index([itemStatus])
+  @@map("po_purchase_requisition_lines")
+}
+
+// ============================================================================
+// SPRINT 14C — CONSOLIDATION CONFIG (po_*)
+// ============================================================================
+
+model ConsolidationConfig {
+  id                   String  @id @default(uuid()) @db.Uuid
+  tenantId             String  @unique @map("tenant_id") @db.Uuid
+  deliveryWindowDays   Int     @default(7)   @map("delivery_window_days")
+  maxDeliveryGapDays   Int     @default(15)  @map("max_delivery_gap_days")
+  priceVarianceWarnPct Decimal @default(10)  @map("price_variance_warn_pct") @db.Decimal(5, 2)
+  // auto_group | separate
+  mrpSeparation        String  @default("auto_group") @map("mrp_separation") @db.VarChar(20)
+  leadTimeSplitDays    Int     @default(7)   @map("lead_time_split_days")
+  updatedAt            DateTime @updatedAt   @map("updated_at")
+  updatedBy            String?  @map("updated_by") @db.Uuid
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@map("po_consolidation_config")
+}
+
+// ============================================================================
+// SPRINT 14D — SUPPLIER SCORE (po_*)
+// ============================================================================
+
+model SupplierScore {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  supplierId    String   @map("supplier_id") @db.Uuid
+  itemId        String?  @map("item_id") @db.Uuid
+  // null = overall supplier score (all items aggregated)
+  periodCode    String   @map("period_code") @db.VarChar(20)
+  // 2026-Q1 | 2026-04 | 2026 | ALL
+  periodType    String   @map("period_type") @db.VarChar(10)
+  // quarterly | monthly | annual | all_time
+  priceScore    Decimal  @map("price_score")     @db.Decimal(5, 2)
+  deliveryScore Decimal  @map("delivery_score")  @db.Decimal(5, 2)
+  qualityScore  Decimal  @map("quality_score")   @db.Decimal(5, 2)
+  leadTimeScore Decimal  @map("lead_time_score") @db.Decimal(5, 2)
+  totalScore    Decimal  @map("total_score")     @db.Decimal(5, 2)
+  // Supporting counts
+  poCount       Int      @map("po_count")
+  grnCount      Int      @map("grn_count")
+  onTimeCount   Int      @map("on_time_count")
+  completeCount Int      @map("complete_count")
+  avgPrice      Decimal? @map("avg_price")     @db.Decimal(15, 4)
+  avgLeadDays   Decimal? @map("avg_lead_days") @db.Decimal(8, 2)
+  calculatedAt  DateTime @default(now()) @map("calculated_at")
+  tenant   Tenant   @relation(fields: [tenantId],   references: [id])
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  item     Item?    @relation(fields: [itemId],     references: [id])
+  @@unique([tenantId, supplierId, itemId, periodCode])
+  @@index([tenantId])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, itemId])
+  @@index([totalScore])
+  @@map("po_supplier_scores")
 }
 
 // ============================================================================
@@ -610,66 +665,41 @@ model Item {
   code        String  @db.VarChar(50)
   name        String  @db.VarChar(255)
   description String? @db.Text
-
-  // Type
-  ///itemType   String  @map("item_type") @db.VarChar(50)
-  ///categoryId String? @map("category_id") @db.Uuid
-  ///baseUom    String  @map("base_uom") @db.VarChar(20)  replaced by SupplierItem for multi-sourcing flexibility
-
-  // Type & Classification
-  
   itemType                     String  @map("item_type") @db.VarChar(50)
-  categoryId                   String? @map("category_id") @db.Uuid           // nullable DB, required UI
-  consumptionGroupId           String? @map("consumption_group_id") @db.Uuid  // optional always
-  baseUom                      String  @map("base_uom") @db.VarChar(20)  // replaced by SupplierItem for multi-sourcing flexibility
+  categoryId                   String? @map("category_id") @db.Uuid
+  consumptionGroupId           String? @map("consumption_group_id") @db.Uuid
+  baseUom                      String  @map("base_uom") @db.VarChar(20)
   purchaseUomId                String?  @map("purchase_uom_id") @db.Uuid
   purchaseToConsumptionFactor  Decimal  @default(1) @map("purchase_to_consumption_factor") @db.Decimal(18, 8)
   storageUomId                 String?  @map("storage_uom_id") @db.Uuid
   storageToConsumptionFactor   Decimal  @default(1) @map("storage_to_consumption_factor") @db.Decimal(18, 8)
   consumptionUomId             String?  @map("consumption_uom_id") @db.Uuid
-
-  // Category & Group relations
-
   category           Category?         @relation(fields: [categoryId],         references: [id])
   consumptionGroup   ConsumptionGroup? @relation(fields: [consumptionGroupId], references: [id])
-
-  // UOM relations
-
   purchaseUom        UomUnit?          @relation("ItemPurchaseUom",    fields: [purchaseUomId],    references: [id])
   storageUom         UomUnit?          @relation("ItemStorageUom",     fields: [storageUomId],     references: [id])
   consumptionUom     UomUnit?          @relation("ItemConsumptionUom", fields: [consumptionUomId], references: [id])
-
-  // Flags
-  isStockable      Boolean @default(true) @map("is_stockable")
-  isPurchasable    Boolean @default(true) @map("is_purchasable")
-  isSaleable       Boolean @default(true) @map("is_saleable")
+  isStockable      Boolean @default(true)  @map("is_stockable")
+  isPurchasable    Boolean @default(true)  @map("is_purchasable")
+  isSaleable       Boolean @default(true)  @map("is_saleable")
   isManufacturable Boolean @default(false) @map("is_manufacturable")
-
-  // Tracking
   isLotTracked    Boolean @default(false) @map("is_lot_tracked")
   isSerialTracked Boolean @default(false) @map("is_serial_tracked")
   isExpiryTracked Boolean @default(false) @map("is_expiry_tracked")
-
-  // Valuation
   valuationMethod String   @default("average") @map("valuation_method") @db.VarChar(50)
   standardCost    Decimal? @map("standard_cost") @db.Decimal(15, 4)
-
-  // Planning
   leadTimeDays      Int     @default(0) @map("lead_time_days")
   safetyStock       Decimal @default(0) @map("safety_stock") @db.Decimal(15, 3)
   reorderPoint      Decimal @default(0) @map("reorder_point") @db.Decimal(15, 3)
   reorderQuantity   Decimal @default(0) @map("reorder_quantity") @db.Decimal(15, 3)
   defaultSupplierId String? @map("default_supplier_id") @db.Uuid
-
   isActive Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant             Tenant              @relation(fields: [tenantId], references: [id])
   createdByUser      User                @relation("ItemCreatedBy", fields: [createdBy], references: [id])
   updatedByUser      User                @relation("ItemUpdatedBy", fields: [updatedBy], references: [id])
@@ -684,7 +714,8 @@ model Item {
   apInvoiceLines     ApInvoiceLine[]
   supplierItems      SupplierItem[]
   grnLines           GoodsReceiptLine[]
-
+  prLines            PurchaseRequisitionLine[]
+  supplierScores     SupplierScore[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -701,56 +732,75 @@ model Warehouse {
   warehouseType String  @default("regular") @map("warehouse_type") @db.VarChar(50)
   address       String? @db.Text
   isActive      Boolean @default(true) @map("is_active")
-
+  locationTrackingEnabled Boolean @default(false) @map("location_tracking_enabled")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant         Tenant          @relation(fields: [tenantId], references: [id])
-  stock          Stock[]
+  tenant             Tenant          @relation(fields: [tenantId], references: [id])
+  stock              Stock[]
   stockMovementsFrom StockMovement[] @relation("MovementFromWarehouse")
   stockMovementsTo   StockMovement[] @relation("MovementToWarehouse")
   goodsReceipts      GoodsReceipt[]
   grnLines           GoodsReceiptLine[]
-  locationTrackingEnabled Boolean @default(false) @map("location_tracking_enabled")
-  zones   WarehouseZone[]
-
+  zones              WarehouseZone[]
+  prLines            PurchaseRequisitionLine[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
   @@map("in_warehouses")
 }
 
+// ============================================================================
+// in_stock — Sprint 14A: Triple UOM quantities (ADR-014, ADR-019)
+// purchaseUom = financial unit of record (ADR-019)
+// storageUom  = warehouse operational unit (auxiliary)
+// consumptionUom = production operational unit (auxiliary)
+// unitCost = WAC per purchaseUom unit
+// ============================================================================
 model Stock {
   id          String @id @default(uuid()) @db.Uuid
   tenantId    String @map("tenant_id") @db.Uuid
   itemId      String @map("item_id") @db.Uuid
   warehouseId String @map("warehouse_id") @db.Uuid
 
-  // Quantities
-  onHandQuantity   Decimal @default(0) @map("on_hand_quantity") @db.Decimal(15, 3)
-  reservedQuantity Decimal @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
-  // availableQuantity is calculated: onHandQuantity - reservedQuantity
+  // ── Purchase UOM quantities (financial unit of record) ────────────────────
+  purchaseQty  Decimal @default(0) @map("purchase_qty") @db.Decimal(15, 3)
+  purchaseUom  String  @default("") @map("purchase_uom") @db.VarChar(20)
 
-  // Lot/Serial
-  lotNumber    String? @map("lot_number") @db.VarChar(100)
+  // ── Storage UOM quantities (warehouse operational unit) ───────────────────
+  // onHandQuantity is kept in sync with storageQty for backward compatibility
+  onHandQuantity Decimal @default(0) @map("on_hand_quantity") @db.Decimal(15, 3)
+  storageQty     Decimal @default(0) @map("storage_qty")     @db.Decimal(15, 3)
+  storageUom     String  @default("") @map("storage_uom")    @db.VarChar(20)
+
+  // ── Consumption UOM quantities (production operational unit) ──────────────
+  consumptionQty Decimal @default(0) @map("consumption_qty") @db.Decimal(15, 3)
+  consumptionUom String  @default("") @map("consumption_uom") @db.VarChar(20)
+
+  // ── Reserved (in storageUom for warehouse operations) ─────────────────────
+  reservedQuantity Decimal @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
+
+  // ── Lot/Serial tracking ───────────────────────────────────────────────────
+  lotNumber    String? @map("lot_number")    @db.VarChar(100)
   serialNumber String? @map("serial_number") @db.VarChar(100)
 
-  // Costing
+  // ── Costing (ADR-019) ─────────────────────────────────────────────────────
+  // unitCost = Weighted Average Cost per purchaseUom unit
+  // totalValue = purchaseQty × unitCost (calculated, never stored)
+  // unitCostStorage = unitCost / storageFactor (derived at query time)
+  // unitCostConsumption = unitCost / consumptionFactor (derived at query time)
   unitCost Decimal? @map("unit_cost") @db.Decimal(15, 4)
-  // totalValue is calculated: onHandQuantity * unitCost
 
   updatedAt DateTime @updatedAt @map("updated_at")
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id])
   item      Item      @relation(fields: [itemId], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
-
-  levelId String? @map("level_id") @db.Uuid
-  binId   String? @map("bin_id")   @db.Uuid
+  levelId String?         @map("level_id") @db.Uuid
+  binId   String?         @map("bin_id")   @db.Uuid
   level   WarehouseLevel? @relation(fields: [levelId], references: [id])
   bin     WarehouseBin?   @relation(fields: [binId],   references: [id])
 
@@ -761,6 +811,12 @@ model Stock {
   @@map("in_stock")
 }
 
+// ============================================================================
+// in_stock_movements — Sprint 14A: Triple UOM + financial audit fields
+// quantity/uom = storageQty/storageUom (existing fields, backward compat)
+// unitCostAtMovement = WAC snapshot at time of movement (for reversal)
+// movementValue = purchaseQty × unitCostAtMovement (pre-calculated audit)
+// ============================================================================
 model StockMovement {
   id             String   @id @default(uuid()) @db.Uuid
   tenantId       String   @map("tenant_id") @db.Uuid
@@ -768,25 +824,37 @@ model StockMovement {
   movementType   String   @map("movement_type") @db.VarChar(50)
   movementDate   DateTime @default(now()) @map("movement_date")
   itemId         String   @map("item_id") @db.Uuid
-
-  // From/To
   fromWarehouseId String? @map("from_warehouse_id") @db.Uuid
   toWarehouseId   String? @map("to_warehouse_id") @db.Uuid
 
+  // Storage UOM (existing — backward compat, = storageQty/storageUom)
   quantity Decimal @db.Decimal(15, 3)
   uom      String  @db.VarChar(20)
 
+  // Sprint 14A — Purchase UOM (financial unit of record)
+  purchaseQty Decimal? @map("purchase_qty") @db.Decimal(15, 3)
+  purchaseUom String?  @map("purchase_uom") @db.VarChar(20)
+
+  // Sprint 14A — Consumption UOM (production auxiliary)
+  consumptionQty Decimal? @map("consumption_qty") @db.Decimal(15, 3)
+  consumptionUom String?  @map("consumption_uom") @db.VarChar(20)
+
   // Lot/Serial
-  lotNumber    String? @map("lot_number") @db.VarChar(100)
+  lotNumber    String? @map("lot_number")    @db.VarChar(100)
   serialNumber String? @map("serial_number") @db.VarChar(100)
 
   // Costing
   unitCost Decimal? @map("unit_cost") @db.Decimal(15, 4)
 
+  // Sprint 14A — Financial audit fields (ADR-019)
+  // unitCostAtMovement: WAC at time of movement — required for GRN cancellation reversal
+  unitCostAtMovement Decimal? @map("unit_cost_at_movement") @db.Decimal(15, 4)
+  // movementValue: purchaseQty × unitCostAtMovement — pre-calculated for audit trail
+  movementValue      Decimal? @map("movement_value") @db.Decimal(15, 2)
+
   // Reference
   referenceType String? @map("reference_type") @db.VarChar(50)
   referenceId   String? @map("reference_id") @db.Uuid
-
   notes String? @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -804,7 +872,7 @@ model StockMovement {
   toLevel   WarehouseLevel? @relation("MovementToLevel",   fields: [toLevelId],   references: [id])
   fromBin   WarehouseBin?   @relation("MovementFromBin",   fields: [fromBinId],   references: [id])
   toBin     WarehouseBin?   @relation("MovementToBin",     fields: [toBinId],     references: [id])
-  grnLines      GoodsReceiptLine[]
+  grnLines  GoodsReceiptLine[]
 
   @@unique([tenantId, movementNumber])
   @@index([tenantId])
@@ -828,20 +896,16 @@ model Bom {
   isActive      Boolean   @default(true) @map("is_active")
   effectiveFrom DateTime? @map("effective_from") @db.Date
   effectiveTo   DateTime? @map("effective_to") @db.Date
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant     Tenant         @relation(fields: [tenantId], references: [id])
   parentItem Item           @relation("BomParentItem", fields: [parentItemId], references: [id])
   components BomComponent[]
-  routings  BomRouting[]
-
-
+  routings   BomRouting[]
   @@unique([tenantId, bomNumber, version])
   @@index([tenantId])
   @@index([tenantId, parentItemId])
@@ -854,22 +918,20 @@ model BomComponent {
   bomId           String  @map("bom_id") @db.Uuid
   lineNumber      Int     @map("line_number")
   componentItemId String  @map("component_item_id") @db.Uuid
+  // quantityPer is in consumptionUom of the component item
   quantityPer     Decimal @map("quantity_per") @db.Decimal(15, 6)
   uom             String  @db.VarChar(20)
   scrapPercent    Decimal @default(0) @map("scrap_percent") @db.Decimal(5, 2)
   isPhantom       Boolean @default(false) @map("is_phantom")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant @relation(fields: [tenantId], references: [id])
   bom           Bom    @relation(fields: [bomId], references: [id], onDelete: Cascade)
   componentItem Item   @relation(fields: [componentItemId], references: [id])
-
   @@index([tenantId])
   @@index([bomId])
   @@index([componentItemId])
@@ -886,17 +948,14 @@ model WorkCenter {
   efficiencyPercent Decimal  @default(100) @map("efficiency_percent") @db.Decimal(5, 2)
   costPerHour       Decimal? @map("cost_per_hour") @db.Decimal(10, 2)
   isActive          Boolean  @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  routings  BomRouting[]
-
+  tenant   Tenant     @relation(fields: [tenantId], references: [id])
+  routings BomRouting[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -917,19 +976,16 @@ model ProductionOrder {
   actualEndDate     DateTime? @map("actual_end_date") @db.Date
   status            String    @default("draft") @db.VarChar(20)
   notes             String?   @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant            Tenant               @relation(fields: [tenantId], references: [id])
   laborActuals      MoLaborActual[]
   materialActuals   MoMaterialActual[]
   variances         ProductionVariance[]
-
   @@unique([tenantId, poNumber])
   @@index([tenantId])
   @@index([tenantId, poNumber])
@@ -949,34 +1005,24 @@ model Customer {
   name      String  @db.VarChar(255)
   legalName String? @map("legal_name") @db.VarChar(255)
   taxId     String? @map("tax_id") @db.VarChar(50)
-
-  // Contact
   phone   String? @db.VarChar(20)
   email   String? @db.VarChar(255)
   website String? @db.VarChar(255)
-
-  // Credit
   creditLimit  Decimal @default(0) @map("credit_limit") @db.Decimal(15, 2)
   creditStatus String  @default("good") @map("credit_status") @db.VarChar(20)
-
-  // Payment
   paymentTerms String? @map("payment_terms") @db.VarChar(50)
   currency     String? @db.VarChar(3)
-
   isActive Boolean @default(true) @map("is_active")
   notes    String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   salesOrders SalesOrder[]
   arInvoices  ArInvoice[]
-
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -993,35 +1039,27 @@ model SalesOrder {
   customerPo    String?   @map("customer_po") @db.VarChar(100)
   requestedDate DateTime? @map("requested_date") @db.Date
   promisedDate  DateTime? @map("promised_date") @db.Date
-
-  // Payment
   paymentTerms String? @map("payment_terms") @db.VarChar(50)
   currency     String? @db.VarChar(3)
   exchangeRate Decimal @default(1) @map("exchange_rate") @db.Decimal(18, 6)
-
-  // Amounts
   subtotal       Decimal @default(0) @db.Decimal(15, 2)
   discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(15, 2)
   taxAmount      Decimal @default(0) @map("tax_amount") @db.Decimal(15, 2)
   total          Decimal @default(0) @db.Decimal(15, 2)
-
   status String  @default("draft") @db.VarChar(20)
   notes  String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant           @relation(fields: [tenantId], references: [id])
   customer      Customer         @relation(fields: [customerId], references: [id])
   createdByUser User             @relation("SalesOrderCreatedBy", fields: [createdBy], references: [id])
   updatedByUser User             @relation("SalesOrderUpdatedBy", fields: [updatedBy], references: [id])
   lines         SalesOrderLine[]
-  arInvoices  ArInvoice[]
-
+  arInvoices    ArInvoice[]
   @@unique([tenantId, soNumber])
   @@index([tenantId])
   @@index([tenantId, soNumber])
@@ -1038,33 +1076,25 @@ model SalesOrderLine {
   lineNumber   Int     @map("line_number")
   itemId       String  @map("item_id") @db.Uuid
   description  String? @db.Text
-
-  // Quantities
   orderedQuantity  Decimal @map("ordered_quantity") @db.Decimal(15, 3)
   reservedQuantity Decimal @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
   shippedQuantity  Decimal @default(0) @map("shipped_quantity") @db.Decimal(15, 3)
   uom              String  @db.VarChar(20)
-
-  // Pricing
   unitPrice       Decimal   @map("unit_price") @db.Decimal(15, 4)
   discountPercent Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
   taxCode         String?   @map("tax_code") @db.VarChar(20)
   lineTotal       Decimal   @map("line_total") @db.Decimal(15, 2)
   deliveryDate    DateTime? @map("delivery_date") @db.Date
-
   status String @default("open") @db.VarChar(20)
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id])
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   item       Item       @relation(fields: [itemId], references: [id])
-
   @@index([tenantId])
   @@index([salesOrderId])
   @@index([itemId])
@@ -1084,31 +1114,26 @@ model Account {
   accountCategory String? @map("account_category") @db.VarChar(100)
   parentAccountId String? @map("parent_account_id") @db.Uuid
   currency        String? @db.VarChar(3)
-
   isSystem              Boolean @default(false) @map("is_system")
   allowManualPosting    Boolean @default(true) @map("allow_manual_posting")
   requireReconciliation Boolean @default(false) @map("require_reconciliation")
   isActive              Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   journalEntryLines JournalEntryLine[]
-  budgetLines       BudgetLine[] // <-- ADD THIS
-  cashFlowLines     CashFlowLine[] // <-- ADD THIS
-
-  arInvoiceLinesRevenue ArInvoiceLine[] @relation("ArLineRevenueAccount")
-  arInvoiceLinesCogs    ArInvoiceLine[] @relation("ArLineCogsAccount")
+  budgetLines       BudgetLine[]
+  cashFlowLines     CashFlowLine[]
+  arInvoiceLinesRevenue   ArInvoiceLine[] @relation("ArLineRevenueAccount")
+  arInvoiceLinesCogs      ArInvoiceLine[] @relation("ArLineCogsAccount")
   apInvoiceLinesInventory ApInvoiceLine[] @relation("ApLineInventoryAccount")
   apInvoiceLinesExpense   ApInvoiceLine[] @relation("ApLineExpenseAccount")
-  categoriesInventory Category[] @relation("CategoryInventoryAccount")
-  categoriesCogs      Category[] @relation("CategoryCogsAccount")
-
+  categoriesInventory     Category[]      @relation("CategoryInventoryAccount")
+  categoriesCogs          Category[]      @relation("CategoryCogsAccount")
   @@unique([tenantId, accountNumber])
   @@index([tenantId])
   @@index([tenantId, accountNumber])
@@ -1127,23 +1152,20 @@ model JournalEntry {
   reference    String?  @db.VarChar(255)
   description  String?  @db.Text
   status       String   @default("draft") @db.VarChar(20)
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant Tenant             @relation(fields: [tenantId], references: [id])
   lines  JournalEntryLine[]
-  arInvoices  ArInvoice[]  @relation("ArInvoiceJe")
-  arPayments  ArPayment[]  @relation("ArPaymentJe")
-  apInvoices  ApInvoice[]  @relation("ApInvoiceJe")
-  apPayments  ApPayment[]  @relation("ApPaymentJe")
+  arInvoices          ArInvoice[]          @relation("ArInvoiceJe")
+  arPayments          ArPayment[]          @relation("ArPaymentJe")
+  apInvoices          ApInvoice[]          @relation("ApInvoiceJe")
+  apPayments          ApPayment[]          @relation("ApPaymentJe")
   productionVariances ProductionVariance[] @relation("VarianceJe")
-  autoJeQueue AutoJeQueue[] @relation("AutoJeQueueJe")
-
+  autoJeQueue         AutoJeQueue[]        @relation("AutoJeQueueJe")
   @@unique([tenantId, entryNumber])
   @@index([tenantId])
   @@index([tenantId, entryNumber])
@@ -1163,18 +1185,15 @@ model JournalEntryLine {
   creditAmount   Decimal @default(0) @map("credit_amount") @db.Decimal(18, 2)
   currency       String? @db.VarChar(3)
   exchangeRate   Decimal @default(1) @map("exchange_rate") @db.Decimal(18, 6)
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account      Account      @relation(fields: [accountId], references: [id])
-
   @@index([tenantId])
   @@index([journalEntryId])
   @@index([accountId])
@@ -1194,16 +1213,13 @@ model FiscalPeriod {
   isCurrent     Boolean   @default(false) @map("is_current")
   closedAt      DateTime? @map("closed_at")
   closedBy      String?   @map("closed_by") @db.Uuid
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant Tenant @relation(fields: [tenantId], references: [id])
-
   @@unique([tenantId, periodCode])
   @@index([tenantId])
   @@index([tenantId, periodCode])
@@ -1223,17 +1239,14 @@ model Budget {
   status      String    @default("draft") @db.VarChar(20)
   approvedAt  DateTime? @map("approved_at")
   approvedBy  String?   @map("approved_by") @db.Uuid
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   budgetLines BudgetLine[]
-
   @@unique([tenantId, budgetCode])
   @@index([tenantId])
   @@index([fiscalYear])
@@ -1249,18 +1262,15 @@ model BudgetLine {
   fiscalPeriod String  @map("fiscal_period") @db.VarChar(20)
   budgetAmount Decimal @map("budget_amount") @db.Decimal(18, 2)
   notes        String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   budget  Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   account Account @relation(fields: [accountId], references: [id])
-
   @@unique([budgetId, accountId, fiscalPeriod])
   @@index([tenantId])
   @@index([budgetId])
@@ -1278,17 +1288,14 @@ model CashFlowProjection {
   endDate        DateTime @map("end_date") @db.Date
   scenario       String   @default("realistic") @db.VarChar(50)
   description    String?  @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   cashFlowLines CashFlowLine[]
-
   @@unique([tenantId, projectionCode])
   @@index([tenantId])
   @@index([scenario])
@@ -1305,18 +1312,15 @@ model CashFlowLine {
   amount               Decimal  @db.Decimal(18, 2)
   description          String?  @db.Text
   accountId            String?  @map("account_id") @db.Uuid
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant             Tenant             @relation(fields: [tenantId], references: [id])
   cashFlowProjection CashFlowProjection @relation(fields: [cashFlowProjectionId], references: [id], onDelete: Cascade)
   account            Account?           @relation(fields: [accountId], references: [id])
-
   @@index([tenantId])
   @@index([cashFlowProjectionId])
   @@index([lineDate])
@@ -1327,7 +1331,6 @@ model CashFlowLine {
 
 // ============================================================================
 // ACCOUNTS RECEIVABLE TABLES (ar_*)
-// Sprint 5 — AR Invoicing
 // ============================================================================
 
 model ArInvoice {
@@ -1352,14 +1355,12 @@ model ArInvoice {
   createdBy     String    @map("created_by") @db.Uuid
   updatedBy     String    @map("updated_by") @db.Uuid
   deletedBy     String?   @map("deleted_by") @db.Uuid
-
   tenant       Tenant          @relation(fields: [tenantId], references: [id])
   customer     Customer        @relation(fields: [customerId], references: [id])
   salesOrder   SalesOrder?     @relation(fields: [soId], references: [id])
   journalEntry JournalEntry?   @relation("ArInvoiceJe", fields: [jeId], references: [id])
   lines        ArInvoiceLine[]
   payments     ArPayment[]
-
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([tenantId, customerId])
@@ -1391,13 +1392,11 @@ model ArInvoiceLine {
   createdBy        String    @map("created_by") @db.Uuid
   updatedBy        String    @map("updated_by") @db.Uuid
   deletedBy        String?   @map("deleted_by") @db.Uuid
-
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
   invoice        ArInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   item           Item?     @relation(fields: [itemId], references: [id])
   revenueAccount Account?  @relation("ArLineRevenueAccount", fields: [revenueAccountId], references: [id])
   cogsAccount    Account?  @relation("ArLineCogsAccount", fields: [cogsAccountId], references: [id])
-
   @@index([tenantId])
   @@index([invoiceId])
   @@index([itemId])
@@ -1421,11 +1420,9 @@ model ArPayment {
   createdBy     String    @map("created_by") @db.Uuid
   updatedBy     String    @map("updated_by") @db.Uuid
   deletedBy     String?   @map("deleted_by") @db.Uuid
-
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   invoice      ArInvoice     @relation(fields: [invoiceId], references: [id])
   journalEntry JournalEntry? @relation("ArPaymentJe", fields: [jeId], references: [id])
-
   @@unique([tenantId, paymentNumber])
   @@index([tenantId])
   @@index([invoiceId])
@@ -1435,7 +1432,6 @@ model ArPayment {
 
 // ============================================================================
 // MANUFACTURING ACTUALS TABLES (mfg_*)
-// Sprint 6 — Production Completeness
 // ============================================================================
 
 model MoLaborActual {
@@ -1450,16 +1446,13 @@ model MoLaborActual {
   laborRate    Decimal?  @map("labor_rate") @db.Decimal(10, 4)
   laborCost    Decimal?  @map("labor_cost") @db.Decimal(15, 2)
   notes        String?   @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
-
-  tenant            Tenant          @relation(fields: [tenantId], references: [id])
-  productionOrder   ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
-
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  productionOrder ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
   @@index([tenantId])
   @@index([moId])
   @@index([workDate])
@@ -1476,17 +1469,14 @@ model MoMaterialActual {
   unitCost     Decimal @default(0) @map("unit_cost") @db.Decimal(10, 4)
   varianceCost Decimal @default(0) @map("variance_cost") @db.Decimal(15, 2)
   notes        String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
-
   tenant          Tenant          @relation(fields: [tenantId], references: [id])
   productionOrder ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
   item            Item            @relation(fields: [itemId], references: [id])
-
   @@index([tenantId])
   @@index([moId])
   @@index([itemId])
@@ -1497,37 +1487,28 @@ model ProductionVariance {
   id           String   @id @default(uuid()) @db.Uuid
   tenantId     String   @map("tenant_id") @db.Uuid
   moId         String   @map("mo_id") @db.Uuid
-  // merma | surplus | labor | material | overhead
   varianceType String   @map("variance_type") @db.VarChar(50)
   description  String?  @db.Text
   quantity     Decimal? @db.Decimal(15, 4)
   unitCost     Decimal? @map("unit_cost") @db.Decimal(10, 4)
   totalCost    Decimal? @map("total_cost") @db.Decimal(15, 2)
-  // open | je_posted | closed
   status       String   @default("open") @db.VarChar(20)
   jeId         String?  @map("je_id") @db.Uuid
   notes        String?  @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
-
   tenant          Tenant          @relation(fields: [tenantId], references: [id])
   productionOrder ProductionOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
   journalEntry    JournalEntry?   @relation("VarianceJe", fields: [jeId], references: [id])
-
   @@index([tenantId])
   @@index([moId])
   @@index([status])
   @@index([varianceType])
   @@map("mfg_production_variances")
 }
-
-// ============================================================================
-// BOM ROUTING (mfg_*)
-// ============================================================================
 
 model BomRouting {
   id             String    @id @default(uuid()) @db.Uuid
@@ -1540,18 +1521,15 @@ model BomRouting {
   runTimePerUnit Decimal   @default(0) @map("run_time_per_unit") @db.Decimal(10, 6)
   isActive       Boolean   @default(true) @map("is_active")
   notes          String?   @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id])
   bom        Bom        @relation(fields: [bomId], references: [id], onDelete: Cascade)
   workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
-
   @@unique([bomId, stepNumber])
   @@index([tenantId])
   @@index([bomId])
@@ -1561,25 +1539,18 @@ model BomRouting {
 
 // ============================================================================
 // AUTOMATION ENGINE (auto_*)
-// Sprint 7 — Accounting Automation Engine
 // ============================================================================
 
 model AutomationConfig {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
-  // ar_invoice | ar_payment | ar_reversal | fg_delivery | production_variance
-  // po_receipt | mo_issue
   module    String   @db.VarChar(50)
-  // full_auto | review_required | manual
   mode      String   @default("review_required") @db.VarChar(20)
   isEnabled Boolean  @default(true) @map("is_enabled")
   notes     String?  @db.Text
-
   updatedAt DateTime @updatedAt @map("updated_at")
   updatedBy String?  @map("updated_by") @db.Uuid
-
   tenant Tenant @relation(fields: [tenantId], references: [id])
-
   @@unique([tenantId, module])
   @@index([tenantId])
   @@map("auto_automation_configs")
@@ -1589,26 +1560,20 @@ model AutoJeQueue {
   id         String    @id @default(uuid()) @db.Uuid
   tenantId   String    @map("tenant_id") @db.Uuid
   jeId       String    @map("je_id") @db.Uuid
-  // ar_invoice | ar_payment | ar_reversal | fg_delivery | production_variance
   eventType  String    @map("event_type") @db.VarChar(50)
-  // Source record reference
   sourceType String    @map("source_type") @db.VarChar(50)
   sourceId   String    @map("source_id") @db.Uuid
   sourceRef  String?   @map("source_ref") @db.VarChar(100)
-  // pending | approved | rejected
   status     String    @default("pending") @db.VarChar(20)
   reviewedBy String?   @map("reviewed_by") @db.Uuid
   reviewedAt DateTime? @map("reviewed_at")
   rejectReason String? @map("reject_reason") @db.Text
   notes      String?   @db.Text
-
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
   createdBy  String?   @map("created_by") @db.Uuid
-
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   journalEntry JournalEntry @relation("AutoJeQueueJe", fields: [jeId], references: [id])
-
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, eventType])
@@ -1618,7 +1583,6 @@ model AutoJeQueue {
 
 // ============================================================================
 // ACCOUNTS PAYABLE TABLES (ap_*)
-// Sprint 10A — AP Cycle
 // ============================================================================
 
 model ApInvoice {
@@ -1645,7 +1609,6 @@ model ApInvoice {
   createdBy     String    @map("created_by") @db.Uuid
   updatedBy     String    @map("updated_by") @db.Uuid
   deletedBy     String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant          @relation(fields: [tenantId], references: [id])
   supplier      Supplier        @relation(fields: [supplierId], references: [id])
   purchaseOrder PurchaseOrder?  @relation(fields: [poId], references: [id])
@@ -1653,7 +1616,6 @@ model ApInvoice {
   goodsReceipt  GoodsReceipt?   @relation("ApInvoiceGrn", fields: [grnId], references: [id])
   lines         ApInvoiceLine[]
   payments      ApPayment[]
-
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([tenantId, supplierId])
@@ -1689,7 +1651,6 @@ model ApInvoiceLine {
   createdBy          String    @map("created_by") @db.Uuid
   updatedBy          String    @map("updated_by") @db.Uuid
   deletedBy          String?   @map("deleted_by") @db.Uuid
-
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   invoice           ApInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   item              Item?              @relation(fields: [itemId], references: [id])
@@ -1697,7 +1658,6 @@ model ApInvoiceLine {
   inventoryAccount  Account?           @relation("ApLineInventoryAccount", fields: [inventoryAccountId], references: [id])
   expenseAccount    Account?           @relation("ApLineExpenseAccount", fields: [expenseAccountId], references: [id])
   goodsReceiptLine  GoodsReceiptLine?  @relation("ApLineGrnLine", fields: [grnLineId], references: [id])
-
   @@index([tenantId])
   @@index([invoiceId])
   @@index([itemId])
@@ -1723,11 +1683,9 @@ model ApPayment {
   createdBy     String    @map("created_by") @db.Uuid
   updatedBy     String    @map("updated_by") @db.Uuid
   deletedBy     String?   @map("deleted_by") @db.Uuid
-
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   invoice      ApInvoice     @relation(fields: [invoiceId], references: [id])
   journalEntry JournalEntry? @relation("ApPaymentJe", fields: [jeId], references: [id])
-
   @@unique([tenantId, paymentNumber])
   @@index([tenantId])
   @@index([invoiceId])
@@ -1737,38 +1695,31 @@ model ApPayment {
 
 // ============================================================================
 // CONFIGURATION TABLES (cfg_*)
-// Sprint 11 — UOM Catalog, Tenant Settings
 // ============================================================================
 
 model UomUnit {
   id       String  @id @default(uuid()) @db.Uuid
-  code     String  @db.VarChar(20)   // LTR, GAL, KG, LB, PCS
-  name     String  @db.VarChar(100)  // Liter, Gallon, Kilogram
-  // volume | mass | count | length | area | time
+  code     String  @db.VarChar(20)
+  name     String  @db.VarChar(100)
   type     String  @db.VarChar(20)
-  // metric | imperial | universal
   system   String  @db.VarChar(20)
-  // true = base unit for this type+system (LTR=base for volume+metric)
   isBase   Boolean @default(false) @map("is_base")
   isActive Boolean @default(true)  @map("is_active")
   symbol   String? @db.VarChar(10)
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
-
-  // Relations
-  conversionsFrom    UomConversion[]  @relation("ConversionFrom")
-  conversionsTo      UomConversion[]  @relation("ConversionTo")
-  itemsPurchaseUom   Item[]           @relation("ItemPurchaseUom")
-  itemsStorageUom    Item[]           @relation("ItemStorageUom")
-  itemsConsumptionUom Item[]          @relation("ItemConsumptionUom")
-  consumptionGroups  ConsumptionGroup[]
-  supplierItems      SupplierItem[]
+  conversionsFrom     UomConversion[]  @relation("ConversionFrom")
+  conversionsTo       UomConversion[]  @relation("ConversionTo")
+  itemsPurchaseUom    Item[]           @relation("ItemPurchaseUom")
+  itemsStorageUom     Item[]           @relation("ItemStorageUom")
+  itemsConsumptionUom Item[]           @relation("ItemConsumptionUom")
+  consumptionGroups   ConsumptionGroup[]
+  supplierItems       SupplierItem[]
+  poLinePurchaseUom   PurchaseOrderLine[] @relation("PoLinePurchaseUom")
   tenantSettingsVolume TenantSettings[] @relation("TenantVolumeUom")
   tenantSettingsMass   TenantSettings[] @relation("TenantMassUom")
   tenantSettingsLength TenantSettings[] @relation("TenantLengthUom")
   tenantSettingsArea   TenantSettings[] @relation("TenantAreaUom")
-
   @@unique([code])
   @@index([type])
   @@index([system])
@@ -1780,17 +1731,12 @@ model UomConversion {
   id         String  @id @default(uuid()) @db.Uuid
   fromUomId  String  @map("from_uom_id") @db.Uuid
   toUomId    String  @map("to_uom_id") @db.Uuid
-  // How many toUom units are in 1 fromUom unit
-  // e.g. fromUom=GAL, toUom=LTR, factor=3.78541
   factor     Decimal @db.Decimal(18, 8)
   isActive   Boolean @default(true) @map("is_active")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
-
   fromUom UomUnit @relation("ConversionFrom", fields: [fromUomId], references: [id])
   toUom   UomUnit @relation("ConversionTo",   fields: [toUomId],   references: [id])
-
   @@unique([fromUomId, toUomId])
   @@index([fromUomId])
   @@index([toUomId])
@@ -1800,32 +1746,23 @@ model UomConversion {
 model TenantSettings {
   id       String @id @default(uuid()) @db.Uuid
   tenantId String @unique @map("tenant_id") @db.Uuid
-
-  // UOM system preference
-  // metric | imperial
   defaultUomSystem String @default("metric") @map("default_uom_system") @db.VarChar(20)
-
-  // Base units per dimension (FK to cfg_uom_units)
-  volumeBaseUomId String? @map("volume_base_uom_id") @db.Uuid  // LTR or GAL
-  massBaseUomId   String? @map("mass_base_uom_id")   @db.Uuid  // KG or LB
-  lengthBaseUomId String? @map("length_base_uom_id") @db.Uuid  // M or FT
-  areaBaseUomId   String? @map("area_base_uom_id")   @db.Uuid  // M2 or FT2
-
+  volumeBaseUomId String? @map("volume_base_uom_id") @db.Uuid
+  massBaseUomId   String? @map("mass_base_uom_id")   @db.Uuid
+  lengthBaseUomId String? @map("length_base_uom_id") @db.Uuid
+  areaBaseUomId   String? @map("area_base_uom_id")   @db.Uuid
   updatedAt DateTime @updatedAt @map("updated_at")
   updatedBy String?  @map("updated_by") @db.Uuid
-
   tenant        Tenant   @relation(fields: [tenantId],       references: [id])
   volumeBaseUom UomUnit? @relation("TenantVolumeUom", fields: [volumeBaseUomId], references: [id])
   massBaseUom   UomUnit? @relation("TenantMassUom",   fields: [massBaseUomId],   references: [id])
   lengthBaseUom UomUnit? @relation("TenantLengthUom", fields: [lengthBaseUomId], references: [id])
   areaBaseUom   UomUnit? @relation("TenantAreaUom",   fields: [areaBaseUomId],   references: [id])
-
   @@map("cfg_tenant_settings")
 }
 
 // ============================================================================
 // INVENTORY ENRICHMENT TABLES (in_*)
-// Sprint 11 — Categories, ConsumptionGroup, SupplierItem
 // ============================================================================
 
 model MacroCategory {
@@ -1835,17 +1772,14 @@ model MacroCategory {
   name        String  @db.VarChar(255)
   description String? @db.Text
   isActive    Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id])
   categories Category[]
-
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("in_macro_categories")
@@ -1854,30 +1788,24 @@ model MacroCategory {
 model Category {
   id              String  @id @default(uuid()) @db.Uuid
   tenantId        String  @map("tenant_id") @db.Uuid
-  macroCategoryId String  @map("macro_category_id") @db.Uuid  // REQUIRED — no orphan categories
+  macroCategoryId String  @map("macro_category_id") @db.Uuid
   code            String  @db.VarChar(50)
   name            String  @db.VarChar(255)
   description     String? @db.Text
-
-  // GL accounts for automatic JE routing
-  inventoryAccountId String? @map("inventory_account_id") @db.Uuid  // DR on receipt
-  cogsAccountId      String? @map("cogs_account_id")      @db.Uuid  // DR on shipment
-
+  inventoryAccountId String? @map("inventory_account_id") @db.Uuid
+  cogsAccountId      String? @map("cogs_account_id")      @db.Uuid
   isActive Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant            Tenant        @relation(fields: [tenantId], references: [id])
-  macroCategory     MacroCategory @relation(fields: [macroCategoryId], references: [id])
-  inventoryAccount  Account?      @relation("CategoryInventoryAccount", fields: [inventoryAccountId], references: [id])
-  cogsAccount       Account?      @relation("CategoryCogsAccount",      fields: [cogsAccountId],      references: [id])
-  items             Item[]
-
+  tenant           Tenant        @relation(fields: [tenantId], references: [id])
+  macroCategory    MacroCategory @relation(fields: [macroCategoryId], references: [id])
+  inventoryAccount Account?      @relation("CategoryInventoryAccount", fields: [inventoryAccountId], references: [id])
+  cogsAccount      Account?      @relation("CategoryCogsAccount",      fields: [cogsAccountId],      references: [id])
+  items            Item[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, macroCategoryId])
@@ -1885,71 +1813,53 @@ model Category {
 }
 
 model ConsumptionGroup {
-  id             String  @id @default(uuid()) @db.Uuid
-  tenantId       String  @map("tenant_id") @db.Uuid
-  code           String  @db.VarChar(50)
-  name           String  @db.VarChar(255)
-  description    String? @db.Text
-  // The unit Production uses — FK to cfg_uom_units
-  consumptionUomId String @map("consumption_uom_id") @db.Uuid
-  isActive       Boolean @default(true) @map("is_active")
-
+  id               String  @id @default(uuid()) @db.Uuid
+  tenantId         String  @map("tenant_id") @db.Uuid
+  code             String  @db.VarChar(50)
+  name             String  @db.VarChar(255)
+  description      String? @db.Text
+  consumptionUomId String  @map("consumption_uom_id") @db.Uuid
+  isActive         Boolean @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant         Tenant  @relation(fields: [tenantId], references: [id])
   consumptionUom UomUnit @relation(fields: [consumptionUomId], references: [id])
   items          Item[]
-
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("in_consumption_groups")
 }
 
 model SupplierItem {
-  id             String  @id @default(uuid()) @db.Uuid
-  tenantId       String  @map("tenant_id") @db.Uuid
-  supplierId     String  @map("supplier_id") @db.Uuid
-  itemId         String  @map("item_id")     @db.Uuid
-
-  // Supplier's own reference for this item
+  id               String  @id @default(uuid()) @db.Uuid
+  tenantId         String  @map("tenant_id") @db.Uuid
+  supplierId       String  @map("supplier_id") @db.Uuid
+  itemId           String  @map("item_id")     @db.Uuid
   supplierItemCode String? @map("supplier_item_code") @db.VarChar(100)
   supplierItemName String? @map("supplier_item_name") @db.VarChar(255)
-
-  // Commercial presentation
-  purchaseUomId     String  @map("purchase_uom_id") @db.Uuid  // FK to cfg_uom_units
-  packSize          Decimal @default(1) @map("pack_size")     @db.Decimal(15, 4)
-
-  // Conversion: how many of item's consumptionUom per 1 purchaseUom
-  // Auto-calculated from cfg_uom_conversions when possible, manual override allowed
-  conversionFactor  Decimal @default(1) @map("conversion_factor") @db.Decimal(18, 8)
-
-  // Commercial conditions
+  purchaseUomId    String  @map("purchase_uom_id") @db.Uuid
+  packSize         Decimal @default(1) @map("pack_size") @db.Decimal(15, 4)
+  conversionFactor Decimal @default(1) @map("conversion_factor") @db.Decimal(18, 8)
   lastPrice    Decimal? @map("last_price")    @db.Decimal(15, 4)
   leadTimeDays Int      @default(0)           @map("lead_time_days")
-  moq          Decimal  @default(1)           @db.Decimal(15, 3)  // minimum order quantity
-
-  isPreferred  Boolean @default(false) @map("is_preferred")
-  isActive     Boolean @default(true)  @map("is_active")
-  notes        String? @db.Text
-
+  moq          Decimal  @default(1)           @db.Decimal(15, 3)
+  isPreferred  Boolean  @default(false) @map("is_preferred")
+  isActive     Boolean  @default(true)  @map("is_active")
+  notes        String?  @db.Text
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant      Tenant   @relation(fields: [tenantId],   references: [id])
-  supplier    Supplier @relation(fields: [supplierId],  references: [id])
-  item        Item     @relation(fields: [itemId],      references: [id])
+  tenant      Tenant   @relation(fields: [tenantId],     references: [id])
+  supplier    Supplier @relation(fields: [supplierId],   references: [id])
+  item        Item     @relation(fields: [itemId],       references: [id])
   purchaseUom UomUnit  @relation(fields: [purchaseUomId], references: [id])
-
-  // One supplier cannot have the same item twice
   @@unique([tenantId, supplierId, itemId])
   @@index([tenantId])
   @@index([tenantId, itemId])
@@ -1957,6 +1867,14 @@ model SupplierItem {
   @@index([isPreferred])
   @@map("in_supplier_items")
 }
+
+// ============================================================================
+// grn_receipts / grn_receipt_lines
+// Sprint 14A: GoodsReceiptLine gains storage + consumption qty fields
+// receivedQuantity/uom = purchaseQty/purchaseUom (source of financial truth)
+// storageQty/storageUom = warehouse operational quantity (auxiliary)
+// consumptionQty/consumptionUom = production operational quantity (auxiliary)
+// ============================================================================
 
 model GoodsReceipt {
   id           String   @id @default(uuid()) @db.Uuid
@@ -1974,13 +1892,11 @@ model GoodsReceipt {
   createdBy    String    @map("created_by") @db.Uuid
   updatedBy    String    @map("updated_by") @db.Uuid
   deletedBy    String?   @map("deleted_by") @db.Uuid
-
   tenant        Tenant             @relation(fields: [tenantId],    references: [id])
   purchaseOrder PurchaseOrder?     @relation(fields: [poId],        references: [id])
   warehouse     Warehouse          @relation(fields: [warehouseId], references: [id])
   lines         GoodsReceiptLine[]
   apInvoices    ApInvoice[]        @relation("ApInvoiceGrn")
-
   @@unique([tenantId, grnNumber])
   @@index([tenantId])
   @@index([tenantId, poId])
@@ -1990,26 +1906,37 @@ model GoodsReceipt {
 }
 
 model GoodsReceiptLine {
-  id               String   @id @default(uuid()) @db.Uuid
-  tenantId         String   @map("tenant_id") @db.Uuid
-  grnId            String   @map("grn_id") @db.Uuid
-  lineNumber       Int      @map("line_number")
-  poLineId         String?  @map("po_line_id") @db.Uuid
-  itemId           String   @map("item_id") @db.Uuid
-  warehouseId      String   @map("warehouse_id") @db.Uuid
-  stockMovementId  String?  @map("stock_movement_id") @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  grnId           String   @map("grn_id") @db.Uuid
+  lineNumber      Int      @map("line_number")
+  poLineId        String?  @map("po_line_id") @db.Uuid
+  itemId          String   @map("item_id") @db.Uuid
+  warehouseId     String   @map("warehouse_id") @db.Uuid
+  stockMovementId String?  @map("stock_movement_id") @db.Uuid
+
+  // Purchase UOM (financial unit of record — source of WAC update)
   receivedQuantity Decimal  @map("received_quantity") @db.Decimal(15, 3)
   uom              String   @db.VarChar(20)
-  unitCost         Decimal? @map("unit_cost") @db.Decimal(15, 4)
-  lotNumber        String?  @map("lot_number") @db.VarChar(100)
-  notes            String?  @db.Text
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt      @map("updated_at")
-  deletedAt        DateTime? @map("deleted_at")
-  createdBy        String    @map("created_by") @db.Uuid
-  updatedBy        String    @map("updated_by") @db.Uuid
-  deletedBy        String?   @map("deleted_by") @db.Uuid
 
+  // Sprint 14A — Storage UOM (auxiliary — warehouse operational)
+  storageQty  Decimal? @map("storage_qty") @db.Decimal(15, 3)
+  storageUom  String?  @map("storage_uom") @db.VarChar(20)
+
+  // Sprint 14A — Consumption UOM (auxiliary — production operational)
+  consumptionQty Decimal? @map("consumption_qty") @db.Decimal(15, 3)
+  consumptionUom String?  @map("consumption_uom") @db.VarChar(20)
+
+  // unitCost = cost per purchaseUom unit (feeds WAC calculation)
+  unitCost  Decimal? @map("unit_cost") @db.Decimal(15, 4)
+  lotNumber String?  @map("lot_number") @db.VarChar(100)
+  notes     String?  @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
   tenant            Tenant             @relation(fields: [tenantId],       references: [id])
   goodsReceipt      GoodsReceipt       @relation(fields: [grnId],          references: [id], onDelete: Cascade)
   purchaseOrderLine PurchaseOrderLine? @relation(fields: [poLineId],        references: [id])
@@ -2017,7 +1944,6 @@ model GoodsReceiptLine {
   warehouse         Warehouse          @relation(fields: [warehouseId],     references: [id])
   stockMovement     StockMovement?     @relation(fields: [stockMovementId], references: [id])
   apInvoiceLines    ApInvoiceLine[]    @relation("ApLineGrnLine")
-  
   @@index([tenantId])
   @@index([grnId])
   @@index([poLineId])
@@ -2028,196 +1954,150 @@ model GoodsReceiptLine {
 
 // ============================================================================
 // WAREHOUSE LOCATION TABLES (in_wh_*)
-// Sprint 14 — Warehouse Location Tracking
-//
 // Hierarchy: Warehouse → Zone → Aisle → Rack → Level → Bin (optional)
-// Location code auto-generated: ZONE-AISLE-RACK-LEVEL[-BIN]
-// Example: STOR-01-02-01-03 (Zone STOR, Aisle 01, Rack 02, Level 01, Bin 03)
-//
-// Tracking mode per warehouse:
-//   locationTrackingEnabled = false → stock balanced at warehouse level (default)
-//   locationTrackingEnabled = true  → stock balanced at bin/level level
 // ============================================================================
 
-// Zone: top-level area within a warehouse
-// Examples: RECV (Receiving), STOR (Storage), QUAR (Quarantine), SHIP (Shipping)
 model WarehouseZone {
   id          String  @id @default(uuid()) @db.Uuid
   tenantId    String  @map("tenant_id") @db.Uuid
   warehouseId String  @map("warehouse_id") @db.Uuid
-  code        String  @db.VarChar(20)   // STOR, RECV, QUAR, SHIP
+  code        String  @db.VarChar(20)
   name        String  @db.VarChar(100)
   zoneType    String  @default("storage") @map("zone_type") @db.VarChar(30)
-  // zone types: storage | receiving | shipping | quarantine | production | returns
   description String? @db.Text
   isActive    Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant    Tenant    @relation(fields: [tenantId],    references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   aisles    WarehouseAisle[]
-
   @@unique([tenantId, warehouseId, code])
   @@index([tenantId])
   @@index([warehouseId])
   @@map("in_wh_zones")
 }
 
-// Aisle: corridor within a zone
-// Code: 01, 02, 03 — auto-generates path STOR-01
 model WarehouseAisle {
   id          String  @id @default(uuid()) @db.Uuid
   tenantId    String  @map("tenant_id") @db.Uuid
   zoneId      String  @map("zone_id") @db.Uuid
-  code        String  @db.VarChar(10)   // 01, 02, A, B
+  code        String  @db.VarChar(10)
   name        String? @db.VarChar(100)
-  // Auto-generated: ZONE.code + "-" + code  e.g. STOR-01
   fullCode    String  @map("full_code") @db.VarChar(50)
   isActive    Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
-  tenant Tenant       @relation(fields: [tenantId], references: [id])
-  zone   WarehouseZone @relation(fields: [zoneId],  references: [id])
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  zone   WarehouseZone @relation(fields: [zoneId],   references: [id])
   racks  WarehouseRack[]
-
   @@unique([zoneId, code])
   @@index([tenantId])
   @@index([zoneId])
   @@map("in_wh_aisles")
 }
 
-// Rack: physical shelving unit within an aisle
-// Code: 01, 02 — auto-generates path STOR-01-02
 model WarehouseRack {
   id       String  @id @default(uuid()) @db.Uuid
   tenantId String  @map("tenant_id") @db.Uuid
   aisleId  String  @map("aisle_id") @db.Uuid
   code     String  @db.VarChar(10)
   name     String? @db.VarChar(100)
-  // Auto-generated: AISLE.fullCode + "-" + code  e.g. STOR-01-02
   fullCode String  @map("full_code") @db.VarChar(50)
   isActive Boolean @default(true) @map("is_active")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant Tenant         @relation(fields: [tenantId], references: [id])
   aisle  WarehouseAisle @relation(fields: [aisleId],  references: [id])
   levels WarehouseLevel[]
-
   @@unique([aisleId, code])
   @@index([tenantId])
   @@index([aisleId])
   @@map("in_wh_racks")
 }
 
-// Level: horizontal shelf within a rack
-// Code: 01, 02 — auto-generates path STOR-01-02-01
-// Capacity lives here when bins are NOT used
 model WarehouseLevel {
   id       String  @id @default(uuid()) @db.Uuid
   tenantId String  @map("tenant_id") @db.Uuid
   rackId   String  @map("rack_id") @db.Uuid
   code     String  @db.VarChar(10)
   name     String? @db.VarChar(100)
-  // Auto-generated: RACK.fullCode + "-" + code  e.g. STOR-01-02-01
   fullCode String  @map("full_code") @db.VarChar(50)
   isActive Boolean @default(true) @map("is_active")
-
-  // Capacity — used when NO bins exist under this level
   maxWeightKg  Decimal? @map("max_weight_kg")  @db.Decimal(10, 2)
   maxVolumeLtr Decimal? @map("max_volume_ltr") @db.Decimal(10, 2)
   maxPallets   Int?     @map("max_pallets")
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant Tenant        @relation(fields: [tenantId], references: [id])
   rack   WarehouseRack @relation(fields: [rackId],   references: [id])
   bins   WarehouseBin[]
-  stock               Stock[]
-  stockMovementsFrom  StockMovement[] @relation("MovementFromLevel")
-  stockMovementsTo    StockMovement[] @relation("MovementToLevel")
-
+  stock              Stock[]
+  stockMovementsFrom StockMovement[] @relation("MovementFromLevel")
+  stockMovementsTo   StockMovement[] @relation("MovementToLevel")
   @@unique([rackId, code])
   @@index([tenantId])
   @@index([rackId])
   @@map("in_wh_levels")
 }
 
-// Bin: optional finest granularity within a level
-// Use cases: pallets, big bags, tanks, silos, IBC containers
-// Code: 01, 02, A, B — auto-generates STOR-01-02-01-03
-// Capacity lives here when bins ARE used
 model WarehouseBin {
   id       String  @id @default(uuid()) @db.Uuid
   tenantId String  @map("tenant_id") @db.Uuid
   levelId  String  @map("level_id") @db.Uuid
   code     String  @db.VarChar(10)
   name     String? @db.VarChar(100)
-  // Auto-generated: LEVEL.fullCode + "-" + code  e.g. STOR-01-02-01-03
   fullCode String  @map("full_code") @db.VarChar(50)
-
-  // Bin type — defines physical container
-  // standard | pallet | big_bag | tank | silo | ibc | container | bulk
   binType  String  @default("standard") @map("bin_type") @db.VarChar(30)
-
-  // Capacity at bin level (overrides level capacity when bins exist)
   maxWeightKg  Decimal? @map("max_weight_kg")  @db.Decimal(10, 2)
   maxVolumeLtr Decimal? @map("max_volume_ltr") @db.Decimal(10, 2)
   maxPallets   Int?     @map("max_pallets")
-
-  // Mixed storage — false = single SKU per bin (recommended for bulk bins)
   allowMixedItems Boolean @default(true) @map("allow_mixed_items")
-
   isActive Boolean @default(true) @map("is_active")
   notes    String? @db.Text
-
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-
   tenant Tenant         @relation(fields: [tenantId], references: [id])
   level  WarehouseLevel @relation(fields: [levelId],  references: [id])
   stock              Stock[]
   stockMovementsFrom StockMovement[] @relation("MovementFromBin")
   stockMovementsTo   StockMovement[] @relation("MovementToBin")
-
   @@unique([levelId, code])
   @@index([tenantId])
   @@index([levelId])
   @@map("in_wh_bins")
 }
 
-
 // ============================================================================
 // END OF SCHEMA
 // ============================================================================
-// Total tables: ~50 core tables
-// Ready for: prisma generate && prisma migrate dev
+// Sprint 14 additions:
+//   in_stock            — purchaseQty/Uom, storageQty/Uom, consumptionQty/Uom
+//   in_stock_movements  — purchaseQty/Uom, consumptionQty/Uom,
+//                         unitCostAtMovement, movementValue
+//   grn_receipt_lines   — storageQty/Uom, consumptionQty/Uom
+//   po_purchase_order_lines — purchaseUomId (FK cfg_uom_units)
+//   po_suppliers        — minimumOrderAmount, minimumOrderCurrency
+//   po_purchase_requisitions + po_purchase_requisition_lines (Sprint 14B)
+//   po_consolidation_config (Sprint 14C)
+//   po_supplier_scores  (Sprint 14D)
 // ============================================================================
-
-

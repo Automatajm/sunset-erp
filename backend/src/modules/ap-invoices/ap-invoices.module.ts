@@ -4,14 +4,14 @@
 import { Module } from '@nestjs/common';
 import { ApInvoicesService } from './ap-invoices.service';
 import { ApInvoicesController } from './ap-invoices.controller';
-import { PrismaService } from '../../database/prisma.service';
-import { AutomationService } from '../automation/automation.service';
-import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
- 
+import { PrismaModule } from '../../database/prisma.module';
+import { StockTransactionsModule } from '../stock-transactions/stock-transactions.module';
+import { AutomationModule } from '../automation/automation.module';
+
 @Module({
+  imports:     [PrismaModule, StockTransactionsModule, AutomationModule],
   controllers: [ApInvoicesController],
-  providers:   [ApInvoicesService, PrismaService, AutomationService, StockTransactionsService],
+  providers:   [ApInvoicesService],
   exports:     [ApInvoicesService],
 })
 export class ApInvoicesModule {}
-
