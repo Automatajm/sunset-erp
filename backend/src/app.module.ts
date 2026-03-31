@@ -31,6 +31,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { ConsumptionGroupsModule } from './modules/consumption-groups/consumption-groups.module';
 import { SupplierItemsModule } from './modules/supplier-items/supplier-items.module';
 import { WarehouseLocationsModule } from './modules/warehouse-locations/warehouse-locations.module';
+import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { WarehouseLocationsModule } from './modules/warehouse-locations/warehous
     ConsumptionGroupsModule,
     SupplierItemsModule,
     WarehouseLocationsModule,
+    GoodsReceiptsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
