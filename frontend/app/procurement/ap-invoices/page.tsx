@@ -1,10 +1,20 @@
+// ============================================================================
+// FILE: frontend/app/procurement/ap-invoices/page.tsx
+// ============================================================================
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import {
+  ERPFilterBar, ERPFilter, ERPFilterValues,
+  useERPFilters, applyERPFilters, dateInSelection,
+} from '@/components/ui/ERPFilterBar';
 import { apInvoicesApi } from '@/lib/api/ap-invoices';
 import { suppliersApi } from '@/lib/api/suppliers';
-import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
+import { goodsReceiptsApi, GoodsReceipt } from '@/lib/api/goods-receipts';
+import apiClient from '@/lib/api/client';
+import { DateSelection } from '@/components/ui/ERPDatePicker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,20 +26,43 @@ interface APLine {
   unitPrice: string; originalPoPrice?: string;
   discountPercent: string; lineTotal: string;
   priceVariance?: string;
+  goodsReceiptLine?: { id: string; receivedQuantity: string; unitCost?: string };
 }
 
 interface APInvoice {
   id: string; invoiceNumber: string;
   supplier?: { id: string; code: string; name: string };
   purchaseOrder?: { id: string; poNumber: string };
-  supplierRef?: string;
-  invoiceDate: string; dueDate: string;
-  status: string;
+  goodsReceipt?: { id: string; grnNumber: string; status: string; receivedDate: string };
+  supplierRef?: string; grnId?: string;
+  invoiceDate: string; dueDate: string; status: string;
   subtotal: string; taxAmount: string; totalAmount: string; paidAmount: string;
   currency: string; notes?: string;
   lines?: APLine[];
   payments?: Array<{ id: string; paymentNumber: string; paymentDate: string; amount: string; paymentMethod?: string }>;
   _count?: { lines: number; payments: number };
+}
+
+interface Supplier { id: string; code: string; name: string; }
+interface PO { id: string; poNumber: string; supplier?: { name: string } }
+interface GRNOption { id: string; grnNumber: string; supplierName?: string; warehouseCode: string; }
+
+interface MatchLine {
+  lineNumber: number; itemCode: string; itemName: string;
+  invoiceQty: number; invoicePrice: number;
+  poQty: number | null; poPrice: number | null; grnQty: number | null;
+  poQtyOk: boolean | null; grnQtyOk: boolean | null; priceOk: boolean | null;
+  priceDiffPct: number | null; lineMatches: boolean; issues: string[];
+}
+
+interface MatchStatus {
+  matchStatus: 'no_match' | 'two_way' | 'three_way_matched' | 'three_way_failed';
+  allLinesMatch: boolean; priceTolerance: string;
+  purchaseOrder?: { poNumber: string; status: string };
+  goodsReceipt?: { grnNumber: string; status: string; receivedDate: string; condition: string };
+  lines: MatchLine[];
+  summary: { total: number; matched: number; failed: number };
+  canPost: boolean;
 }
 
 interface KPIs {
@@ -46,171 +79,361 @@ function fmtDate(d?: string) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+function fmtDateShort(d?: string) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 function daysUntil(d: string) {
-  const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
-  return diff;
+  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
-const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  draft:   { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  posted:  { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  partial: { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
-  paid:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  void:    { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' },
+const STATUS_STYLE: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  draft:   { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft'   },
+  posted:  { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Posted'  },
+  partial: { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Partial' },
+  paid:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Paid'    },
+  void:    { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Void' },
+};
+
+const MATCH_CFG = {
+  no_match:          { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'No Match' },
+  two_way:           { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: '2-Way'   },
+  three_way_matched: { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: '3-Way ✓' },
+  three_way_failed:  { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: '3-Way ✗' },
 };
 
 function StatusBadge({ status }: { status: string }) {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:s.color, background:s.bg, border:`0.5px solid ${s.border}`, whiteSpace:'nowrap' }}>
-      <span style={{ width:5, height:5, borderRadius:'50%', background:s.color, flexShrink:0 }} />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span style={{ width:5, height:5, borderRadius:'50%', background:s.color, flexShrink:0 }} />{s.label}
     </span>
   );
 }
 
-// ─── AP Invoice Row ───────────────────────────────────────────────────────────
+function MatchBadge({ status }: { status: keyof typeof MATCH_CFG }) {
+  const m = MATCH_CFG[status] ?? MATCH_CFG.no_match;
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:600, color:m.color, background:m.bg, border:`0.5px solid ${m.border}`, whiteSpace:'nowrap' }}>
+      {m.label}
+    </span>
+  );
+}
 
-function APRow({ inv, onAction, actionBusy }: {
-  inv: APInvoice;
-  onAction: (id: string, action: 'post' | 'pay' | 'void') => void;
-  actionBusy: string | null;
+// ─── 3-Way Match Panel ────────────────────────────────────────────────────────
+
+function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, onUnlinked }: {
+  invoiceId: string; invoiceStatus: string; currentGrnId?: string;
+  onLinked: () => void; onUnlinked: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [detail, setDetail] = useState<APInvoice | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const busy = actionBusy === inv.id;
+  const [match,       setMatch]       = useState<MatchStatus | null>(null);
+  const [loading,     setLoading]     = useState(false);
+  const [grns,        setGrns]        = useState<GoodsReceipt[]>([]);
+  const [selectedGrn, setSelectedGrn] = useState('');
+  const [linking,     setLinking]     = useState(false);
+  const [unlinking,   setUnlinking]   = useState(false);
+  const [error,       setError]       = useState('');
+
+  const loadMatch = useCallback(async () => {
+    setLoading(true);
+    try { const res = await apiClient.get(`/ap-invoices/${invoiceId}/match-status`); setMatch(res.data); }
+    catch { setError('Failed to load match status.'); }
+    finally { setLoading(false); }
+  }, [invoiceId]);
+
+  useEffect(() => {
+    loadMatch();
+    if (invoiceStatus === 'draft') goodsReceiptsApi.getAll().then(g => setGrns(g.filter(x => x.status === 'posted')));
+  }, [invoiceId, invoiceStatus, loadMatch]);
+
+  const handleLink = async () => {
+    if (!selectedGrn) { setError('Select a GRN first.'); return; }
+    setLinking(true); setError('');
+    try { await apiClient.post(`/ap-invoices/${invoiceId}/link-grn`, { grnId: selectedGrn }); await loadMatch(); onLinked(); }
+    catch (err: any) { setError(err?.response?.data?.message || 'Link failed.'); }
+    finally { setLinking(false); }
+  };
+
+  const handleUnlink = async () => {
+    setUnlinking(true); setError('');
+    try { await apiClient.post(`/ap-invoices/${invoiceId}/unlink-grn`); await loadMatch(); onUnlinked(); }
+    catch (err: any) { setError(err?.response?.data?.message || 'Unlink failed.'); }
+    finally { setUnlinking(false); }
+  };
+
+  if (loading) return <div style={{ padding:'12px 0', fontSize:12, color:'rgba(255,255,255,0.3)' }}>Loading match status…</div>;
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {match && (
+        <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <MatchBadge status={match.matchStatus} />
+          {match.purchaseOrder && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>PO: <span style={{ ...MONO, color:'#fb923c' }}>{match.purchaseOrder.poNumber}</span></span>}
+          {match.goodsReceipt  && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>GRN: <span style={{ ...MONO, color:'#4ade80' }}>{match.goodsReceipt.grnNumber}</span><span style={{ color:'rgba(255,255,255,0.25)', marginLeft:6 }}>({fmtDateShort(match.goodsReceipt.receivedDate)})</span></span>}
+          <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)' }}>Tolerance: {match.priceTolerance}</span>
+          <span style={{ fontSize:10, color: match.summary.failed > 0 ? '#f87171' : '#4ade80', marginLeft:'auto' }}>{match.summary.matched}/{match.summary.total} lines matched</span>
+        </div>
+      )}
+      {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 10px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+      {invoiceStatus === 'draft' && (
+        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          {currentGrnId ? (
+            <button onClick={handleUnlink} disabled={unlinking}
+              style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif", opacity:unlinking?0.5:1 }}>
+              {unlinking ? 'Unlinking…' : 'Unlink GRN'}
+            </button>
+          ) : (
+            <>
+              <select value={selectedGrn} onChange={e => setSelectedGrn(e.target.value)}
+                style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', outline:'none', minWidth:220 }}>
+                <option value="">— Select GRN to link —</option>
+                {grns.map(g => <option key={g.id} value={g.id}>{g.grnNumber} · {g.supplierName ?? g.warehouseCode} · {fmtDateShort(g.receivedDate)}</option>)}
+              </select>
+              <button onClick={handleLink} disabled={linking || !selectedGrn}
+                style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor: linking||!selectedGrn?'not-allowed':'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'#4ade80', fontFamily:"'IBM Plex Sans',sans-serif", opacity: linking||!selectedGrn?0.5:1 }}>
+                {linking ? 'Linking…' : 'Link GRN'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {match && match.lines.length > 0 && (
+        <div style={{ border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+            <thead>
+              <tr style={{ background:'rgba(255,255,255,0.02)' }}>
+                {['#','Item','Inv Qty','PO Qty','GRN Rcvd','Inv Price','PO Price','Δ%','Match'].map(h => (
+                  <th key={h} style={{ padding:'5px 8px', fontSize:9, color:'rgba(167,139,250,0.55)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign: ['Inv Qty','PO Qty','GRN Rcvd','Inv Price','PO Price','Δ%'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {match.lines.map(line => (
+                <tr key={line.lineNumber} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)', background: !line.lineMatches ? 'rgba(248,113,113,0.03)' : 'transparent' }}>
+                  <td style={{ padding:'6px 8px', color:'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                  <td style={{ padding:'6px 8px' }}>
+                    <div style={{ ...MONO, color:'#a78bfa', fontSize:10 }}>{line.itemCode ?? '—'}</div>
+                    <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10, marginTop:1, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{line.itemName}</div>
+                  </td>
+                  <td style={{ padding:'6px 8px', textAlign:'right', ...MONO }}>{line.invoiceQty}</td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.poQtyOk === false ? '#f87171' : line.poQtyOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.poQty ?? '—'}</span></td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.grnQtyOk === false ? '#f87171' : line.grnQtyOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.grnQty ?? '—'}</span></td>
+                  <td style={{ padding:'6px 8px', textAlign:'right', ...MONO }}>{fmtAmt(line.invoicePrice)}</td>
+                  <td style={{ padding:'6px 8px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.poPrice ? fmtAmt(line.poPrice) : '—'}</td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ fontSize:10, color: line.priceOk === false ? '#f87171' : line.priceOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.priceDiffPct !== null ? `${line.priceDiffPct}%` : '—'}</span></td>
+                  <td style={{ padding:'6px 8px' }}>
+                    {line.lineMatches ? <span style={{ fontSize:10, color:'#4ade80' }}>✓</span> : (
+                      <div><span style={{ fontSize:10, color:'#f87171' }}>✗</span>{line.issues.map((iss, i) => <div key={i} style={{ fontSize:9, color:'rgba(248,113,113,0.7)', marginTop:1, maxWidth:160, lineHeight:1.3 }}>{iss}</div>)}</div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {match?.matchStatus === 'three_way_matched' && (
+        <div style={{ background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#4ade80' }}>
+          ✓ All {match.summary.total} lines pass 3-way match. Invoice is ready to post.
+        </div>
+      )}
+      {match?.matchStatus === 'three_way_failed' && (
+        <div style={{ background:'rgba(248,113,113,0.05)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#f87171' }}>
+          ✗ {match.summary.failed} line{match.summary.failed !== 1 ? 's' : ''} failed. Resolve discrepancies before posting.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AP Invoice Detail Drawer ─────────────────────────────────────────────────
+
+function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => void; onAction: () => void }) {
+  const [detail,     setDetail]     = useState<APInvoice | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [activeTab,  setActiveTab]  = useState<'lines' | 'match' | 'payments'>('lines');
+  const [actionBusy, setActionBusy] = useState(false);
+  const [payOpen,    setPayOpen]    = useState(false);
+  const [error,      setError]      = useState('');
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    try { setDetail(await apInvoicesApi.getById(inv.id) as APInvoice); }
+    catch { setError('Failed to load invoice details.'); }
+    finally { setLoading(false); }
+  }, [inv.id]);
+
+  useEffect(() => { loadDetail(); }, [loadDetail]);
+
+  const handleAction = async (action: 'post' | 'void') => {
+    setActionBusy(true); setError('');
+    try {
+      if (action === 'post') await apInvoicesApi.post(inv.id);
+      if (action === 'void') await apInvoicesApi.void(inv.id);
+      onAction(); onClose();
+    } catch (err: any) { setError(err?.response?.data?.message || `${action} failed.`); }
+    finally { setActionBusy(false); }
+  };
+
   const days = daysUntil(inv.dueDate);
   const outstanding = Number(inv.totalAmount) - Number(inv.paidAmount);
 
-  const handleExpand = async () => {
-    if (!expanded && !detail) {
-      setLoadingDetail(true);
-      try { setDetail(await apInvoicesApi.getById(inv.id) as APInvoice); }
-      finally { setLoadingDetail(false); }
-    }
-    setExpanded(e => !e);
-  };
-
   return (
-    <>
-      <tr style={{ cursor: 'pointer' }} onClick={handleExpand}>
-        <td>
-          <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', transform:expanded?'rotate(90deg)':'none', display:'inline-block', transition:'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color:'#a78bfa', fontWeight:500 }}>{inv.invoiceNumber}</span>
-          </span>
-        </td>
-        <td>
-          <span style={{ color:'#e2dfd8', fontWeight:500 }}>{inv.supplier?.name ?? '—'}</span>
-          {inv.purchaseOrder && <div style={{ fontSize:11, color:'rgba(167,139,250,0.55)', marginTop:1 }}>PO: {inv.purchaseOrder.poNumber}</div>}
-          {inv.supplierRef && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:1 }}>Ref: {inv.supplierRef}</div>}
-        </td>
-        <td><span style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{fmtDate(inv.invoiceDate)}</span></td>
-        <td>
-          <span style={{ fontSize:12, color: days < 0 ? '#f87171' : days <= 7 ? '#fbbf24' : 'rgba(255,255,255,0.5)' }}>
-            {fmtDate(inv.dueDate)}
-            {inv.status !== 'paid' && inv.status !== 'void' && (
-              <span style={{ fontSize:10, marginLeft:5, color: days < 0 ? '#f87171' : days <= 7 ? '#fbbf24' : 'rgba(255,255,255,0.3)' }}>
-                {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`}
-              </span>
-            )}
-          </span>
-        </td>
-        <td style={{ textAlign:'right' }}>
-          <span style={{ ...MONO, color:'#e2dfd8' }}>{fmtAmt(inv.totalAmount)}</span>
-          {outstanding > 0.01 && inv.status !== 'draft' && (
-            <div style={{ fontSize:10, color:'#f87171', marginTop:1 }}>Due: {fmtAmt(outstanding)}</div>
-          )}
-        </td>
-        <td><StatusBadge status={inv.status} /></td>
-        <td onClick={e => e.stopPropagation()}>
-          <div style={{ display:'flex', gap:5 }}>
-            {inv.status === 'draft' && (
-              <button onClick={() => onAction(inv.id, 'post')} disabled={busy} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#60a5fa', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:busy?0.5:1 }}>
-                {busy ? '…' : 'Post'}
-              </button>
-            )}
-            {['posted', 'partial'].includes(inv.status) && (
-              <button onClick={() => onAction(inv.id, 'pay')} disabled={busy} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#4ade80', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:busy?0.5:1 }}>
-                {busy ? '…' : 'Pay'}
-              </button>
-            )}
-            {['draft', 'posted'].includes(inv.status) && (
-              <button onClick={() => onAction(inv.id, 'void')} disabled={busy} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#f87171', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:busy?0.5:1 }}>
-                {busy ? '…' : 'Void'}
-              </button>
-            )}
+    <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
+      <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
+      <div style={{ width:780, background:'#0a0712', borderLeft:'0.5px solid rgba(167,139,250,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+        {/* Header */}
+        <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div>
+            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', ...MONO }}>{inv.invoiceNumber}</div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
+              {inv.supplier?.name}
+              {inv.purchaseOrder && <span style={{ color:'rgba(167,139,250,0.5)', marginLeft:8 }}>· PO {inv.purchaseOrder.poNumber}</span>}
+              {inv.goodsReceipt  && <span style={{ color:'rgba(74,222,128,0.5)',  marginLeft:8 }}>· GRN {inv.goodsReceipt.grnNumber}</span>}
+            </div>
           </div>
-        </td>
-      </tr>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <StatusBadge status={inv.status} />
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          </div>
+        </div>
 
-      {expanded && (
-        <tr>
-          <td colSpan={7} style={{ padding:0, background:'rgba(167,139,250,0.01)' }}>
-            {loadingDetail ? (
-              <div style={{ padding:'16px 40px', fontSize:12, color:'rgba(255,255,255,0.3)' }}>Loading…</div>
-            ) : detail ? (
-              <div style={{ padding:'12px 40px 16px' }}>
-                {/* Lines */}
-                {detail.lines && detail.lines.length > 0 && (
-                  <table style={{ width:'100%', borderCollapse:'collapse', marginBottom:12 }}>
-                    <thead>
-                      <tr>{['#','Item','Description','Qty','UOM','PO Price','Invoice Price','Variance','Line Total'].map(h => (
-                        <th key={h} style={{ padding:'5px 10px', fontSize:10, color:'rgba(255,255,255,0.3)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty','PO Price','Invoice Price','Variance','Line Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
-                      ))}</tr>
-                    </thead>
-                    <tbody>
-                      {detail.lines.map(line => {
-                        const variance = Number(line.priceVariance ?? 0);
-                        return (
-                          <tr key={line.id}>
-                            <td style={{ padding:'6px 10px', fontSize:11, color:'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                            <td style={{ padding:'6px 10px' }}><span style={{ ...MONO, color:'#a78bfa' }}>{line.item?.code ?? '—'}</span></td>
-                            <td style={{ padding:'6px 10px', fontSize:12, color:'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', ...MONO }}>{line.quantity}</td>
-                            <td style={{ padding:'6px 10px', fontSize:12, color:'rgba(255,255,255,0.45)' }}>{line.uom ?? '—'}</td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.originalPoPrice ? fmtAmt(line.originalPoPrice) : '—'}</td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', fontSize:11, color: variance > 0 ? '#f87171' : variance < 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>
-                              {variance !== 0 ? `${variance > 0 ? '+' : ''}${fmtAmt(variance)}` : '—'}
-                            </td>
-                            <td style={{ padding:'6px 10px', textAlign:'right', ...MONO, color:'#e2dfd8', fontWeight:500 }}>{fmtAmt(line.lineTotal)}</td>
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ borderTop:'0.5px solid rgba(255,255,255,0.08)' }}>
-                        <td colSpan={8} style={{ padding:'7px 10px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL</td>
-                        <td style={{ padding:'7px 10px', textAlign:'right', ...MONO, color:'#a78bfa', fontWeight:600, fontSize:13 }}>{fmtAmt(detail.totalAmount)}</td>
+        {loading ? (
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
+        ) : detail ? (
+          <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+            {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+
+            {/* Info grid */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+              {[
+                { label:'Invoice Date', value: fmtDate(detail.invoiceDate) },
+                { label:'Due Date',     value: fmtDate(detail.dueDate), extra: inv.status !== 'paid' && inv.status !== 'void' ? (days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`) : undefined, extraColor: days < 0 ? '#f87171' : '#fbbf24' },
+                { label:'Outstanding',  value: outstanding > 0.01 ? fmtAmt(outstanding) : '—', valueColor: outstanding > 0.01 ? '#f87171' : '#4ade80' },
+                { label:'Currency',     value: detail.currency },
+              ].map(item => (
+                <div key={item.label} style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 12px' }}>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{item.label}</div>
+                  <div style={{ fontSize:13, color:(item as any).valueColor ?? '#e2dfd8' }}>{item.value}</div>
+                  {(item as any).extra && <div style={{ fontSize:10, color:(item as any).extraColor, marginTop:2 }}>{(item as any).extra}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display:'flex', gap:0, background:'rgba(255,255,255,0.03)', borderRadius:7, border:'0.5px solid rgba(255,255,255,0.07)', overflow:'hidden', width:'fit-content' }}>
+              {([
+                { key:'lines',    label:'Lines' },
+                { key:'match',    label:'3-Way Match' },
+                { key:'payments', label:`Payments (${detail.payments?.length ?? 0})` },
+              ] as { key: typeof activeTab; label: string }[]).map(t => (
+                <button key={t.key} onClick={() => setActiveTab(t.key)}
+                  style={{ padding:'6px 16px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', border:'none', background: activeTab === t.key ? 'rgba(167,139,250,0.15)' : 'transparent', color: activeTab === t.key ? '#a78bfa' : 'rgba(255,255,255,0.4)', borderRight:'0.5px solid rgba(255,255,255,0.07)', transition:'all 0.15s' }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lines tab */}
+            {activeTab === 'lines' && detail.lines && (
+              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                <thead>
+                  <tr>{['#','Item','Description','Qty','UOM','PO Price','Invoice Price','Variance','Total'].map(h => (
+                    <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(167,139,250,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty','PO Price','Invoice Price','Variance','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {detail.lines.map(line => {
+                    const variance = Number(line.priceVariance ?? 0);
+                    return (
+                      <tr key={line.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                        <td style={{ padding:'7px 8px' }}><span style={{ ...MONO, color:'#a78bfa', fontSize:11 }}>{line.item?.code ?? '—'}</span></td>
+                        <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.45)', fontSize:11 }}>{line.description || '—'}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO }}>{line.quantity}</td>
+                        <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.4)' }}>{line.uom ?? '—'}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.originalPoPrice ? fmtAmt(line.originalPoPrice) : '—'}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', fontSize:11, color: variance > 0 ? '#f87171' : variance < 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{variance !== 0 ? `${variance > 0 ? '+' : ''}${fmtAmt(variance)}` : '—'}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'#e2dfd8', fontWeight:500 }}>{fmtAmt(line.lineTotal)}</td>
                       </tr>
-                    </tbody>
-                  </table>
-                )}
-                {/* Payments */}
-                {detail.payments && detail.payments.length > 0 && (
-                  <div>
-                    <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(74,222,128,0.5)', marginBottom:6 }}>Payments</div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      {detail.payments.map(p => (
-                        <div key={p.id} style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:7, padding:'6px 12px', fontSize:11 }}>
-                          <span style={{ ...MONO, color:'#4ade80' }}>{fmtAmt(p.amount)}</span>
-                          <span style={{ color:'rgba(255,255,255,0.3)', marginLeft:8 }}>{fmtDate(p.paymentDate)}</span>
-                          {p.paymentMethod && <span style={{ color:'rgba(255,255,255,0.25)', marginLeft:8 }}>{p.paymentMethod}</span>}
-                        </div>
-                      ))}
+                    );
+                  })}
+                  <tr style={{ background:'rgba(255,255,255,0.02)' }}>
+                    <td colSpan={8} style={{ padding:'7px 8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL</td>
+                    <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'#a78bfa', fontWeight:600, fontSize:13 }}>{fmtAmt(detail.totalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+
+            {/* 3-Way Match tab */}
+            {activeTab === 'match' && (
+              <ThreeWayMatchPanel
+                invoiceId={inv.id}
+                invoiceStatus={inv.status}
+                currentGrnId={(detail as any).grnId}
+                onLinked={() => { loadDetail(); onAction(); }}
+                onUnlinked={() => { loadDetail(); onAction(); }}
+              />
+            )}
+
+            {/* Payments tab */}
+            {activeTab === 'payments' && (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {detail.payments && detail.payments.length > 0 ? (
+                  detail.payments.map(p => (
+                    <div key={p.id} style={{ display:'flex', alignItems:'center', gap:12, background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'10px 14px' }}>
+                      <span style={{ ...MONO, color:'#4ade80', fontSize:14, fontWeight:500 }}>{fmtAmt(p.amount)}</span>
+                      <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{fmtDate(p.paymentDate)}</span>
+                      {p.paymentMethod && <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)', padding:'1px 6px', borderRadius:4, background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.08)' }}>{p.paymentMethod}</span>}
+                      <span style={{ ...MONO, fontSize:10, color:'rgba(255,255,255,0.25)', marginLeft:'auto' }}>{p.paymentNumber}</span>
                     </div>
-                  </div>
-                )}
+                  ))
+                ) : <div style={{ fontSize:12, color:'rgba(255,255,255,0.25)', padding:'8px 0' }}>No payments recorded yet.</div>}
               </div>
-            ) : null}
-          </td>
-        </tr>
+            )}
+
+            {detail.notes && (
+              <div style={{ background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>Notes</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', lineHeight:1.6 }}>{detail.notes}</div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)', flexWrap:'wrap' }}>
+              {detail.status === 'draft' && (
+                <button onClick={() => handleAction('post')} disabled={actionBusy}
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.25)', color:'#60a5fa', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
+                  {actionBusy ? '…' : '✓ Post Invoice'}
+                </button>
+              )}
+              {['posted','partial'].includes(detail.status) && (
+                <button onClick={() => setPayOpen(true)}
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'#4ade80', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                  $ Apply Payment
+                </button>
+              )}
+              {['draft','posted'].includes(detail.status) && (
+                <button onClick={() => handleAction('void')} disabled={actionBusy}
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
+                  Void
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {payOpen && detail && (
+        <PaymentModal inv={detail} onClose={() => setPayOpen(false)} onSaved={() => { setPayOpen(false); loadDetail(); onAction(); }} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -221,29 +444,26 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
   const [form, setForm] = useState({ paymentDate: new Date().toISOString().split('T')[0], amount: outstanding.toFixed(2), paymentMethod: 'wire', reference: '', notes: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
-  const INPUT: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
-  const LABEL = { fontSize:10, fontWeight:500 as const, letterSpacing:'0.08em' as const, textTransform:'uppercase' as const, color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
+  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Number(form.amount) <= 0) { setError('Amount must be greater than 0.'); return; }
+    if (Number(form.amount) <= 0) { setError('Amount must be > 0.'); return; }
     setBusy(true); setError('');
-    try {
-      await apInvoicesApi.applyPayment(inv.id, { paymentDate: form.paymentDate, amount: Number(form.amount), paymentMethod: form.paymentMethod || undefined, reference: form.reference || undefined, notes: form.notes || undefined });
-      onSaved(); onClose();
-    } catch (err) { setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Payment failed.'); }
+    try { await apInvoicesApi.applyPayment(inv.id, { paymentDate: form.paymentDate, amount: Number(form.amount), paymentMethod: form.paymentMethod || undefined, reference: form.reference || undefined, notes: form.notes || undefined }); onSaved(); }
+    catch (err: any) { setError(err?.response?.data?.message || 'Payment failed.'); }
     finally { setBusy(false); }
   };
 
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:14, width:'100%', maxWidth:460, boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:14, width:'100%', maxWidth:460, boxShadow:'0 24px 60px rgba(0,0,0,0.7)', position:'relative' }}>
         <div style={{ position:'absolute', top:0, left:30, right:30, height:1, background:'linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent)' }} />
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)' }}>
           <div>
-            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Sans',sans-serif" }}>Apply Payment</div>
+            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>Apply Payment</div>
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:2 }}>{inv.invoiceNumber} · Outstanding: {fmtAmt(outstanding)}</div>
           </div>
           <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
@@ -252,19 +472,19 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
           <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
             {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Payment Date</label><input type="date" style={INPUT} value={form.paymentDate} onChange={set('paymentDate')} /></div>
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Amount ($)</label><input type="number" min="0.01" step="0.01" style={INPUT} value={form.amount} onChange={set('amount')} /></div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Payment Date</label><input type="date" style={INP} value={form.paymentDate} onChange={set('paymentDate')} /></div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Amount ($)</label><input type="number" min="0.01" step="0.01" style={INP} value={form.amount} onChange={set('amount')} /></div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={LABEL}>Method</label>
-                <select style={INPUT} value={form.paymentMethod} onChange={set('paymentMethod')}>
+                <label style={LBL}>Method</label>
+                <select style={INP} value={form.paymentMethod} onChange={set('paymentMethod')}>
                   {['wire','ach','check','transfer','cash'].map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase()+m.slice(1)}</option>)}
                 </select>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Reference</label><input style={INPUT} placeholder="WIRE-2026-001" value={form.reference} onChange={set('reference')} /></div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Reference</label><input style={INP} placeholder="WIRE-2026-001" value={form.reference} onChange={set('reference')} /></div>
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LABEL}>Notes</label><input style={INPUT} placeholder="Payment notes" value={form.notes} onChange={set('notes')} /></div>
+            <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Notes</label><input style={INP} placeholder="Payment notes" value={form.notes} onChange={set('notes')} /></div>
           </div>
           <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
@@ -282,183 +502,291 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
 
 export default function ApInvoicesPage() {
   const [invoices,     setInvoices]     = useState<APInvoice[]>([]);
+  const [suppliers,    setSuppliers]    = useState<Supplier[]>([]);
+  const [pos,          setPos]          = useState<PO[]>([]);
+  const [grns,         setGrns]         = useState<GRNOption[]>([]);
   const [kpis,         setKpis]         = useState<KPIs | null>(null);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
-  const [search,       setSearch]       = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [actionBusy,   setActionBusy]   = useState<string | null>(null);
-  const [payingInv,    setPayingInv]    = useState<APInvoice | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [detailInv,    setDetailInv]    = useState<APInvoice | null>(null);
+
+  // ── Filter definitions ─────────────────────────────────────────────────────
+  const filterDefs = useMemo<ERPFilter<APInvoice>[]>(() => [
+    // 1. Supplier — searchselect
+    {
+      key: 'supplierId', label: 'Supplier', type: 'searchselect',
+      placeholder: 'Search supplier…',
+      selectWidth: 210,
+      options: suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
+      filterFn: (row, val) => row.supplier?.id === val,
+    },
+    // 2. Supplier Ref — free text search (compact)
+    {
+      key: 'supplierRef', label: 'Supplier Ref', type: 'search',
+      placeholder: 'Ref / invoice #…',
+      inputWidth: 150,
+      filterFn: (row, val) =>
+        !!(row.supplierRef ?? '').toLowerCase().includes(String(val).toLowerCase()) ||
+        row.invoiceNumber.toLowerCase().includes(String(val).toLowerCase()),
+    },
+    // 3. Invoice Date range — daterange picker
+    {
+      key: 'invoiceDate', label: 'Invoice Date', type: 'daterange',
+      placeholder: 'Invoice date…', dateWidth: 200,
+      filterFn: (row, val) => dateInSelection(row.invoiceDate, val as DateSelection),
+    },
+    // 3. Due Date range — daterange picker
+    {
+      key: 'dueDate', label: 'Due Date', type: 'daterange',
+      placeholder: 'Due date…', dateWidth: 195,
+      filterFn: (row, val) => dateInSelection(row.dueDate, val as DateSelection),
+    },
+    // 4. Match Status — multiselect
+    {
+      key: 'matchStatus', label: 'Match', type: 'multiselect',
+      options: [
+        { value: 'no_match',          label: 'No Match', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' },
+        { value: 'two_way',           label: '2-Way',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
+        { value: 'three_way_matched', label: '3-Way ✓',  color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  },
+        { value: 'three_way_failed',  label: '3-Way ✗',  color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
+      ],
+      filterFn: (row, val) => {
+        const arr = val as string[];
+        const hasPo  = !!row.purchaseOrder;
+        const hasGrn = !!(row as any).grnId;
+        const ms = !hasPo && !hasGrn ? 'no_match' : hasPo && !hasGrn ? 'two_way' : 'three_way_matched';
+        return arr.includes(ms);
+      },
+    },
+    // 5. Currency — select
+    {
+      key: 'currency', label: 'Currency', type: 'select', placeholder: 'All',
+      options: ['USD','EUR','DOP','GBP'].map(c => ({ value: c, label: c })),
+      filterFn: (row, val) => row.currency === val,
+    },
+    // 6. PO Number — searchselect
+    {
+      key: 'poId', label: 'PO Number', type: 'searchselect',
+      placeholder: 'Search PO…',
+      selectWidth: 185,
+      options: pos.map(p => ({
+        value: p.id,
+        label: p.poNumber,
+        sublabel: p.supplier?.name,
+      })),
+      filterFn: (row, val) => row.purchaseOrder?.id === val,
+    },
+    // 7. GRN Number — searchselect
+    {
+      key: 'grnId', label: 'GRN Number', type: 'searchselect',
+      placeholder: 'Search GRN…',
+      selectWidth: 185,
+      options: grns.map(g => ({
+        value: g.id,
+        label: g.grnNumber,
+        sublabel: g.supplierName ?? g.warehouseCode,
+      })),
+      filterFn: (row, val) => (row as any).grnId === val,
+    },
+  ], [suppliers, pos, grns]);
+
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+
+  const filtered = useMemo(() => {
+    const base = applyERPFilters(invoices, filterDefs, filterVals);
+    return statusFilter ? base.filter(i => i.status === statusFilter) : base;
+  }, [invoices, filterDefs, filterVals, statusFilter]);
 
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [invData, kpiData] = await Promise.all([
+      const [invData, kpiData, supData, grnData] = await Promise.all([
         apInvoicesApi.getAll(),
         apInvoicesApi.getKpis(),
+        suppliersApi.getAll(),
+        goodsReceiptsApi.getAll(),
       ]);
       setInvoices(invData as APInvoice[]);
       setKpis(kpiData as KPIs);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data.');
-    } finally { setLoading(false); }
+      setSuppliers(supData as Supplier[]);
+      // Build PO list from invoices that have a linked PO (deduped)
+      const poMap = new Map<string, PO>();
+      (invData as APInvoice[]).forEach(inv => {
+        if (inv.purchaseOrder) poMap.set(inv.purchaseOrder.id, { id: inv.purchaseOrder.id, poNumber: inv.purchaseOrder.poNumber, supplier: inv.supplier });
+      });
+      setPos(Array.from(poMap.values()).sort((a,b) => a.poNumber.localeCompare(b.poNumber)));
+      setGrns((grnData as GRNOption[]).filter(g => g.id));
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load data.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filtered = invoices.filter(inv => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      inv.invoiceNumber.toLowerCase().includes(q) ||
-      (inv.supplier?.name ?? '').toLowerCase().includes(q) ||
-      (inv.purchaseOrder?.poNumber ?? '').toLowerCase().includes(q) ||
-      (inv.supplierRef ?? '').toLowerCase().includes(q);
-    const matchStatus = !statusFilter || inv.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // ── Columns ────────────────────────────────────────────────────────────────
+  const columns = useMemo<ERPColumn<APInvoice>[]>(() => [
+    {
+      key: 'invoiceNumber', header: 'Invoice #', width: 150, sortable: true,
+      value: r => r.invoiceNumber,
+      render: r => <span style={{ ...MONO, color:'#a78bfa', fontWeight:500 }}>{r.invoiceNumber}</span>,
+    },
+    {
+      key: 'supplier', header: 'Supplier', sortable: true,
+      value: r => r.supplier?.name ?? '',
+      render: r => (
+        <div>
+          <div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.supplier?.name ?? '—'}</div>
+          {r.purchaseOrder && <div style={{ fontSize:11, color:'rgba(167,139,250,0.5)', marginTop:1 }}>PO: {r.purchaseOrder.poNumber}</div>}
+          {r.supplierRef   && <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:1 }}>Ref: {r.supplierRef}</div>}
+        </div>
+      ),
+    },
+    {
+      key: 'match', header: 'Match', width: 110, sortable: false,
+      render: r => {
+        const hasPo = !!r.purchaseOrder; const hasGrn = !!(r as any).grnId;
+        const status: keyof typeof MATCH_CFG = !hasPo && !hasGrn ? 'no_match' : hasPo && !hasGrn ? 'two_way' : 'three_way_matched';
+        return <MatchBadge status={status} />;
+      },
+    },
+    {
+      key: 'invoiceDate', header: 'Invoice Date', width: 115, sortable: true,
+      value: r => r.invoiceDate,
+      render: r => <span style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.invoiceDate)}</span>,
+    },
+    {
+      key: 'dueDate', header: 'Due Date', width: 120, sortable: true,
+      value: r => r.dueDate,
+      render: r => {
+        const days = daysUntil(r.dueDate);
+        const overdue = days < 0 && r.status !== 'paid' && r.status !== 'void';
+        return (
+          <div>
+            <span style={{ fontSize:12, color: overdue ? '#f87171' : 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.dueDate)}</span>
+            {r.status !== 'paid' && r.status !== 'void' && days <= 7 && (
+              <div style={{ fontSize:10, color: days < 0 ? '#f87171' : '#fbbf24', marginTop:1 }}>
+                {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'totalAmount', header: 'Total', width: 120, align: 'right', sortable: true,
+      value: r => Number(r.totalAmount),
+      render: r => <span style={{ ...MONO, fontWeight:500, color:'#e2dfd8' }}>{fmtAmt(r.totalAmount)}</span>,
+    },
+    {
+      key: 'outstanding', header: 'Outstanding', width: 120, align: 'right', sortable: true,
+      value: r => Number(r.totalAmount) - Number(r.paidAmount),
+      render: r => {
+        const out = Number(r.totalAmount) - Number(r.paidAmount);
+        return out > 0.01
+          ? <span style={{ ...MONO, fontSize:12, color:'#f87171' }}>{fmtAmt(out)}</span>
+          : <span style={{ fontSize:12, color:'rgba(74,222,128,0.5)' }}>—</span>;
+      },
+    },
+    {
+      key: 'status', header: 'Status', width: 100, sortable: true,
+      value: r => r.status,
+      render: r => <StatusBadge status={r.status} />,
+    },
+    {
+      key: '_actions', header: '', width: 70, sortable: false,
+      render: r => (
+        <button onClick={e => { e.stopPropagation(); setDetailInv(r); }}
+          style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.55)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+          View
+        </button>
+      ),
+    },
+  ], []);
 
-  const handleAction = async (id: string, action: 'post' | 'pay' | 'void') => {
-    if (action === 'pay') {
-      const inv = invoices.find(i => i.id === id);
-      if (inv) { setPayingInv(inv); return; }
-    }
-    setActionBusy(id);
-    try {
-      if (action === 'post') await apInvoicesApi.post(id);
-      if (action === 'void') await apInvoicesApi.void(id);
-      fetchAll();
-    } catch (err) {
-      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || `${action} failed.`);
-    } finally { setActionBusy(null); }
-  };
-
-  const allStatuses = ['draft', 'posted', 'partial', 'paid', 'void'];
-  const counts = Object.fromEntries(allStatuses.map(s => [s, invoices.filter(i => i.status === s).length]));
+  const counts = useMemo(() => Object.fromEntries(
+    ['draft','posted','partial','paid','void'].map(s => [s, invoices.filter(i => i.status === s).length])
+  ), [invoices]);
 
   return (
-    <ERPShell breadcrumbs={['Home', 'Procurement', 'AP Invoices']} title="Accounts Payable Invoices">
+    <ERPShell breadcrumbs={['Home','Procurement','AP Invoices']} title="Accounts Payable Invoices">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .ap-page { padding: 0 18px 24px; }
-        .ap-kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:16px; }
-        .ap-kpi { background:rgba(10,7,18,0.7); border:0.5px solid rgba(167,139,250,0.12); border-radius:9px; padding:10px 14px; }
-        .ap-kpi-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(167,139,250,0.5); margin-bottom:4px; }
-        .ap-kpi-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:#f1ede8; }
-        .ap-stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-        .ap-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:6px 12px; display:flex; flex-direction:column; gap:2px; cursor:pointer; transition:opacity 0.15s; }
-        .ap-stat:hover { opacity:0.8; }
-        .ap-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .ap-stat-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:#f1ede8; }
-        .ap-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-        .ap-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; width:260px; }
-        .ap-search::placeholder { color:rgba(255,255,255,0.2); }
-        .ap-search:focus { border-color:rgba(167,139,250,0.4); }
-        .ap-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; }
-        .ap-filter option { background:#0e0b1a; }
-        .ap-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(167,139,250,0.12); border-radius:10px; overflow:hidden; }
-        .ap-table { width:100%; border-collapse:collapse; }
-        .ap-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(167,139,250,0.55); background:rgba(167,139,250,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; white-space:nowrap; }
-        .ap-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
-        .ap-table tbody tr:last-child td { border-bottom:none; }
-        .ap-table tbody tr:hover td { background:rgba(167,139,250,0.02); }
-        .ap-empty, .ap-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .ap-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(167,139,250,0.2); border-top-color:#a78bfa; animation:ap-spin 0.7s linear infinite; }
-        @keyframes ap-spin { to { transform:rotate(360deg); } }
-        .ap-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .ap-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#fca5a5; }
+        .ap-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+        .ap-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
       `}</style>
 
       <div className="ap-page">
 
-        {/* KPI Cards */}
+        {/* KPI bar */}
         {kpis && (
-          <div className="ap-kpis">
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:10, flexShrink:0 }}>
             {[
-              { label: 'Total Invoiced', value: fmtAmt(kpis.totalInvoiced), color: '#a78bfa' },
-              { label: 'Total Paid',     value: fmtAmt(kpis.totalPaid),     color: '#4ade80' },
-              { label: 'Pending',        value: fmtAmt(kpis.totalPending),  color: '#fbbf24' },
-              { label: 'Overdue',        value: fmtAmt(kpis.totalOverdue),  color: '#f87171' },
-              { label: 'Payment Rate',   value: `${kpis.paymentRate.toFixed(1)}%`, color: kpis.paymentRate >= 80 ? '#4ade80' : '#fbbf24' },
+              { label:'Total Invoiced', value: fmtAmt(kpis.totalInvoiced), color:'#a78bfa' },
+              { label:'Total Paid',     value: fmtAmt(kpis.totalPaid),     color:'#4ade80' },
+              { label:'Pending',        value: fmtAmt(kpis.totalPending),  color:'#fbbf24' },
+              { label:'Overdue',        value: fmtAmt(kpis.totalOverdue),  color:'#f87171' },
+              { label:'Payment Rate',   value: `${kpis.paymentRate.toFixed(1)}%`, color: kpis.paymentRate >= 80 ? '#4ade80' : '#fbbf24' },
             ].map(k => (
-              <div key={k.label} className="ap-kpi">
-                <div className="ap-kpi-label">{k.label}</div>
-                <div className="ap-kpi-value" style={{ color: k.color }}>{k.value}</div>
+              <div key={k.label} style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.12)', borderRadius:9, padding:'10px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(167,139,250,0.5)', marginBottom:4 }}>{k.label}</div>
+                <div style={{ fontSize:18, fontWeight:500, fontFamily:"'IBM Plex Mono',monospace", color:k.color }}>{k.value}</div>
               </div>
             ))}
           </div>
         )}
 
         {/* Status filter pills */}
-        {invoices.length > 0 && (
-          <div className="ap-stats">
-            {allStatuses.map(s => {
-              const style = STATUS_STYLE[s];
-              return (
-                <div key={s} className="ap-stat"
-                  style={{ border:`0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }}
-                  onClick={() => setStatusFilter(prev => prev === s ? '' : s)}
-                >
-                  <span className="ap-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase()+s.slice(1)}</span>
-                  <span className="ap-stat-value">{counts[s]}</span>
-                </div>
-              );
-            })}
-            <div className="ap-stat"
-              style={{ border:`0.5px solid ${!statusFilter ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.07)'}` }}
-              onClick={() => setStatusFilter('')}
-            >
-              <span className="ap-stat-label" style={{ color:'rgba(167,139,250,0.6)' }}>Total</span>
-              <span className="ap-stat-value" style={{ color:'#a78bfa' }}>{invoices.length}</span>
-            </div>
+        <div style={{ display:'flex', gap:8, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
+          {(['draft','posted','partial','paid','void'] as const).map(s => {
+            const style = STATUS_STYLE[s]; const isActive = statusFilter === s;
+            return (
+              <div key={s} onClick={() => setStatusFilter(prev => prev === s ? null : s)}
+                style={{ background: isActive ? style.bg : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? style.color : style.border}`, borderRadius:8, padding:'6px 12px', display:'flex', flexDirection:'column', gap:2, minWidth:70, cursor:'pointer', transition:'all 0.15s' }}>
+                <span style={{ fontSize:10, color:style.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{style.label}</span>
+                <span style={{ fontSize:18, fontWeight:500, color: isActive ? style.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{counts[s] ?? 0}</span>
+              </div>
+            );
+          })}
+          <div onClick={() => setStatusFilter(null)}
+            style={{ background: !statusFilter ? 'rgba(167,139,250,0.08)' : 'rgba(10,7,18,0.7)', border:`0.5px solid ${!statusFilter ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'6px 12px', display:'flex', flexDirection:'column', gap:2, minWidth:60, cursor:'pointer', transition:'all 0.15s' }}>
+            <span style={{ fontSize:10, color:'rgba(167,139,250,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>All</span>
+            <span style={{ fontSize:18, fontWeight:500, color:'#a78bfa', fontFamily:"'IBM Plex Mono',monospace" }}>{invoices.length}</span>
           </div>
-        )}
+        </div>
 
-        <div className="ap-toolbar">
-          <input className="ap-search" placeholder="Search by invoice#, supplier, PO, ref…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select className="ap-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="">All Status</option>
-            {allStatuses.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-          </select>
+        {/* Filter bar */}
+        <div style={{ marginBottom:10, flexShrink:0 }}>
+          <ERPFilterBar
+            filters={filterDefs}
+            values={filterVals}
+            onChange={setFilterVal}
+            onReset={resetFilters}
+            activeCount={filterCount}
+          />
         </div>
 
         {error && <div className="ap-error">{error}</div>}
 
-        <div className="ap-wrap">
-          {loading ? (
-            <div className="ap-loading"><div className="ap-spinner" />Loading AP invoices…</div>
-          ) : filtered.length === 0 ? (
-            <div className="ap-empty">{search || statusFilter ? 'No invoices match your filters.' : 'No AP invoices yet. Post a Purchase Order to generate one.'}</div>
-          ) : (
-            <>
-              <table className="ap-table">
-                <thead>
-                  <tr>
-                    <th>Invoice #</th>
-                    <th>Supplier / PO</th>
-                    <th>Invoice Date</th>
-                    <th>Due Date</th>
-                    <th style={{ textAlign:'right' }}>Amount</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(inv => (
-                    <APRow key={inv.id} inv={inv} onAction={handleAction} actionBusy={actionBusy} />
-                  ))}
-                </tbody>
-              </table>
-              <div className="ap-footer">{filtered.length} of {invoices.length} AP invoice{invoices.length !== 1 ? 's' : ''}</div>
-            </>
-          )}
+        {/* Table */}
+        <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <ERPTable<APInvoice>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="ap-invoices"
+            emptyMessage={filterCount || statusFilter ? 'No invoices match your filters.' : 'No AP invoices yet.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+            onRowClick={inv => setDetailInv(inv)}
+          />
         </div>
       </div>
 
-      {payingInv && (
-        <PaymentModal
-          inv={payingInv}
-          onClose={() => setPayingInv(null)}
-          onSaved={() => { setPayingInv(null); fetchAll(); }}
+      {detailInv && (
+        <APDrawer
+          inv={detailInv}
+          onClose={() => setDetailInv(null)}
+          onAction={() => { setDetailInv(null); fetchAll(); }}
         />
       )}
     </ERPShell>

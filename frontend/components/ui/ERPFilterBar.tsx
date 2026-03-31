@@ -1,12 +1,15 @@
+// ============================================================================
+// FILE: frontend/components/ui/ERPFilterBar.tsx
+// ============================================================================
 "use client";
 
 import SearchSelect from '@/components/ui/SearchSelect';
-
+import { ERPDatePicker, DateSelection } from '@/components/ui/ERPDatePicker';
 import { useState, useMemo, useCallback } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ERPFilterValue = string | string[] | boolean | null;
+export type ERPFilterValue = string | string[] | boolean | DateSelection | null;
 
 export interface ERPFilterOption {
   value: string;
@@ -18,12 +21,18 @@ export interface ERPFilterOption {
 }
 
 export interface ERPFilter<T = any> {
-  key:         string;
-  label:       string;
-  type:        'search' | 'select' | 'multiselect' | 'boolean';
-  options?:    ERPFilterOption[];
+  key:          string;
+  label:        string;
+  type:         'search' | 'select' | 'multiselect' | 'boolean' | 'searchselect' | 'daterange';
+  options?:     ERPFilterOption[];
   placeholder?: string;
-  filterFn?:   (row: T, value: ERPFilterValue) => boolean;
+  /** Width for daterange picker (default 240) */
+  dateWidth?:   number;
+  /** minWidth for searchselect trigger+panel (default 280) */
+  selectWidth?: number;
+  /** Width for search text input (default 180) */
+  inputWidth?:  number;
+  filterFn?:    (row: T, value: ERPFilterValue) => boolean;
 }
 
 export type ERPFilterValues = Record<string, ERPFilterValue>;
@@ -51,6 +60,38 @@ export function useERPFilters(filters: ERPFilter[]) {
   return { values, setValue, reset, activeCount };
 }
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+/** Extract { from, to } from a DateSelection for use in filterFn */
+export function dateSelectionToRange(sel: DateSelection | null | undefined): { from: Date; to: Date } | null {
+  if (!sel) return null;
+  if (sel.type === 'day')        return { from: sel.date, to: sel.date };
+  if (sel.type === 'range')      return { from: sel.from, to: sel.to };
+  if (sel.type === 'week')       return { from: sel.from, to: sel.to };
+  if (sel.type === 'week-range') return { from: sel.from, to: sel.to };
+  return null;
+}
+
+/** Normalizes any date value to midnight local time (strips time component).
+ *  This ensures day-level filtering regardless of timezone or time in the date string. */
+function toLocalDay(d: Date | string): Date {
+  const dt = typeof d === 'string' ? new Date(d) : d;
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
+/** Returns true if dateStr (YYYY-MM-DD or ISO) falls within the DateSelection.
+ *  Minimum granularity is always the day — hours/minutes are stripped before comparison. */
+export function dateInSelection(dateStr: string | undefined | null, sel: DateSelection | null): boolean {
+  if (!sel || !dateStr) return true;
+  const range = dateSelectionToRange(sel);
+  if (!range) return true;
+  const d    = toLocalDay(dateStr);                    // strip time from the row value
+  const from = toLocalDay(range.from);                 // strip time from range start
+  const to   = toLocalDay(range.to);
+  to.setDate(to.getDate() + 1);                        // make 'to' exclusive at day boundary
+  return d >= from && d < to;
+}
+
 // ─── Filter function ──────────────────────────────────────────────────────────
 
 export function applyERPFilters<T>(
@@ -70,8 +111,10 @@ export function applyERPFilters<T>(
       const rowVal = (row as any)[f.key];
       if (f.type === 'search')      return String(rowVal ?? '').toLowerCase().includes(String(val).toLowerCase());
       if (f.type === 'select')      return String(rowVal ?? '') === String(val);
+      if (f.type === 'searchselect')return String(rowVal ?? '') === String(val);
       if (f.type === 'multiselect') return (val as string[]).includes(String(rowVal ?? ''));
       if (f.type === 'boolean')     return val === true ? !!rowVal : true;
+      if (f.type === 'daterange')   return dateInSelection(String(rowVal ?? ''), val as DateSelection);
       return true;
     })
   );
@@ -103,19 +146,20 @@ export function ERPFilterBar<T>({
   const LBL: React.CSSProperties = {
     fontSize: 10, fontWeight: 500, letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)',
-    marginBottom: 4,
+    marginBottom: 5,
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
       {filters.map(f => {
         const val = values[f.key];
 
+        // ── Text search ──────────────────────────────────────────────────────
         if (f.type === 'search') return (
           <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={LBL}>{f.label}</span>
             <input
-              style={INP}
+              style={{ ...INP, ...(f.inputWidth ? { minWidth: f.inputWidth, width: f.inputWidth } : {}) }}
               placeholder={f.placeholder ?? `Search…`}
               value={(val as string) ?? ''}
               onChange={e => onChange(f.key, e.target.value || null)}
@@ -123,6 +167,7 @@ export function ERPFilterBar<T>({
           </div>
         );
 
+        // ── Select ───────────────────────────────────────────────────────────
         if (f.type === 'select') return (
           <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={LBL}>{f.label}</span>
@@ -137,8 +182,9 @@ export function ERPFilterBar<T>({
           </div>
         );
 
+        // ── Search Select ────────────────────────────────────────────────────
         if (f.type === 'searchselect') return (
-          <div key={f.key} style={{ display: 'flex', flexDirection: 'column', minWidth: 200 }}>
+          <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={LBL}>{f.label}</span>
             <SearchSelect
               options={f.options?.map(o => ({ value: o.value, label: o.label, sublabel: o.sublabel })) ?? []}
@@ -146,10 +192,33 @@ export function ERPFilterBar<T>({
               onChange={v => onChange(f.key, v || null)}
               placeholder={f.placeholder ?? `Search ${f.label}…`}
               clearLabel={`— All ${f.label}s —`}
+              minWidth={f.selectWidth ?? 200}
             />
           </div>
         );
 
+        // ── Date Range ───────────────────────────────────────────────────────
+        if (f.type === 'daterange') return (
+          <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={LBL}>
+              {f.label}
+              {val && (
+                <button
+                  onClick={() => onChange(f.key, null)}
+                  style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(248,113,113,0.7)', fontSize: 10, padding: 0, fontFamily: "'IBM Plex Sans',sans-serif" }}
+                >× clear</button>
+              )}
+            </span>
+            <ERPDatePicker
+              value={(val as DateSelection) ?? null}
+              onChange={sel => onChange(f.key, sel)}
+              placeholder={f.placeholder ?? 'Select date range…'}
+              width={f.dateWidth ?? 200}
+            />
+          </div>
+        );
+
+        // ── Multiselect ──────────────────────────────────────────────────────
         if (f.type === 'multiselect') {
           const sel = (val as string[]) ?? [];
           return (
@@ -181,6 +250,7 @@ export function ERPFilterBar<T>({
           );
         }
 
+        // ── Boolean toggle ───────────────────────────────────────────────────
         if (f.type === 'boolean') return (
           <div key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={LBL}>{f.label}</span>
