@@ -1317,6 +1317,59 @@ erDiagram
     String deleted_by "❓"
     }
   
+
+  "in_stock_count_sessions" {
+    String id "🗝️"
+    String tenant_id 
+    String session_number 
+    String warehouse_id 
+    String description "❓"
+    DateTime count_date 
+    String status 
+    Int total_lines_count "❓"
+    Int lines_with_variance "❓"
+    Decimal total_variance_value "❓"
+    String approved_by "❓"
+    DateTime approved_at "❓"
+    String approval_notes "❓"
+    DateTime posted_at "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "in_stock_count_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String session_id 
+    String item_id 
+    Decimal system_storage_qty 
+    String storage_uom 
+    Decimal system_purchase_qty 
+    String purchase_uom 
+    Decimal unit_cost_snapshot 
+    Decimal counted_storage_qty "❓"
+    Decimal counted_purchase_qty "❓"
+    Decimal variance_storage_qty "❓"
+    Decimal variance_purchase_qty "❓"
+    Decimal variance_value "❓"
+    String status 
+    String lot_number "❓"
+    String serial_number "❓"
+    String notes "❓"
+    String adjustment_movement_id "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1482,4 +1535,9 @@ erDiagram
     "in_wh_levels" }o--|| in_wh_racks : "rack"
     "in_wh_bins" }o--|| saas_tenants : "tenant"
     "in_wh_bins" }o--|| in_wh_levels : "level"
+    "in_stock_count_sessions" }o--|| saas_tenants : "tenant"
+    "in_stock_count_sessions" }o--|| in_warehouses : "warehouse"
+    "in_stock_count_lines" }o--|| saas_tenants : "tenant"
+    "in_stock_count_lines" }o--|| in_stock_count_sessions : "session"
+    "in_stock_count_lines" }o--|| in_items : "item"
 ```

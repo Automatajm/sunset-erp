@@ -32,6 +32,7 @@ import { ConsumptionGroupsModule } from './modules/consumption-groups/consumptio
 import { SupplierItemsModule } from './modules/supplier-items/supplier-items.module';
 import { WarehouseLocationsModule } from './modules/warehouse-locations/warehouse-locations.module';
 import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.module';
+import { StockReconciliationModule } from './modules/stock-reconciliation/stock-reconciliation.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.mod
     SupplierItemsModule,
     WarehouseLocationsModule,
     GoodsReceiptsModule,
+    StockReconciliationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

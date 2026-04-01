@@ -44,6 +44,7 @@ const NAV: NavItem[] = [
           { label: 'Inventory Turnover',  href: '/inventory/inventory-turnover' },
           { label: 'ABC Analysis',       href: '/inventory/abc-analysis' },
           { label: 'Slow Moving Items',  href: '/inventory/slow-moving' },
+          { label: 'Stock Reconciliation',  href: '/inventory/stock-reconciliation' },
           
         ],
       },
