@@ -50,6 +50,17 @@ export class AuthController {
     };
   }
 
+  // Sprint 14F - List users in tenant for assignment UI
+  @Get('users')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List active users in current tenant - used for count assignment' })
+  @ApiResponse({ status: 200, description: 'List of users in tenant with roles' })
+  async getTenantUsers(@Request() req) {
+    const users = await this.authService.getTenantUsers(req.user.tenantId);
+    return { users, count: users.length };
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

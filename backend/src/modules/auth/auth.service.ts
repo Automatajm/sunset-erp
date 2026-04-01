@@ -74,7 +74,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Get user's tenants
     const tenants = user.userTenants.map((ut) => ({
       id: ut.tenant.id,
       code: ut.tenant.code,
@@ -86,7 +85,6 @@ export class AuthService {
       throw new UnauthorizedException('User has no tenant access. Contact administrator.');
     }
 
-    // If only one tenant, auto-select it
     if (tenants.length === 1) {
       const payload = {
         sub: user.id,
@@ -109,7 +107,6 @@ export class AuthService {
       };
     }
 
-    // Multiple tenants - return list for selection
     const payload = {
       sub: user.id,
       email: user.email,
@@ -131,7 +128,6 @@ export class AuthService {
   }
 
   async selectTenant(userId: string, selectTenantDto: SelectTenantDto) {
-    // Verify user has access to this tenant
     const userTenant = await this.prisma.userTenant.findFirst({
       where: {
         userId,
@@ -148,7 +144,6 @@ export class AuthService {
       throw new NotFoundException('You do not have access to this tenant');
     }
 
-    // Generate new token with tenant
     const payload = {
       sub: userId,
       email: userTenant.user.email,
@@ -191,6 +186,40 @@ export class AuthService {
       name: ut.tenant.name,
       isDefault: ut.isDefault,
     }));
+  }
+
+  // Sprint 14F - List active users in tenant (for assignment UI)
+  async getTenantUsers(tenantId: string) {
+    const userTenants = await this.prisma.userTenant.findMany({
+      where: { tenantId, isActive: true },
+      include: {
+        user: {
+          select: {
+            id: true, email: true, firstName: true, lastName: true,
+            status: true, avatarUrl: true,
+            userRoles: {
+              where: { tenantId },
+              include: { role: { select: { id: true, code: true, name: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { user: { firstName: 'asc' } },
+    });
+
+    return userTenants
+      .filter(ut => ut.user.status === 'active')
+      .map(ut => ({
+        id:        ut.user.id,
+        email:     ut.user.email,
+        firstName: ut.user.firstName,
+        lastName:  ut.user.lastName,
+        fullName:  `${ut.user.firstName} ${ut.user.lastName}`,
+        avatarUrl: ut.user.avatarUrl,
+        roles:     ut.user.userRoles.map(r => ({
+          id: r.role.id, code: r.role.code, name: r.role.name,
+        })),
+      }));
   }
 
   async validateUser(userId: string) {

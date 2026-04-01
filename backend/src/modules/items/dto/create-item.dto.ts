@@ -1,4 +1,7 @@
-﻿import {
+﻿// ============================================================================
+// FILE: backend/src/modules/items/dto/create-item.dto.ts
+// ============================================================================
+import {
   IsString,
   IsOptional,
   IsBoolean,
@@ -44,6 +47,26 @@ export class CreateItemDto {
   @IsOptional()
   @IsUUID()
   consumptionGroupId?: string;
+
+  // ── Barcodes (Sprint 14F) ───────────────────────────────────────────────────
+
+  @ApiPropertyOptional({
+    example: 'ITEM-0001',
+    description: 'Internal barcode — auto-generated from item code if omitted. Used for mobile count scanning.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  barcodeInternal?: string;
+
+  @ApiPropertyOptional({
+    example: '7501031311309',
+    description: 'External barcode — EAN-13, UPC, or supplier barcode. Accepted as alternative scan input.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  barcodeExternal?: string;
 
   // ── UOM — legacy (kept for backward compatibility) ──────────────────────────
 

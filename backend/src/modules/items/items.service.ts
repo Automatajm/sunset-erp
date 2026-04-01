@@ -1,4 +1,7 @@
-﻿import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+﻿// ============================================================================
+// FILE: backend/src/modules/items/items.service.ts
+// ============================================================================
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -61,28 +64,21 @@ export class ItemsService {
   }
 
   // ── Auto-calculate UOM conversion factors from catalog ─────────────────────
-  // Returns the factor from `fromUomId` to `toUomId` (consumption base).
-  // Falls back to the provided manual value if catalog lookup fails.
   private async resolveConversionFactor(
     fromUomId: string | undefined,
     toUomId:   string | undefined,
     manualFactor: number,
   ): Promise<number> {
-    // If same UOM or missing, factor is always 1
     if (!fromUomId || !toUomId || fromUomId === toUomId) return 1;
-
-    // Only auto-calculate when manual factor is the default (1) — meaning
-    // the user didn't explicitly set a custom value
     if (manualFactor !== 1) return manualFactor;
-
     try {
       const autoFactor = await this.uomService.getConversionFactor(fromUomId, toUomId);
       if (autoFactor && autoFactor !== 1) return autoFactor;
-    } catch {
-      // Catalog doesn't have this conversion — keep manual
-    }
+    } catch { /* keep manual */ }
     return manualFactor;
   }
+
+  // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateItemDto) {
     const code = dto.code?.trim()
@@ -93,6 +89,9 @@ export class ItemsService {
       where: { tenantId, code, deletedAt: null },
     });
     if (existing) throw new ConflictException(`Item with code ${code} already exists`);
+
+    // Auto-generate barcodeInternal from code if not provided
+    const barcodeInternal = dto.barcodeInternal?.trim() || code;
 
     // Auto-calculate conversion factors from UOM catalog
     const purchaseFactor = await this.resolveConversionFactor(
@@ -116,7 +115,10 @@ export class ItemsService {
         baseUom:            dto.baseUom,
         categoryId:         dto.categoryId,
         consumptionGroupId: dto.consumptionGroupId,
-        // UOM triple — with auto-calculated factors
+        // Sprint 14F — Barcodes
+        barcodeInternal,
+        barcodeExternal:    dto.barcodeExternal?.trim() || null,
+        // UOM triple
         purchaseUomId:               dto.purchaseUomId,
         purchaseToConsumptionFactor: purchaseFactor,
         storageUomId:                dto.storageUomId,
@@ -145,6 +147,8 @@ export class ItemsService {
     });
   }
 
+  // ── Find All ───────────────────────────────────────────────────────────────
+
   async findAll(tenantId: string, itemType?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (itemType) where.itemType = itemType;
@@ -155,6 +159,8 @@ export class ItemsService {
     });
   }
 
+  // ── Find One ───────────────────────────────────────────────────────────────
+
   async findOne(tenantId: string, id: string) {
     const item = await this.prisma.item.findFirst({
       where: { id, tenantId, deletedAt: null },
@@ -163,6 +169,77 @@ export class ItemsService {
     if (!item) throw new NotFoundException(`Item with ID ${id} not found`);
     return item;
   }
+
+  // ── Find by Barcode (Sprint 14F) ───────────────────────────────────────────
+  // Searches by: internal barcode, external barcode, item code, or supplier item code
+  // Used by mobile count scanner — accepts any scan input and returns the item
+
+  async findByBarcode(tenantId: string, scan: string) {
+    const q = scan.trim();
+
+    // 1. Try internal barcode (exact match)
+    let item = await this.prisma.item.findFirst({
+      where: { tenantId, barcodeInternal: q, deletedAt: null },
+      include: ITEM_INCLUDE,
+    });
+    if (item) return { item, matchedBy: 'barcodeInternal' };
+
+    // 2. Try external barcode (exact match)
+    item = await this.prisma.item.findFirst({
+      where: { tenantId, barcodeExternal: q, deletedAt: null },
+      include: ITEM_INCLUDE,
+    });
+    if (item) return { item, matchedBy: 'barcodeExternal' };
+
+    // 3. Try item code (case-insensitive)
+    item = await this.prisma.item.findFirst({
+      where: { tenantId, code: { equals: q, mode: 'insensitive' }, deletedAt: null },
+      include: ITEM_INCLUDE,
+    });
+    if (item) return { item, matchedBy: 'itemCode' };
+
+    // 4. Try supplier item code (any supplier)
+    const supplierItem = await this.prisma.supplierItem.findFirst({
+      where: {
+        tenantId,
+        supplierItemCode: { equals: q, mode: 'insensitive' },
+        deletedAt: null,
+        isActive: true,
+      },
+      include: { item: { include: ITEM_INCLUDE } },
+    });
+    if (supplierItem?.item) {
+      return { item: supplierItem.item, matchedBy: 'supplierItemCode', supplierId: supplierItem.supplierId };
+    }
+
+    throw new NotFoundException(`No item found for barcode/code "${q}"`);
+  }
+
+  // ── Lookup multiple barcodes (batch scan) ──────────────────────────────────
+  // Used by bulk location import to resolve itemCodes/barcodes in one call
+
+  async findManyByCodes(tenantId: string, codes: string[]) {
+    const items = await this.prisma.item.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        OR: [
+          { code:            { in: codes, mode: 'insensitive' } },
+          { barcodeInternal: { in: codes } },
+          { barcodeExternal: { in: codes } },
+        ],
+      },
+      select: {
+        id: true, code: true, name: true, itemType: true, baseUom: true,
+        barcodeInternal: true, barcodeExternal: true,
+        purchaseUom: { select: { code: true } },
+        storageUom:  { select: { code: true } },
+      },
+    });
+    return items;
+  }
+
+  // ── Update ─────────────────────────────────────────────────────────────────
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateItemDto) {
     const current = await this.findOne(tenantId, id);
@@ -174,17 +251,26 @@ export class ItemsService {
       if (existing) throw new ConflictException(`Item with code ${dto.code} already exists`);
     }
 
-    // Resolve effective UOM IDs — use incoming or fall back to current saved
+    // Resolve effective UOM IDs
     const a = current as any;
     const effectivePurchaseUom    = dto.purchaseUomId    ?? a.purchaseUomId;
     const effectiveStorageUom     = dto.storageUomId     ?? a.storageUomId;
     const effectiveConsumptionUom = dto.consumptionUomId ?? a.consumptionUomId;
 
-    // Build clean data — skip undefined/null/empty, coerce numerics
+    // Build clean data
     const data: any = { updatedBy: userId };
     for (const [k, v] of Object.entries(dto)) {
       if (v === undefined || v === null || v === '') continue;
       data[k] = NUMERIC_FIELDS.includes(k) ? Number(v) : v;
+    }
+
+    // If code changed and barcodeInternal was auto-generated from code, update it too
+    if (dto.code && !dto.barcodeInternal) {
+      const currentBarcode = (current as any).barcodeInternal;
+      const currentCode    = (current as any).code;
+      if (currentBarcode === currentCode) {
+        data.barcodeInternal = dto.code.trim().toUpperCase();
+      }
     }
 
     // Auto-calculate factors when UOM fields are being changed
@@ -196,7 +282,6 @@ export class ItemsService {
       const autoPurchaseFactor = await this.resolveConversionFactor(
         effectivePurchaseUom,
         effectiveConsumptionUom,
-        // If user explicitly sent a factor value != 1, respect it; otherwise auto-calc
         dto.purchaseToConsumptionFactor !== undefined ? manualPurchaseFactor : 1,
       );
       data.purchaseToConsumptionFactor = autoPurchaseFactor;
@@ -219,6 +304,8 @@ export class ItemsService {
     });
   }
 
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
   async remove(tenantId: string, userId: string, id: string) {
     await this.findOne(tenantId, id);
     const item = await this.prisma.item.update({
@@ -227,6 +314,8 @@ export class ItemsService {
     });
     return { message: 'Item deleted successfully', id: item.id };
   }
+
+  // ── Statistics ─────────────────────────────────────────────────────────────
 
   async getStatistics(tenantId: string) {
     const total = await this.prisma.item.count({ where: { tenantId, deletedAt: null } });
@@ -238,11 +327,14 @@ export class ItemsService {
     const saleable      = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isSaleable: true } });
     const withCategory  = await this.prisma.item.count({ where: { tenantId, deletedAt: null, categoryId: { not: null } } });
     const withUomTriple = await this.prisma.item.count({ where: { tenantId, deletedAt: null, consumptionUomId: { not: null } } });
+    const withBarcode   = await this.prisma.item.count({ where: { tenantId, deletedAt: null, barcodeInternal: { not: null } } });
+    const withExternalBarcode = await this.prisma.item.count({ where: { tenantId, deletedAt: null, barcodeExternal: { not: null } } });
 
     return {
       total,
       byType: byType.map(i => ({ type: i.itemType, count: i._count })),
       stockable, purchasable, saleable, withCategory, withUomTriple,
+      withBarcode, withExternalBarcode,
     };
   }
 }
