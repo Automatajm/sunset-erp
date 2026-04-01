@@ -527,4 +527,225 @@ export class GoodsReceiptsService {
       totalValue: valueAgg[0]?.total_value ?? 0,
     };
   }
+  // ── Inventory Turnover ─────────────────────────────────────────────────────
+  // Turnover Ratio  = COGS (issues) / Average Inventory Value
+  // Days on Hand    = 365 / Turnover Ratio
+  // Average Inv.    = (Opening Value + Closing Value) / 2
+  // All values use purchaseUom × unitCost (ADR-019)
+ 
+  async getInventoryTurnover(tenantId: string, filters?: {
+    warehouseId?: string;
+    itemType?:    string;
+    dateFrom?:    string;  // YYYY-MM-DD  (default: Jan 1 current year)
+    dateTo?:      string;  // YYYY-MM-DD  (default: today)
+  }) {
+    const now      = new Date();
+    const dateFrom = filters?.dateFrom ? new Date(filters.dateFrom) : new Date(now.getFullYear(), 0, 1);
+    const dateTo   = filters?.dateTo   ? new Date(filters.dateTo + 'T23:59:59Z') : now;
+    const days     = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
+ 
+    // ── 1. Current stock positions ─────────────────────────────────────────
+    const stockWhere: any = { tenantId };
+    if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
+ 
+    const stock = await this.prisma.stock.findMany({
+      where: stockWhere,
+      include: {
+        item:      { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
+        warehouse: { select: { id: true, code: true, name: true } },
+      },
+    });
+ 
+    const filtered = stock.filter(s => !filters?.itemType || s.item.itemType === filters.itemType);
+ 
+    // ── 2. COGS in period = sum of issue movementValues ───────────────────
+    const issueWhere: any = {
+      tenantId,
+      movementType: 'issue',
+      movementDate: { gte: dateFrom, lte: dateTo },
+    };
+    if (filters?.warehouseId) {
+      issueWhere.OR = [
+        { fromWarehouseId: filters.warehouseId },
+        { toWarehouseId:   filters.warehouseId },
+      ];
+    }
+ 
+    const issues = await this.prisma.stockMovement.findMany({
+      where:   issueWhere,
+      include: { item: { select: { id: true, itemType: true } } },
+    });
+ 
+    // Group COGS by itemId
+    const cogsMap = new Map<string, number>();
+    for (const mv of issues) {
+      if (!mv.itemId) continue;
+      if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
+      const val = Math.abs(
+        mv.movementValue ? Number(mv.movementValue) : Number(mv.quantity) * Number(mv.unitCost ?? 0)
+      );
+      cogsMap.set(mv.itemId, (cogsMap.get(mv.itemId) ?? 0) + val);
+    }
+ 
+    // ── 3. Opening inventory value (movements BEFORE dateFrom) ────────────
+    const openingWhere: any = {
+      tenantId,
+      movementDate: { lt: dateFrom },
+    };
+    if (filters?.warehouseId) {
+      openingWhere.OR = [
+        { fromWarehouseId: filters.warehouseId },
+        { toWarehouseId:   filters.warehouseId },
+      ];
+    }
+ 
+    const openingMovements = await this.prisma.stockMovement.findMany({
+      where:  openingWhere,
+      select: {
+        itemId: true, movementType: true,
+        purchaseQty: true, unitCost: true, movementValue: true,
+        item: { select: { id: true, itemType: true } },
+      },
+    });
+ 
+    // Calculate opening value per item (running balance × last unitCost before period)
+    const openingQtyMap  = new Map<string, number>();
+    const openingCostMap = new Map<string, number>();
+    for (const mv of openingMovements) {
+      if (!mv.itemId) continue;
+      if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
+      const qty      = Number(mv.purchaseQty ?? 0);
+      const isIssue  = mv.movementType === 'issue';
+      const current  = openingQtyMap.get(mv.itemId) ?? 0;
+      openingQtyMap.set(mv.itemId, current + (isIssue ? -qty : qty));
+      if (!isIssue && mv.unitCost) {
+        openingCostMap.set(mv.itemId, Number(mv.unitCost));
+      }
+    }
+ 
+    // ── 4. Build per-item rows ─────────────────────────────────────────────
+    // Aggregate by item (sum across warehouses)
+    const itemMap = new Map<string, {
+      itemId: string; itemCode: string; itemName: string; itemType: string;
+      closingValue: number; closingQty: number; unitCost: number;
+      cogs: number; warehouses: string[];
+    }>();
+ 
+    for (const s of filtered) {
+      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
+      const unitCost    = Number(s.unitCost ?? 0);
+      const value       = Math.round(purchaseQty * unitCost * 100) / 100;
+ 
+      const ex = itemMap.get(s.item.id);
+      if (ex) {
+        ex.closingValue += value;
+        ex.closingQty   += purchaseQty;
+        ex.warehouses.push(s.warehouse.code);
+      } else {
+        itemMap.set(s.item.id, {
+          itemId:       s.item.id,
+          itemCode:     s.item.code,
+          itemName:     s.item.name,
+          itemType:     s.item.itemType,
+          closingValue: value,
+          closingQty:   purchaseQty,
+          unitCost,
+          cogs:         0,
+          warehouses:   [s.warehouse.code],
+        });
+      }
+    }
+ 
+    // Attach COGS
+    for (const [itemId, cogs] of cogsMap) {
+      const ex = itemMap.get(itemId);
+      if (ex) ex.cogs = Math.round(cogs * 100) / 100;
+    }
+ 
+    const rows = [...itemMap.values()].map(item => {
+      const openingQty   = Math.max(0, openingQtyMap.get(item.itemId) ?? 0);
+      const openingCost  = openingCostMap.get(item.itemId) ?? item.unitCost;
+      const openingValue = Math.round(openingQty * openingCost * 100) / 100;
+      const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
+ 
+      // Annualize COGS if period < 365 days
+      const annualizedCogs = days < 365
+        ? Math.round((item.cogs / days) * 365 * 100) / 100
+        : item.cogs;
+ 
+      const turnoverRatio = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
+      const daysOnHand    = turnoverRatio && turnoverRatio > 0
+        ? Math.round((365 / turnoverRatio) * 10) / 10
+        : null;
+ 
+      // Performance classification
+      let performance: 'excellent' | 'good' | 'fair' | 'poor' | 'no_movement';
+      if (item.cogs === 0)               performance = 'no_movement';
+      else if (!turnoverRatio)           performance = 'poor';
+      else if (turnoverRatio >= 12)      performance = 'excellent';
+      else if (turnoverRatio >= 6)       performance = 'good';
+      else if (turnoverRatio >= 3)       performance = 'fair';
+      else                               performance = 'poor';
+ 
+      return {
+        itemId:         item.itemId,
+        itemCode:       item.itemCode,
+        itemName:       item.itemName,
+        itemType:       item.itemType,
+        warehouses:     [...new Set(item.warehouses)],
+        // Values
+        openingValue,
+        closingValue:   Math.round(item.closingValue * 100) / 100,
+        avgInventory,
+        cogs:           item.cogs,
+        annualizedCogs,
+        // Ratios
+        turnoverRatio,
+        daysOnHand,
+        performance,
+      };
+    });
+ 
+    // Sort by turnover ratio asc (poor performers first)
+    rows.sort((a, b) => {
+      if (a.turnoverRatio === null) return -1;
+      if (b.turnoverRatio === null) return 1;
+      return a.turnoverRatio - b.turnoverRatio;
+    });
+ 
+    // Summary
+    const totalCogs         = Math.round(rows.reduce((s, r) => s + r.cogs,         0) * 100) / 100;
+    const totalAvgInventory = Math.round(rows.reduce((s, r) => s + r.avgInventory, 0) * 100) / 100;
+    const overallTurnover   = totalAvgInventory > 0
+      ? Math.round((totalCogs / totalAvgInventory) * 100) / 100
+      : null;
+    const overallDaysOnHand = overallTurnover && overallTurnover > 0
+      ? Math.round((365 / overallTurnover) * 10) / 10
+      : null;
+ 
+    return {
+      rows,
+      summary: {
+        totalItems:         rows.length,
+        totalCogs,
+        totalAvgInventory,
+        totalClosingValue:  Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100,
+        overallTurnover,
+        overallDaysOnHand,
+        periodDays:         days,
+        excellentCount:     rows.filter(r => r.performance === 'excellent').length,
+        goodCount:          rows.filter(r => r.performance === 'good').length,
+        fairCount:          rows.filter(r => r.performance === 'fair').length,
+        poorCount:          rows.filter(r => r.performance === 'poor').length,
+        noMovementCount:    rows.filter(r => r.performance === 'no_movement').length,
+      },
+      period: {
+        dateFrom: dateFrom.toISOString().split('T')[0],
+        dateTo:   dateTo.toISOString().split('T')[0],
+        days,
+        isAnnualized: days < 365,
+      },
+      asOf: new Date(),
+    };
+  }
 }

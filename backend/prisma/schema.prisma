@@ -138,6 +138,8 @@ model Tenant {
   consolidationConfig     ConsolidationConfig?
   // Sprint 14D
   supplierScores          SupplierScore[]
+  stockCountSessions  StockCountSession[]
+  stockCountLines     StockCountLine[]
 
   @@map("saas_tenants")
 }
@@ -716,6 +718,8 @@ model Item {
   grnLines           GoodsReceiptLine[]
   prLines            PurchaseRequisitionLine[]
   supplierScores     SupplierScore[]
+  stockCountLines     StockCountLine[]
+
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -747,6 +751,8 @@ model Warehouse {
   grnLines           GoodsReceiptLine[]
   zones              WarehouseZone[]
   prLines            PurchaseRequisitionLine[]
+  stockCountSessions  StockCountSession[]
+  
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -2085,6 +2091,103 @@ model WarehouseBin {
   @@index([tenantId])
   @@index([levelId])
   @@map("in_wh_bins")
+}
+
+model StockCountSession {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id")   @db.Uuid
+  sessionNumber String   @map("session_number") @db.VarChar(50)  // CC-YYYY-NNNN
+  warehouseId   String   @map("warehouse_id") @db.Uuid
+  description   String?  @db.Text
+  countDate     DateTime @default(dbgenerated("CURRENT_DATE")) @map("count_date") @db.Date
+  status        String   @default("draft") @db.VarChar(20)
+  // draft | in_progress | pending_approval | approved | posted | cancelled
+
+  // Variance summary — populated on submitForApproval
+  totalLinesCount    Int?     @map("total_lines_count")
+  linesWithVariance  Int?     @map("lines_with_variance")
+  totalVarianceValue Decimal? @map("total_variance_value") @db.Decimal(15, 2)
+
+  // Approval — requires INVENTORY:APPROVE
+  approvedBy    String?   @map("approved_by") @db.Uuid
+  approvedAt    DateTime? @map("approved_at")
+  approvalNotes String?   @map("approval_notes") @db.Text
+
+  // Posted
+  postedAt DateTime? @map("posted_at")
+
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  tenant    Tenant    @relation(fields: [tenantId],    references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  lines     StockCountLine[]
+
+  @@unique([tenantId, sessionNumber])
+  @@index([tenantId])
+  @@index([tenantId, warehouseId])
+  @@index([tenantId, status])
+  @@index([countDate])
+  @@map("in_stock_count_sessions")
+}
+
+model StockCountLine {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id")  @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  itemId    String @map("item_id")    @db.Uuid
+
+  // System snapshot — taken when session is created
+  systemStorageQty  Decimal @map("system_storage_qty")  @db.Decimal(15, 3)
+  storageUom        String  @map("storage_uom")         @db.VarChar(20)
+  systemPurchaseQty Decimal @map("system_purchase_qty") @db.Decimal(15, 3)
+  purchaseUom       String  @map("purchase_uom")        @db.VarChar(20)
+  unitCostSnapshot  Decimal @map("unit_cost_snapshot")  @db.Decimal(15, 4)
+  // WAC at snapshot time — used for variance value (ADR-019)
+
+  // Counted quantities — entered by user in storageUom
+  // system auto-converts to purchaseUom via UomService
+  countedStorageQty  Decimal? @map("counted_storage_qty")  @db.Decimal(15, 3)
+  countedPurchaseQty Decimal? @map("counted_purchase_qty") @db.Decimal(15, 3)
+
+  // Variances = counted - system
+  varianceStorageQty  Decimal? @map("variance_storage_qty")  @db.Decimal(15, 3)
+  variancePurchaseQty Decimal? @map("variance_purchase_qty") @db.Decimal(15, 3)
+  varianceValue       Decimal? @map("variance_value")        @db.Decimal(15, 2)
+  // varianceValue = variancePurchaseQty × unitCostSnapshot (ADR-019)
+
+  // Line status
+  status String @default("pending") @db.VarChar(20)
+  // pending | counted | confirmed | adjusted
+
+  lotNumber    String? @map("lot_number")    @db.VarChar(100)
+  serialNumber String? @map("serial_number") @db.VarChar(100)
+  notes        String? @db.Text
+
+  // FK to adjustment movement (set when session is posted)
+  adjustmentMovementId String? @map("adjustment_movement_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+
+  tenant  Tenant            @relation(fields: [tenantId],  references: [id])
+  session StockCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  item    Item              @relation(fields: [itemId],     references: [id])
+
+  @@unique([sessionId, itemId, lotNumber, serialNumber])
+  @@index([tenantId])
+  @@index([sessionId])
+  @@index([itemId])
+  @@index([status])
+  @@map("in_stock_count_lines")
 }
 
 // ============================================================================

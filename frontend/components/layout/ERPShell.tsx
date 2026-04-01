@@ -39,7 +39,12 @@ const NAV: NavItem[] = [
           { label: 'Stock Ledger',       href: '/inventory/ledger' },
           { label: 'Stock Balance',      href: '/inventory/stock-balance' },
           { label: 'Stock Planning',     href: '/inventory/stock-planning' },
+          { label: 'Stock Aging',        href: '/inventory/stock-aging' },
           { label: 'Inventory Valuation',href: '/inventory/valuation' },
+          { label: 'Inventory Turnover',  href: '/inventory/inventory-turnover' },
+          { label: 'ABC Analysis',       href: '/inventory/abc-analysis' },
+          { label: 'Slow Moving Items',  href: '/inventory/slow-moving' },
+          
         ],
       },
     ],

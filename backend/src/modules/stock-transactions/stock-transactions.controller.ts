@@ -170,6 +170,26 @@ export class StockTransactionsController {
     return this.stockTransactionsService.getValuation(req.user.tenantId, { warehouseId, itemType });
   }
 
+  @Get('turnover')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Inventory Turnover — COGS / Avg Inventory, Days on Hand per item' })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiQuery({ name: 'dateFrom',    required: false, description: 'YYYY-MM-DD (default: Jan 1 current year)' })
+  @ApiQuery({ name: 'dateTo',      required: false, description: 'YYYY-MM-DD (default: today)' })
+  @ApiResponse({ status: 200, description: 'Inventory turnover report' })
+  async getInventoryTurnover(
+    @Request() req,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType')    itemType?:    string,
+    @Query('dateFrom')    dateFrom?:    string,
+    @Query('dateTo')      dateTo?:      string,
+  ) {
+    return this.stockTransactionsService.getInventoryTurnover(req.user.tenantId, {
+      warehouseId, itemType, dateFrom, dateTo,
+    });
+  }
+
   @Get(':id')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get stock transaction by ID' })
