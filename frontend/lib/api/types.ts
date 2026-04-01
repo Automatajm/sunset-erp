@@ -63,6 +63,15 @@ export interface Item {
   description?: string;
   itemType: ItemType;
   baseUom: string;
+  // Sprint 14A — Triple UOM (ADR-013)
+  purchaseUomId?: string;
+  purchaseUom?: { id: string; code: string; name: string };
+  purchaseToConsumptionFactor?: number;
+  storageUomId?: string;
+  storageUom?: { id: string; code: string; name: string };
+  storageToConsumptionFactor?: number;
+  consumptionUomId?: string;
+  consumptionUom?: { id: string; code: string; name: string };
   isStockable: boolean;
   isPurchasable: boolean;
   isSaleable: boolean;
@@ -144,8 +153,19 @@ export interface StockTransaction {
   fromWarehouseId?: string;
   toWarehouseId?: string;
   fromWarehouse?: Warehouse;
+  // Storage UOM (existing — backward compat)
   quantity: number;
   uom: string;
+  // Sprint 14A — Purchase UOM (financial unit of record)
+  purchaseQty?: number;
+  purchaseUom?: string;
+  // Sprint 14A — Consumption UOM (auxiliary)
+  consumptionQty?: number;
+  consumptionUom?: string;
+  // Sprint 14A — Financial audit fields (ADR-019)
+  unitCostAtMovement?: number;
+  movementValue?: number;
+  unitCost?: number;
   referenceId?: string;
   referenceType?: string;
   lotNumber?: string;
@@ -160,6 +180,7 @@ export interface CreateStockTransactionDto {
   warehouseId: string;
   quantity: number;
   uom: string;
+  unitCost?: number;  // Sprint 14A — for WAC calculation on receipts
   referenceId?: string;
   referenceType?: string;
   lotNumber?: string;
@@ -168,16 +189,53 @@ export interface CreateStockTransactionDto {
   transactionDate?: string;
 }
 
+// ─── Stock Balance — Sprint 14A: Triple UOM (ADR-014, ADR-019) ───────────────
+// purchaseUom = financial unit of record (WAC, valuation, JE amounts)
+// storageUom  = warehouse operational unit (physical counting)
+// consumptionUom = production unit (BOM quantities, MRP)
+
 export interface StockBalance {
   id: string;
   itemId: string;
-  item?: Item;
+  item?: {
+    id: string;
+    code: string;
+    name: string;
+    itemType: string;
+    baseUom: string;
+    standardCost?: number;
+    purchaseUom?:    { id: string; code: string; name: string };
+    storageUom?:     { id: string; code: string; name: string };
+    consumptionUom?: { id: string; code: string; name: string };
+    purchaseToConsumptionFactor?: number;
+    storageToConsumptionFactor?:  number;
+  };
   warehouseId: string;
-  warehouse?: Warehouse;
-  onHandQuantity: number;
+  warehouse?: { id: string; code: string; name: string };
+
+  // ── Purchase UOM — financial unit of record (ADR-019) ──────────────────────
+  purchaseQty:  number;   // official quantity for valuation
+  purchaseUom:  string;   // e.g. SACO, LTR, PALLET
+  unitCost:     number;   // WAC per purchaseUom unit
+  totalValue:   number;   // purchaseQty × unitCost
+
+  // ── Storage UOM — warehouse operational (auxiliary) ────────────────────────
+  onHandQuantity:   number;  // = storageQty (backward compat alias)
+  storageQty:       number;
+  storageUom:       string;
+  unitCostStorage:  number;  // derived: unitCost / storageFactor (display only)
+
+  // ── Consumption UOM — production operational (auxiliary) ───────────────────
+  consumptionQty:          number;
+  consumptionUom:          string;
+  unitCostConsumption:     number;  // derived: unitCost / consumptionFactor (display only)
+
+  // ── Reserved / Available (in storageUom) ───────────────────────────────────
   reservedQuantity: number;
-  unitCost: number;
-  lotNumber?: string;
+  availableQty:     number;  // storageQty - reservedQuantity
+
+  // ── Lot / Serial ───────────────────────────────────────────────────────────
+  lotNumber?:    string;
   serialNumber?: string;
 }
 
@@ -460,9 +518,6 @@ export interface CreateFiscalPeriodDto {
 export type UpdateFiscalPeriodDto = Partial<CreateFiscalPeriodDto>;
 
 // ─── BOM ─────────────────────────────────────────────────────────────────────
-// POST DTO uses itemId/bomCode/quantity (swagger names)
-// Backend maps: itemId→parentItemId, bomCode→bomNumber, quantity→quantityPer
-// GET response returns Prisma field names
 
 export interface BomComponent {
   id: string;
@@ -537,9 +592,6 @@ export interface CreateWorkCenterDto {
 export type UpdateWorkCenterDto = Partial<CreateWorkCenterDto>;
 
 // ─── Production Orders ───────────────────────────────────────────────────────
-// POST DTO uses quantityOrdered (swagger name)
-// Backend maps: quantityOrdered → quantityToProduce (Prisma field)
-// GET response returns Prisma field names
 
 export type ProductionOrderStatus = 'draft' | 'released' | 'in_progress' | 'completed' | 'cancelled';
 export type ProductionPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -749,7 +801,8 @@ export interface CreateCashFlowLineDto {
   accountId?: string;
 }
 
-// --- APPEND TO types.ts ---
+// ─── UOM ─────────────────────────────────────────────────────────────────────
+
 export interface UomUnit {
   id: string;
   code: string;
@@ -762,7 +815,7 @@ export interface UomUnit {
   createdAt: string;
   updatedAt: string;
 }
- 
+
 export interface UomConversion {
   id: string;
   fromUomId: string;
@@ -772,13 +825,13 @@ export interface UomConversion {
   fromUom: Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
   toUom:   Pick<UomUnit, 'code' | 'name' | 'type' | 'system'>;
 }
- 
+
 export interface UomConvertResult {
   fromUom: string; toUom: string;
   inputQty: number; outputQty: number;
   factor: number; isAutomatic: boolean;
 }
- 
+
 export interface TenantSettings {
   id: string;
   tenantId: string;
@@ -793,7 +846,7 @@ export interface TenantSettings {
   areaBaseUom?: UomUnit;
   updatedAt: string;
 }
- 
+
 export interface UpdateTenantSettingsDto {
   defaultUomSystem?: 'metric' | 'imperial';
   volumeBaseUomId?: string;
@@ -801,7 +854,9 @@ export interface UpdateTenantSettingsDto {
   lengthBaseUomId?: string;
   areaBaseUomId?: string;
 }
- 
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
 export interface MacroCategory {
   id: string;
   tenantId: string;
@@ -814,21 +869,21 @@ export interface MacroCategory {
   _count?: { categories: number };
   categories?: Category[];
 }
- 
+
 export interface CreateMacroCategoryDto {
   code: string;
   name: string;
   description?: string;
   isActive?: boolean;
 }
- 
+
 export interface UpdateMacroCategoryDto {
   code?: string;
   name?: string;
   description?: string;
   isActive?: boolean;
 }
- 
+
 export interface Category {
   id: string;
   tenantId: string;
@@ -846,7 +901,7 @@ export interface Category {
   cogsAccount?: { accountNumber: string; name: string };
   _count?: { items: number };
 }
- 
+
 export interface CreateCategoryDto {
   macroCategoryId: string;
   code: string;
@@ -856,7 +911,7 @@ export interface CreateCategoryDto {
   cogsAccountId?: string;
   isActive?: boolean;
 }
- 
+
 export interface UpdateCategoryDto {
   macroCategoryId?: string;
   code?: string;
@@ -866,7 +921,9 @@ export interface UpdateCategoryDto {
   cogsAccountId?: string;
   isActive?: boolean;
 }
- 
+
+// ─── Consumption Groups ───────────────────────────────────────────────────────
+
 export interface ConsumptionGroup {
   id: string;
   tenantId: string;
@@ -881,7 +938,7 @@ export interface ConsumptionGroup {
   _count?: { items: number };
   totalConsumptionQty?: number;
 }
- 
+
 export interface CreateConsumptionGroupDto {
   code: string;
   name: string;
@@ -889,7 +946,7 @@ export interface CreateConsumptionGroupDto {
   consumptionUomId: string;
   isActive?: boolean;
 }
- 
+
 export interface UpdateConsumptionGroupDto {
   code?: string;
   name?: string;
@@ -897,7 +954,9 @@ export interface UpdateConsumptionGroupDto {
   consumptionUomId?: string;
   isActive?: boolean;
 }
- 
+
+// ─── Supplier Items ───────────────────────────────────────────────────────────
+
 export interface SupplierItem {
   id: string;
   tenantId: string;
@@ -921,7 +980,7 @@ export interface SupplierItem {
   purchaseUom?: Pick<UomUnit, 'id' | 'code' | 'name' | 'type' | 'system'>;
   conversionPreview?: string;
 }
- 
+
 export interface CreateSupplierItemDto {
   supplierId: string;
   itemId: string;
@@ -937,7 +996,7 @@ export interface CreateSupplierItemDto {
   isActive?: boolean;
   notes?: string;
 }
- 
+
 export interface UpdateSupplierItemDto {
   supplierItemCode?: string;
   supplierItemName?: string;
