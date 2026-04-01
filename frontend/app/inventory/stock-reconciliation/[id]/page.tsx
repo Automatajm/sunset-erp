@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter }              from 'next/navigation';
-import ERPShell  from '@/components/layout/ERPShell';
-import apiClient from '@/lib/api/client';
+import ERPShell        from '@/components/layout/ERPShell';
+import apiClient       from '@/lib/api/client';
+import AssignmentModal from './AssignmentModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -334,13 +335,14 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
 export default function StockReconciliationDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id     = Array.isArray(params?.id) ? params.id[0] : params?.id as string;
+  const id     = params?.id as string;
 
   const [session,       setSession]       = useState<CountSession | null>(null);
   const [loading,       setLoading]       = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState('');
   const [showApprove,   setShowApprove]   = useState(false);
+  const [showAssign,    setShowAssign]    = useState(false);
   const [filterStatus,  setFilterStatus]  = useState('all');
 
   const fetchSession = useCallback(async () => {
@@ -505,6 +507,15 @@ export default function StockReconciliationDetailPage() {
             </button>
           )}
 
+          {session.status === 'in_progress' && (
+            <button
+              className="srd-btn"
+              onClick={() => setShowAssign(true)}
+              style={{ background: 'rgba(167,139,250,0.08)', border: '0.5px solid rgba(167,139,250,0.2)', color: '#a78bfa' }}>
+              👥 Assign Lines
+            </button>
+          )}
+
           {session.status === 'pending_approval' && (
             <button className="srd-btn" disabled={actionLoading} onClick={() => setShowApprove(true)}
               style={{ background: 'linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6)', color: 'white' }}>
@@ -576,6 +587,15 @@ export default function StockReconciliationDetailPage() {
         <ApproveModal
           onClose={() => setShowApprove(false)}
           onApprove={async notes => { await doAction('approve', { approvalNotes: notes }); }}
+        />
+      )}
+
+      {showAssign && (
+        <AssignmentModal
+          sessionId={session.id}
+          warehouseId={session.warehouse.id}
+          onClose={() => setShowAssign(false)}
+          onSaved={() => fetchSession()}
         />
       )}
     </ERPShell>
