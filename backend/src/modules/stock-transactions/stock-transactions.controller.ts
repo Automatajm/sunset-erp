@@ -44,6 +44,34 @@ export class StockTransactionsController {
     );
   }
 
+  @Get('abc')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'ABC Analysis — items ranked by value with cumulative % and A/B/C classification' })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiResponse({ status: 200, description: 'ABC Analysis report' })
+  async getAbcAnalysis(
+    @Request() req,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType')    itemType?:    string,
+  ) {
+    return this.stockTransactionsService.getAbcAnalysis(req.user.tenantId, { warehouseId, itemType });
+  }
+ 
+  @Get('aging')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Stock Aging — days since last movement per item/warehouse, bucketed by age' })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiResponse({ status: 200, description: 'Stock aging report' })
+  async getStockAging(
+    @Request() req,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType')    itemType?:    string,
+  ) {
+    return this.stockTransactionsService.getStockAging(req.user.tenantId, { warehouseId, itemType });
+  }
+
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all stock transactions with filters' })

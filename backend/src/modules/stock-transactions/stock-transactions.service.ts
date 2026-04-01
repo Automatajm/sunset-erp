@@ -732,4 +732,217 @@ export class StockTransactionsService {
       },
     };
   }
+  // ============================================================================
+// ADD THESE TWO METHODS to StockTransactionsService
+// Place them before the closing brace } of the class
+// ============================================================================
+
+  // ── ABC Analysis (ADR-019: value = purchaseQty × unitCost) ────────────────
+  // A = top items representing ~80% of total value
+  // B = next items representing ~15% of total value
+  // C = remaining items representing ~5% of total value
+
+  async getAbcAnalysis(tenantId: string, filters?: { warehouseId?: string; itemType?: string }) {
+    const where: any = { tenantId };
+    if (filters?.warehouseId) where.warehouseId = filters.warehouseId;
+
+    const stock = await this.prisma.stock.findMany({
+      where,
+      include: {
+        item:      { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
+        warehouse: { select: { id: true, code: true, name: true } },
+      },
+      orderBy: [{ item: { code: 'asc' } }],
+    });
+
+    // Aggregate by item (sum across warehouses)
+    const itemMap = new Map<string, {
+      itemId: string; itemCode: string; itemName: string; itemType: string;
+      totalValue: number; totalPurchaseQty: number; unitCost: number;
+      warehouses: string[];
+    }>();
+
+    for (const s of stock) {
+      if (filters?.itemType && s.item.itemType !== filters.itemType) continue;
+      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
+      const unitCost    = Number(s.unitCost ?? 0);
+      const value       = Math.round(purchaseQty * unitCost * 100) / 100;
+
+      const ex = itemMap.get(s.item.id);
+      if (ex) {
+        ex.totalValue       += value;
+        ex.totalPurchaseQty += purchaseQty;
+        ex.warehouses.push(s.warehouse.code);
+      } else {
+        itemMap.set(s.item.id, {
+          itemId:          s.item.id,
+          itemCode:        s.item.code,
+          itemName:        s.item.name,
+          itemType:        s.item.itemType,
+          totalValue:      value,
+          totalPurchaseQty: purchaseQty,
+          unitCost,
+          warehouses:      [s.warehouse.code],
+        });
+      }
+    }
+
+    // Sort descending by value
+    const sorted = [...itemMap.values()].sort((a, b) => b.totalValue - a.totalValue);
+    const grandTotal = sorted.reduce((s, r) => s + r.totalValue, 0);
+
+    // Assign ABC class based on cumulative value %
+    let cumulative = 0;
+    const rows = sorted.map((item, idx) => {
+      cumulative += item.totalValue;
+      const cumulativePct = grandTotal > 0 ? (cumulative / grandTotal) * 100 : 0;
+      const valuePct      = grandTotal > 0 ? (item.totalValue / grandTotal) * 100 : 0;
+      const abcClass      = cumulativePct <= 80 ? 'A' : cumulativePct <= 95 ? 'B' : 'C';
+
+      return {
+        rank:             idx + 1,
+        itemId:           item.itemId,
+        itemCode:         item.itemCode,
+        itemName:         item.itemName,
+        itemType:         item.itemType,
+        totalValue:       Math.round(item.totalValue       * 100) / 100,
+        totalPurchaseQty: Math.round(item.totalPurchaseQty * 1000) / 1000,
+        unitCost:         Math.round(item.unitCost         * 10000) / 10000,
+        valuePct:         Math.round(valuePct              * 100) / 100,
+        cumulativePct:    Math.round(cumulativePct         * 100) / 100,
+        abcClass,
+        warehouses:       [...new Set(item.warehouses)],
+      };
+    });
+
+    const summary = {
+      grandTotal:    Math.round(grandTotal * 100) / 100,
+      totalItems:    rows.length,
+      classA: { count: rows.filter(r => r.abcClass === 'A').length, value: Math.round(rows.filter(r => r.abcClass === 'A').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
+      classB: { count: rows.filter(r => r.abcClass === 'B').length, value: Math.round(rows.filter(r => r.abcClass === 'B').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
+      classC: { count: rows.filter(r => r.abcClass === 'C').length, value: Math.round(rows.filter(r => r.abcClass === 'C').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
+    };
+
+    return { rows, summary, asOf: new Date() };
+  }
+
+  // ── Stock Aging ────────────────────────────────────────────────────────────
+  // Days since last movement per item/warehouse
+  // Buckets: 0-30d (fresh), 31-60d (watch), 61-90d (aging), 91-180d (slow), 180+d (dead)
+
+  async getStockAging(tenantId: string, filters?: { warehouseId?: string; itemType?: string }) {
+    const stockWhere: any = { tenantId };
+    if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
+
+    const stock = await this.prisma.stock.findMany({
+      where: stockWhere,
+      include: {
+        item:      { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
+        warehouse: { select: { id: true, code: true, name: true } },
+      },
+    });
+
+    const now = new Date();
+
+    // Get last movement date per item+warehouse in one batch query
+    const lastMovements = await this.prisma.stockMovement.groupBy({
+      by:      ['itemId', 'fromWarehouseId', 'toWarehouseId'],
+      where:   { tenantId },
+      _max:    { movementDate: true },
+    });
+
+    // Build lookup: itemId:warehouseId → lastMovementDate
+    const lastMovMap = new Map<string, Date>();
+    for (const m of lastMovements) {
+      const date = m._max.movementDate;
+      if (!date) continue;
+      for (const whId of [m.toWarehouseId, m.fromWarehouseId]) {
+        if (!whId) continue;
+        const key     = `${m.itemId}:${whId}`;
+        const current = lastMovMap.get(key);
+        if (!current || date > current) lastMovMap.set(key, date);
+      }
+    }
+
+    const rows = stock
+      .filter(s => !filters?.itemType || s.item.itemType === filters.itemType)
+      .map(s => {
+        const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
+        const storageQty  = Number(s.storageQty  ?? s.onHandQuantity);
+        const unitCost    = Number(s.unitCost ?? 0);
+        const totalValue  = Math.round(purchaseQty * unitCost * 100) / 100;
+
+        const key          = `${s.itemId}:${s.warehouseId}`;
+        const lastMovDate  = lastMovMap.get(key) ?? null;
+        const daysSinceLastMovement = lastMovDate
+          ? Math.floor((now.getTime() - lastMovDate.getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+
+        // Aging bucket
+        let agingBucket: '0-30' | '31-60' | '61-90' | '91-180' | '180+' | 'no_movement';
+        if (daysSinceLastMovement === null)       agingBucket = 'no_movement';
+        else if (daysSinceLastMovement <= 30)     agingBucket = '0-30';
+        else if (daysSinceLastMovement <= 60)     agingBucket = '31-60';
+        else if (daysSinceLastMovement <= 90)     agingBucket = '61-90';
+        else if (daysSinceLastMovement <= 180)    agingBucket = '91-180';
+        else                                      agingBucket = '180+';
+
+        const isSlowMoving = daysSinceLastMovement !== null && daysSinceLastMovement > 60;
+        const isDead       = daysSinceLastMovement !== null && daysSinceLastMovement > 180;
+
+        return {
+          itemId:               s.item.id,
+          itemCode:             s.item.code,
+          itemName:             s.item.name,
+          itemType:             s.item.itemType,
+          warehouseId:          s.warehouse.id,
+          warehouseCode:        s.warehouse.code,
+          warehouseName:        s.warehouse.name,
+          purchaseQty:          Math.round(purchaseQty * 1000) / 1000,
+          storageQty:           Math.round(storageQty  * 1000) / 1000,
+          uom:                  s.storageUom  || s.item.baseUom,
+          purchaseUom:          s.purchaseUom || s.item.baseUom,
+          unitCost,
+          totalValue,
+          lastMovementDate:     lastMovDate?.toISOString() ?? null,
+          daysSinceLastMovement,
+          agingBucket,
+          isSlowMoving,
+          isDead,
+        };
+      })
+      .sort((a, b) => {
+        // Sort: no_movement first, then by days desc
+        if (a.daysSinceLastMovement === null) return -1;
+        if (b.daysSinceLastMovement === null) return 1;
+        return b.daysSinceLastMovement - a.daysSinceLastMovement;
+      });
+
+    const bucketSummary = {
+      'no_movement': { count: 0, value: 0 },
+      '0-30':        { count: 0, value: 0 },
+      '31-60':       { count: 0, value: 0 },
+      '61-90':       { count: 0, value: 0 },
+      '91-180':      { count: 0, value: 0 },
+      '180+':        { count: 0, value: 0 },
+    };
+    for (const r of rows) {
+      bucketSummary[r.agingBucket].count++;
+      bucketSummary[r.agingBucket].value = Math.round((bucketSummary[r.agingBucket].value + r.totalValue) * 100) / 100;
+    }
+
+    return {
+      rows,
+      summary: {
+        totalItems:      rows.length,
+        totalValue:      Math.round(rows.reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        slowMovingCount: rows.filter(r => r.isSlowMoving).length,
+        slowMovingValue: Math.round(rows.filter(r => r.isSlowMoving).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        deadStockCount:  rows.filter(r => r.isDead).length,
+        deadStockValue:  Math.round(rows.filter(r => r.isDead).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        buckets:         bucketSummary,
+      },
+      asOf: new Date(),
+    };
+  }
 }
