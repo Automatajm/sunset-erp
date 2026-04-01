@@ -414,6 +414,8 @@ erDiagram
     Decimal reorder_point 
     Decimal reorder_quantity 
     String default_supplier_id "❓"
+    String barcode_internal "❓"
+    String barcode_external "❓"
     Boolean is_active 
     DateTime created_at 
     DateTime updated_at 
@@ -1361,6 +1363,10 @@ erDiagram
     String status 
     String lot_number "❓"
     String serial_number "❓"
+    String level_id "❓"
+    String bin_id "❓"
+    String location_code "❓"
+    String assigned_to_user_id "❓"
     String notes "❓"
     String adjustment_movement_id "❓"
     DateTime created_at 
@@ -1368,6 +1374,85 @@ erDiagram
     DateTime deleted_at "❓"
     String created_by 
     String updated_by 
+    }
+  
+
+  "in_stock_count_assignments" {
+    String id "🗝️"
+    String tenant_id 
+    String session_id 
+    String user_id 
+    String zone_ids 
+    String aisle_ids 
+    String level_ids 
+    String bin_ids 
+    String category_ids 
+    String macro_category_ids 
+    String item_ids 
+    String assigned_line_ids 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by 
+    }
+  
+
+  "in_stock_location_updates" {
+    String id "🗝️"
+    String tenant_id 
+    String item_id 
+    String warehouse_id 
+    String stock_id "❓"
+    String from_level_id "❓"
+    String from_bin_id "❓"
+    String from_code "❓"
+    String to_level_id "❓"
+    String to_bin_id "❓"
+    String to_code 
+    String method 
+    String batch_ref "❓"
+    String notes "❓"
+    DateTime created_at 
+    String created_by 
+    }
+  
+
+  "in_stock_location_batches" {
+    String id "🗝️"
+    String tenant_id 
+    String batch_ref 
+    String warehouse_id 
+    String status 
+    Int total_lines "❓"
+    Int lines_ok "❓"
+    Int lines_with_mismatch "❓"
+    Int lines_with_excess "❓"
+    Int lines_with_shortage "❓"
+    Json raw_data "❓"
+    String notes "❓"
+    DateTime posted_at "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "in_stock_location_batch_lines" {
+    String id "🗝️"
+    String batch_id 
+    Int line_no 
+    String item_code 
+    String bin_code 
+    Decimal qty 
+    String uom 
+    String item_id "❓"
+    String bin_id "❓"
+    String level_id "❓"
+    String validation_status 
+    String validation_message "❓"
+    Decimal system_qty "❓"
+    DateTime created_at 
     }
   
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
@@ -1537,7 +1622,15 @@ erDiagram
     "in_wh_bins" }o--|| in_wh_levels : "level"
     "in_stock_count_sessions" }o--|| saas_tenants : "tenant"
     "in_stock_count_sessions" }o--|| in_warehouses : "warehouse"
+    "in_stock_count_lines" }o--|o in_wh_levels : "level"
+    "in_stock_count_lines" }o--|o in_wh_bins : "bin"
     "in_stock_count_lines" }o--|| saas_tenants : "tenant"
     "in_stock_count_lines" }o--|| in_stock_count_sessions : "session"
     "in_stock_count_lines" }o--|| in_items : "item"
+    "in_stock_count_assignments" }o--|| saas_tenants : "tenant"
+    "in_stock_count_assignments" }o--|| in_stock_count_sessions : "session"
+    "in_stock_location_updates" }o--|| saas_tenants : "tenant"
+    "in_stock_location_updates" }o--|| in_items : "item"
+    "in_stock_location_batches" }o--|| saas_tenants : "tenant"
+    "in_stock_location_batch_lines" }o--|| in_stock_location_batches : "batch"
 ```

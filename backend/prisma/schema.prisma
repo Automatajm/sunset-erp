@@ -140,6 +140,9 @@ model Tenant {
   supplierScores          SupplierScore[]
   stockCountSessions  StockCountSession[]
   stockCountLines     StockCountLine[]
+  stockCountAssignments StockCountAssignment[]
+  stockLocationUpdates  StockLocationUpdate[]
+  stockLocationBatches  StockLocationBatch[]
 
   @@map("saas_tenants")
 }
@@ -695,6 +698,8 @@ model Item {
   reorderPoint      Decimal @default(0) @map("reorder_point") @db.Decimal(15, 3)
   reorderQuantity   Decimal @default(0) @map("reorder_quantity") @db.Decimal(15, 3)
   defaultSupplierId String? @map("default_supplier_id") @db.Uuid
+  barcodeInternal  String? @map("barcode_internal") @db.VarChar(100)
+  barcodeExternal  String? @map("barcode_external") @db.VarChar(100)
   isActive Boolean @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -718,13 +723,16 @@ model Item {
   grnLines           GoodsReceiptLine[]
   prLines            PurchaseRequisitionLine[]
   supplierScores     SupplierScore[]
-  stockCountLines     StockCountLine[]
+  stockCountLines    StockCountLine[]
+  stockLocationUpdates StockLocationUpdate[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
   @@index([tenantId, name])
   @@index([tenantId, itemType])
+  @@index([tenantId, barcodeInternal])
+  @@index([tenantId, barcodeExternal])
   @@map("in_items")
 }
 
@@ -2054,6 +2062,8 @@ model WarehouseLevel {
   rack   WarehouseRack @relation(fields: [rackId],   references: [id])
   bins   WarehouseBin[]
   stock              Stock[]
+  countLines StockCountLine[]
+
   stockMovementsFrom StockMovement[] @relation("MovementFromLevel")
   stockMovementsTo   StockMovement[] @relation("MovementToLevel")
   @@unique([rackId, code])
@@ -2085,6 +2095,7 @@ model WarehouseBin {
   tenant Tenant         @relation(fields: [tenantId], references: [id])
   level  WarehouseLevel @relation(fields: [levelId],  references: [id])
   stock              Stock[]
+  countLines StockCountLine[]
   stockMovementsFrom StockMovement[] @relation("MovementFromBin")
   stockMovementsTo   StockMovement[] @relation("MovementToBin")
   @@unique([levelId, code])
@@ -2127,6 +2138,7 @@ model StockCountSession {
   tenant    Tenant    @relation(fields: [tenantId],    references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   lines     StockCountLine[]
+  assignments StockCountAssignment[]
 
   @@unique([tenantId, sessionNumber])
   @@index([tenantId])
@@ -2167,6 +2179,12 @@ model StockCountLine {
 
   lotNumber    String? @map("lot_number")    @db.VarChar(100)
   serialNumber String? @map("serial_number") @db.VarChar(100)
+  levelId      String? @map("level_id")      @db.Uuid
+  binId        String? @map("bin_id")         @db.Uuid
+  locationCode String? @map("location_code") @db.VarChar(100)
+  assignedToUserId String? @map("assigned_to_user_id") @db.Uuid
+  level WarehouseLevel? @relation(fields: [levelId], references: [id])
+  bin   WarehouseBin?   @relation(fields: [binId],   references: [id])
   notes        String? @db.Text
 
   // FK to adjustment movement (set when session is posted)
@@ -2188,6 +2206,162 @@ model StockCountLine {
   @@index([itemId])
   @@index([status])
   @@map("in_stock_count_lines")
+}
+
+// ── Sprint 14F: Count line assignments ────────────────────────────────────────
+// Supervisor assigns lines to specific users by any combination of:
+// zone / aisle / level / bin / category / macroCategory / specific items
+
+model StockCountAssignment {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id")  @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  userId    String @map("user_id")    @db.Uuid
+  // user assigned to count these lines
+
+  // Filter criteria — any combination, all optional
+  // If empty → all unassigned lines
+  zoneIds          String[] @map("zone_ids")           @db.Uuid
+  aisleIds         String[] @map("aisle_ids")          @db.Uuid
+  levelIds         String[] @map("level_ids")          @db.Uuid
+  binIds           String[] @map("bin_ids")            @db.Uuid
+  categoryIds      String[] @map("category_ids")       @db.Uuid
+  macroCategoryIds String[] @map("macro_category_ids") @db.Uuid
+  itemIds          String[] @map("item_ids")           @db.Uuid
+  // explicit item overrides
+
+  // Resolved line IDs (populated when assignment is created)
+  assignedLineIds  String[] @map("assigned_line_ids")  @db.Uuid
+
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  createdBy String    @map("created_by") @db.Uuid
+
+  tenant  Tenant            @relation(fields: [tenantId],  references: [id])
+  session StockCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([sessionId])
+  @@index([userId])
+  @@map("in_stock_count_assignments")
+}
+
+// ── Sprint 14F: Stock location update log ─────────────────────────────────────
+// Tracks every time an item's bin/level is updated
+// Methods: scan (mobile double-scan), bulk (CSV upload), manual (desktop)
+
+model StockLocationUpdate {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id")   @db.Uuid
+  itemId      String  @map("item_id")     @db.Uuid
+  warehouseId String  @map("warehouse_id") @db.Uuid
+  stockId     String? @map("stock_id")    @db.Uuid
+  // FK to in_stock record (null if not yet resolved)
+
+  // Previous location (null if first assignment)
+  fromLevelId String? @map("from_level_id") @db.Uuid
+  fromBinId   String? @map("from_bin_id")   @db.Uuid
+  fromCode    String? @map("from_code")     @db.VarChar(100)
+
+  // New location
+  toLevelId   String? @map("to_level_id")   @db.Uuid
+  toBinId     String? @map("to_bin_id")     @db.Uuid
+  toCode      String  @map("to_code")       @db.VarChar(100)
+
+  method    String  @db.VarChar(20)
+  // scan | bulk | manual
+  batchRef  String? @map("batch_ref") @db.VarChar(100)
+  // reference to bulk upload batch ID if method = bulk
+  notes     String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String   @map("created_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  item   Item   @relation(fields: [itemId],   references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, itemId])
+  @@index([tenantId, warehouseId])
+  @@index([createdAt])
+  @@map("in_stock_location_updates")
+}
+
+// ── Sprint 14F: Bulk location import batch ────────────────────────────────────
+// Tracks a bulk upload: itemCode + binCode + qty
+// Validates that quantities split across bins match system total
+// Alert if sum(qty per item) ≠ system stock (split mismatch)
+
+model StockLocationBatch {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id")  @db.Uuid
+  batchRef  String @map("batch_ref")  @db.VarChar(100)
+  // auto-generated: BLK-YYYY-NNNN
+
+  warehouseId String  @map("warehouse_id") @db.Uuid
+  status      String  @default("draft") @db.VarChar(20)
+  // draft | validating | validated | posted | failed
+
+  // Validation summary (populated after validate step)
+  totalLines       Int?     @map("total_lines")
+  linesOk          Int?     @map("lines_ok")
+  linesWithMismatch Int?    @map("lines_with_mismatch")
+  // items where sum(uploadedQty) ≠ systemStock
+  linesWithExcess  Int?     @map("lines_with_excess")
+  // items where sum(uploadedQty) > systemStock
+  linesWithShortage Int?   @map("lines_with_shortage")
+  // items where sum(uploadedQty) < systemStock
+
+  rawData   Json?   @map("raw_data")
+  // original upload rows stored for audit
+
+  notes     String?   @db.Text
+  postedAt  DateTime? @map("posted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  createdBy String    @map("created_by") @db.Uuid
+  updatedBy String    @map("updated_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  lines  StockLocationBatchLine[]
+
+  @@unique([tenantId, batchRef])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("in_stock_location_batches")
+}
+
+model StockLocationBatchLine {
+  id      String @id @default(uuid()) @db.Uuid
+  batchId String @map("batch_id") @db.Uuid
+  lineNo  Int    @map("line_no")
+
+  // Input data from upload
+  itemCode    String  @map("item_code")    @db.VarChar(50)
+  binCode     String  @map("bin_code")     @db.VarChar(100)
+  qty         Decimal @db.Decimal(15, 3)
+  uom         String  @db.VarChar(20)
+
+  // Resolved FKs (populated during validation)
+  itemId  String? @map("item_id")  @db.Uuid
+  binId   String? @map("bin_id")   @db.Uuid
+  levelId String? @map("level_id") @db.Uuid
+
+  // Validation result
+  validationStatus  String  @default("pending") @map("validation_status") @db.VarChar(20)
+  // pending | ok | item_not_found | bin_not_found | qty_mismatch | qty_excess | qty_shortage
+  validationMessage String? @map("validation_message") @db.Text
+  systemQty         Decimal? @map("system_qty") @db.Decimal(15, 3)
+  // system stock at time of validation (for mismatch comparison)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  batch StockLocationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([validationStatus])
+  @@map("in_stock_location_batch_lines")
 }
 
 // ============================================================================
