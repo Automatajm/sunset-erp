@@ -334,7 +334,7 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
 export default function StockReconciliationDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id     = params?.id as string;
+  const id     = Array.isArray(params?.id) ? params.id[0] : params?.id as string;
 
   const [session,       setSession]       = useState<CountSession | null>(null);
   const [loading,       setLoading]       = useState(true);
@@ -493,6 +493,15 @@ export default function StockReconciliationDetailPage() {
               onClick={() => doAction('submit')}
               style={{ background: pendingCount > 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#b45309,#d97706,#f59e0b)', color: pendingCount > 0 ? 'rgba(255,255,255,0.2)' : 'white', cursor: pendingCount > 0 ? 'not-allowed' : 'pointer' }}>
               {pendingCount > 0 ? `Submit (${pendingCount} pending)` : 'Submit for Approval'}
+            </button>
+          )}
+
+          {session.status === 'in_progress' && (
+            <button
+              className="srd-btn"
+              onClick={() => router.push(`/inventory/stock-reconciliation/${session.id}/count`)}
+              style={{ background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80' }}>
+              📱 Mobile Count
             </button>
           )}
 
