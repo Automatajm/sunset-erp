@@ -31,10 +31,8 @@ export class StockTransactionsService {
     const isReceipt      = dto.transactionType === 'receipt';
     const isIssue        = dto.transactionType === 'issue';
     const absQty         = Math.abs(dto.quantity);
-    const signedQty      = isIssue ? -absQty : absQty;
 
     // Calculate all 3 UOM quantities (ADR-014)
-    // For manual adjustments, dto.quantity is treated as purchaseQty
     const allQtys = await this.uom.calcAllQties(absQty, dto.itemId, tenantId);
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -47,13 +45,10 @@ export class StockTransactionsService {
           itemId:          dto.itemId,
           fromWarehouseId: isIssue   ? dto.warehouseId : null,
           toWarehouseId:   isReceipt ? dto.warehouseId : null,
-          // Storage UOM (existing fields — backward compat)
           quantity:        new Decimal(absQty),
           uom:             dto.uom ?? allQtys.storageUom,
-          // Purchase UOM (financial unit of record)
           purchaseQty:     allQtys.purchaseQty,
           purchaseUom:     allQtys.purchaseUom,
-          // Consumption UOM (auxiliary)
           consumptionQty:  allQtys.consumptionQty,
           consumptionUom:  allQtys.consumptionUom,
           lotNumber:       dto.lotNumber,
@@ -70,11 +65,9 @@ export class StockTransactionsService {
       });
 
       if (existing) {
-        const currentPurchaseQty  = Number(existing.purchaseQty ?? existing.onHandQuantity);
-        const currentUnitCost     = Number(existing.unitCost ?? 0);
-
-        // For receipts: recalculate WAC (ADR-019)
-        let newUnitCost = currentUnitCost;
+        const currentPurchaseQty = Number(existing.purchaseQty ?? existing.onHandQuantity);
+        const currentUnitCost    = Number(existing.unitCost ?? 0);
+        let newUnitCost    = currentUnitCost;
         let newPurchaseQty = currentPurchaseQty + (isIssue ? -allQtys.purchaseQty : allQtys.purchaseQty);
 
         if (isReceipt && dto.unitCost) {
@@ -89,14 +82,14 @@ export class StockTransactionsService {
         await tx.stock.update({
           where: { id: existing.id },
           data: {
-            purchaseQty:     Math.max(0, newPurchaseQty),
-            purchaseUom:     allQtys.purchaseUom,
-            onHandQuantity:  { increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty) },
-            storageQty:      { increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty) },
-            storageUom:      allQtys.storageUom,
-            consumptionQty:  { increment: new Decimal(isIssue ? -allQtys.consumptionQty : allQtys.consumptionQty) },
-            consumptionUom:  allQtys.consumptionUom,
-            unitCost:        new Decimal(newUnitCost),
+            purchaseQty:    Math.max(0, newPurchaseQty),
+            purchaseUom:    allQtys.purchaseUom,
+            onHandQuantity: { increment: new Decimal(isIssue ? -allQtys.storageQty    : allQtys.storageQty)    },
+            storageQty:     { increment: new Decimal(isIssue ? -allQtys.storageQty    : allQtys.storageQty)    },
+            storageUom:     allQtys.storageUom,
+            consumptionQty: { increment: new Decimal(isIssue ? -allQtys.consumptionQty : allQtys.consumptionQty) },
+            consumptionUom: allQtys.consumptionUom,
+            unitCost:       new Decimal(newUnitCost),
           },
         });
       } else {
@@ -104,19 +97,19 @@ export class StockTransactionsService {
         await tx.stock.create({
           data: {
             tenantId,
-            itemId:          dto.itemId,
-            warehouseId:     dto.warehouseId,
-            purchaseQty:     new Decimal(Math.max(0, allQtys.purchaseQty)),
-            purchaseUom:     allQtys.purchaseUom,
-            onHandQuantity:  new Decimal(Math.max(0, allQtys.storageQty)),
-            storageQty:      new Decimal(Math.max(0, allQtys.storageQty)),
-            storageUom:      allQtys.storageUom,
-            consumptionQty:  new Decimal(Math.max(0, allQtys.consumptionQty)),
-            consumptionUom:  allQtys.consumptionUom,
+            itemId:           dto.itemId,
+            warehouseId:      dto.warehouseId,
+            purchaseQty:      new Decimal(Math.max(0, allQtys.purchaseQty)),
+            purchaseUom:      allQtys.purchaseUom,
+            onHandQuantity:   new Decimal(Math.max(0, allQtys.storageQty)),
+            storageQty:       new Decimal(Math.max(0, allQtys.storageQty)),
+            storageUom:       allQtys.storageUom,
+            consumptionQty:   new Decimal(Math.max(0, allQtys.consumptionQty)),
+            consumptionUom:   allQtys.consumptionUom,
             reservedQuantity: new Decimal(0),
-            unitCost:        new Decimal(initCost),
-            lotNumber:       dto.lotNumber,
-            serialNumber:    dto.serialNumber,
+            unitCost:         new Decimal(initCost),
+            lotNumber:        dto.lotNumber,
+            serialNumber:     dto.serialNumber,
           },
         });
       }
@@ -158,7 +151,7 @@ export class StockTransactionsService {
     };
   }
 
-  // ── Stock Balance (returns all 3 UOM columns) ──────────────────────────────
+  // ── Stock Balance ──────────────────────────────────────────────────────────
 
   async getStockBalance(tenantId: string, filters?: { itemId?: string; warehouseId?: string }) {
     const where: any = { tenantId };
@@ -180,30 +173,26 @@ export class StockTransactionsService {
       const consumptionQty = Number(s.consumptionQty ?? s.onHandQuantity);
       const unitCost       = Number(s.unitCost ?? 0);
 
-      // Derived costs (ADR-019 — never stored, always computed at query time)
-      const storageFactor     = Number(s.item.storageToConsumptionFactor     ?? 1);
-      const consumptionFactor = Number(s.item.purchaseToConsumptionFactor    ?? 1);
+      const storageFactor       = Number(s.item.storageToConsumptionFactor  ?? 1);
+      const consumptionFactor   = Number(s.item.purchaseToConsumptionFactor ?? 1);
       const unitCostStorage     = storageFactor     > 0 ? unitCost / storageFactor     : unitCost;
       const unitCostConsumption = consumptionFactor > 0 ? unitCost / consumptionFactor : unitCost;
 
       return {
         ...s,
-        // Purchase UOM (financial unit of record)
         purchaseQty,
-        purchaseUom:      s.purchaseUom     || s.item.purchaseUom?.code  || s.item.baseUom,
+        purchaseUom:         s.purchaseUom    || s.item.purchaseUom?.code    || s.item.baseUom,
         unitCost,
-        totalValue:       Math.round(purchaseQty * unitCost * 100) / 100,
-        // Storage UOM (warehouse operational)
-        onHandQuantity:   storageQty,
+        totalValue:          Math.round(purchaseQty * unitCost * 100) / 100,
+        onHandQuantity:      storageQty,
         storageQty,
-        storageUom:       s.storageUom      || s.item.storageUom?.code   || s.item.baseUom,
-        unitCostStorage:  Math.round(unitCostStorage * 10000) / 10000,
-        // Consumption UOM (production operational)
+        storageUom:          s.storageUom     || s.item.storageUom?.code     || s.item.baseUom,
+        unitCostStorage:     Math.round(unitCostStorage     * 10000) / 10000,
         consumptionQty,
-        consumptionUom:   s.consumptionUom  || s.item.consumptionUom?.code || s.item.baseUom,
+        consumptionUom:      s.consumptionUom || s.item.consumptionUom?.code || s.item.baseUom,
         unitCostConsumption: Math.round(unitCostConsumption * 10000) / 10000,
-        reservedQuantity: Number(s.reservedQuantity),
-        availableQty:     Math.max(0, storageQty - Number(s.reservedQuantity)),
+        reservedQuantity:    Number(s.reservedQuantity),
+        availableQty:        Math.max(0, storageQty - Number(s.reservedQuantity)),
       };
     });
   }
@@ -223,7 +212,6 @@ export class StockTransactionsService {
   }
 
   // ── Internal: receive from AP Invoice ─────────────────────────────────────
-  // Called by ApInvoicesService when posting an invoice without a GRN
 
   async receiveFromApInvoice(
     tenantId: string,
@@ -254,8 +242,7 @@ export class StockTransactionsService {
       });
       if (!item) continue;
 
-      // Calculate all 3 UOM quantities (ADR-014)
-      const allQtys = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
+      const allQtys        = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
       const movementNumber = await this.generateMovementNumber(tenantId);
 
       await this.prisma.$transaction(async (tx) => {
@@ -263,7 +250,6 @@ export class StockTransactionsService {
           where: { tenantId, itemId: line.itemId!, warehouseId: warehouse.id },
         });
 
-        // WAC recalculation (ADR-019)
         const wacResult = this.uom.calcNewWAC(
           existing ? Number(existing.purchaseQty ?? existing.onHandQuantity) : 0,
           existing ? Number(existing.unitCost ?? 0) : 0,
@@ -274,21 +260,21 @@ export class StockTransactionsService {
         await tx.stockMovement.create({
           data: {
             tenantId, movementNumber, movementType: 'receipt', movementDate: new Date(),
-            itemId:          line.itemId!,
-            toWarehouseId:   warehouse.id,
-            quantity:        new Decimal(allQtys.storageQty),
-            uom:             allQtys.storageUom,
-            purchaseQty:     allQtys.purchaseQty,
-            purchaseUom:     allQtys.purchaseUom,
-            consumptionQty:  allQtys.consumptionQty,
-            consumptionUom:  allQtys.consumptionUom,
-            unitCost:              new Decimal(line.unitPrice),
-            unitCostAtMovement:    new Decimal(line.unitPrice),
-            movementValue:         new Decimal(Math.round(allQtys.purchaseQty * line.unitPrice * 100) / 100),
-            referenceType:   'ap_invoice',
-            referenceId:     apInvoice.id,
-            notes:           `AP Receipt — ${apInvoice.invoiceNumber}`,
-            createdBy:       userId,
+            itemId:             line.itemId!,
+            toWarehouseId:      warehouse.id,
+            quantity:           new Decimal(allQtys.storageQty),
+            uom:                allQtys.storageUom,
+            purchaseQty:        allQtys.purchaseQty,
+            purchaseUom:        allQtys.purchaseUom,
+            consumptionQty:     allQtys.consumptionQty,
+            consumptionUom:     allQtys.consumptionUom,
+            unitCost:           new Decimal(line.unitPrice),
+            unitCostAtMovement: new Decimal(line.unitPrice),
+            movementValue:      new Decimal(Math.round(allQtys.purchaseQty * line.unitPrice * 100) / 100),
+            referenceType:      'ap_invoice',
+            referenceId:        apInvoice.id,
+            notes:              `AP Receipt — ${apInvoice.invoiceNumber}`,
+            createdBy:          userId,
           },
         });
 
@@ -296,31 +282,31 @@ export class StockTransactionsService {
           await tx.stock.update({
             where: { id: existing.id },
             data: {
-              purchaseQty:     wacResult.newPurchaseQty,
-              purchaseUom:     allQtys.purchaseUom,
-              onHandQuantity:  { increment: new Decimal(allQtys.storageQty) },
-              storageQty:      { increment: new Decimal(allQtys.storageQty) },
-              storageUom:      allQtys.storageUom,
-              consumptionQty:  { increment: new Decimal(allQtys.consumptionQty) },
-              consumptionUom:  allQtys.consumptionUom,
-              unitCost:        new Decimal(wacResult.newUnitCost),
+              purchaseQty:    wacResult.newPurchaseQty,
+              purchaseUom:    allQtys.purchaseUom,
+              onHandQuantity: { increment: new Decimal(allQtys.storageQty)     },
+              storageQty:     { increment: new Decimal(allQtys.storageQty)     },
+              storageUom:     allQtys.storageUom,
+              consumptionQty: { increment: new Decimal(allQtys.consumptionQty) },
+              consumptionUom: allQtys.consumptionUom,
+              unitCost:       new Decimal(wacResult.newUnitCost),
             },
           });
         } else {
           await tx.stock.create({
             data: {
               tenantId,
-              itemId:          line.itemId!,
-              warehouseId:     warehouse.id,
-              purchaseQty:     new Decimal(allQtys.purchaseQty),
-              purchaseUom:     allQtys.purchaseUom,
-              onHandQuantity:  new Decimal(allQtys.storageQty),
-              storageQty:      new Decimal(allQtys.storageQty),
-              storageUom:      allQtys.storageUom,
-              consumptionQty:  new Decimal(allQtys.consumptionQty),
-              consumptionUom:  allQtys.consumptionUom,
+              itemId:           line.itemId!,
+              warehouseId:      warehouse.id,
+              purchaseQty:      new Decimal(allQtys.purchaseQty),
+              purchaseUom:      allQtys.purchaseUom,
+              onHandQuantity:   new Decimal(allQtys.storageQty),
+              storageQty:       new Decimal(allQtys.storageQty),
+              storageUom:       allQtys.storageUom,
+              consumptionQty:   new Decimal(allQtys.consumptionQty),
+              consumptionUom:   allQtys.consumptionUom,
               reservedQuantity: new Decimal(0),
-              unitCost:        new Decimal(line.unitPrice),
+              unitCost:         new Decimal(line.unitPrice),
             },
           });
         }
@@ -358,9 +344,7 @@ export class StockTransactionsService {
       });
       if (!item) continue;
 
-      // quantity here is in consumptionUom (sales order qty)
-      // Convert to purchaseQty for financial calculation (ADR-019)
-      const allQtys = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
+      const allQtys        = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
       const movementNumber = await this.generateMovementNumber(tenantId);
 
       await this.prisma.$transaction(async (tx) => {
@@ -369,7 +353,6 @@ export class StockTransactionsService {
         });
         const unitCost = existing ? Number(existing.unitCost ?? 0) : 0;
 
-        // COGS = consumptionQty / consumptionFactor × unitCost (ADR-019)
         const cogsValue = this.uom.calcFinancialValue(
           allQtys.consumptionQty,
           'consumption',
@@ -383,21 +366,21 @@ export class StockTransactionsService {
         await tx.stockMovement.create({
           data: {
             tenantId, movementNumber, movementType: 'issue', movementDate: new Date(),
-            itemId:          line.itemId!,
-            fromWarehouseId: warehouse.id,
-            quantity:        new Decimal(allQtys.storageQty),
-            uom:             allQtys.storageUom,
-            purchaseQty:     allQtys.purchaseQty,
-            purchaseUom:     allQtys.purchaseUom,
-            consumptionQty:  allQtys.consumptionQty,
-            consumptionUom:  allQtys.consumptionUom,
-            unitCost:              new Decimal(unitCost),
-            unitCostAtMovement:    new Decimal(unitCost),
-            movementValue:         new Decimal(-Math.abs(cogsValue)),
-            referenceType:   'ar_invoice',
-            referenceId:     arInvoice.id,
-            notes:           `AR Shipment — ${arInvoice.invoiceNumber}`,
-            createdBy:       userId,
+            itemId:             line.itemId!,
+            fromWarehouseId:    warehouse.id,
+            quantity:           new Decimal(allQtys.storageQty),
+            uom:                allQtys.storageUom,
+            purchaseQty:        allQtys.purchaseQty,
+            purchaseUom:        allQtys.purchaseUom,
+            consumptionQty:     allQtys.consumptionQty,
+            consumptionUom:     allQtys.consumptionUom,
+            unitCost:           new Decimal(unitCost),
+            unitCostAtMovement: new Decimal(unitCost),
+            movementValue:      new Decimal(-Math.abs(cogsValue)),
+            referenceType:      'ar_invoice',
+            referenceId:        arInvoice.id,
+            notes:              `AR Shipment — ${arInvoice.invoiceNumber}`,
+            createdBy:          userId,
           },
         });
 
@@ -405,11 +388,10 @@ export class StockTransactionsService {
           await tx.stock.update({
             where: { id: existing.id },
             data: {
-              purchaseQty:    { decrement: new Decimal(allQtys.purchaseQty) },
-              onHandQuantity: { decrement: new Decimal(allQtys.storageQty) },
-              storageQty:     { decrement: new Decimal(allQtys.storageQty) },
+              purchaseQty:    { decrement: new Decimal(allQtys.purchaseQty)    },
+              onHandQuantity: { decrement: new Decimal(allQtys.storageQty)     },
+              storageQty:     { decrement: new Decimal(allQtys.storageQty)     },
               consumptionQty: { decrement: new Decimal(allQtys.consumptionQty) },
-              // WAC stays the same on issues (ADR-019)
             },
           });
         }
@@ -447,26 +429,33 @@ export class StockTransactionsService {
 
     let filtered = movements.filter(m => !filters?.itemType || m.item?.itemType === filters.itemType);
 
-    // Resolve reference numbers
-    const arIds = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice'     && m.referenceId).map(m => m.referenceId!))];
-    const apIds = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice'     && m.referenceId).map(m => m.referenceId!))];
-    const poIds = [...new Set(filtered.filter(m => m.referenceType === 'purchase_order' && m.referenceId).map(m => m.referenceId!))];
+    // ── Resolve reference numbers (batch lookup — no N+1) ─────────────────
+    const arIds  = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice'     && m.referenceId).map(m => m.referenceId!))];
+    const apIds  = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice'     && m.referenceId).map(m => m.referenceId!))];
+    const poIds  = [...new Set(filtered.filter(m => m.referenceType === 'purchase_order' && m.referenceId).map(m => m.referenceId!))];
+    const grnIds = [...new Set(filtered.filter(m =>
+      (m.referenceType === 'GRN' || m.referenceType === 'GRN_CANCEL') && m.referenceId
+    ).map(m => m.referenceId!))];
 
-    const [arInvoices, apInvoices, poOrders] = await Promise.all([
-      arIds.length > 0 ? this.prisma.arInvoice.findMany({     where: { id: { in: arIds } }, select: { id: true, invoiceNumber: true } }) : [],
-      apIds.length > 0 ? this.prisma.apInvoice.findMany({     where: { id: { in: apIds } }, select: { id: true, invoiceNumber: true } }) : [],
-      poIds.length > 0 ? this.prisma.purchaseOrder.findMany({ where: { id: { in: poIds } }, select: { id: true, poNumber:      true } }) : [],
+    const [arInvoices, apInvoices, poOrders, grnReceipts] = await Promise.all([
+      arIds.length  > 0 ? this.prisma.arInvoice.findMany({    where: { id: { in: arIds  } }, select: { id: true, invoiceNumber: true } }) : [],
+      apIds.length  > 0 ? this.prisma.apInvoice.findMany({    where: { id: { in: apIds  } }, select: { id: true, invoiceNumber: true } }) : [],
+      poIds.length  > 0 ? this.prisma.purchaseOrder.findMany({ where: { id: { in: poIds  } }, select: { id: true, poNumber:      true } }) : [],
+      grnIds.length > 0 ? this.prisma.goodsReceipt.findMany({ where: { id: { in: grnIds } }, select: { id: true, grnNumber:     true } }) : [],
     ]);
 
-    const arMap = new Map<string, string>(arInvoices.map(i  => [i.id,  i.invoiceNumber] as [string, string]));
-    const apMap = new Map<string, string>(apInvoices.map(i  => [i.id,  i.invoiceNumber] as [string, string]));
-    const poMap = new Map<string, string>((poOrders as any[]).map(p => [p.id, p.poNumber] as [string, string]));
+    const arMap  = new Map<string, string>(arInvoices.map(i  => [i.id, i.invoiceNumber] as [string, string]));
+    const apMap  = new Map<string, string>(apInvoices.map(i  => [i.id, i.invoiceNumber] as [string, string]));
+    const poMap  = new Map<string, string>((poOrders    as any[]).map(p => [p.id, p.poNumber]  as [string, string]));
+    const grnMap = new Map<string, string>((grnReceipts as any[]).map(g => [g.id, g.grnNumber] as [string, string]));
 
     const resolveRef = (m: any): string => {
-      if (!m.referenceType || !m.referenceId)   return '—';
-      if (m.referenceType === 'ar_invoice')     return arMap.get(m.referenceId) ?? m.referenceId;
-      if (m.referenceType === 'ap_invoice')     return apMap.get(m.referenceId) ?? m.referenceId;
-      if (m.referenceType === 'purchase_order') return poMap.get(m.referenceId) ?? m.referenceId;
+      if (!m.referenceType || !m.referenceId)    return '—';
+      if (m.referenceType === 'ar_invoice')      return arMap.get(m.referenceId)  ?? m.referenceId;
+      if (m.referenceType === 'ap_invoice')      return apMap.get(m.referenceId)  ?? m.referenceId;
+      if (m.referenceType === 'purchase_order')  return poMap.get(m.referenceId)  ?? m.referenceId;
+      if (m.referenceType === 'GRN')             return grnMap.get(m.referenceId) ?? m.referenceId;
+      if (m.referenceType === 'GRN_CANCEL')      return (grnMap.get(m.referenceId) ?? m.referenceId) + ' (cancel)';
       if (m.referenceType === 'opening_balance') return 'Opening Balance';
       return m.referenceId ?? '—';
     };
@@ -476,7 +465,7 @@ export class StockTransactionsService {
       filtered = filtered.filter(m => resolveRef(m).toLowerCase().includes(q));
     }
 
-    // Running balance (in storageQty for backward compat display)
+    // ── Running balance ────────────────────────────────────────────────────
     const balanceMap: Record<string, number> = {};
 
     if (filters?.dateFrom) {
@@ -521,17 +510,13 @@ export class StockTransactionsService {
         warehouseId:     whId,
         referenceType:   m.referenceType,
         referenceNumber: resolveRef(m),
-        // Storage qty (display)
         quantity:        qty,
         signedQuantity:  signedQty,
         uom:             m.uom,
-        // Purchase qty (financial)
         purchaseQty:     m.purchaseQty    ? Number(m.purchaseQty)    : qty,
         purchaseUom:     m.purchaseUom    ?? m.uom,
-        // Consumption qty
         consumptionQty:  m.consumptionQty ? Number(m.consumptionQty) : qty,
         consumptionUom:  m.consumptionUom ?? m.uom,
-        // Costing (ADR-019)
         unitCost,
         movementValue:   m.movementValue  ? Number(m.movementValue)  : (isOut ? -totalValue : totalValue),
         totalValue:      isOut ? -totalValue : totalValue,
@@ -551,12 +536,12 @@ export class StockTransactionsService {
       totals: {
         totalIn:        Math.round(totalIn        * 1000) / 1000,
         totalOut:       Math.round(totalOut       * 1000) / 1000,
-        netMovement:    Math.round((totalIn - totalOut) * 1000) / 1000,
+        netMovement:    Math.round((totalIn - totalOut)           * 1000) / 1000,
         totalInValue:   Math.round(totalInValue   * 100)  / 100,
         totalOutValue:  Math.round(totalOutValue  * 100)  / 100,
-        netValue:       Math.round((totalInValue - totalOutValue) * 100) / 100,
-        openingBalance: rows.length > 0 ? rows[0].openingBalance                : 0,
-        closingBalance: rows.length > 0 ? rows[rows.length - 1].closingBalance  : 0,
+        netValue:       Math.round((totalInValue - totalOutValue) * 100)  / 100,
+        openingBalance: rows.length > 0 ? rows[0].openingBalance               : 0,
+        closingBalance: rows.length > 0 ? rows[rows.length - 1].closingBalance : 0,
       },
       count: rows.length,
     };
@@ -580,21 +565,18 @@ export class StockTransactionsService {
     const rows = stock
       .filter(s => !filters?.itemType || s.item.itemType === filters.itemType)
       .map(s => {
-        // ADR-019: totalValue = purchaseQty × unitCost (financial unit of record)
         const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
         const unitCost    = Number(s.unitCost ?? 0);
         const totalValue  = Math.round(purchaseQty * unitCost * 100) / 100;
         return {
           itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
           warehouseId: s.warehouse.id, warehouseCode: s.warehouse.code, warehouseName: s.warehouse.name,
-          // Purchase UOM (financial)
           purchaseQty,
-          purchaseUom: s.purchaseUom || s.item.baseUom,
+          purchaseUom:    s.purchaseUom || s.item.baseUom,
           unitCost,
           totalValue,
-          // Storage UOM (display)
           onHandQuantity: Number(s.storageQty ?? s.onHandQuantity),
-          uom: s.storageUom || s.item.baseUom,
+          uom:            s.storageUom  || s.item.baseUom,
         };
       });
 
@@ -647,7 +629,10 @@ export class StockTransactionsService {
       include: { salesOrder: { select: { id: true, soNumber: true, status: true, promisedDate: true } } },
     });
 
-    const poSupplyMap = new Map<string, { totalPending: number; orders: Array<{ poNumber: string; pending: number; expectedDate: string | null }> }>();
+    const poSupplyMap = new Map<string, {
+      totalPending: number;
+      orders: Array<{ poNumber: string; pending: number; expectedDate: string | null }>;
+    }>();
     for (const line of pendingPOLines) {
       const pending = Number(line.orderedQuantity) - Number(line.receivedQuantity);
       if (pending <= 0 || !line.itemId) continue;
@@ -657,7 +642,10 @@ export class StockTransactionsService {
       poSupplyMap.set(line.itemId, ex);
     }
 
-    const soDemandMap = new Map<string, { totalDemand: number; orders: Array<{ soNumber: string; demand: number; promisedDate: string | null }> }>();
+    const soDemandMap = new Map<string, {
+      totalDemand: number;
+      orders: Array<{ soNumber: string; demand: number; promisedDate: string | null }>;
+    }>();
     for (const line of openSOLines) {
       const demand = Number(line.orderedQuantity) - Number(line.shippedQuantity);
       if (demand <= 0 || !line.itemId) continue;
@@ -668,41 +656,43 @@ export class StockTransactionsService {
     }
 
     const rows = filtered.map(s => {
-      // Use storageQty for operational planning (warehouse sees storage units)
-      const onHand    = Number(s.storageQty ?? s.onHandQuantity);
-      const reserved  = Number(s.reservedQuantity);
-      const available = onHand - reserved;
-      // Use purchaseQty × unitCost for financial value (ADR-019)
+      const onHand      = Number(s.storageQty ?? s.onHandQuantity);
+      const reserved    = Number(s.reservedQuantity);
+      const available   = onHand - reserved;
       const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
       const unitCost    = Number(s.unitCost ?? 0);
       const stockValue  = Math.round(purchaseQty * unitCost * 100) / 100;
 
-      const reorderPoint = Number(s.item.reorderPoint  ?? 0);
-      const safetyStock  = Number(s.item.safetyStock   ?? 0);
+      const reorderPoint = Number(s.item.reorderPoint   ?? 0);
+      const safetyStock  = Number(s.item.safetyStock    ?? 0);
       const reorderQty   = Number(s.item.reorderQuantity ?? 0);
-      const leadTimeDays = Number(s.item.leadTimeDays  ?? 0);
+      const leadTimeDays = Number(s.item.leadTimeDays   ?? 0);
 
       const poData   = poSupplyMap.get(s.itemId);
       const soData   = soDemandMap.get(s.itemId);
       const poSupply = poData?.totalPending ?? 0;
       const soDemand = soData?.totalDemand  ?? 0;
-      const atp      = available + poSupply - soDemand;
-      const projectedStock = onHand + poSupply - soDemand;
-      const dailyDemand    = soDemand > 0 ? soDemand / 30 : 0;
-      const coverageDays   = dailyDemand > 0 ? Math.floor(available / dailyDemand) : available > 0 ? 999 : 0;
-      const shortfall      = Math.max(0, reorderPoint + safetyStock - atp);
+      const atp               = available + poSupply - soDemand;
+      const projectedStock    = onHand + poSupply - soDemand;
+      const dailyDemand       = soDemand > 0 ? soDemand / 30 : 0;
+      const coverageDays      = dailyDemand > 0 ? Math.floor(available / dailyDemand) : available > 0 ? 999 : 0;
+      const shortfall         = Math.max(0, reorderPoint + safetyStock - atp);
       const suggestedOrderQty = shortfall > 0 ? Math.max(shortfall, reorderQty) : 0;
 
       let alertLevel: 'ok' | 'warning' | 'critical' | 'overstock' = 'ok';
-      if      (atp < 0)                                  alertLevel = 'critical';
-      else if (atp <= safetyStock)                       alertLevel = 'critical';
-      else if (atp <= reorderPoint)                      alertLevel = 'warning';
+      if      (atp < 0)                                        alertLevel = 'critical';
+      else if (atp <= safetyStock)                             alertLevel = 'critical';
+      else if (atp <= reorderPoint)                            alertLevel = 'warning';
       else if (onHand > reorderPoint * 3 && reorderPoint > 0) alertLevel = 'overstock';
 
       const hasOpenPO       = poSupply > 0;
       const doubleOrderRisk = atp <= reorderPoint && hasOpenPO;
-      const nextReceipt     = poData?.orders.filter(o => o.expectedDate).sort((a, b) => (a.expectedDate ?? '').localeCompare(b.expectedDate ?? ''))[0]?.expectedDate ?? null;
-      const daysUntilReorder = leadTimeDays > 0 && dailyDemand > 0 ? Math.floor((available - reorderPoint) / dailyDemand) - leadTimeDays : null;
+      const nextReceipt     = poData?.orders
+        .filter(o => o.expectedDate)
+        .sort((a, b) => (a.expectedDate ?? '').localeCompare(b.expectedDate ?? ''))[0]?.expectedDate ?? null;
+      const daysUntilReorder = leadTimeDays > 0 && dailyDemand > 0
+        ? Math.floor((available - reorderPoint) / dailyDemand) - leadTimeDays
+        : null;
 
       return {
         itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
@@ -711,14 +701,14 @@ export class StockTransactionsService {
         onHandQty: onHand, reservedQty: reserved, availableQty: available,
         unitCost, stockValue,
         purchaseQty, purchaseUom: s.purchaseUom || s.item.baseUom,
-        poSupplyQty: Math.round(poSupply * 1000) / 1000,
-        soDemandQty: Math.round(soDemand * 1000) / 1000,
-        atpQty: Math.round(atp * 1000) / 1000,
+        poSupplyQty:       Math.round(poSupply       * 1000) / 1000,
+        soDemandQty:       Math.round(soDemand       * 1000) / 1000,
+        atpQty:            Math.round(atp            * 1000) / 1000,
         projectedStockQty: Math.round(projectedStock * 1000) / 1000,
         reorderPoint, safetyStock, reorderQty, leadTimeDays,
         suggestedOrderQty: Math.round(suggestedOrderQty * 1000) / 1000,
-        coverageDays: coverageDays > 900 ? null : coverageDays,
-        dailyDemand: Math.round(dailyDemand * 1000) / 1000,
+        coverageDays:      coverageDays > 900 ? null : coverageDays,
+        dailyDemand:       Math.round(dailyDemand * 1000) / 1000,
         daysUntilReorder,
         alertLevel, hasOpenPO, doubleOrderRisk,
         nextReceiptDate: nextReceipt,
