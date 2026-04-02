@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+// FILE: frontend/lib/contexts/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../api/types';
@@ -28,11 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('access_token');
       if (!token) { setIsLoading(false); return; }
 
-      const profile = await authApi.getProfile();
-      setUser(profile.user ?? profile);
+      // 1 — Restore immediately from localStorage to avoid flash on navigation
+      const savedUser   = localStorage.getItem('user');
+      const savedTenant = localStorage.getItem('tenant_name');
+      if (savedUser)   setUser(JSON.parse(savedUser));
+      if (savedTenant) setTenantName(savedTenant);
 
-      const saved = localStorage.getItem('tenant_name');
-      if (saved) setTenantName(saved);
+      // 2 — Validate token + get fresh user with role from backend
+      const profile   = await authApi.getProfile();
+      // getProfile returns { message, user: req.user, tenantId }
+      // req.user is now the full enriched object from jwt.strategy.ts
+      const freshUser = profile.user ?? profile;
+      setUser(freshUser);
+      localStorage.setItem('user', JSON.stringify(freshUser));
     } catch {
       logout();
     } finally {
@@ -43,13 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
+
+      // Save token
       localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+
+      // Save user — backend now returns firstName/lastName in login response
+      const userData = response.user;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+
+      // Save tenant name
       if (response.tenant?.name) {
         localStorage.setItem('tenant_name', response.tenant.name);
         setTenantName(response.tenant.name);
       }
-      setUser(response.user);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Login failed');
     }
@@ -65,7 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, tenantName, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{
+      user, tenantName, isAuthenticated: !!user,
+      isLoading, login, logout, checkAuth,
+    }}>
       {children}
     </AuthContext.Provider>
   );

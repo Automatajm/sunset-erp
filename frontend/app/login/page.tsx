@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 // FILE: frontend/app/login/page.tsx
 
 import { useState, useRef, useEffect } from 'react';
@@ -12,7 +12,7 @@ type Step = 'credentials' | 'tenant';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, checkAuth } = useAuth();
 
   // Step 1 — credentials
   const [email,    setEmail]    = useState('');
@@ -62,6 +62,7 @@ export default function LoginPage() {
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.tenant?.name) localStorage.setItem('tenant_name', data.tenant.name);
+        await checkAuth();
         router.push('/');
       }
     } catch (e: any) {
@@ -83,6 +84,7 @@ export default function LoginPage() {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('tenant_name', tenantSel.name);
+      await checkAuth();
       router.push('/');
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Failed to select company.');
