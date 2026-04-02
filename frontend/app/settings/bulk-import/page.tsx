@@ -17,103 +17,130 @@ interface ImportResult {
 }
 
 const ENTITIES: {
-  value: Entity; label: string; color: string;
+  value: Entity; label: string; color: string; group: string;
   requiredFields: string[]; optionalFields: string[];
   sampleRow: Record<string, string>;
   exportEndpoint: string;
 }[] = [
+  // ── Inventory ──────────────────────────────────────────────────────────────
   {
-    value: 'items', label: 'Items', color: '#fb923c',
+    value: 'items', label: 'Items', color: '#fb923c', group: 'Inventory',
     requiredFields: ['code', 'name', 'itemType', 'baseUom'],
     optionalFields:  ['description', 'standardCost', 'leadTimeDays', 'safetyStock', 'reorderPoint', 'reorderQuantity', 'valuationMethod', 'isStockable', 'isPurchasable', 'isSaleable', 'isManufacturable'],
     sampleRow: { code:'ITM001', name:'Burger Patty 4oz', itemType:'raw_material', baseUom:'KG', description:'Fresh beef patty', standardCost:'2.50', leadTimeDays:'3', isStockable:'true', isPurchasable:'true', isSaleable:'false', isManufacturable:'false', valuationMethod:'average', safetyStock:'100', reorderPoint:'50', reorderQuantity:'500' },
     exportEndpoint: '/items',
   },
   {
-    value: 'customers', label: 'Customers', color: '#60a5fa',
-    requiredFields: ['code', 'name'],
-    optionalFields:  ['legalName', 'taxId', 'phone', 'email', 'website', 'creditLimit', 'paymentTerms', 'currency', 'notes'],
-    sampleRow: { code:'CUST001', name:'Acme Restaurants', legalName:'Acme Corp LLC', taxId:'123-456-789', phone:'+1-555-0100', email:'orders@acme.com', website:'www.acme.com', creditLimit:'50000', paymentTerms:'NET30', currency:'USD', notes:'Key account' },
-    exportEndpoint: '/customers',
+    value: 'warehouses', label: 'Warehouses', color: '#a78bfa', group: 'Inventory',
+    requiredFields: ['name'],
+    optionalFields:  ['code', 'warehouseType', 'address', 'isActive', 'locationTrackingEnabled'],
+    sampleRow: { code:'', name:'Almacen Principal', warehouseType:'regular', address:'Zona Industrial', isActive:'true', locationTrackingEnabled:'true' },
+    exportEndpoint: '/warehouses',
   },
   {
-    value: 'suppliers', label: 'Suppliers', color: '#4ade80',
+    value: 'warehouse-locations', label: 'WH Locations', color: '#c084fc', group: 'Inventory',
+    requiredFields: ['warehouseCode', 'level', 'code', 'name'],
+    optionalFields:  ['parentCode', 'zoneType', 'description', 'maxWeightKg', 'maxVolumeLtr', 'maxPallets', 'binType', 'allowMixedItems', 'notes'],
+    sampleRow: { warehouseCode:'WH-REG-001', level:'zone', code:'STOR', name:'Storage Area', parentCode:'', zoneType:'storage', description:'', maxWeightKg:'', maxVolumeLtr:'', maxPallets:'', binType:'', allowMixedItems:'true', notes:'' },
+    exportEndpoint: '/warehouses',
+  },
+  // ── Procurement ────────────────────────────────────────────────────────────
+  {
+    value: 'suppliers', label: 'Suppliers', color: '#4ade80', group: 'Procurement',
     requiredFields: ['code', 'name'],
     optionalFields:  ['legalName', 'taxId', 'phone', 'email', 'website', 'paymentTerms', 'currency', 'creditLimit', 'category', 'notes'],
     sampleRow: { code:'SUP001', name:'Best Foods Inc', legalName:'Best Foods LLC', taxId:'987-654-321', phone:'+1-555-0200', email:'sales@bestfoods.com', paymentTerms:'NET15', currency:'USD', creditLimit:'100000', category:'Food Supplier', notes:'Primary supplier' },
     exportEndpoint: '/suppliers',
   },
   {
-    value: 'warehouses', label: 'Warehouses', color: '#a78bfa',
-    requiredFields: ['name'],
-    optionalFields:  ['code', 'warehouseType', 'address', 'isActive', 'locationTrackingEnabled'],
-    sampleRow: { code:'', name:'Almacén Principal', warehouseType:'regular', address:'Zona Industrial Los Minas, Santo Domingo Este', isActive:'true', locationTrackingEnabled:'true' },
-    exportEndpoint: '/warehouses',
+    value: 'purchase-orders', label: 'Purchase Orders', color: '#818cf8', group: 'Procurement',
+    requiredFields: ['supplierCode', 'poDate', 'itemCode', 'qty', 'unitPrice'],
+    optionalFields:  ['currency', 'paymentTerms', 'expectedDate', 'uom', 'discount', 'notes'],
+    sampleRow: { supplierCode:'SUP001', poDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', expectedDate:'2026-04-01', itemCode:'RM-BEEF', qty:'1000', unitPrice:'3.50', uom:'KG', discount:'0', notes:'' },
+    exportEndpoint: '/purchase-orders',
+  },
+  // ── Sales ──────────────────────────────────────────────────────────────────
+  {
+    value: 'customers', label: 'Customers', color: '#60a5fa', group: 'Sales',
+    requiredFields: ['code', 'name'],
+    optionalFields:  ['legalName', 'taxId', 'phone', 'email', 'website', 'creditLimit', 'paymentTerms', 'currency', 'notes'],
+    sampleRow: { code:'CUST001', name:'Acme Restaurants', legalName:'Acme Corp LLC', taxId:'123-456-789', phone:'+1-555-0100', email:'orders@acme.com', website:'www.acme.com', creditLimit:'50000', paymentTerms:'NET30', currency:'USD', notes:'Key account' },
+    exportEndpoint: '/customers',
   },
   {
-    value: 'warehouse-locations', label: 'WH Locations', color: '#c084fc',
-    requiredFields: ['warehouseCode', 'level', 'code', 'name'],
-    optionalFields:  ['parentCode', 'zoneType', 'description', 'maxWeightKg', 'maxVolumeLtr', 'maxPallets', 'binType', 'allowMixedItems', 'notes'],
-    sampleRow: { warehouseCode:'WH-REG-001', level:'zone', code:'STOR', name:'Storage Area', parentCode:'', zoneType:'storage', description:'', maxWeightKg:'', maxVolumeLtr:'', maxPallets:'', binType:'', allowMixedItems:'true', notes:'' },
-    exportEndpoint: '/warehouses',
+    value: 'sales-orders', label: 'Sales Orders', color: '#34d399', group: 'Sales',
+    requiredFields: ['customerCode', 'orderDate', 'itemCode', 'qty', 'unitPrice'],
+    optionalFields:  ['currency', 'paymentTerms', 'promisedDate', 'uom', 'discount', 'notes'],
+    sampleRow: { customerCode:'CUST001', orderDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', promisedDate:'2026-04-15', itemCode:'FG-BURG', qty:'500', unitPrice:'8.50', uom:'PCS', discount:'0', notes:'Bulk order' },
+    exportEndpoint: '/sales-orders',
   },
+  // ── Manufacturing ──────────────────────────────────────────────────────────
   {
-    value: 'work-centers', label: 'Work Centers', color: '#fbbf24',
+    value: 'work-centers', label: 'Work Centers', color: '#fbbf24', group: 'Manufacturing',
     requiredFields: ['code', 'name', 'workCenterType'],
     optionalFields:  ['capacityPerHour', 'efficiencyPercent', 'costPerHour'],
     sampleRow: { code:'WC001', name:'Kitchen Assembly Line', workCenterType:'assembly', capacityPerHour:'500', efficiencyPercent:'95', costPerHour:'25' },
     exportEndpoint: '/work-centers',
   },
   {
-    value: 'accounts', label: 'Chart of Accounts', color: '#f87171',
-    requiredFields: ['accountNumber', 'name', 'accountType'],
-    optionalFields:  ['accountCategory', 'currency', 'isSystem', 'allowManualPosting', 'requireReconciliation'],
-    sampleRow: { accountNumber:'1.1.01', name:'Cash and Equivalents', accountType:'asset', accountCategory:'Current Assets', currency:'USD', isSystem:'false', allowManualPosting:'true', requireReconciliation:'false' },
-    exportEndpoint: '/chart-of-accounts',
-  },
-  {
-    value: 'sales-orders', label: 'Sales Orders', color: '#34d399',
-    requiredFields: ['customerCode', 'orderDate', 'itemCode', 'qty', 'unitPrice'],
-    optionalFields:  ['currency', 'paymentTerms', 'promisedDate', 'uom', 'discount', 'notes'],
-    sampleRow: { customerCode:'CUST001', orderDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', promisedDate:'2026-04-15', itemCode:'FG-BURG', qty:'500', unitPrice:'8.50', uom:'PCS', discount:'0', notes:'Bulk order' },
-    exportEndpoint: '/sales-orders',
-  },
-  {
-    value: 'purchase-orders', label: 'Purchase Orders', color: '#818cf8',
-    requiredFields: ['supplierCode', 'poDate', 'itemCode', 'qty', 'unitPrice'],
-    optionalFields:  ['currency', 'paymentTerms', 'expectedDate', 'uom', 'discount', 'notes'],
-    sampleRow: { supplierCode:'SUP001', poDate:'2026-03-25', currency:'USD', paymentTerms:'NET30', expectedDate:'2026-04-01', itemCode:'RM-BEEF', qty:'1000', unitPrice:'3.50', uom:'KG', discount:'0', notes:'' },
-    exportEndpoint: '/purchase-orders',
-  },
-  {
-    value: 'budget-lines', label: 'Budget Lines', color: '#fb7185',
-    requiredFields: ['budgetCode', 'accountNumber', 'fiscalPeriod', 'amount'],
-    optionalFields:  ['notes'],
-    sampleRow: { budgetCode:'BUDGET-2026', accountNumber:'4.1.01', fiscalPeriod:'2026-01', amount:'500000', notes:'Q1 Revenue target' },
-    exportEndpoint: '/budgets',
-  },
-  {
-    value: 'fiscal-periods', label: 'Fiscal Periods', color: '#38bdf8',
-    requiredFields: ['periodCode', 'periodName', 'startDate', 'endDate', 'fiscalYear'],
-    optionalFields:  ['fiscalQuarter', 'status', 'isCurrent'],
-    sampleRow: { periodCode:'2025-01', periodName:'January 2025', startDate:'2025-01-01', endDate:'2025-01-31', fiscalYear:'2025', fiscalQuarter:'Q1', status:'open', isCurrent:'false' },
-    exportEndpoint: '/fiscal-periods',
-  },
-  {
-    value: 'boms', label: 'BOMs', color: '#e879f9',
+    value: 'boms', label: 'BOMs', color: '#e879f9', group: 'Manufacturing',
     requiredFields: ['bomNumber', 'parentItemCode', 'componentCode', 'quantityPer'],
     optionalFields:  ['uom', 'scrapPercent', 'version', 'isActive'],
     sampleRow: { bomNumber:'BOM-PROD-001', parentItemCode:'FG-001', componentCode:'RM-001', quantityPer:'2.5', uom:'KG', scrapPercent:'2', version:'1', isActive:'true' },
     exportEndpoint: '/bom',
   },
   {
-    value: 'bom-routings', label: 'BOM Routings', color: '#fb923c',
+    value: 'bom-routings', label: 'BOM Routings', color: '#f0abfc', group: 'Manufacturing',
     requiredFields: ['bomNumber', 'stepNumber', 'workCenterCode'],
     optionalFields:  ['description', 'setupTime', 'runTimePerUnit', 'notes'],
     sampleRow: { bomNumber:'BOM-PROD-001', stepNumber:'10', workCenterCode:'WC-CUT', description:'Cutting operation', setupTime:'0.5', runTimePerUnit:'0.002', notes:'' },
     exportEndpoint: '/bom',
   },
+  // ── Accounting ─────────────────────────────────────────────────────────────
+  {
+    value: 'accounts', label: 'Chart of Accounts', color: '#f87171', group: 'Accounting',
+    requiredFields: ['accountNumber', 'name', 'accountType'],
+    optionalFields:  ['accountCategory', 'currency', 'isSystem', 'allowManualPosting', 'requireReconciliation'],
+    sampleRow: { accountNumber:'1.1.01', name:'Cash and Equivalents', accountType:'asset', accountCategory:'Current Assets', currency:'USD', isSystem:'false', allowManualPosting:'true', requireReconciliation:'false' },
+    exportEndpoint: '/chart-of-accounts',
+  },
+  {
+    value: 'budget-lines', label: 'Budget Lines', color: '#fb7185', group: 'Accounting',
+    requiredFields: ['budgetCode', 'accountNumber', 'fiscalPeriod', 'amount'],
+    optionalFields:  ['notes'],
+    sampleRow: { budgetCode:'BUDGET-2026', accountNumber:'4.1.01', fiscalPeriod:'2026-01', amount:'500000', notes:'Q1 Revenue target' },
+    exportEndpoint: '/budgets',
+  },
+  {
+    value: 'fiscal-periods', label: 'Fiscal Periods', color: '#38bdf8', group: 'Accounting',
+    requiredFields: ['periodCode', 'periodName', 'startDate', 'endDate', 'fiscalYear'],
+    optionalFields:  ['fiscalQuarter', 'status', 'isCurrent'],
+    sampleRow: { periodCode:'2025-01', periodName:'January 2025', startDate:'2025-01-01', endDate:'2025-01-31', fiscalYear:'2025', fiscalQuarter:'Q1', status:'open', isCurrent:'false' },
+    exportEndpoint: '/fiscal-periods',
+  },
+  // ── Admin ──────────────────────────────────────────────────────────────────
+  {
+    value: 'roles', label: 'Roles', color: '#a78bfa', group: 'Admin',
+    requiredFields: ['code', 'name'],
+    optionalFields:  ['description', 'permissionCodes'],
+    sampleRow: { code:'WAREHOUSE_SUPERVISOR', name:'Warehouse Supervisor', description:'Manages stock counts', permissionCodes:'INVENTORY:VIEW,INVENTORY:COUNT,INVENTORY:APPROVE' },
+    exportEndpoint: '/roles',
+  },
+  {
+    value: 'users', label: 'Users', color: '#60a5fa', group: 'Admin',
+    requiredFields: ['email', 'password', 'firstName', 'lastName'],
+    optionalFields:  ['phone', 'roleCodes'],
+    sampleRow: { email:'juan.rivera@company.com', password:'TempPass123!', firstName:'Juan', lastName:'Rivera', phone:'+1-809-555-0001', roleCodes:'WAREHOUSE_SUPERVISOR' },
+    exportEndpoint: '/users',
+  },
 ];
+
+// Group entities by group
+const ENTITY_GROUPS = ENTITIES.reduce((acc, e) => {
+  if (!acc[e.group]) acc[e.group] = [];
+  acc[e.group].push(e);
+  return acc;
+}, {} as Record<string, typeof ENTITIES>);
 
 function parseCsv(text: string): Record<string, any>[] {
   const lines = text.trim().split(/\r?\n/);
@@ -153,21 +180,84 @@ const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fon
 const INPUT: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
 const LABEL: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
+// ─── Entity Selector (searchable dropdown) ────────────────────────────────────
+function EntitySelector({ entity, onSelect }: { entity: Entity; onSelect: (e: Entity) => void }) {
+  const [open,   setOpen]   = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const cfg = ENTITIES.find(e => e.value === entity)!;
+
+  const filtered = search.trim()
+    ? ENTITIES.filter(e => e.label.toLowerCase().includes(search.toLowerCase()) || e.group.toLowerCase().includes(search.toLowerCase()))
+    : null;
+
+  const groups = filtered
+    ? filtered.reduce((acc, e) => { if (!acc[e.group]) acc[e.group]=[]; acc[e.group].push(e); return acc; }, {} as Record<string, typeof ENTITIES>)
+    : ENTITY_GROUPS;
+
+  return (
+    <div ref={ref} style={{ position: 'relative', maxWidth: 400 }}>
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'rgba(255,255,255,0.04)', border: `0.5px solid ${cfg.color}50`, borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color, flex: 1, textAlign: 'left' }}>{cfg.label}</span>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginRight: 4 }}>{cfg.group}</span>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 200, background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.7)', minWidth: 320 }}>
+          {/* Search */}
+          <div style={{ padding: '10px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search entities..."
+              style={{ ...INPUT, padding: '7px 10px', fontSize: 12, border: '0.5px solid rgba(255,255,255,0.1)' }}
+            />
+          </div>
+          {/* Groups */}
+          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+            {Object.entries(groups).map(([group, items]) => (
+              <div key={group}>
+                <div style={{ padding: '8px 14px 4px', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)' }}>{group}</div>
+                {items.map(e => (
+                  <button
+                    key={e.value}
+                    onClick={() => { onSelect(e.value); setOpen(false); setSearch(''); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', background: entity === e.value ? `${e.color}12` : 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textAlign: 'left' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: e.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: entity === e.value ? e.color : '#e2dfd8', fontWeight: entity === e.value ? 600 : 400, flex: 1 }}>{e.label}</span>
+                    {entity === e.value && <span style={{ fontSize: 10, color: e.color }}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {Object.keys(groups).length === 0 && (
+              <div style={{ padding: '20px 14px', fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No entities found</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop */}
+      {open && <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => { setOpen(false); setSearch(''); }} />}
+    </div>
+  );
+}
+
 // ─── Dry Run Result Modal ─────────────────────────────────────────────────────
 function DryRunModal({
-  result,
-  entityCfg,
-  onClose,
-  onRunLive,
-  liveRunning,
+  result, entityCfg, onClose, onRunLive, liveRunning,
 }: {
-  result: ImportResult;
-  entityCfg: typeof ENTITIES[0];
-  onClose: () => void;
-  onRunLive: () => void;
-  liveRunning: boolean;
+  result: ImportResult; entityCfg: typeof ENTITIES[0];
+  onClose: () => void; onRunLive: () => void; liveRunning: boolean;
 }) {
-  const hasErrors = result.errors.length > 0;
+  const hasErrors   = result.errors.length > 0;
   const wouldInsert = result.valid - result.skipped;
 
   return (
@@ -188,8 +278,6 @@ function DryRunModal({
       `}</style>
       <div className="drm-overlay">
         <div className="drm-box">
-
-          {/* Header */}
           <div className="drm-hdr">
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>
@@ -200,20 +288,16 @@ function DryRunModal({
                 : <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(74,222,128,0.1)', color:'#4ade80', border:'0.5px solid rgba(74,222,128,0.25)' }}>All valid</span>
               }
             </div>
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>x</button>
           </div>
-
-          {/* Scrollable body */}
           <div className="drm-scroll">
-
-            {/* Stats */}
             <div className="drm-stats">
               {[
-                { label:'Total',        value:result.total,       color:'#e2dfd8' },
-                { label:'Valid',        value:result.valid,       color:'#4ade80' },
-                { label:'Would Insert', value:wouldInsert,        color:'#4ade80' },
+                { label:'Total',        value:result.total,             color:'#e2dfd8' },
+                { label:'Valid',        value:result.valid,             color:'#4ade80' },
+                { label:'Would Insert', value:wouldInsert,              color:'#4ade80' },
                 { label:'Would Update', value:result.upsert ? result.skipped : 0, color:'#a78bfa' },
-                { label:'Errors',       value:result.errors.length, color: result.errors.length > 0 ? '#f87171' : '#4ade80' },
+                { label:'Errors',       value:result.errors.length,     color:result.errors.length > 0 ? '#f87171' : '#4ade80' },
               ].map(s => (
                 <div key={s.label} className="drm-stat">
                   <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{s.label}</div>
@@ -221,25 +305,19 @@ function DryRunModal({
                 </div>
               ))}
             </div>
-
-            {/* Success message */}
             {!hasErrors && (
               <div style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'#4ade80', marginBottom:12 }}>
-                ✓ All {result.valid} records passed validation. Click <strong>Run Live Import</strong> to apply changes.
+                All {result.valid} records passed validation. Click Run Live Import to apply changes.
               </div>
             )}
-
-            {/* Errors */}
             {hasErrors && (
               <>
                 <div style={{ fontSize:10, color:'rgba(248,113,113,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>
-                  {result.errors.length} validation error{result.errors.length !== 1 ? 's' : ''} — fix these before running Live Import
+                  {result.errors.length} validation error{result.errors.length !== 1 ? 's' : ''} — fix before running Live Import
                 </div>
                 <div style={{ border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, overflow:'hidden' }}>
                   <table className="drm-err-table">
-                    <thead>
-                      <tr><th>Row</th><th>Field</th><th>Message</th></tr>
-                    </thead>
+                    <thead><tr><th>Row</th><th>Field</th><th>Message</th></tr></thead>
                     <tbody>
                       {result.errors.map((e, i) => (
                         <tr key={i}>
@@ -254,24 +332,15 @@ function DryRunModal({
               </>
             )}
           </div>
-
-          {/* Footer */}
           <div className="drm-ftr">
             <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>
-              {hasErrors
-                ? 'Fix the errors in your file, then re-upload and validate again.'
-                : `Ready to insert ${wouldInsert} record${wouldInsert !== 1 ? 's' : ''}.`}
+              {hasErrors ? 'Fix errors in your file, re-upload and validate again.' : `Ready to insert ${wouldInsert} record${wouldInsert !== 1 ? 's' : ''}.`}
             </span>
             <div style={{ display:'flex', gap:8 }}>
-              <button onClick={onClose} style={{ padding:'8px 18px', borderRadius:7, fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', cursor:'pointer' }}>
-                Cancel
-              </button>
-              <button
-                onClick={onRunLive}
-                disabled={hasErrors || liveRunning}
-                style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background: hasErrors ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor: hasErrors ? 'not-allowed' : 'pointer', opacity: hasErrors || liveRunning ? 0.5 : 1, whiteSpace:'nowrap', boxShadow: hasErrors ? 'none' : '0 3px 12px rgba(22,163,74,0.3)' }}
-              >
-                {liveRunning ? 'Importing…' : `Run Live Import (${wouldInsert})`}
+              <button onClick={onClose} style={{ padding:'8px 18px', borderRadius:7, fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', cursor:'pointer' }}>Cancel</button>
+              <button onClick={onRunLive} disabled={hasErrors || liveRunning}
+                style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:hasErrors?'rgba(255,255,255,0.08)':'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor:hasErrors?'not-allowed':'pointer', opacity:hasErrors||liveRunning?0.5:1, whiteSpace:'nowrap', boxShadow:hasErrors?'none':'0 3px 12px rgba(22,163,74,0.3)' }}>
+                {liveRunning ? 'Importing...' : `Run Live Import (${wouldInsert})`}
               </button>
             </div>
           </div>
@@ -282,49 +351,35 @@ function DryRunModal({
 }
 
 // ─── Live Result Modal ────────────────────────────────────────────────────────
-function LiveResultModal({
-  result,
-  entityCfg,
-  onClose,
-}: {
-  result: ImportResult;
-  entityCfg: typeof ENTITIES[0];
-  onClose: () => void;
-}) {
+function LiveResultModal({ result, entityCfg, onClose }: { result: ImportResult; entityCfg: typeof ENTITIES[0]; onClose: () => void }) {
   return (
-    <>
-      <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-        <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.25)', borderRadius:14, width:'100%', maxWidth:480, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)', position:'relative' }}>
-          <div style={{ position:'absolute', top:0, left:30, right:30, height:1, background:'linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent)' }} />
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-            <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>
-              Import Complete — <span style={{ color:entityCfg.color }}>{entityCfg.label}</span>
-            </span>
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
-            {[
-              { label:'Inserted', value:result.inserted, color:'#4ade80' },
-              { label:'Updated',  value:result.updated,  color:'#a78bfa' },
-              { label:'Skipped',  value:result.skipped,  color:'#fbbf24' },
-            ].map(s => (
-              <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{s.label}</div>
-                <div style={{ ...MONO, fontSize:26, fontWeight:500, color:s.color }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#4ade80', marginBottom:16 }}>
-            ✓ {result.inserted} record{result.inserted !== 1 ? 's' : ''} inserted successfully.{result.skipped > 0 ? ` ${result.skipped} duplicates skipped.` : ''}
-          </div>
-          <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <button onClick={onClose} style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor:'pointer', boxShadow:'0 3px 12px rgba(22,163,74,0.3)' }}>
-              Done
-            </button>
-          </div>
+    <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.25)', borderRadius:14, width:'100%', maxWidth:480, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)', position:'relative' }}>
+        <div style={{ position:'absolute', top:0, left:30, right:30, height:1, background:'linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent)' }} />
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>Import Complete — <span style={{ color:entityCfg.color }}>{entityCfg.label}</span></span>
+          <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>x</button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
+          {[
+            { label:'Inserted', value:result.inserted, color:'#4ade80' },
+            { label:'Updated',  value:result.updated,  color:'#a78bfa' },
+            { label:'Skipped',  value:result.skipped,  color:'#fbbf24' },
+          ].map(s => (
+            <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{s.label}</div>
+              <div style={{ ...MONO, fontSize:26, fontWeight:500, color:s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#4ade80', marginBottom:16 }}>
+          {result.inserted} record{result.inserted !== 1 ? 's' : ''} inserted successfully.{result.skipped > 0 ? ` ${result.skipped} duplicates skipped.` : ''}
+        </div>
+        <div style={{ display:'flex', justifyContent:'flex-end' }}>
+          <button onClick={onClose} style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor:'pointer', boxShadow:'0 3px 12px rgba(22,163,74,0.3)' }}>Done</button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -342,12 +397,17 @@ export default function BulkImportPage() {
   const [busy,        setBusy]        = useState(false);
   const [liveRunning, setLiveRunning] = useState(false);
   const [exportBusy,  setExportBusy]  = useState(false);
-  const [dryResult,   setDryResult]   = useState<ImportResult | null>(null);  // shown in dry run modal
-  const [liveResult,  setLiveResult]  = useState<ImportResult | null>(null);  // shown in live result modal
+  const [dryResult,   setDryResult]   = useState<ImportResult | null>(null);
+  const [liveResult,  setLiveResult]  = useState<ImportResult | null>(null);
   const [parseError,  setParseError]  = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const entityCfg = ENTITIES.find(e => e.value === entity)!;
+
+  const handleEntitySelect = (e: Entity) => {
+    setEntity(e); setDryResult(null); setLiveResult(null);
+    setRecords([]); setFileName(''); setParseError('');
+  };
 
   const downloadTemplate = useCallback(() => {
     const allFields = [...entityCfg.requiredFields, ...entityCfg.optionalFields];
@@ -361,8 +421,8 @@ export default function BulkImportPage() {
   const handleExport = useCallback(async () => {
     setExportBusy(true); setParseError('');
     try {
-      const res = await apiClient.get(entityCfg.exportEndpoint);
-      const data: Record<string, any>[] = Array.isArray(res.data) ? res.data : [];
+      const res  = await apiClient.get(entityCfg.exportEndpoint);
+      const data: Record<string, any>[] = Array.isArray(res.data) ? res.data : (res.data?.users ?? res.data?.roles ?? []);
       if (data.length === 0) { setParseError(`No ${entityCfg.label} records found.`); return; }
       const allFields = [...entityCfg.requiredFields, ...entityCfg.optionalFields];
       const rows = data.map(record => {
@@ -400,7 +460,6 @@ export default function BulkImportPage() {
     }
   }, []);
 
-  // Build request body
   const buildBody = (overrideDryRun?: boolean) => {
     const body: any = { dryRun: overrideDryRun ?? dryRun, upsert };
     if (channel === 'file') { body.records = records; }
@@ -409,7 +468,6 @@ export default function BulkImportPage() {
     return body;
   };
 
-  // Validate (dry run) → opens modal
   const handleValidate = async () => {
     if (channel === 'file' && records.length === 0) { setParseError('No records loaded. Upload a file first.'); return; }
     if (channel === 'url' && !sourceUrl.trim()) { setParseError('Source URL is required.'); return; }
@@ -422,20 +480,17 @@ export default function BulkImportPage() {
     } finally { setBusy(false); }
   };
 
-  // Live run (from modal) → shows live result modal
   const handleRunLive = async () => {
     setLiveRunning(true);
     try {
       const res = await apiClient.post(`/bulk-import/${entity}`, buildBody(false));
-      setDryResult(null);
-      setLiveResult(res.data);
+      setDryResult(null); setLiveResult(res.data);
     } catch (err: any) {
       setParseError(err.response?.data?.message || 'Import failed.');
       setDryResult(null);
     } finally { setLiveRunning(false); }
   };
 
-  // Direct live run (when dryRun toggle is OFF) → shows live result modal directly
   const handleDirectLive = async () => {
     if (channel === 'file' && records.length === 0) { setParseError('No records loaded. Upload a file first.'); return; }
     if (channel === 'url' && !sourceUrl.trim()) { setParseError('Source URL is required.'); return; }
@@ -466,8 +521,6 @@ export default function BulkImportPage() {
         .bi-section-title { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(251,146,60,0.55); margin-bottom:12px; }
         .bi-mode-tabs { display:flex; gap:0; background:rgba(255,255,255,0.04); border-radius:8px; border:0.5px solid rgba(255,255,255,0.08); overflow:hidden; width:fit-content; margin-bottom:16px; }
         .bi-mode-tab { padding:8px 20px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; border:none; transition:all 0.15s; }
-        .bi-entity-grid { display:flex; gap:8px; flex-wrap:wrap; }
-        .bi-entity-btn { padding:6px 14px; border-radius:7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; transition:all 0.15s; font-weight:500; }
         .bi-channel-tabs { display:flex; gap:0; background:rgba(255,255,255,0.04); border-radius:7px; border:0.5px solid rgba(255,255,255,0.08); overflow:hidden; margin-bottom:14px; width:fit-content; }
         .bi-channel-tab { padding:7px 16px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
         .bi-drop { border:1.5px dashed rgba(255,255,255,0.12); border-radius:8px; padding:28px; text-align:center; cursor:pointer; transition:all 0.15s; }
@@ -480,25 +533,8 @@ export default function BulkImportPage() {
         .bi-opt-btn { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; font-weight:500; transition:all 0.15s; }
       `}</style>
 
-      {/* ── Dry Run Modal ── */}
-      {dryResult && (
-        <DryRunModal
-          result={dryResult}
-          entityCfg={entityCfg}
-          onClose={() => setDryResult(null)}
-          onRunLive={handleRunLive}
-          liveRunning={liveRunning}
-        />
-      )}
-
-      {/* ── Live Result Modal ── */}
-      {liveResult && (
-        <LiveResultModal
-          result={liveResult}
-          entityCfg={entityCfg}
-          onClose={() => { setLiveResult(null); setRecords([]); setFileName(''); }}
-        />
-      )}
+      {dryResult  && <DryRunModal   result={dryResult}  entityCfg={entityCfg} onClose={() => setDryResult(null)}  onRunLive={handleRunLive} liveRunning={liveRunning} />}
+      {liveResult && <LiveResultModal result={liveResult} entityCfg={entityCfg} onClose={() => { setLiveResult(null); setRecords([]); setFileName(''); }} />}
 
       <div className="bi-page">
 
@@ -512,38 +548,38 @@ export default function BulkImportPage() {
           ))}
         </div>
 
-        {/* Entity selector */}
+        {/* ── Entity selector card ── */}
         <div className="bi-card">
           <div className="bi-section-title">{mode === 'import' ? '1. Select Entity' : 'Select Entity'}</div>
-          <div className="bi-entity-grid">
-            {ENTITIES.map(e => (
-              <button key={e.value} className="bi-entity-btn"
-                onClick={() => { setEntity(e.value); setDryResult(null); setLiveResult(null); setRecords([]); setFileName(''); setParseError(''); }}
-                style={{ color: entity === e.value ? e.color : 'rgba(255,255,255,0.4)', background: entity === e.value ? `${e.color}15` : 'rgba(255,255,255,0.04)', border: `0.5px solid ${entity === e.value ? `${e.color}40` : 'rgba(255,255,255,0.08)'}` }}>
-                {e.label}
-              </button>
-            ))}
-          </div>
-          <div style={{ marginTop:12, display:'flex', gap:16, flexWrap:'wrap' }}>
+
+          <EntitySelector entity={entity} onSelect={handleEntitySelect} />
+
+          {/* Fields info */}
+          <div style={{ marginTop: 14, display:'flex', gap:16, flexWrap:'wrap' }}>
             <div>
               <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Required fields</div>
               <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                {entityCfg.requiredFields.map(f => <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:`${entityCfg.color}15`, color:entityCfg.color, border:`0.5px solid ${entityCfg.color}30` }}>{f}</span>)}
+                {entityCfg.requiredFields.map(f => (
+                  <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:`${entityCfg.color}15`, color:entityCfg.color, border:`0.5px solid ${entityCfg.color}30` }}>{f}</span>
+                ))}
               </div>
             </div>
-            <div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Optional fields</div>
-              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                {entityCfg.optionalFields.map(f => <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.4)', border:'0.5px solid rgba(255,255,255,0.08)' }}>{f}</span>)}
+            {entityCfg.optionalFields.length > 0 && (
+              <div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Optional fields</div>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                  {entityCfg.optionalFields.map(f => (
+                    <span key={f} style={{ ...MONO, fontSize:11, padding:'2px 7px', borderRadius:4, background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.4)', border:'0.5px solid rgba(255,255,255,0.08)' }}>{f}</span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* ── IMPORT MODE ── */}
         {mode === 'import' && (
           <>
-            {/* Data Source */}
             <div className="bi-card">
               <div className="bi-section-title">2. Data Source</div>
               <div className="bi-channel-tabs">
@@ -572,7 +608,7 @@ export default function BulkImportPage() {
                       <div>
                         <div style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'center', marginBottom:4 }}>
                           <span style={{ fontSize:13, color:'#4ade80', fontWeight:500 }}>{fileName}</span>
-                          {fileTypeLabel && <span className="bi-format-badge" style={{ background: fileTypeLabel==='Excel'?'rgba(96,165,250,0.15)':'rgba(74,222,128,0.15)', color: fileTypeLabel==='Excel'?'#60a5fa':'#4ade80', border:`0.5px solid ${fileTypeLabel==='Excel'?'rgba(96,165,250,0.3)':'rgba(74,222,128,0.3)'}` }}>{fileTypeLabel}</span>}
+                          {fileTypeLabel && <span className="bi-format-badge" style={{ background:fileTypeLabel==='Excel'?'rgba(96,165,250,0.15)':'rgba(74,222,128,0.15)', color:fileTypeLabel==='Excel'?'#60a5fa':'#4ade80', border:`0.5px solid ${fileTypeLabel==='Excel'?'rgba(96,165,250,0.3)':'rgba(74,222,128,0.3)'}` }}>{fileTypeLabel}</span>}
                         </div>
                         <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>{records.length} rows loaded — click to replace</div>
                       </div>
@@ -631,13 +667,13 @@ export default function BulkImportPage() {
                   {upsert ? 'Upsert — update if exists' : 'Skip — ignore duplicates'}
                 </button>
                 <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', flex:1 }}>
-                  {dryRun ? 'Validates data → shows result modal → you decide to run or cancel.' : upsert ? 'New records inserted. Existing records updated.' : 'New records inserted. Duplicates skipped.'}
+                  {dryRun ? 'Validates data, shows result modal, you decide to run or cancel.' : upsert ? 'New records inserted. Existing records updated.' : 'New records inserted. Duplicates skipped.'}
                 </span>
                 <button
                   onClick={dryRun ? handleValidate : handleDirectLive}
                   disabled={busy || !canRun}
-                  style={{ padding:'7px 22px', borderRadius:7, fontSize:13, fontWeight:500, cursor: canRun && !busy ? 'pointer' : 'not-allowed', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background: dryRun ? 'linear-gradient(135deg,#92400e,#d97706,#fbbf24)' : upsert ? 'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)' : 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', opacity: busy || !canRun ? 0.5 : 1, whiteSpace:'nowrap', boxShadow: busy || !canRun ? 'none' : '0 3px 12px rgba(0,0,0,0.3)' }}>
-                  {busy ? 'Running…' : dryRun ? 'Validate' : upsert ? `Upsert ${entityCfg.label}` : `Import ${entityCfg.label}`}
+                  style={{ padding:'7px 22px', borderRadius:7, fontSize:13, fontWeight:500, cursor:canRun&&!busy?'pointer':'not-allowed', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:dryRun?'linear-gradient(135deg,#92400e,#d97706,#fbbf24)':upsert?'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)':'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', opacity:busy||!canRun?0.5:1, whiteSpace:'nowrap', boxShadow:busy||!canRun?'none':'0 3px 12px rgba(0,0,0,0.3)' }}>
+                  {busy ? 'Running...' : dryRun ? 'Validate' : upsert ? `Upsert ${entityCfg.label}` : `Import ${entityCfg.label}`}
                 </button>
               </div>
               {parseError && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{parseError}</div>}
@@ -653,7 +689,7 @@ export default function BulkImportPage() {
               <div className="bi-export-action">
                 <div>
                   <div style={{ fontSize:13, fontWeight:500, color:'#e2dfd8', marginBottom:4 }}>Import Template — {entityCfg.label}</div>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>Empty Excel with all columns. Required fields: <span style={{ color:entityCfg.color }}>{entityCfg.requiredFields.join(', ')}</span></div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>Empty Excel with all columns. Required: <span style={{ color:entityCfg.color }}>{entityCfg.requiredFields.join(', ')}</span></div>
                 </div>
                 <button onClick={downloadTemplate} style={{ padding:'8px 18px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:"'IBM Plex Sans',sans-serif", color:'#60a5fa', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.2)', whiteSpace:'nowrap' }}>Download Template</button>
               </div>
@@ -662,8 +698,8 @@ export default function BulkImportPage() {
                   <div style={{ fontSize:13, fontWeight:500, color:'#e2dfd8', marginBottom:4 }}>Export Current Data — {entityCfg.label}</div>
                   <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>Download all existing {entityCfg.label.toLowerCase()} records as Excel.</div>
                 </div>
-                <button onClick={handleExport} disabled={exportBusy} style={{ padding:'8px 18px', borderRadius:7, fontSize:12, fontWeight:500, cursor: exportBusy?'not-allowed':'pointer', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#1e3a5f,#1d4ed8,#3b82f6)', border:'none', whiteSpace:'nowrap', opacity:exportBusy?0.5:1 }}>
-                  {exportBusy ? 'Exporting…' : 'Export to Excel'}
+                <button onClick={handleExport} disabled={exportBusy} style={{ padding:'8px 18px', borderRadius:7, fontSize:12, fontWeight:500, cursor:exportBusy?'not-allowed':'pointer', fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:'linear-gradient(135deg,#1e3a5f,#1d4ed8,#3b82f6)', border:'none', whiteSpace:'nowrap', opacity:exportBusy?0.5:1 }}>
+                  {exportBusy ? 'Exporting...' : 'Export to Excel'}
                 </button>
               </div>
               {parseError && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{parseError}</div>}
@@ -671,7 +707,6 @@ export default function BulkImportPage() {
             </div>
           </div>
         )}
-
       </div>
     </ERPShell>
   );

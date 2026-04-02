@@ -10,20 +10,35 @@ interface NavItem  { label: string; href?: string; groups?: NavGroup[]; }
 
 const NAV: NavItem[] = [
   { label: 'Home', href: '/' },
+
+  // ── Procurement ────────────────────────────────────────────────────────────
   {
     label: 'Procurement',
     groups: [
-      { label: 'Suppliers',  items: [{ label: 'Suppliers', href: '/procurement/suppliers' }] },
-      { label: 'Purchasing', items: [{ label: 'Purchase Orders', href: '/procurement/purchase-orders' }, 
-                                     { label: 'Goods Receipts',  href: '/procurement/goods-receipts' },
-                                     { label: 'AP Invoices',     href: '/procurement/ap-invoices' }] },
+      {
+        label: 'Suppliers',
+        items: [
+          { label: 'Supplier Catalog',    href: '/procurement/suppliers' },
+          { label: 'Supplier Price Lists', href: '/procurement/supplier-items' },
+        ],
+      },
+      {
+        label: 'Purchasing',
+        items: [
+          { label: 'Purchase Orders',  href: '/procurement/purchase-orders' },
+          { label: 'Goods Receipts',   href: '/procurement/goods-receipts' },
+          { label: 'AP Invoices',      href: '/procurement/ap-invoices' },
+        ],
+      },
     ],
   },
+
+  // ── Inventory ──────────────────────────────────────────────────────────────
   {
     label: 'Inventory',
     groups: [
       {
-        label: 'Master Data',
+        label: 'Catalog',
         items: [
           { label: 'Items',              href: '/inventory/items' },
           { label: 'Warehouses',         href: '/inventory/warehouses' },
@@ -33,52 +48,75 @@ const NAV: NavItem[] = [
         ],
       },
       {
-        label: 'Transactions',
+        label: 'Stock Control',
         items: [
-          { label: 'Stock Transactions', href: '/inventory/stock-transactions' },
-          { label: 'Stock Ledger',       href: '/inventory/ledger' },
-          { label: 'Stock Balance',      href: '/inventory/stock-balance' },
-          { label: 'Stock Planning',     href: '/inventory/stock-planning' },
-          { label: 'Stock Aging',        href: '/inventory/stock-aging' },
-          { label: 'Inventory Valuation',href: '/inventory/valuation' },
-          { label: 'Inventory Turnover',  href: '/inventory/inventory-turnover' },
-          { label: 'ABC Analysis',       href: '/inventory/abc-analysis' },
-          { label: 'Slow Moving Items',  href: '/inventory/slow-moving' },
-          { label: 'Stock Reconciliation',  href: '/inventory/stock-reconciliation' },
-          { label: 'Labels',  href: '/inventory/labels' },
-          
+          { label: 'Stock Transactions',  href: '/inventory/stock-transactions' },
+          { label: 'Stock Balance',       href: '/inventory/stock-balance' },
+          { label: 'Stock Ledger',        href: '/inventory/ledger' },
+          { label: 'Stock Reconciliation',href: '/inventory/stock-reconciliation' },
+          { label: 'Label Printing',      href: '/inventory/labels' },
+        ],
+      },
+      {
+        label: 'Analysis',
+        items: [
+          { label: 'Stock Planning',       href: '/inventory/stock-planning' },
+          { label: 'Stock Aging',          href: '/inventory/stock-aging' },
+          { label: 'Inventory Valuation',  href: '/inventory/valuation' },
+          { label: 'Inventory Turnover',   href: '/inventory/inventory-turnover' },
+          { label: 'ABC Analysis',         href: '/inventory/abc-analysis' },
+          { label: 'Slow Moving Items',    href: '/inventory/slow-moving' },
         ],
       },
     ],
   },
+
+  // ── Manufacturing ──────────────────────────────────────────────────────────
   {
     label: 'Manufacturing',
     groups: [
       {
-        label: 'Setup',
+        label: 'Engineering',
         items: [
-          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
           { label: 'Bill of Materials', href: '/manufacturing/bom' },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
         ],
       },
       {
         label: 'Production',
-        items: [{ label: 'Production Orders', href: '/manufacturing/production-orders' }],
+        items: [
+          { label: 'Production Orders', href: '/manufacturing/production-orders' },
+        ],
       },
     ],
   },
+
+  // ── Sales ──────────────────────────────────────────────────────────────────
   {
     label: 'Sales',
     groups: [
-      { label: 'Customers', items: [{ label: 'Customers', href: '/sales/customers' }] },
-      { label: 'Orders',    items: [{ label: 'Sales Orders', href: '/sales/sales-orders' }, { label: 'AR Invoices', href: '/sales/invoices' }] },
+      {
+        label: 'Customers',
+        items: [
+          { label: 'Customer Catalog', href: '/sales/customers' },
+        ],
+      },
+      {
+        label: 'Orders & Billing',
+        items: [
+          { label: 'Sales Orders', href: '/sales/sales-orders' },
+          { label: 'AR Invoices',  href: '/sales/invoices' },
+        ],
+      },
     ],
   },
+
+  // ── Financial ──────────────────────────────────────────────────────────────
   {
     label: 'Financial',
     groups: [
       {
-        label: 'Accounting',
+        label: 'General Ledger',
         items: [
           { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
           { label: 'Journal Entries',   href: '/accounting/journal-entries' },
@@ -94,7 +132,9 @@ const NAV: NavItem[] = [
       },
       {
         label: 'Reports',
-        items: [{ label: 'Financial Reports', href: '/accounting/reports' }],
+        items: [
+          { label: 'Financial Reports', href: '/accounting/reports' },
+        ],
       },
       {
         label: 'Planning',
@@ -105,59 +145,64 @@ const NAV: NavItem[] = [
       },
     ],
   },
+
+  // ── Settings ───────────────────────────────────────────────────────────────
   {
     label: 'Settings',
     groups: [
       {
-        label: 'Configuration',
+        label: 'Access Control',
         items: [
-          { label: 'General Settings',   href: '/settings/general' },
-          { label: 'Units of Measure',   href: '/settings/uom' },
-          { label: 'Fiscal Periods',     href: '/accounting/fiscal-periods' },
-          { label: 'Automation Config',  href: '/accounting/automation' },
-          { label: 'Bill of Materials',  href: '/manufacturing/bom' },
-          { label: 'Users',              href: '/settings/users' },
-          { label: 'Rol',              href: '/settings/roles' },
+          { label: 'Tenants',          href: '/settings/tenants' },
+          { label: 'Users',            href: '/settings/users' },
+          { label: 'Roles & Permissions', href: '/settings/roles' },
+        ],
+      },
+      {
+        label: 'System Config',
+        items: [
+          { label: 'General Settings', href: '/settings/general' },
+          { label: 'Units of Measure', href: '/settings/uom' },
+          { label: 'Fiscal Calendar',  href: '/accounting/fiscal-periods' },
+          { label: 'JE Automation',    href: '/accounting/automation' },
         ],
       },
       {
         label: 'Data Management',
         items: [
-          { label: 'Bulk Import', href: '/settings/bulk-import' },
+          { label: 'Bulk Import & Export', href: '/settings/bulk-import' },
         ],
       },
       {
         label: 'Master Data',
         items: [
-          { label: 'Items',              href: '/inventory/items' },
-          { label: 'Macro Categories',   href: '/inventory/macro-categories' },
-          { label: 'Categories',         href: '/inventory/categories' },
-          { label: 'Consumption Groups', href: '/inventory/consumption-groups' },
-          { label: 'Customers',          href: '/sales/customers' },
-          { label: 'Suppliers',          href: '/procurement/suppliers' },
-          { label: 'Warehouses',         href: '/inventory/warehouses' },
-          { label: 'Work Centers',       href: '/manufacturing/work-centers' },
-          { label: 'Chart of Accounts',  href: '/accounting/chart-of-accounts' },
+          { label: 'Items',            href: '/inventory/items' },
+          { label: 'Warehouses',       href: '/inventory/warehouses' },
+          { label: 'Categories',       href: '/inventory/categories' },
+          { label: 'Suppliers',        href: '/procurement/suppliers' },
+          { label: 'Customers',        href: '/sales/customers' },
+          { label: 'Work Centers',     href: '/manufacturing/work-centers' },
+          { label: 'Chart of Accounts',href: '/accounting/chart-of-accounts' },
         ],
       },
     ],
   },
 ];
 
-// ─── Single nav item with dropdown ───────────────────────────────────────────
+// ─── Nav dropdown component ────────────────────────────────────────────────────
 
 function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [open,       setOpen]       = useState(false);
   const [hoverGroup, setHoverGroup] = useState<string>('');
-  const router = useRouter();
+  const router     = useRouter();
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const open_ = () => {
+  const openMenu  = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpen(true);
     setHoverGroup(item.groups?.[0]?.label ?? '');
   };
-  const close_ = () => {
+  const closeMenu = () => {
     closeTimer.current = setTimeout(() => setOpen(false), 200);
   };
 
@@ -174,8 +219,8 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
     <div
       className={`ni ni-dd${isActive ? ' ni-active' : ''}${open ? ' ni-open' : ''}`}
-      onMouseEnter={open_}
-      onMouseLeave={close_}
+      onMouseEnter={openMenu}
+      onMouseLeave={closeMenu}
     >
       {item.label}
       <svg width="9" height="9" viewBox="0 0 9 9" fill="none" style={{ display:'block', flexShrink:0 }}>
@@ -183,7 +228,8 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
       </svg>
 
       {open && (
-        <div className="dd-panel" onMouseEnter={open_} onMouseLeave={close_}>
+        <div className="dd-panel" onMouseEnter={openMenu} onMouseLeave={closeMenu}>
+          {/* Left — group list */}
           <div className="dd-left">
             {item.groups.map(g => (
               <div
@@ -199,6 +245,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
             ))}
           </div>
 
+          {/* Right — items for active group */}
           {currentGroup && (
             <div className="dd-right">
               <div className="dd-right-hdr">{currentGroup.label}</div>
@@ -208,7 +255,7 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
                   className="dd-leaf"
                   onClick={() => { router.push(leaf.href); setOpen(false); }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ display:'block', flexShrink:0, opacity:0.45 }}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ display:'block', flexShrink:0, opacity:0.4 }}>
                     <rect x="1.5" y="2.5" width="10" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
                     <line x1="3.5" y1="5.5" x2="9.5" y2="5.5" stroke="currentColor" strokeWidth="1"/>
                     <line x1="3.5" y1="7.8" x2="7.5" y2="7.8" stroke="currentColor" strokeWidth="1"/>
@@ -224,25 +271,30 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
   );
 }
 
-// ─── Shell ────────────────────────────────────────────────────────────────────
+// ─── Shell wrapper ─────────────────────────────────────────────────────────────
 
 interface ERPShellProps {
-  children: React.ReactNode;
+  children:     React.ReactNode;
   breadcrumbs?: string[];
-  title?: string;
+  title?:       string;
 }
 
 export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps) {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user, tenantName, logout } = useAuth();
+  const router   = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState('');
 
-  const initials = (user?.name || user?.email || 'A').charAt(0).toUpperCase();
+  const fullName  = user ? `${user.firstName} ${user.lastName}`.trim() : '';
+  const initials  = fullName
+    ? fullName.charAt(0).toUpperCase()
+    : (user?.email?.charAt(0).toUpperCase() ?? 'A');
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase().replace(/_/g, ' ')
+    : '';
 
   const isActive = (item: NavItem) => {
     if (item.href) return pathname === item.href;
-    // Settings only activates on /settings/* — never on cross-module links
     if (item.label === 'Settings') return pathname.startsWith('/settings');
     return item.groups?.some(g => g.items.some(i => pathname.startsWith(i.href))) ?? false;
   };
@@ -253,6 +305,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ── Root layout ─────────────────────────────────────────────────── */
         .shell-root {
           font-family: 'IBM Plex Sans', sans-serif;
           height: 100vh;
@@ -264,6 +317,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           display: flex; flex-direction: column;
         }
 
+        /* ── Top bar ─────────────────────────────────────────────────────── */
         .shell-brand {
           height: 42px;
           background: rgba(8,6,14,0.97);
@@ -273,7 +327,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           position: sticky; top: 0; z-index: 200;
           backdrop-filter: blur(20px); flex-shrink: 0;
         }
-
         .shell-mark {
           width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
           background: linear-gradient(145deg,#c2410c,#ea580c,#f97316);
@@ -281,14 +334,12 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .shell-mark svg { width: 14px; height: 14px; display: block; flex-shrink: 0; }
-
         .shell-wordmark {
           font-family: 'Cormorant Garamond', serif;
           font-size: 18px; font-weight: 300; letter-spacing: 0.1em;
           color: #fff; flex-shrink: 0; cursor: pointer; white-space: nowrap;
         }
         .shell-wordmark span { color: #fb923c; }
-
         .shell-search {
           flex: 1; max-width: 300px;
           background: rgba(255,255,255,0.05);
@@ -304,36 +355,49 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           box-shadow: 0 0 0 2px rgba(234,88,12,0.1);
         }
 
-        .shell-user { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        .shell-uname { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.75); }
+        /* ── User area ───────────────────────────────────────────────────── */
+        .shell-user {
+          margin-left: auto;
+          display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .shell-tenant {
+          font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
+          text-transform: uppercase; color: rgba(251,146,60,0.5);
+          padding-right: 12px;
+          border-right: 0.5px solid rgba(255,255,255,0.08);
+          white-space: nowrap;
+        }
+        .shell-uname { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.75); white-space: nowrap; }
         .shell-urole { font-size: 10px; color: rgba(255,255,255,0.3); }
         .shell-avatar {
-          width: 26px; height: 26px; border-radius: 50%;
+          width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
           background: linear-gradient(135deg,#c2410c,#f97316);
           display: flex; align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 500; color: #fff; flex-shrink: 0; cursor: pointer;
+          font-size: 11px; font-weight: 600; color: #fff; cursor: pointer;
         }
         .shell-signout {
           font-size: 11px; color: rgba(251,146,60,0.5);
           background: none; border: none; cursor: pointer;
           font-family: 'IBM Plex Sans', sans-serif;
           padding: 3px 7px; border-radius: 4px;
-          transition: color 0.2s, background 0.2s;
+          transition: color 0.2s, background 0.2s; white-space: nowrap;
         }
         .shell-signout:hover { color: #fb923c; background: rgba(251,146,60,0.08); }
 
+        /* ── Nav bar ─────────────────────────────────────────────────────── */
         .shell-nav {
           height: 34px;
           background: rgba(18,12,26,0.97);
           border-bottom: 0.5px solid rgba(255,255,255,0.06);
           display: flex; align-items: stretch;
-          padding: 0 18px; gap: 0;
+          padding: 0 18px;
           overflow: visible; scrollbar-width: none;
           position: sticky; top: 42px; z-index: 199;
           backdrop-filter: blur(20px); flex-shrink: 0;
         }
         .shell-nav::-webkit-scrollbar { display: none; }
 
+        /* ── Nav items ───────────────────────────────────────────────────── */
         .ni {
           display: flex; align-items: center; gap: 4px;
           padding: 0 11px; font-size: 12px;
@@ -343,29 +407,33 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           transition: color 0.15s, background 0.15s, border-color 0.15s;
           user-select: none; position: relative;
         }
-        .ni:hover, .ni-open { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
-        .ni-active { color: #fb923c !important; border-bottom-color: #fb923c !important; background: rgba(251,146,60,0.05) !important; }
-
+        .ni:hover, .ni-open {
+          color: rgba(255,255,255,0.85);
+          background: rgba(255,255,255,0.04);
+        }
+        .ni-active {
+          color: #fb923c !important;
+          border-bottom-color: #fb923c !important;
+          background: rgba(251,146,60,0.05) !important;
+        }
+        /* invisible bridge prevents gap closing dropdown */
         .ni-dd::after {
           content: "";
-          position: absolute;
-          top: 100%; left: 0;
+          position: absolute; top: 100%; left: 0;
           width: 100%; height: 8px;
           background: transparent;
         }
 
+        /* ── Dropdown panel ──────────────────────────────────────────────── */
         .dd-panel {
-          position: absolute;
-          top: 100%; left: 0;
-          margin-top: 2px;
-          min-width: 380px;
+          position: absolute; top: 100%; left: 0;
+          margin-top: 2px; min-width: 380px;
           background: rgba(12,8,22,0.98);
           border: 0.5px solid rgba(251,146,60,0.2);
           border-radius: 10px;
           box-shadow: 0 20px 50px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.02) inset;
           backdrop-filter: blur(24px);
-          display: flex;
-          z-index: 300;
+          display: flex; z-index: 300;
           animation: dd-appear 0.1s ease;
         }
         @keyframes dd-appear {
@@ -373,8 +441,9 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           to   { opacity: 1; transform: translateY(0); }
         }
 
+        /* Left column — group list */
         .dd-left {
-          width: 150px; flex-shrink: 0;
+          width: 155px; flex-shrink: 0;
           background: rgba(255,255,255,0.02);
           border-right: 0.5px solid rgba(255,255,255,0.06);
           border-radius: 10px 0 0 10px;
@@ -394,11 +463,11 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           border: 0.5px solid rgba(251,146,60,0.22);
         }
 
+        /* Right column — leaf items */
         .dd-right {
           flex: 1; padding: 8px 8px 8px 6px;
           display: flex; flex-direction: column; gap: 1px;
-          min-width: 200px;
-          border-radius: 0 10px 10px 0;
+          min-width: 200px; border-radius: 0 10px 10px 0;
         }
         .dd-right-hdr {
           font-size: 10px; font-weight: 500;
@@ -416,6 +485,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .dd-leaf:hover { background: rgba(255,255,255,0.06); color: #f1ede8; }
 
+        /* ── Breadcrumb bar ──────────────────────────────────────────────── */
         .shell-sub { display: flex; align-items: center; padding: 10px 18px 6px; flex-shrink: 0; }
         .shell-bc  { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.3); }
         .shell-bc-sep  { color: rgba(255,255,255,0.15); }
@@ -423,46 +493,68 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-bc-link:hover { color: #fb923c; }
         .shell-bc-cur  { color: rgba(255,255,255,0.6); }
 
-        .shell-title { font-size: 15px; font-weight: 500; color: #f1ede8; padding: 0 18px 8px; }
+        /* ── Page title & content ────────────────────────────────────────── */
+        .shell-title   { font-size: 15px; font-weight: 500; color: #f1ede8; padding: 0 18px 8px; }
         .shell-content { flex: 1; overflow: hidden; min-height: 0; }
       `}</style>
 
       <div className="shell-root">
+
+        {/* ── Top bar ── */}
         <div className="shell-brand">
+          {/* Logo mark */}
           <div className="shell-mark" onClick={() => router.push('/')}>
             <svg viewBox="0 0 26 26" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="13" cy="11" r="4"/>
-              <line x1="13" y1="3"   x2="13"   y2="5.5"/>
+              <line x1="13"   y1="3"   x2="13"   y2="5.5"/>
               <line x1="19.5" y1="6.5" x2="18.2" y2="7.8"/>
-              <line x1="22"  y1="13"  x2="19.8" y2="13"/>
-              <line x1="6.5" y1="6.5" x2="7.8"  y2="7.8"/>
-              <line x1="4"   y1="13"  x2="6.2"  y2="13"/>
-              <line x1="4"   y1="19"  x2="22"   y2="19" strokeWidth="2.2"/>
+              <line x1="22"   y1="13"  x2="19.8" y2="13"/>
+              <line x1="6.5"  y1="6.5" x2="7.8"  y2="7.8"/>
+              <line x1="4"    y1="13"  x2="6.2"  y2="13"/>
+              <line x1="4"    y1="19"  x2="22"   y2="19" strokeWidth="2.2"/>
             </svg>
           </div>
+
+          {/* Wordmark */}
           <span className="shell-wordmark" onClick={() => router.push('/')}>Sun<span>set</span></span>
+
+          {/* Global search */}
           <input
             className="shell-search"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+
+          {/* User area */}
           <div className="shell-user">
+            {/* Company name */}
+            {tenantName && (
+              <span className="shell-tenant">{tenantName}</span>
+            )}
+
+            {/* Name + role */}
             <div>
-              <div className="shell-uname">{user?.name || user?.email || 'Admin'}</div>
-              <div className="shell-urole">Administrator · Executive</div>
+              <div className="shell-uname">{fullName || user?.email || 'Admin'}</div>
+              {roleLabel && <div className="shell-urole">{roleLabel}</div>}
             </div>
+
+            {/* Avatar */}
             <div className="shell-avatar">{initials}</div>
+
+            {/* Sign out */}
             <button className="shell-signout" onClick={logout}>Sign out</button>
           </div>
         </div>
 
+        {/* ── Nav bar ── */}
         <div className="shell-nav">
           {NAV.map(item => (
             <NavDropdown key={item.label} item={item} isActive={isActive(item)} />
           ))}
         </div>
 
+        {/* ── Breadcrumb ── */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <div className="shell-sub">
             <div className="shell-bc">
@@ -478,7 +570,10 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           </div>
         )}
 
+        {/* ── Page title ── */}
         {title && <div className="shell-title">{title}</div>}
+
+        {/* ── Page content ── */}
         <div className="shell-content">{children}</div>
       </div>
     </>
