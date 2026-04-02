@@ -232,7 +232,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <div className="login-wordmark">Sun<span>set</span> ERP</div>
-            <div className="login-sub">Manufacturing Resource Planning</div>
+            <div className="login-sub">Enterprise Resource Planning</div>
           </div>
 
           {/* Body */}
