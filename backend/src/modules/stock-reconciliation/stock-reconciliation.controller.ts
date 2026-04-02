@@ -55,14 +55,14 @@ export class StockReconciliationController {
   }
 
   @Patch(':id/lines')
-  @RequirePermissions('INVENTORY:CREATE')
-  @ApiOperation({ summary: 'Enter physical count for one line (storageUom, auto-converts to purchaseUom)' })
+  @RequirePermissions('INVENTORY:COUNT')
+  @ApiOperation({ summary: 'Enter physical count for one line — requires INVENTORY:COUNT' })
   updateLine(@Request() req, @Param('id') id: string, @Body() dto: UpdateCountLineDto) {
     return this.service.updateLine(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Patch(':id/submit')
-  @RequirePermissions('INVENTORY:CREATE')
+  @RequirePermissions('INVENTORY:COUNT')
   @ApiOperation({ summary: 'Submit for approval — in_progress → pending_approval' })
   submit(@Request() req, @Param('id') id: string) {
     return this.service.submitForApproval(req.user.tenantId, req.user.id, id);
