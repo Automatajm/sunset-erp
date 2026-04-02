@@ -5,10 +5,20 @@ import { useParams, useRouter }                       from 'next/navigation';
 import apiClient                                      from '@/lib/api/client';
 import dynamic                                        from 'next/dynamic';
 
-// Lazy-load scanner to avoid SSR issues with camera APIs
 const BarcodeScanner = dynamic(() => import('./BarcodeScanner'), { ssr: false });
 
-// ---- Types -------------------------------------------------------------------
+// ---- JWT decode (no external lib needed) ------------------------------------
+
+function getTokenUserId(): string | null {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub ?? payload.userId ?? payload.id ?? null;
+  } catch { return null; }
+}
+
+// ---- Types ------------------------------------------------------------------
 
 type LineStatus  = 'pending' | 'counted' | 'confirmed' | 'adjusted';
 type ActiveField = 'storage' | 'purchase';
@@ -30,6 +40,8 @@ interface CountLine {
   status:              LineStatus;
   lotNumber:           string | null;
   notes:               string | null;
+  assignedToUserId:    string | null;
+  assignedToUser:      { id: string; firstName: string; lastName: string } | null;
 }
 
 interface CountSession {
@@ -42,7 +54,7 @@ interface CountSession {
   lines:         CountLine[];
 }
 
-// ---- Helpers -----------------------------------------------------------------
+// ---- Helpers ----------------------------------------------------------------
 
 function fmtQty(v: number | null, digits = 3) {
   if (v === null || v === undefined) return '---';
@@ -62,28 +74,17 @@ const ITEM_TYPE_COLOR: Record<string, string> = {
 
 function NumPad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const keys = ['7','8','9','4','5','6','1','2','3','.','0','<'];
-
   function press(k: string) {
     if (k === '<') { onChange(value.slice(0, -1)); return; }
     if (k === '.' && value.includes('.')) return;
     if (k === '.' && value === '') { onChange('0.'); return; }
     onChange(value + k);
   }
-
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%', maxWidth: 280 }}>
       {keys.map(k => (
-        <button
-          key={k}
-          onClick={() => press(k)}
-          style={{
-            height: 56, borderRadius: 12, fontSize: k === '<' ? 18 : 22, fontWeight: 500,
-            fontFamily: "'IBM Plex Mono', monospace",
-            background: k === '<' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)',
-            border: k === '<' ? '0.5px solid rgba(248,113,113,0.2)' : '0.5px solid rgba(255,255,255,0.1)',
-            color: k === '<' ? '#f87171' : '#e2dfd8',
-            cursor: 'pointer', userSelect: 'none',
-          }}
+        <button key={k} onClick={() => press(k)}
+          style={{ height: 56, borderRadius: 12, fontSize: k === '<' ? 18 : 22, fontWeight: 500, fontFamily: "'IBM Plex Mono', monospace", background: k === '<' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)', border: k === '<' ? '0.5px solid rgba(248,113,113,0.2)' : '0.5px solid rgba(255,255,255,0.1)', color: k === '<' ? '#f87171' : '#e2dfd8', cursor: 'pointer', userSelect: 'none' }}
           onTouchStart={e => { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.14)'; }}
           onTouchEnd={e =>   { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)'; }}>
           {k}
@@ -93,7 +94,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
   );
 }
 
-// ---- Progress Bar ------------------------------------------------------------
+// ---- Progress Bar -----------------------------------------------------------
 
 function ProgressBar({ counted, total }: { counted: number; total: number }) {
   const pct = total > 0 ? (counted / total) * 100 : 0;
@@ -104,7 +105,7 @@ function ProgressBar({ counted, total }: { counted: number; total: number }) {
   );
 }
 
-// ---- Main Page ---------------------------------------------------------------
+// ---- Main Page --------------------------------------------------------------
 
 export default function MobileCountPage() {
   const params = useParams();
@@ -122,8 +123,16 @@ export default function MobileCountPage() {
   const [showAll,     setShowAll]     = useState(false);
   const [savedFlash,  setSavedFlash]  = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // ---- Fetch -----------------------------------------------------------------
+  // ---- Get current user from JWT -------------------------------------------
+
+  useEffect(() => {
+    const uid = getTokenUserId();
+    setCurrentUserId(uid);
+  }, []);
+
+  // ---- Fetch session --------------------------------------------------------
 
   const fetchSession = useCallback(async () => {
     setLoading(true);
@@ -139,23 +148,49 @@ export default function MobileCountPage() {
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 
-  // ---- Work list: pending first, then counted --------------------------------
+  // ---- Work list logic ------------------------------------------------------
+  // If ANY lines have assignments AND current user has assignments in this session
+  // → show only lines assigned to this user (+ already counted by anyone)
+  // If no assignments exist → show all lines (supervisor mode)
 
   const workList = useMemo(() => {
     if (!session) return [];
-    const lines = [...session.lines];
+
+    const allLines = [...session.lines];
+    const hasAnyAssignments = allLines.some(l => l.assignedToUserId !== null);
+
+    if (!hasAnyAssignments) {
+      // No assignments — show all (supervisor or unassigned session)
+      if (!showAll) {
+        const pending = allLines.filter(l => l.status === 'pending');
+        const counted = allLines.filter(l => l.status !== 'pending');
+        return [...pending, ...counted];
+      }
+      return allLines;
+    }
+
+    // Assignments exist — filter to current user's lines
+    const myLines = allLines.filter(l =>
+      l.assignedToUserId === currentUserId ||
+      l.status !== 'pending' // always show already-counted lines for context
+    );
+
     if (!showAll) {
-      const pending = lines.filter(l => l.status === 'pending');
-      const counted = lines.filter(l => l.status !== 'pending');
+      const pending = myLines.filter(l => l.status === 'pending');
+      const counted = myLines.filter(l => l.status !== 'pending');
       return [...pending, ...counted];
     }
-    return lines;
-  }, [session, showAll]);
+    return myLines;
+  }, [session, showAll, currentUserId]);
 
-  const line       = workList[cursor] ?? null;
-  const totalLines = workList.length;
-  const countedN   = workList.filter(l => l.status !== 'pending').length;
-  const pendingN   = workList.filter(l => l.status === 'pending').length;
+  // ---- Derived counts -------------------------------------------------------
+
+  const hasAssignments  = (session?.lines ?? []).some(l => l.assignedToUserId !== null);
+  const myAssignedCount = (session?.lines ?? []).filter(l => l.assignedToUserId === currentUserId).length;
+  const line            = workList[cursor] ?? null;
+  const totalLines      = workList.length;
+  const countedN        = workList.filter(l => l.status !== 'pending').length;
+  const pendingN        = workList.filter(l => l.status === 'pending').length;
 
   // Reset input when line changes
   useEffect(() => {
@@ -164,7 +199,7 @@ export default function MobileCountPage() {
     setInput(line.countedStorageQty !== null ? String(line.countedStorageQty) : '');
   }, [line?.id]); // eslint-disable-line
 
-  // ---- Save line -------------------------------------------------------------
+  // ---- Save line ------------------------------------------------------------
 
   async function handleSave(andNext = true) {
     if (!line || !input) return;
@@ -182,11 +217,8 @@ export default function MobileCountPage() {
       await fetchSession();
       if (andNext) {
         const nextPending = workList.findIndex((l, i) => i > cursor && l.status === 'pending');
-        if (nextPending !== -1) {
-          setCursor(nextPending);
-        } else if (cursor < totalLines - 1) {
-          setCursor(c => c + 1);
-        }
+        if (nextPending !== -1) setCursor(nextPending);
+        else if (cursor < totalLines - 1) setCursor(c => c + 1);
       }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Save failed');
@@ -195,12 +227,12 @@ export default function MobileCountPage() {
     }
   }
 
-  // ---- Navigation ------------------------------------------------------------
+  // ---- Navigation -----------------------------------------------------------
 
   function goPrev() { if (cursor > 0) { setCursor(c => c - 1); setInput(''); } }
   function goNext() { if (cursor < totalLines - 1) { setCursor(c => c + 1); setInput(''); } }
 
-  // ---- Barcode scan handler --------------------------------------------------
+  // ---- Barcode scan ---------------------------------------------------------
 
   async function handleScan(scanned: string) {
     setShowScanner(false);
@@ -211,7 +243,7 @@ export default function MobileCountPage() {
       if (!itemId) { setScanError(`No item found for: ${scanned}`); return; }
       const idx = workList.findIndex(l => l.itemId === itemId);
       if (idx === -1) {
-        setScanError(`Item "${res.data?.item?.code}" is not in this count session`);
+        setScanError(`Item "${res.data?.item?.code}" is not in your count list`);
         return;
       }
       setCursor(idx);
@@ -221,7 +253,7 @@ export default function MobileCountPage() {
     }
   }
 
-  // ---- Format display with thousands separator -------------------------------
+  // ---- Display formatter ----------------------------------------------------
 
   function formatDisplay(val: string): string {
     if (!val || val === '0') return '0';
@@ -230,7 +262,7 @@ export default function MobileCountPage() {
     return decPart !== undefined ? `${formatted}.${decPart}` : formatted;
   }
 
-  // ---- Loading ---------------------------------------------------------------
+  // ---- Loading --------------------------------------------------------------
 
   if (loading) {
     return (
@@ -242,18 +274,27 @@ export default function MobileCountPage() {
     );
   }
 
+  // ---- All done -------------------------------------------------------------
+
   if (!session || workList.length === 0) {
+    const totalSessionLines = session?.lines.length ?? 0;
+    const myPending = session?.lines.filter(l => l.assignedToUserId === currentUserId && l.status === 'pending').length ?? 0;
     return (
       <div style={{ height: '100dvh', background: '#06040f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 24 }}>
         <div style={{ fontSize: 40 }}>OK</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif" }}>All items counted!</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-          Return to the desktop view to review variances and submit for approval.
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          {hasAssignments ? 'Your assigned lines are all counted!' : 'All items counted!'}
+        </div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.6 }}>
+          {hasAssignments
+            ? `You were assigned ${myAssignedCount} line${myAssignedCount !== 1 ? 's' : ''}. Return to the supervisor to complete the session.`
+            : 'Return to the desktop view to review variances and submit for approval.'
+          }
         </div>
         <button
           onClick={() => router.push(`/inventory/stock-reconciliation/${id}`)}
           style={{ marginTop: 8, background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 10, padding: '14px 28px', fontSize: 15, fontWeight: 600, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer' }}>
-          View Session Summary
+          View Session
         </button>
       </div>
     );
@@ -267,6 +308,7 @@ export default function MobileCountPage() {
   const itemTypeColor = ITEM_TYPE_COLOR[line.item.itemType] ?? '#e2dfd8';
   const displayQty    = input || '0';
   const canSave       = input !== '' && !isNaN(parseFloat(input)) && parseFloat(input) >= 0;
+  const isMyLine      = !hasAssignments || line.assignedToUserId === currentUserId;
 
   return (
     <>
@@ -288,9 +330,15 @@ export default function MobileCountPage() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 {session.sessionNumber}
               </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
                 {session.warehouse.code} - {session.warehouse.name}
               </div>
+              {/* Assignment badge */}
+              {hasAssignments && (
+                <div style={{ marginTop: 3, fontSize: 9, padding: '2px 8px', borderRadius: 10, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '0.5px solid rgba(96,165,250,0.2)', display: 'inline-block' }}>
+                  {myAssignedCount} assigned to you
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {/* Pending/All toggle */}
@@ -299,11 +347,10 @@ export default function MobileCountPage() {
                 style={{ background: showAll ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.05)', border: `0.5px solid ${showAll ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, padding: '6px 10px', fontSize: 11, color: showAll ? '#fb923c' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
                 {showAll ? 'All' : 'Pending'}
               </button>
-              {/* Barcode scan button */}
+              {/* Scan button */}
               <button
                 onClick={() => { setScanError(''); setShowScanner(true); }}
-                style={{ background: 'rgba(251,146,60,0.12)', border: '0.5px solid rgba(251,146,60,0.3)', borderRadius: 8, padding: '6px 12px', fontSize: 18, color: '#fb923c', cursor: 'pointer', lineHeight: 1 }}
-                title="Scan barcode">
+                style={{ background: 'rgba(251,146,60,0.12)', border: '0.5px solid rgba(251,146,60,0.3)', borderRadius: 8, padding: '6px 12px', fontSize: 18, color: '#fb923c', cursor: 'pointer', lineHeight: 1 }}>
                 [=]
               </button>
             </div>
@@ -321,7 +368,15 @@ export default function MobileCountPage() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 16px', gap: 10, overflow: 'hidden' }}>
 
           {/* Item card */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${savedFlash ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 14, padding: '14px 16px', flexShrink: 0, transition: 'border-color 0.3s' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${savedFlash ? 'rgba(74,222,128,0.4)' : !isMyLine ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 14, padding: '14px 16px', flexShrink: 0, transition: 'border-color 0.3s' }}>
+            
+            {/* Not-my-line warning */}
+            {!isMyLine && (
+              <div style={{ marginBottom: 8, fontSize: 10, color: '#fbbf24', background: 'rgba(251,191,36,0.06)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 6, padding: '4px 10px', textAlign: 'center' }}>
+                Assigned to {line.assignedToUser ? `${line.assignedToUser.firstName} ${line.assignedToUser.lastName}` : 'another user'}
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <button onClick={goPrev} disabled={cursor === 0}
                 style={{ width: 40, height: 40, borderRadius: 10, background: cursor === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.08)', fontSize: 18, color: cursor === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', cursor: cursor === 0 ? 'not-allowed' : 'pointer' }}>
@@ -406,15 +461,13 @@ export default function MobileCountPage() {
             <NumPad value={input} onChange={setInput} />
           </div>
 
-          {/* Error */}
+          {/* Errors */}
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#fca5a5', textAlign: 'center', flexShrink: 0 }}>
               {error}
               <button onClick={() => setError('')} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 14 }}>x</button>
             </div>
           )}
-
-          {/* Scan error */}
           {scanError && (
             <div style={{ background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#fb923c', textAlign: 'center', flexShrink: 0 }}>
               {scanError}
@@ -422,19 +475,19 @@ export default function MobileCountPage() {
             </div>
           )}
 
-          {/* Save buttons */}
+          {/* Save buttons — disabled if not my line */}
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, paddingBottom: 16 }}>
             <button
               onClick={() => handleSave(false)}
-              disabled={!canSave || saving}
-              style={{ flex: 1, height: 52, borderRadius: 12, fontSize: 14, fontWeight: 500, background: canSave ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${canSave ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.06)'}`, color: canSave ? '#60a5fa' : 'rgba(255,255,255,0.2)', cursor: canSave ? 'pointer' : 'not-allowed' }}>
+              disabled={!canSave || saving || !isMyLine}
+              style={{ flex: 1, height: 52, borderRadius: 12, fontSize: 14, fontWeight: 500, background: canSave && isMyLine ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${canSave && isMyLine ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.06)'}`, color: canSave && isMyLine ? '#60a5fa' : 'rgba(255,255,255,0.2)', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed' }}>
               Save
             </button>
             <button
               onClick={() => handleSave(true)}
-              disabled={!canSave || saving}
-              style={{ flex: 2, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, background: canSave ? 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)' : 'rgba(255,255,255,0.04)', border: 'none', color: canSave ? 'white' : 'rgba(255,255,255,0.2)', cursor: canSave ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
-              {saving ? 'Saving...' : cursor < totalLines - 1 ? 'Save & Next' : 'Save OK'}
+              disabled={!canSave || saving || !isMyLine}
+              style={{ flex: 2, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, background: canSave && isMyLine ? 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)' : 'rgba(255,255,255,0.04)', border: 'none', color: canSave && isMyLine ? 'white' : 'rgba(255,255,255,0.2)', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Saving...' : !isMyLine ? 'Not your line' : cursor < totalLines - 1 ? 'Save & Next' : 'Save OK'}
             </button>
           </div>
 
