@@ -33,22 +33,21 @@ const INPUT: React.CSSProperties = {
   borderRadius: 7, padding: '8px 12px', fontSize: 13,
   fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%',
 };
-const LABEL: React.CSSProperties = {
+const LABEL_S: React.CSSProperties = {
   fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
   color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif", marginBottom: 4, display: 'block',
 };
-const BTN_PRI = {
+const BTN_PRI: React.CSSProperties = {
   padding: '8px 20px', borderRadius: 7, fontSize: 12, fontWeight: 500,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', border: 'none', cursor: 'pointer',
   background: 'linear-gradient(135deg,#92400e,#d97706,#fbbf24)',
   boxShadow: '0 3px 12px rgba(217,119,6,0.3)',
 };
-const BTN_SEC = {
+const BTN_SEC: React.CSSProperties = {
   padding: '7px 16px', borderRadius: 7, fontSize: 12,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)',
   background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', cursor: 'pointer',
 };
-
 const PLAN_COLOR: Record<string, string> = {
   free: '#6b7280', starter: '#60a5fa', professional: '#a78bfa', enterprise: '#f97316',
 };
@@ -56,63 +55,81 @@ const STATUS_COLOR: Record<string, string> = {
   active: '#4ade80', suspended: '#f87171', cancelled: '#6b7280',
 };
 
+// ── Field components defined OUTSIDE modal to prevent focus loss ───────────
+
+interface FieldProps {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; disabled?: boolean;
+}
+function TenantField({ label, value, onChange, placeholder, disabled }: FieldProps) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={LABEL_S}>{label}</label>
+      <input
+        style={{ ...INPUT, opacity: disabled ? 0.5 : 1 }}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
+interface SelectProps {
+  label: string; value: string; onChange: (v: string) => void;
+  options: { v: string; l: string }[];
+}
+function TenantSelect({ label, value, onChange, options }: SelectProps) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={LABEL_S}>{label}</label>
+      <select style={{ ...INPUT, cursor: 'pointer' }} value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+    </div>
+  );
+}
+
 // ── Create/Edit Modal ──────────────────────────────────────────────────────
 function TenantModal({
   tenant, onClose, onSaved,
 }: { tenant: Partial<Tenant> | null; onClose: () => void; onSaved: () => void }) {
   const isEdit = !!tenant?.id;
-  const [form, setForm] = useState({
-    code:             tenant?.code            ?? '',
-    name:             tenant?.name            ?? '',
-    legalName:        tenant?.legalName       ?? '',
-    taxId:            tenant?.taxId           ?? '',
-    country:          tenant?.country         ?? 'DO',
-    industry:         tenant?.industry        ?? '',
-    companySize:      tenant?.companySize      ?? '',
-    defaultCurrency:  tenant?.defaultCurrency  ?? 'USD',
-    defaultLanguage:  tenant?.defaultLanguage  ?? 'en-US',
-    timezone:         tenant?.timezone         ?? 'America/Santo_Domingo',
-    subscriptionPlan: tenant?.subscriptionPlan ?? 'free',
-    status:           tenant?.status           ?? 'active',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  // Individual state per field — prevents focus loss caused by shared object
+  const [name,             setName]             = useState(tenant?.name            ?? '');
+  const [legalName,        setLegalName]        = useState(tenant?.legalName       ?? '');
+  const [taxId,            setTaxId]            = useState(tenant?.taxId           ?? '');
+  const [country,          setCountry]          = useState(tenant?.country         ?? 'DO');
+  const [industry,         setIndustry]         = useState(tenant?.industry        ?? '');
+  const [companySize,      setCompanySize]      = useState(tenant?.companySize      ?? '');
+  const [defaultCurrency,  setDefaultCurrency]  = useState(tenant?.defaultCurrency  ?? 'USD');
+  const [defaultLanguage,  setDefaultLanguage]  = useState(tenant?.defaultLanguage  ?? 'en-US');
+  const [timezone,         setTimezone]         = useState(tenant?.timezone         ?? 'America/Santo_Domingo');
+  const [subscriptionPlan, setSubscriptionPlan] = useState(tenant?.subscriptionPlan ?? 'free');
+  const [status,           setStatus]           = useState(tenant?.status           ?? 'active');
+  const [saving,           setSaving]           = useState(false);
+  const [error,            setError]            = useState('');
 
   const handleSave = async () => {
-    if (!form.code || !form.name || !form.country) {
-      setError('Code, Name and Country are required.'); return;
-    }
+    if (!name || !country) { setError('Name and Country are required.'); return; }
     setSaving(true); setError('');
     try {
       if (isEdit) {
-        await apiClient.patch(`/tenants/${tenant!.id}`, form);
+        // code is NOT sent on update — it's immutable and not in UpdateTenantDto
+        const updateBody = { name, legalName, taxId, country, industry, companySize, defaultCurrency, defaultLanguage, timezone, subscriptionPlan, status };
+        await apiClient.patch(`/tenants/${tenant!.id}`, updateBody);
       } else {
-        await apiClient.post('/tenants', form);
+        // code is sent only on create
+        const createBody = { name, legalName, taxId, country, industry, companySize, defaultCurrency, defaultLanguage, timezone, subscriptionPlan };
+        await apiClient.post('/tenants', createBody);
       }
       onSaved();
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Save failed');
     } finally { setSaving(false); }
   };
-
-  const F = ({ label, k, placeholder, disabled }: { label: string; k: string; placeholder?: string; disabled?: boolean }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={LABEL}>{label}</label>
-      <input style={{ ...INPUT, opacity: disabled ? 0.5 : 1 }} value={(form as any)[k]}
-        onChange={e => set(k, e.target.value)} placeholder={placeholder} disabled={disabled} />
-    </div>
-  );
-
-  const S = ({ label, k, options }: { label: string; k: string; options: { v: string; l: string }[] }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={LABEL}>{label}</label>
-      <select style={{ ...INPUT, cursor: 'pointer' }} value={(form as any)[k]} onChange={e => set(k, e.target.value)}>
-        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-      </select>
-    </div>
-  );
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -127,37 +144,49 @@ function TenantModal({
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
-            <F label="Code *" k="code" placeholder="ACME" disabled={isEdit} />
-            <F label="Name *" k="name" placeholder="Acme Manufacturing LLC" />
-          </div>
+          {isEdit && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={LABEL_S}>Code (auto-generated)</label>
+              <input
+                style={{ ...INPUT, opacity: 0.45, fontFamily: "'IBM Plex Mono',monospace", letterSpacing: '0.08em' }}
+                value={tenant?.code ?? ''}
+                disabled
+                readOnly
+              />
+            </div>
+          )}
+          <TenantField label="Name *" value={name} onChange={setName} placeholder="Acme Manufacturing LLC" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <F label="Legal Name" k="legalName" placeholder="Acme Mfg S.A.S." />
-            <F label="Tax ID / RNC" k="taxId" placeholder="101-234567-8" />
+            <TenantField label="Legal Name"   value={legalName} onChange={setLegalName} placeholder="Acme Mfg S.A.S." />
+            <TenantField label="Tax ID / RNC" value={taxId}     onChange={setTaxId}     placeholder="101-234567-8" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <F label="Country *" k="country" placeholder="DO" />
-            <F label="Industry" k="industry" placeholder="Manufacturing" />
-            <S label="Company Size" k="companySize" options={[
+            <TenantField label="Country *" value={country}  onChange={setCountry}  placeholder="DO" />
+            <TenantField label="Industry"  value={industry} onChange={setIndustry} placeholder="Manufacturing" />
+            <TenantSelect label="Company Size" value={companySize} onChange={setCompanySize} options={[
               { v: '', l: '—' }, { v: '1-10', l: '1–10' }, { v: '11-50', l: '11–50' },
               { v: '50-200', l: '50–200' }, { v: '200-500', l: '200–500' }, { v: '500+', l: '500+' },
             ]} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <F label="Currency" k="defaultCurrency" placeholder="USD" />
-            <F label="Language" k="defaultLanguage" placeholder="en-US" />
-            <F label="Timezone" k="timezone" placeholder="America/Santo_Domingo" />
+            <TenantField label="Currency" value={defaultCurrency} onChange={setDefaultCurrency} placeholder="USD" />
+            <TenantField label="Language" value={defaultLanguage} onChange={setDefaultLanguage} placeholder="en-US" />
+            <TenantField label="Timezone" value={timezone}        onChange={setTimezone}        placeholder="America/Santo_Domingo" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <S label="Plan" k="subscriptionPlan" options={[
+            <TenantSelect label="Plan" value={subscriptionPlan} onChange={setSubscriptionPlan} options={[
               { v: 'free', l: 'Free' }, { v: 'starter', l: 'Starter' },
               { v: 'professional', l: 'Professional' }, { v: 'enterprise', l: 'Enterprise' },
             ]} />
-            {isEdit && <S label="Status" k="status" options={[
-              { v: 'active', l: 'Active' }, { v: 'suspended', l: 'Suspended' }, { v: 'cancelled', l: 'Cancelled' },
-            ]} />}
+            {isEdit && (
+              <TenantSelect label="Status" value={status} onChange={setStatus} options={[
+                { v: 'active', l: 'Active' }, { v: 'suspended', l: 'Suspended' }, { v: 'cancelled', l: 'Cancelled' },
+              ]} />
+            )}
           </div>
-          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+          {error && (
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>
+          )}
         </div>
 
         {/* Footer */}
@@ -215,8 +244,13 @@ function AddUserModal({
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
         <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input style={INPUT} placeholder="Search by name or email..." value={search}
-            onChange={e => setSearch(e.target.value)} autoFocus />
+          <input
+            style={INPUT}
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            autoFocus
+          />
           {loading && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>Searching...</div>}
           {results.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 300, overflowY: 'auto' }}>
@@ -226,7 +260,9 @@ function AddUserModal({
                     <div style={{ fontSize: 13, color: '#e2dfd8' }}>{u.firstName} {u.lastName}</div>
                     <div style={{ ...MONO, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{u.email}</div>
                   </div>
-                  <button onClick={() => handleAdd(u.id)} disabled={adding === u.id}
+                  <button
+                    onClick={() => handleAdd(u.id)}
+                    disabled={adding === u.id}
                     style={{ ...BTN_PRI, padding: '5px 14px', fontSize: 11, opacity: adding === u.id ? 0.5 : 1 }}>
                     {adding === u.id ? '...' : '+ Add'}
                   </button>
@@ -239,7 +275,9 @@ function AddUserModal({
               No users found. Create the user first in Settings → Users.
             </div>
           )}
-          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+          {error && (
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>
+          )}
         </div>
       </div>
     </div>
@@ -248,7 +286,6 @@ function AddUserModal({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function TenantsPage() {
-  const router = useRouter();
   const [tenants,    setTenants]    = useState<Tenant[]>([]);
   const [selected,   setSelected]   = useState<Tenant | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -282,6 +319,13 @@ export default function TenantsPage() {
     try {
       await apiClient.delete(`/tenants/${selected.id}/users/${userId}`);
       loadDetail(selected.id);
+    } catch {}
+  };
+
+  const handleToggleDefault = async (tenantId: string, userId: string, isDefault: boolean) => {
+    try {
+      await apiClient.patch(`/tenants/${tenantId}/users/${userId}/set-default`, { unset: isDefault });
+      loadDetail(tenantId);
     } catch {}
   };
 
@@ -328,11 +372,15 @@ export default function TenantsPage() {
       </div>
 
       <div className="tm-layout">
-        {/* List */}
+        {/* ── List ── */}
         <div className="tm-list">
           <div className="tm-list-hdr">
-            <input style={{ ...INPUT, padding: '7px 10px', fontSize: 12 }}
-              placeholder="Search tenants..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input
+              style={{ ...INPUT, padding: '7px 10px', fontSize: 12 }}
+              placeholder="Search tenants..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {filtered.length} tenant{filtered.length !== 1 ? 's' : ''}
             </div>
@@ -343,7 +391,8 @@ export default function TenantsPage() {
             ) : filtered.length === 0 ? (
               <div className="tm-empty">No tenants found</div>
             ) : filtered.map(t => (
-              <div key={t.id}
+              <div
+                key={t.id}
                 className={`tm-row${selected?.id === t.id ? ' tm-row-active' : ''}`}
                 onClick={() => loadDetail(t.id)}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -361,7 +410,7 @@ export default function TenantsPage() {
           </div>
         </div>
 
-        {/* Detail */}
+        {/* ── Detail ── */}
         <div className="tm-detail">
           {!selected ? (
             <div className="tm-empty">
@@ -372,7 +421,7 @@ export default function TenantsPage() {
             <div className="tm-empty">Loading...</div>
           ) : (
             <>
-              {/* Tenant header */}
+              {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#f1ede8', marginBottom: 4 }}>{selected.name}</div>
@@ -390,10 +439,10 @@ export default function TenantsPage() {
               {/* Info grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
                 {[
-                  { label: 'Industry',  value: selected.industry      ?? '—' },
-                  { label: 'Size',      value: selected.companySize    ?? '—' },
-                  { label: 'Language',  value: selected.defaultLanguage },
-                  { label: 'Timezone',  value: selected.timezone       ?? 'UTC' },
+                  { label: 'Industry', value: selected.industry       ?? '—' },
+                  { label: 'Size',     value: selected.companySize     ?? '—' },
+                  { label: 'Language', value: selected.defaultLanguage },
+                  { label: 'Timezone', value: selected.timezone        ?? 'UTC' },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px' }}>
                     <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
@@ -402,7 +451,7 @@ export default function TenantsPage() {
                 ))}
               </div>
 
-              {/* Users section */}
+              {/* Users */}
               <div style={CARD}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' }}>
@@ -421,12 +470,22 @@ export default function TenantsPage() {
                         <div style={{ width: 30, height: 30, borderRadius: '50%', background: u.isActive ? 'linear-gradient(135deg,#c2410c,#f97316)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
                           {u.firstName.charAt(0)}
                         </div>
+
                         {/* Info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 13, color: '#e2dfd8', fontWeight: 500 }}>{u.fullName}</span>
-                            {u.isDefault && <span className="tm-badge" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c', border: '0.5px solid rgba(251,146,60,0.25)', fontSize: 9 }}>DEFAULT</span>}
-                            {!u.isActive && <span className="tm-badge" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '0.5px solid rgba(248,113,113,0.25)', fontSize: 9 }}>INACTIVE</span>}
+                            {u.isDefault && (
+                              <span
+                                className="tm-badge"
+                                title="This tenant is the default for this user — they log in here automatically"
+                                style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c', border: '0.5px solid rgba(251,146,60,0.25)', fontSize: 9, cursor: 'help' }}>
+                                MY DEFAULT
+                              </span>
+                            )}
+                            {!u.isActive && (
+                              <span className="tm-badge" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '0.5px solid rgba(248,113,113,0.25)', fontSize: 9 }}>INACTIVE</span>
+                            )}
                           </div>
                           <div style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{u.email}</div>
                           {u.roles.length > 0 && (
@@ -437,18 +496,21 @@ export default function TenantsPage() {
                             </div>
                           )}
                         </div>
+
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          {!u.isDefault && (
-                            <button
-                              onClick={async () => {
-                                await apiClient.patch(`/tenants/${selected.id}/users/${u.id}/set-default`);
-                                loadDetail(selected.id);
-                              }}
-                              style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', color: '#fb923c', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-                              Set Default
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleToggleDefault(selected.id, u.id, u.isDefault)}
+                            title={u.isDefault ? 'Remove as default tenant for this user' : 'Set as default tenant for this user'}
+                            style={{
+                              fontSize: 10, padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
+                              fontFamily: "'IBM Plex Sans',sans-serif",
+                              background: u.isDefault ? 'rgba(107,114,128,0.08)' : 'rgba(251,146,60,0.08)',
+                              border: u.isDefault ? '0.5px solid rgba(107,114,128,0.25)' : '0.5px solid rgba(251,146,60,0.2)',
+                              color: u.isDefault ? '#6b7280' : '#fb923c',
+                            }}>
+                            {u.isDefault ? 'Unset Default' : 'Set Default'}
+                          </button>
                           <button
                             onClick={() => handleRemoveUser(u.id)}
                             style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: '#f87171', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>

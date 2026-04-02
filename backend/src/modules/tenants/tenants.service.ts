@@ -1,6 +1,4 @@
-// ============================================================================
 // FILE: backend/src/modules/tenants/tenants.service.ts
-// ============================================================================
 import {
   Injectable, NotFoundException, ConflictException,
 } from '@nestjs/common';
@@ -45,7 +43,6 @@ export class TenantsService {
       include: {
         _count: { select: { userTenants: true } },
         userTenants: {
-          where:   { },
           include: {
             user: {
               select: {
@@ -100,35 +97,57 @@ export class TenantsService {
     };
   }
 
+  // ── Generate unique tenant code ──────────────────────────────────────────
+
+  private async generateCode(name: string): Promise<string> {
+    // Take first 4 uppercase letters from name, strip non-alpha
+    const base = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4).padEnd(4, 'X');
+    // Find highest existing code with this prefix
+    const last = await this.prisma.tenant.findFirst({
+      where: { code: { startsWith: base + '-' } },
+      orderBy: { code: 'desc' },
+    });
+    if (!last) return `${base}-0001`;
+    const parts = last.code.split('-');
+    const num   = parseInt(parts[parts.length - 1], 10);
+    const next  = isNaN(num) ? 1 : num + 1;
+    return `${base}-${next.toString().padStart(4, '0')}`;
+  }
+
   // ── Create tenant ──────────────────────────────────────────────────────────
 
   async create(dto: {
-    code: string; name: string; country: string;
+    code?: string; name: string; country: string;
     legalName?: string; taxId?: string; industry?: string;
     companySize?: string; defaultCurrency?: string;
     defaultLanguage?: string; timezone?: string;
     subscriptionPlan?: string; status?: string;
   }) {
+    // Auto-generate code if not provided
+    const code = dto.code
+      ? dto.code.toUpperCase().trim()
+      : await this.generateCode(dto.name);
+
     const existing = await this.prisma.tenant.findFirst({
-      where: { code: dto.code.toUpperCase() },
+      where: { code },
     });
-    if (existing) throw new ConflictException(`Tenant code "${dto.code}" already exists`);
+    if (existing) throw new ConflictException(`Tenant code "${code}" already exists`);
 
     const tenant = await this.prisma.tenant.create({
       data: {
-        code:             dto.code.toUpperCase(),
-        name:             dto.name,
-        country:          dto.country,
-        legalName:        dto.legalName,
-        taxId:            dto.taxId,
-        industry:         dto.industry,
-        companySize:      dto.companySize,
-        defaultCurrency:  dto.defaultCurrency  ?? 'USD',
-        defaultLanguage:  dto.defaultLanguage  ?? 'en-US',
-        timezone:         dto.timezone         ?? 'UTC',
-        subscriptionPlan: dto.subscriptionPlan ?? 'free',
+        code,
+        name:               dto.name,
+        country:            dto.country,
+        legalName:          dto.legalName,
+        taxId:              dto.taxId,
+        industry:           dto.industry,
+        companySize:        dto.companySize,
+        defaultCurrency:    dto.defaultCurrency    ?? 'USD',
+        defaultLanguage:    dto.defaultLanguage    ?? 'en-US',
+        timezone:           dto.timezone           ?? 'UTC',
+        subscriptionPlan:   dto.subscriptionPlan   ?? 'free',
         subscriptionStatus: 'active',
-        status:           dto.status ?? 'active',
+        status:             dto.status             ?? 'active',
       },
     });
 
@@ -145,7 +164,6 @@ export class TenantsService {
   }) {
     const tenant = await this.prisma.tenant.findFirst({ where: { id, deletedAt: null } });
     if (!tenant) throw new NotFoundException('Tenant not found');
-
     await this.prisma.tenant.update({ where: { id }, data: { ...dto } });
     return this.findOne(id);
   }
@@ -159,12 +177,9 @@ export class TenantsService {
     const user = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
     if (!user) throw new NotFoundException('User not found');
 
-    const existing = await this.prisma.userTenant.findFirst({
-      where: { userId, tenantId },
-    });
+    const existing = await this.prisma.userTenant.findFirst({ where: { userId, tenantId } });
 
     if (existing) {
-      // Re-activate if inactive
       await this.prisma.userTenant.update({
         where: { id: existing.id },
         data:  { isActive: true, isDefault },
@@ -188,25 +203,37 @@ export class TenantsService {
       where: { id: ut.id },
       data:  { isActive: false },
     });
-
-    // Remove roles for this tenant
     await this.prisma.userRole.deleteMany({ where: { userId, tenantId } });
 
     return { message: 'User removed from tenant', userId, tenantId };
   }
 
-  // ── Set user as default tenant ────────────────────────────────────────────
+  // ── Toggle default tenant for user ───────────────────────────────────────
+  // unset=true  → remove default flag
+  // unset=false → clear all defaults for this user, set this tenant as default
 
-  async setDefaultTenant(tenantId: string, userId: string) {
-    // Clear existing default
+  async setDefaultTenant(tenantId: string, userId: string, unset = false) {
+    const ut = await this.prisma.userTenant.findFirst({ where: { userId, tenantId } });
+    if (!ut) throw new NotFoundException('User not found in this tenant');
+
+    if (unset) {
+      // Just remove default flag — user ends up with no default
+      await this.prisma.userTenant.update({
+        where: { id: ut.id },
+        data:  { isDefault: false },
+      });
+      return { message: 'Default tenant removed', userId, tenantId };
+    }
+
+    // Clear any existing default for this user, then set this one
     await this.prisma.userTenant.updateMany({
       where: { userId, isDefault: true },
       data:  { isDefault: false },
     });
-    // Set new default
-    const ut = await this.prisma.userTenant.findFirst({ where: { userId, tenantId } });
-    if (!ut) throw new NotFoundException('User not found in this tenant');
-    await this.prisma.userTenant.update({ where: { id: ut.id }, data: { isDefault: true } });
-    return { message: 'Default tenant updated' };
+    await this.prisma.userTenant.update({
+      where: { id: ut.id },
+      data:  { isDefault: true },
+    });
+    return { message: 'Default tenant updated', userId, tenantId };
   }
 }

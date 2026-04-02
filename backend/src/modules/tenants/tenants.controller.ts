@@ -1,7 +1,7 @@
 // FILE: backend/src/modules/tenants/tenants.controller.ts
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards, Request, HttpCode, HttpStatus,
+  Param, Body, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { TenantsService }    from './tenants.service';
@@ -65,8 +65,14 @@ export class TenantsController {
   @Patch(':id/users/:userId/set-default')
   @RequirePermissions('ADMIN:SETTINGS')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Set this tenant as default for the user' })
-  setDefault(@Param('id') id: string, @Param('userId') userId: string) {
-    return this.svc.setDefaultTenant(id, userId);
+  @ApiParam({ name: 'id',     description: 'Tenant UUID' })
+  @ApiParam({ name: 'userId', description: 'User UUID' })
+  @ApiOperation({ summary: 'Set or unset this tenant as default for the user' })
+  setDefault(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() body: { unset?: boolean },
+  ) {
+    return this.svc.setDefaultTenant(id, userId, body?.unset === true);
   }
 }
