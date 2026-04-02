@@ -45,6 +45,7 @@ const NAV: NavItem[] = [
           { label: 'ABC Analysis',       href: '/inventory/abc-analysis' },
           { label: 'Slow Moving Items',  href: '/inventory/slow-moving' },
           { label: 'Stock Reconciliation',  href: '/inventory/stock-reconciliation' },
+          { label: 'Labels',  href: '/inventory/labels' },
           
         ],
       },
