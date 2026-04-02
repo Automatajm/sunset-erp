@@ -3,9 +3,9 @@ import { IsString, IsOptional, IsIn, Length } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTenantDto {
-  @ApiProperty({ example: 'ACME' })
-  @IsString() @Length(2, 50)
-  code: string;
+  @ApiPropertyOptional({ example: 'ACME-0001', description: 'Tenant code — auto-generated from name if not provided' })
+  @IsOptional() @IsString() @Length(2, 50)
+  code?: string;
 
   @ApiProperty({ example: 'Acme Manufacturing LLC' })
   @IsString()
