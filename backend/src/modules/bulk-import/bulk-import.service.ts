@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { BulkImportDto, BulkImportEntity, BulkImportError, BulkImportResult } from './dto/bulk-import.dto';
 
@@ -27,6 +28,8 @@ export class BulkImportService {
       case 'boms':           return this.importBoms(tenantId, userId, records, dryRun, upsert);
       case 'bom-routings':   return this.importBomRoutings(tenantId, userId, records, dryRun, upsert);
       case 'warehouse-locations': return this.importWarehouseLocations(tenantId, userId, records, dryRun, upsert);
+      case 'users': return this.importUsers(tenantId, userId, records, dryRun, upsert);
+      case 'roles': return this.importRoles(tenantId, userId, records, dryRun, upsert);
       default: throw new BadRequestException(`Unsupported entity: ${entity}`);
     }
   }
@@ -1322,4 +1325,230 @@ async importWarehouseLocations(
 
   return this.buildResult('warehouse-locations', records.length, inserted, updated, skipped, errors, dryRun, upsert);
 }
+
+// ============================================================================
+// ADD TO: backend/src/modules/bulk-import/bulk-import.service.ts
+// ============================================================================
+// 
+// STEP 1 — In the switch statement, add after 'warehouse-locations':
+//
+//   case 'users': return this.importUsers(tenantId, userId, records, dryRun, upsert);
+//   case 'roles': return this.importRoles(tenantId, userId, records, dryRun, upsert);
+//
+// STEP 2 — Add bcrypt import at the top of the file:
+//   import * as bcrypt from 'bcrypt';
+//
+// STEP 3 — Add these two methods to the class:
+// ============================================================================
+
+  // ── Import Users ──────────────────────────────────────────────────────────
+  // CSV columns: email*, password*, firstName*, lastName*, phone, roleCodes
+  // roleCodes: comma-separated role codes e.g. "WAREHOUSE_SUPERVISOR,INVENTORY_VIEW"
+  // If user already exists (by email): adds to tenant, optionally updates name
+  // roleCodes are resolved by code within this tenant
+
+  private async importUsers(
+    tenantId: string,
+    userId: string,
+    records: Record<string, any>[],
+    dryRun: boolean,
+    upsert: boolean,
+  ): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    for (let i = 0; i < records.length; i++) {
+      const row = i + 1;
+      const rec = records[i];
+
+      // Required fields
+      const email     = this.req(row, rec, 'email',     errors);
+      const firstName = this.req(row, rec, 'firstName', errors);
+      const lastName  = this.req(row, rec, 'lastName',  errors);
+      if (!email || !firstName || !lastName) continue;
+
+      // Normalize email
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Parse roleCodes (optional, comma-separated)
+      const roleCodesRaw = this.str(rec, 'roleCodes') ?? '';
+      const roleCodes    = roleCodesRaw ? roleCodesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+
+      // Resolve role IDs within tenant
+      const resolvedRoleIds: string[] = [];
+      for (const code of roleCodes) {
+        const role = await this.prisma.role.findFirst({
+          where: { tenantId, code, deletedAt: null },
+        });
+        if (!role) {
+          errors.push({ row, field: 'roleCodes', message: `Role code "${code}" not found in tenant`, value: code });
+          continue;
+        }
+        resolvedRoleIds.push(role.id);
+      }
+
+      if (dryRun) { inserted++; continue; }
+
+      try {
+        // Check if user exists globally
+        let user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+        if (!user) {
+          // Require password for new users
+          const password = this.str(rec, 'password');
+          if (!password) {
+            errors.push({ row, field: 'password', message: 'password is required for new users', value: null });
+            continue;
+          }
+          const passwordHash = await bcrypt.hash(password, 12);
+          user = await this.prisma.user.create({
+            data: {
+              email:        normalizedEmail,
+              passwordHash,
+              firstName:    firstName.trim(),
+              lastName:     lastName.trim(),
+              phone:        this.str(rec, 'phone'),
+              status:       'active',
+              locale:       'en-US',
+              timezone:     'UTC',
+            },
+          });
+          inserted++;
+        } else if (upsert) {
+          // Update name if upsert mode
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data:  { firstName: firstName.trim(), lastName: lastName.trim() },
+          });
+          updated++;
+        } else {
+          skipped++;
+        }
+
+        // Ensure user is in tenant
+        await this.prisma.userTenant.upsert({
+          where:  { userId_tenantId: { userId: user.id, tenantId } },
+          update: { isActive: true },
+          create: { userId: user.id, tenantId, isActive: true },
+        });
+
+        // Assign roles (replace all if upsert, append if not)
+        if (resolvedRoleIds.length > 0) {
+          if (upsert) {
+            await this.prisma.userRole.deleteMany({ where: { userId: user.id, tenantId } });
+          }
+          await this.prisma.userRole.createMany({
+            data: resolvedRoleIds.map(roleId => ({ userId: user!.id, roleId, tenantId })),
+            skipDuplicates: true,
+          });
+        }
+      } catch (e: any) {
+        errors.push({ row, field: 'general', message: e.message ?? 'Unknown error', value: normalizedEmail });
+      }
+    }
+
+    return {
+      entity: 'users', total: records.length,
+      valid: records.length - errors.length,
+      inserted, updated, skipped,
+      errors, dryRun, upsert,
+    };
+  }
+
+  // ── Import Roles ──────────────────────────────────────────────────────────
+  // CSV columns: code*, name*, description, permissionCodes
+  // permissionCodes: comma-separated permission codes e.g. "INVENTORY:VIEW,INVENTORY:COUNT"
+  // If role code already exists: skips unless upsert=true (updates name + description)
+  // Permissions are replaced when upsert=true, appended when upsert=false
+
+  private async importRoles(
+    tenantId: string,
+    userId: string,
+    records: Record<string, any>[],
+    dryRun: boolean,
+    upsert: boolean,
+  ): Promise<BulkImportResult> {
+    const errors: BulkImportError[] = [];
+    let inserted = 0, updated = 0, skipped = 0;
+
+    for (let i = 0; i < records.length; i++) {
+      const row = i + 1;
+      const rec = records[i];
+
+      const code = this.req(row, rec, 'code', errors);
+      const name = this.req(row, rec, 'name', errors);
+      if (!code || !name) continue;
+
+      const normalizedCode = code.toUpperCase().trim().replace(/\s+/g, '_');
+
+      // Parse permissionCodes (optional, comma-separated)
+      const permCodesRaw = this.str(rec, 'permissionCodes') ?? '';
+      const permCodes    = permCodesRaw ? permCodesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+
+      // Resolve permission IDs
+      const resolvedPermIds: string[] = [];
+      for (const pCode of permCodes) {
+        const perm = await this.prisma.permission.findUnique({ where: { code: pCode } });
+        if (!perm) {
+          errors.push({ row, field: 'permissionCodes', message: `Permission "${pCode}" not found`, value: pCode });
+          continue;
+        }
+        resolvedPermIds.push(perm.id);
+      }
+
+      if (dryRun) { inserted++; continue; }
+
+      try {
+        const existing = await this.prisma.role.findFirst({
+          where: { tenantId, code: normalizedCode, deletedAt: null },
+        });
+
+        let role: { id: string };
+
+        if (!existing) {
+          role = await this.prisma.role.create({
+            data: {
+              tenantId,
+              code:        normalizedCode,
+              name:        name.trim(),
+              description: this.str(rec, 'description'),
+              isSystem:    false,
+              createdBy:   userId,
+              updatedBy:   userId,
+            },
+          });
+          inserted++;
+        } else if (upsert) {
+          role = await this.prisma.role.update({
+            where: { id: existing.id },
+            data:  { name: name.trim(), description: this.str(rec, 'description'), updatedBy: userId },
+          });
+          updated++;
+        } else {
+          skipped++;
+          continue;
+        }
+
+        // Assign permissions
+        if (resolvedPermIds.length > 0) {
+          if (upsert && existing) {
+            await this.prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+          }
+          await this.prisma.rolePermission.createMany({
+            data: resolvedPermIds.map(permissionId => ({ roleId: role.id, permissionId })),
+            skipDuplicates: true,
+          });
+        }
+      } catch (e: any) {
+        errors.push({ row, field: 'general', message: e.message ?? 'Unknown error', value: normalizedCode });
+      }
+    }
+
+    return {
+      entity: 'roles', total: records.length,
+      valid: records.length - errors.length,
+      inserted, updated, skipped,
+      errors, dryRun, upsert,
+    };
+  }
 }

@@ -116,6 +116,8 @@ const NAV: NavItem[] = [
           { label: 'Fiscal Periods',     href: '/accounting/fiscal-periods' },
           { label: 'Automation Config',  href: '/accounting/automation' },
           { label: 'Bill of Materials',  href: '/manufacturing/bom' },
+          { label: 'Users',              href: '/settings/users' },
+          { label: 'Rol',              href: '/settings/roles' },
         ],
       },
       {

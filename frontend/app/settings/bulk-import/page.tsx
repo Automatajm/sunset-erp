@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import apiClient from '@/lib/api/client';
 
-type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'warehouse-locations' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines' | 'fiscal-periods' | 'boms' | 'bom-routings';
+type Entity = 'items' | 'customers' | 'suppliers' | 'warehouses' | 'warehouse-locations' | 'work-centers' | 'accounts' | 'sales-orders' | 'purchase-orders' | 'budget-lines' | 'fiscal-periods' | 'boms' | 'bom-routings' | 'users' | 'roles';
 type Channel = 'file' | 'url' | 'api';
 type Mode    = 'import' | 'export';
 

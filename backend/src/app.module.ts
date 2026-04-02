@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -33,6 +33,8 @@ import { SupplierItemsModule } from './modules/supplier-items/supplier-items.mod
 import { WarehouseLocationsModule } from './modules/warehouse-locations/warehouse-locations.module';
 import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.module';
 import { StockReconciliationModule } from './modules/stock-reconciliation/stock-reconciliation.module';
+import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { StockReconciliationModule } from './modules/stock-reconciliation/stock-
     WarehouseLocationsModule,
     GoodsReceiptsModule,
     StockReconciliationModule,
+    UsersModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

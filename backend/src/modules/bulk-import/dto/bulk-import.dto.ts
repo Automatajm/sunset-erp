@@ -1,3 +1,6 @@
+// ============================================================================
+// FILE: backend/src/modules/bulk-import/dto/bulk-import.dto.ts
+// ============================================================================
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
@@ -7,6 +10,7 @@ export const BULK_IMPORT_ENTITIES = [
   'work-centers', 'accounts',
   'sales-orders', 'purchase-orders', 'budget-lines',
   'fiscal-periods', 'boms', 'bom-routings',
+  'users', 'roles',
 ] as const;
 
 export type BulkImportEntity = typeof BULK_IMPORT_ENTITIES[number];
@@ -24,7 +28,7 @@ export class BulkImportDto {
   @IsOptional() @IsString()
   sourceToken?: string;
 
-  @ApiPropertyOptional({ description: 'If true, validate only — do not insert or update', default: false })
+  @ApiPropertyOptional({ description: 'If true, validate only - do not insert or update', default: false })
   @IsOptional() @IsBoolean()
   dryRun?: boolean;
 
