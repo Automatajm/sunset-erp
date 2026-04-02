@@ -35,6 +35,7 @@ import { GoodsReceiptsModule } from './modules/goods-receipts/goods-receipts.mod
 import { StockReconciliationModule } from './modules/stock-reconciliation/stock-reconciliation.module';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { RolesModule } from './modules/roles/roles.module';
     StockReconciliationModule,
     UsersModule,
     RolesModule,
+    TenantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
