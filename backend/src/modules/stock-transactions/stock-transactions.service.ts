@@ -522,20 +522,33 @@ export class StockTransactionsService {
       const key        = `${m.itemId}:${whId}`;
       const isOut      = m.movementType === 'issue';
       const qty        = Number(m.quantity);
-      const signedQty  = isOut ? -qty : qty;
       const unitCost   = Number(m.unitCost ?? 0);
-      const totalValue = Math.round(Math.abs(signedQty) * unitCost * 100) / 100;
-
-      if (!balanceMap[key]) balanceMap[key] = 0;
-      const openingBalance = balanceMap[key];
-      balanceMap[key]     += signedQty;
-      const closingBalance = balanceMap[key];
+      const totalValue = Math.round(qty * unitCost * 100) / 100;
 
       // Use stored movementValue (signed) when available, otherwise compute
-      const storedValue = m.movementValue ? Number(m.movementValue) : null;
+      const storedValue  = m.movementValue != null ? Number(m.movementValue) : null;
       const displayValue = storedValue !== null
         ? storedValue
         : (isOut ? -totalValue : totalValue);
+
+      // For running balance: use purchaseQty with correct sign
+      // For adjustments: derive sign from movementValue (negative = shortage)
+      // For issues: negative. For receipts/transfers: positive.
+      let balanceDelta: number;
+      const purchaseQty = m.purchaseQty ? Number(m.purchaseQty) : qty;
+      if (m.movementType === 'adjustment' && storedValue !== null) {
+        balanceDelta = storedValue < 0 ? -purchaseQty : storedValue > 0 ? purchaseQty : 0;
+      } else {
+        balanceDelta = isOut ? -purchaseQty : purchaseQty;
+      }
+
+      // signedQuantity for display — same logic
+      const signedQty = balanceDelta;
+
+      if (!balanceMap[key]) balanceMap[key] = 0;
+      const openingBalance = balanceMap[key];
+      balanceMap[key]     += balanceDelta;
+      const closingBalance = balanceMap[key];
 
       return {
         id:              m.id,

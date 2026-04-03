@@ -19,18 +19,14 @@ interface LedgerRow {
   warehouse?:      { id: string; code: string; name: string };
   referenceType?:  string;
   referenceNumber: string;
-  // Storage UOM (existing — display)
   quantity:        number;
   signedQuantity:  number;
   uom:             string;
-  // Purchase UOM (financial — Sprint 14A)
   purchaseQty?:    number;
   purchaseUom?:    string;
-  // Financial fields (Sprint 14A)
   unitCost:        number;
   movementValue?:  number;
   totalValue:      number;
-  // Running balance
   openingBalance:  number;
   closingBalance:  number;
   notes?:          string;
@@ -88,6 +84,16 @@ function MoveBadge({ type }: { type: string }) {
       <span style={{ fontSize: 11 }}>{c.sign}</span>{c.label}
     </span>
   );
+}
+
+// ─── Sign helper ─────────────────────────────────────────────────────────────
+// For adjustments: use movementValue sign (negative = shortage/loss)
+// For other types: use signedQuantity direction
+function getEffectiveSign(r: LedgerRow): number {
+  if (r.movementType === 'adjustment' && r.movementValue !== undefined && r.movementValue !== null) {
+    return r.movementValue < 0 ? -1 : r.movementValue > 0 ? 1 : 0;
+  }
+  return r.signedQuantity >= 0 ? 1 : -1;
 }
 
 // ─── Columns ─────────────────────────────────────────────────────────────────
@@ -165,12 +171,13 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     key: 'signedQuantity', header: 'Qty Moved', width: 110, align: 'right', sortable: true,
     value: r => r.signedQuantity,
     render: r => {
-      const isIn  = r.signedQuantity > 0;
-      const isOut = r.signedQuantity < 0;
+      const sign   = getEffectiveSign(r);
+      const color  = sign > 0 ? '#4ade80' : sign < 0 ? '#f87171' : '#fbbf24';
+      const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isIn ? '#4ade80' : isOut ? '#f87171' : '#fbbf24' }}>
-            {isIn ? '+' : isOut ? '−' : '±'}{fmtQty(r.signedQuantity)}
+          <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color }}>
+            {prefix}{fmtQty(r.signedQuantity)}
           </span>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
         </div>
@@ -178,18 +185,18 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     },
   },
   {
-    // Sprint 14A — purchaseQty column (financial unit of record)
     key: 'purchaseQty', header: 'Purchase Qty', width: 120, align: 'right', sortable: true,
     value: r => r.purchaseQty ?? r.quantity,
     render: r => {
-      const pQty = r.purchaseQty ?? r.quantity;
-      const pUom = r.purchaseUom ?? r.uom;
-      const isIn = r.signedQuantity > 0;
-      const isOut = r.signedQuantity < 0;
+      const pQty   = r.purchaseQty ?? r.quantity;
+      const pUom   = r.purchaseUom ?? r.uom;
+      const sign   = getEffectiveSign(r);
+      const color  = sign > 0 ? '#4ade80' : sign < 0 ? '#f87171' : '#fbbf24';
+      const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color: isIn ? '#4ade80' : isOut ? '#f87171' : '#fbbf24' }}>
-            {isIn ? '+' : isOut ? '−' : '±'}{fmtQty(pQty)}
+          <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color }}>
+            {prefix}{fmtQty(pQty)}
           </span>
           <div style={{ marginTop: 2 }}>
             <span style={{
@@ -217,16 +224,19 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     ),
   },
   {
-    // Sprint 14A — movementValue (purchaseQty × unitCostAtMovement — ADR-019)
+    // FIX: use the actual sign of movementValue from DB — not signedQuantity
+    // Cycle count adjustments have signed movementValue (negative=loss) but
+    // signedQuantity reflects the absolute physical movement direction
     key: 'movementValue', header: 'Movement Value', width: 130, align: 'right', sortable: true,
     value: r => r.movementValue ?? r.totalValue,
     render: r => {
-      const val   = r.movementValue ?? r.totalValue;
-      const isIn  = r.signedQuantity > 0;
-      const isOut = r.signedQuantity < 0;
+      const val  = r.movementValue ?? r.totalValue;
+      const isPos = val > 0;
+      const isNeg = val < 0;
+      const color = isPos ? '#4ade80' : isNeg ? '#f87171' : '#fbbf24';
       return (
-        <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color: isIn ? '#4ade80' : isOut ? '#f87171' : '#fbbf24' }}>
-          {val !== 0 ? (isIn ? '+' : '−') + fmtAmt(Math.abs(val)) : '—'}
+        <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color }}>
+          {val !== 0 ? (isPos ? '+' : '−') + fmtAmt(Math.abs(val)) : '—'}
         </span>
       );
     },
@@ -274,10 +284,7 @@ function buildFilters(items: Item[], warehouses: Warehouse[]): ERPFilter<LedgerR
     {
       key: 'movementDate', label: 'Date', type: 'daterange',
       dateWidth: 210,
-      filterFn: (row, val) => {
-        // daterange handled by ERPFilterBar built-in dateInSelection
-        return true; // backend already filters by date — this is just for display
-      },
+      filterFn: () => true, // backend filters by date
     },
   ];
 }
@@ -294,7 +301,6 @@ export default function StockLedgerPage() {
   const filters = useMemo(() => buildFilters(items, warehouses), [items, warehouses]);
   const { values, setValue, reset, activeCount } = useERPFilters(filters);
 
-  // Load dropdowns
   useEffect(() => {
     Promise.all([itemsApi.getAll(), warehousesApi.getAll()]).then(([its, whs]) => {
       setItems(its as Item[]);
@@ -311,12 +317,11 @@ export default function StockLedgerPage() {
       const movType = filterValues['movementType'] as string[];
       const refNum  = filterValues['referenceNumber'] as string;
 
-      if (itemSel) params.itemId       = itemSel;
-      if (whSel)   params.warehouseId  = whSel;
-      if (movType?.length === 1) params.movementType = movType[0]; // backend supports single
+      if (itemSel) params.itemId          = itemSel;
+      if (whSel)   params.warehouseId     = whSel;
+      if (movType?.length === 1) params.movementType = movType[0];
       if (refNum)  params.referenceNumber = refNum;
 
-      // Date range from daterange filter
       const dateSel = filterValues['movementDate'] as any;
       if (dateSel) {
         const from = dateSel.from ?? dateSel.date;
@@ -332,7 +337,6 @@ export default function StockLedgerPage() {
     } finally { setLoading(false); }
   }, []);
 
-  // Initial load
   useEffect(() => { fetchLedger({}); }, [fetchLedger]);
 
   const handleApply = () => fetchLedger(values);
@@ -359,8 +363,6 @@ export default function StockLedgerPage() {
       `}</style>
 
       <div className="sl-page">
-
-        {/* ── Filter panel ── */}
         <div className="sl-filters">
           <ERPFilterBar
             filters={filters}
@@ -370,13 +372,9 @@ export default function StockLedgerPage() {
             activeCount={activeCount}
           />
           <div className="sl-filter-actions">
-            <button className="sl-btn-apply" onClick={handleApply}>
-              Apply Filters
-            </button>
+            <button className="sl-btn-apply" onClick={handleApply}>Apply Filters</button>
             {activeCount > 0 && (
-              <button className="sl-btn-reset" onClick={handleReset}>
-                ↺ Clear
-              </button>
+              <button className="sl-btn-reset" onClick={handleReset}>↺ Clear</button>
             )}
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>
               Date filter requires Apply — other filters work in real-time
@@ -386,18 +384,17 @@ export default function StockLedgerPage() {
 
         {error && <div className="sl-error">{error}</div>}
 
-        {/* ── Totals bar ── */}
         {data && (
           <div className="sl-totals">
             {[
-              { label: 'Opening Bal.',  value: fmtQty(data.totals.openingBalance), color: '#a78bfa', border: 'rgba(167,139,250,0.15)' },
-              { label: 'Total IN (qty)', value: `+${fmtQty(data.totals.totalIn)}`, color: '#4ade80', border: 'rgba(74,222,128,0.15)'  },
-              { label: 'Total OUT (qty)',value: `−${fmtQty(data.totals.totalOut)}`, color: '#f87171', border: 'rgba(248,113,113,0.15)' },
-              { label: 'Net Movement',  value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? '#4ade80' : '#f87171', border: 'rgba(255,255,255,0.06)' },
-              { label: 'Closing Bal.',  value: fmtQty(data.totals.closingBalance), color: '#60a5fa', border: 'rgba(96,165,250,0.15)'  },
-              { label: 'IN Value',      value: fmtAmt(data.totals.totalInValue),   color: '#4ade80', border: 'rgba(74,222,128,0.1)'   },
-              { label: 'OUT Value',     value: fmtAmt(data.totals.totalOutValue),  color: '#f87171', border: 'rgba(248,113,113,0.1)'  },
-              { label: 'Net Value',     value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? '#4ade80' : '#f87171', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Opening Bal.',   value: fmtQty(data.totals.openingBalance), color: '#a78bfa', border: 'rgba(167,139,250,0.15)' },
+              { label: 'Total IN (qty)', value: `+${fmtQty(data.totals.totalIn)}`,  color: '#4ade80', border: 'rgba(74,222,128,0.15)'  },
+              { label: 'Total OUT (qty)',value: `−${fmtQty(data.totals.totalOut)}`,  color: '#f87171', border: 'rgba(248,113,113,0.15)' },
+              { label: 'Net Movement',   value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? '#4ade80' : '#f87171', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Closing Bal.',   value: fmtQty(data.totals.closingBalance), color: '#60a5fa', border: 'rgba(96,165,250,0.15)'  },
+              { label: 'IN Value',       value: fmtAmt(data.totals.totalInValue),   color: '#4ade80', border: 'rgba(74,222,128,0.1)'   },
+              { label: 'OUT Value',      value: fmtAmt(data.totals.totalOutValue),  color: '#f87171', border: 'rgba(248,113,113,0.1)'  },
+              { label: 'Net Value',      value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? '#4ade80' : '#f87171', border: 'rgba(255,255,255,0.06)' },
             ].map(t => (
               <div key={t.label} className="sl-total" style={{ border: `0.5px solid ${t.border}` }}>
                 <div className="sl-total-l">{t.label}</div>
@@ -407,7 +404,6 @@ export default function StockLedgerPage() {
           </div>
         )}
 
-        {/* ── ERPTable ── */}
         <div className="sl-table-wrap">
           <ERPTable<LedgerRow>
             columns={COLUMNS}
@@ -432,7 +428,6 @@ export default function StockLedgerPage() {
             }
           />
         </div>
-
       </div>
     </ERPShell>
   );
