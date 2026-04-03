@@ -137,7 +137,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required.'); return; }
+    if (!form.name.trim()) { setError('Name is required.'); return; }
     setSubmitting(true); setError('');
     try {
       const payload = { ...form };
@@ -220,7 +220,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                     <div className="sm-row">
                       <div className="sm-field">
                         <label style={L}>Code *</label>
-                        <input style={F} placeholder="SUP-001" value={form.code} onChange={set('code')} required />
+                        <input style={F} placeholder="Auto-generated (e.g. SUP-2026-0001)" value={form.code} onChange={set('code')} />
                       </div>
                       <div className="sm-field">
                         <label style={L}>Category</label>

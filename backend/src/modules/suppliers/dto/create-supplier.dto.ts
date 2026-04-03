@@ -12,9 +12,9 @@ const INCOTERMS = ['EXW','FCA','CPT','CIP','DAP','DPU','DDP','FAS','FOB','CFR','
 
 export class CreateSupplierDto {
   // ── Identity ──────────────────────────────────────────────────────────────
-  @ApiProperty({ example: 'SUP-001' })
-  @IsString() @MaxLength(50)
-  code: string;
+  @ApiPropertyOptional({ example: 'SUP-2026-0001', description: 'Auto-generated if omitted' })
+  @IsOptional() @IsString() @MaxLength(50)
+  code?: string;
 
   @ApiProperty({ example: 'Acme Corporation' })
   @IsString() @MaxLength(255)

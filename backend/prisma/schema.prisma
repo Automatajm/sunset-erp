@@ -138,6 +138,12 @@ model Tenant {
   consolidationConfig     ConsolidationConfig?
   // Sprint 14D
   supplierScores          SupplierScore[]
+  generalNeeds            GeneralNeed[]
+  generalNeedLines        GeneralNeedLine[]
+  rfqs                    Rfq[]
+  rfqLines                RfqLine[]
+  rfqSuppliers            RfqSupplier[]
+  rfqResponseLines        RfqResponseLine[]
   stockCountSessions  StockCountSession[]
   stockCountLines     StockCountLine[]
   stockCountAssignments StockCountAssignment[]
@@ -455,7 +461,10 @@ model Supplier {
   apInvoices     ApInvoice[]
   supplierItems  SupplierItem[]
   supplierScores SupplierScore[]
-  goodsReceipts  GoodsReceipt[]
+  goodsReceipts         GoodsReceipt[]
+  rfqSuppliers          RfqSupplier[]
+  gnLineSuggested       GeneralNeedLine[]  @relation("GnLineSuggestedSupplier")
+  rfqLinesAwarded       RfqLine[]          @relation("RfqLineAwardedSupplier")
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -468,6 +477,7 @@ model PurchaseOrder {
   tenantId        String    @map("tenant_id") @db.Uuid
   poNumber        String    @map("po_number") @db.VarChar(50)
   supplierId      String    @map("supplier_id") @db.Uuid
+  rfqId           String?   @map("rfq_id") @db.Uuid
   poDate          DateTime  @default(dbgenerated("CURRENT_DATE")) @map("po_date") @db.Date
   expectedDate    DateTime? @map("expected_date") @db.Date
   deliveryAddress String?   @map("delivery_address") @db.Text
@@ -493,6 +503,7 @@ model PurchaseOrder {
   lines         PurchaseOrderLine[]
   apInvoices    ApInvoice[]
   goodsReceipts GoodsReceipt[]
+  rfq           Rfq?    @relation(fields: [rfqId], references: [id])
   @@unique([tenantId, poNumber])
   @@index([tenantId])
   @@index([tenantId, poNumber])
@@ -534,6 +545,7 @@ model PurchaseOrderLine {
   apInvoiceLines ApInvoiceLine[]
   grnLines       GoodsReceiptLine[]
   prLines        PurchaseRequisitionLine[]
+  rfqLines       RfqLine[]   @relation("RfqLineToPo")
   @@index([tenantId])
   @@index([purchaseOrderId])
   @@index([itemId])
@@ -575,6 +587,7 @@ model PurchaseRequisition {
   deletedBy       String?   @map("deleted_by") @db.Uuid
   tenant Tenant                    @relation(fields: [tenantId], references: [id])
   lines  PurchaseRequisitionLine[]
+  rfqs   Rfq[]
   @@unique([tenantId, prNumber])
   @@index([tenantId])
   @@index([tenantId, status])
@@ -615,6 +628,8 @@ model PurchaseRequisitionLine {
   item                Item?               @relation(fields: [itemId], references: [id])
   warehouse           Warehouse?          @relation(fields: [warehouseId], references: [id])
   purchaseOrderLine   PurchaseOrderLine?  @relation(fields: [poLineId], references: [id])
+  generalNeedLines    GeneralNeedLine[]
+  rfqLinesFromPr      RfqLine[]           @relation("RfqLineFromPr")
   @@index([tenantId])
   @@index([prId])
   @@index([itemId])
@@ -744,6 +759,8 @@ model Item {
   supplierScores     SupplierScore[]
   stockCountLines    StockCountLine[]
   stockLocationUpdates StockLocationUpdate[]
+  generalNeedLines     GeneralNeedLine[]
+  rfqLines             RfqLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -2386,6 +2403,227 @@ model StockLocationBatchLine {
   @@index([validationStatus])
   @@map("in_stock_location_batch_lines")
 }
+
+// ============================================================================
+// SPRINT 15 — FULL PROCUREMENT CYCLE (po_*)
+// GeneralNeed → PR → RFQ → PO
+// ============================================================================
+
+model GeneralNeed {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  gnNumber    String   @map("gn_number") @db.VarChar(50)  // GN-YYYY-NNNN
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end")   @db.Date
+  source      String   @default("manual") @db.VarChar(20)
+  // manual | mrp_explode
+  status      String   @default("draft") @db.VarChar(20)
+  // draft | in_progress | completed | cancelled
+  notes       String?  @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt      @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String    @map("created_by") @db.Uuid
+  updatedBy   String    @map("updated_by") @db.Uuid
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+  tenant Tenant            @relation(fields: [tenantId], references: [id])
+  lines  GeneralNeedLine[]
+  rfqs   Rfq[]
+  @@unique([tenantId, gnNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([periodStart])
+  @@map("po_general_needs")
+}
+
+model GeneralNeedLine {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  gnId          String   @map("gn_id") @db.Uuid
+  lineNumber    Int      @map("line_number")
+  itemId        String?  @map("item_id") @db.Uuid
+  // null = generic item not yet in catalog
+  genericDescription String? @map("generic_description") @db.Text
+  quantity      Decimal  @db.Decimal(15, 3)
+  uom           String   @db.VarChar(20)
+  requiredDate  DateTime @map("required_date") @db.Date
+  // Suggested supplier (from SupplierItem.isPreferred)
+  suggestedSupplierId String? @map("suggested_supplier_id") @db.Uuid
+  estimatedUnitCost   Decimal? @map("estimated_unit_cost") @db.Decimal(15, 4)
+  // Source — if exploded from MO
+  sourceType    String?  @map("source_type") @db.VarChar(20)
+  // mo | manual
+  sourceMoId    String?  @map("source_mo_id") @db.Uuid
+  // FK to ProductionOrder
+  // Conversion tracking
+  prLineId      String?  @map("pr_line_id") @db.Uuid
+  // set when converted to PR
+  status        String   @default("pending") @db.VarChar(20)
+  // pending | converted | cancelled
+  notes         String?  @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt      @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  updatedBy     String    @map("updated_by") @db.Uuid
+  tenant            Tenant               @relation(fields: [tenantId],           references: [id])
+  generalNeed       GeneralNeed          @relation(fields: [gnId],               references: [id], onDelete: Cascade)
+  item              Item?                @relation(fields: [itemId],             references: [id])
+  suggestedSupplier Supplier?            @relation("GnLineSuggestedSupplier",    fields: [suggestedSupplierId], references: [id])
+  purchaseRequisitionLine PurchaseRequisitionLine? @relation(fields: [prLineId], references: [id])
+  rfqLines                RfqLine[]                @relation("RfqLineFromGn")
+  @@index([tenantId])
+  @@index([gnId])
+  @@index([itemId])
+  @@index([status])
+  @@map("po_general_need_lines")
+}
+
+model Rfq {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  rfqNumber        String    @map("rfq_number") @db.VarChar(50)  // RFQ-YYYY-NNNN
+  title            String    @db.VarChar(255)
+  status           String    @default("draft") @db.VarChar(20)
+  // draft | sent | partial_response | fully_responded | awarded | cancelled
+  issueDate        DateTime  @default(dbgenerated("CURRENT_DATE")) @map("issue_date") @db.Date
+  responseDeadline DateTime? @map("response_deadline") @db.Date
+  currency         String    @default("USD") @db.VarChar(3)
+  // Source PR (optional — puede ser manual sin PR)
+  prId             String?   @map("pr_id") @db.Uuid
+  // Source GN (optional)
+  gnId             String?   @map("gn_id") @db.Uuid
+  notes            String?   @db.Text
+  awardedAt        DateTime? @map("awarded_at")
+  awardedBy        String?   @map("awarded_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt      @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String    @map("created_by") @db.Uuid
+  updatedBy        String    @map("updated_by") @db.Uuid
+  deletedBy        String?   @map("deleted_by") @db.Uuid
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  purchaseRequisition PurchaseRequisition? @relation(fields: [prId], references: [id])
+  generalNeed         GeneralNeed?         @relation(fields: [gnId], references: [id])
+  lines               RfqLine[]
+  rfqSuppliers        RfqSupplier[]
+  purchaseOrders      PurchaseOrder[]
+  @@unique([tenantId, rfqNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([issueDate])
+  @@index([tenantId, gnId])
+  @@map("po_rfqs")
+}
+
+model RfqLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  rfqId        String   @map("rfq_id") @db.Uuid
+  lineNumber   Int      @map("line_number")
+  itemId       String?  @map("item_id") @db.Uuid
+  genericDescription String? @map("generic_description") @db.Text
+  quantity     Decimal  @db.Decimal(15, 3)
+  uom          String   @db.VarChar(20)
+  requiredDate DateTime @map("required_date") @db.Date
+  // Source traceability
+  prLineId     String?  @map("pr_line_id") @db.Uuid
+  gnLineId     String?  @map("gn_line_id") @db.Uuid
+  // Award result — set when line is awarded
+  awardedSupplierId    String?  @map("awarded_supplier_id") @db.Uuid
+  awardedResponseLineId String? @map("awarded_response_line_id") @db.Uuid
+  awardedUnitPrice     Decimal? @map("awarded_unit_price") @db.Decimal(15, 4)
+  awardedQty           Decimal? @map("awarded_qty") @db.Decimal(15, 3)
+  // Conversion
+  poLineId     String?  @map("po_line_id") @db.Uuid
+  status       String   @default("open") @db.VarChar(20)
+  // open | partially_awarded | awarded | cancelled
+  notes        String?  @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt      @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String    @map("created_by") @db.Uuid
+  updatedBy    String    @map("updated_by") @db.Uuid
+  tenant            Tenant                @relation(fields: [tenantId], references: [id])
+  rfq               Rfq                   @relation(fields: [rfqId],    references: [id], onDelete: Cascade)
+  item              Item?                 @relation(fields: [itemId],   references: [id])
+  prLine            PurchaseRequisitionLine? @relation("RfqLineFromPr", fields: [prLineId], references: [id])
+  gnLine            GeneralNeedLine?      @relation("RfqLineFromGn",    fields: [gnLineId], references: [id])
+  awardedSupplier   Supplier?             @relation("RfqLineAwardedSupplier", fields: [awardedSupplierId], references: [id])
+  purchaseOrderLine PurchaseOrderLine?    @relation("RfqLineToPo",      fields: [poLineId], references: [id])
+  responseLines     RfqResponseLine[]
+  @@index([tenantId])
+  @@index([rfqId])
+  @@index([itemId])
+  @@index([status])
+  @@map("po_rfq_lines")
+}
+
+model RfqSupplier {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  rfqId       String    @map("rfq_id") @db.Uuid
+  supplierId  String    @map("supplier_id") @db.Uuid
+  status      String    @default("invited") @db.VarChar(20)
+  // invited | sent | responded | awarded | declined
+  sentAt      DateTime? @map("sent_at")
+  respondedAt DateTime? @map("responded_at")
+  declinedAt  DateTime? @map("declined_at")
+  declineReason String? @map("decline_reason") @db.Text
+  // Overall supplier score for this RFQ (calculated on response)
+  totalOfferedAmount Decimal? @map("total_offered_amount") @db.Decimal(15, 2)
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt      @map("updated_at")
+  createdBy   String    @map("created_by") @db.Uuid
+  updatedBy   String    @map("updated_by") @db.Uuid
+  tenant        Tenant          @relation(fields: [tenantId],  references: [id])
+  rfq           Rfq             @relation(fields: [rfqId],     references: [id], onDelete: Cascade)
+  supplier      Supplier        @relation(fields: [supplierId], references: [id])
+  responseLines RfqResponseLine[]
+  @@unique([rfqId, supplierId])
+  @@index([tenantId])
+  @@index([rfqId])
+  @@index([supplierId])
+  @@map("po_rfq_suppliers")
+}
+
+model RfqResponseLine {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  rfqSupplierId   String    @map("rfq_supplier_id") @db.Uuid
+  rfqLineId       String    @map("rfq_line_id") @db.Uuid
+  // What the supplier offered
+  offeredQty      Decimal   @map("offered_qty") @db.Decimal(15, 3)
+  uom             String    @db.VarChar(20)
+  unitPrice       Decimal   @map("unit_price") @db.Decimal(15, 4)
+  leadTimeDays    Int       @map("lead_time_days")
+  validUntil      DateTime? @map("valid_until") @db.Date
+  // Packaging / presentation
+  packSize        Decimal?  @map("pack_size") @db.Decimal(15, 4)
+  moq             Decimal?  @db.Decimal(15, 3)
+  // Award
+  isAwarded       Boolean   @default(false) @map("is_awarded")
+  awardedQty      Decimal?  @map("awarded_qty") @db.Decimal(15, 3)
+  // null = full qty awarded
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt      @map("updated_at")
+  createdBy       String    @map("created_by") @db.Uuid
+  updatedBy       String    @map("updated_by") @db.Uuid
+  tenant      Tenant      @relation(fields: [tenantId],      references: [id])
+  rfqSupplier RfqSupplier @relation(fields: [rfqSupplierId], references: [id], onDelete: Cascade)
+  rfqLine     RfqLine     @relation(fields: [rfqLineId],     references: [id], onDelete: Cascade)
+  @@unique([rfqSupplierId, rfqLineId])
+  @@index([tenantId])
+  @@index([rfqSupplierId])
+  @@index([rfqLineId])
+  @@index([isAwarded])
+  @@map("po_rfq_response_lines")
+}
+
 
 // ============================================================================
 // END OF SCHEMA

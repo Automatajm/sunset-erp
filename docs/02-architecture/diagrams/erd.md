@@ -263,6 +263,7 @@ erDiagram
     String tenant_id 
     String po_number 
     String supplier_id 
+    String rfq_id "❓"
     DateTime po_date 
     DateTime expected_date "❓"
     String delivery_address "❓"
@@ -1472,6 +1473,142 @@ erDiagram
     DateTime created_at 
     }
   
+
+  "po_general_needs" {
+    String id "🗝️"
+    String tenant_id 
+    String gn_number 
+    String title 
+    String description "❓"
+    DateTime period_start 
+    DateTime period_end 
+    String source 
+    String status 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "po_general_need_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String gn_id 
+    Int line_number 
+    String item_id "❓"
+    String generic_description "❓"
+    Decimal quantity 
+    String uom 
+    DateTime required_date 
+    String suggested_supplier_id "❓"
+    Decimal estimated_unit_cost "❓"
+    String source_type "❓"
+    String source_mo_id "❓"
+    String pr_line_id "❓"
+    String status 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "po_rfqs" {
+    String id "🗝️"
+    String tenant_id 
+    String rfq_number 
+    String title 
+    String status 
+    DateTime issue_date 
+    DateTime response_deadline "❓"
+    String currency 
+    String pr_id "❓"
+    String gn_id "❓"
+    String notes "❓"
+    DateTime awarded_at "❓"
+    String awarded_by "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "po_rfq_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String rfq_id 
+    Int line_number 
+    String item_id "❓"
+    String generic_description "❓"
+    Decimal quantity 
+    String uom 
+    DateTime required_date 
+    String pr_line_id "❓"
+    String gn_line_id "❓"
+    String awarded_supplier_id "❓"
+    String awarded_response_line_id "❓"
+    Decimal awarded_unit_price "❓"
+    Decimal awarded_qty "❓"
+    String po_line_id "❓"
+    String status 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "po_rfq_suppliers" {
+    String id "🗝️"
+    String tenant_id 
+    String rfq_id 
+    String supplier_id 
+    String status 
+    DateTime sent_at "❓"
+    DateTime responded_at "❓"
+    DateTime declined_at "❓"
+    String decline_reason "❓"
+    Decimal total_offered_amount "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by 
+    String updated_by 
+    }
+  
+
+  "po_rfq_response_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String rfq_supplier_id 
+    String rfq_line_id 
+    Decimal offered_qty 
+    String uom 
+    Decimal unit_price 
+    Int lead_time_days 
+    DateTime valid_until "❓"
+    Decimal pack_size "❓"
+    Decimal moq "❓"
+    Boolean is_awarded 
+    Decimal awarded_qty "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by 
+    String updated_by 
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1494,6 +1631,7 @@ erDiagram
     "po_purchase_orders" }o--|| po_suppliers : "supplier"
     "po_purchase_orders" }o--|| auth_users : "createdByUser"
     "po_purchase_orders" }o--|| auth_users : "updatedByUser"
+    "po_purchase_orders" }o--|o po_rfqs : "rfq"
     "po_purchase_order_lines" }o--|| saas_tenants : "tenant"
     "po_purchase_order_lines" }o--|| po_purchase_orders : "purchaseOrder"
     "po_purchase_order_lines" }o--|| in_items : "item"
@@ -1651,4 +1789,26 @@ erDiagram
     "in_stock_location_updates" }o--|| in_items : "item"
     "in_stock_location_batches" }o--|| saas_tenants : "tenant"
     "in_stock_location_batch_lines" }o--|| in_stock_location_batches : "batch"
+    "po_general_needs" }o--|| saas_tenants : "tenant"
+    "po_general_need_lines" }o--|| saas_tenants : "tenant"
+    "po_general_need_lines" }o--|| po_general_needs : "generalNeed"
+    "po_general_need_lines" }o--|o in_items : "item"
+    "po_general_need_lines" }o--|o po_suppliers : "suggestedSupplier"
+    "po_general_need_lines" }o--|o po_purchase_requisition_lines : "purchaseRequisitionLine"
+    "po_rfqs" }o--|| saas_tenants : "tenant"
+    "po_rfqs" }o--|o po_purchase_requisitions : "purchaseRequisition"
+    "po_rfqs" }o--|o po_general_needs : "generalNeed"
+    "po_rfq_lines" }o--|| saas_tenants : "tenant"
+    "po_rfq_lines" }o--|| po_rfqs : "rfq"
+    "po_rfq_lines" }o--|o in_items : "item"
+    "po_rfq_lines" }o--|o po_purchase_requisition_lines : "prLine"
+    "po_rfq_lines" }o--|o po_general_need_lines : "gnLine"
+    "po_rfq_lines" }o--|o po_suppliers : "awardedSupplier"
+    "po_rfq_lines" }o--|o po_purchase_order_lines : "purchaseOrderLine"
+    "po_rfq_suppliers" }o--|| saas_tenants : "tenant"
+    "po_rfq_suppliers" }o--|| po_rfqs : "rfq"
+    "po_rfq_suppliers" }o--|| po_suppliers : "supplier"
+    "po_rfq_response_lines" }o--|| saas_tenants : "tenant"
+    "po_rfq_response_lines" }o--|| po_rfq_suppliers : "rfqSupplier"
+    "po_rfq_response_lines" }o--|| po_rfq_lines : "rfqLine"
 ```
