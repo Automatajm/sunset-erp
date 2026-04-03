@@ -206,7 +206,7 @@ function useHasPermission() {
   return (permission?: string): boolean => {
     if (!permission) return true;                          // no restriction
     if (!user) return false;
-    if (user.role === 'ADMINISTRATOR') return true;        // admin sees everything
+    if ((user.role ?? '').toUpperCase() === 'ADMIN') return true; // ADMIN sees everything"
     const perms: string[] = (user as any).permissions ?? [];
     return perms.includes(permission);
   };
