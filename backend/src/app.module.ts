@@ -36,6 +36,8 @@ import { StockReconciliationModule } from './modules/stock-reconciliation/stock-
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { GeneralNeedsModule } from './modules/general-needs/general-needs.module';
+import { RfqsModule } from './modules/rfqs/rfqs.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { TenantsModule } from './modules/tenants/tenants.module';
     UsersModule,
     RolesModule,
     TenantsModule,
+    GeneralNeedsModule,
+    RfqsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
