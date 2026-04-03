@@ -4,9 +4,13 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
-interface NavLeaf  { label: string; href: string; }
-interface NavGroup { label: string; items: NavLeaf[]; }
-interface NavItem  { label: string; href?: string; groups?: NavGroup[]; }
+// ─── Permission-aware nav structure ──────────────────────────────────────────
+// permission: if set, user must have this permission OR be ADMINISTRATOR role
+// If no permission set, item is always visible
+
+interface NavLeaf  { label: string; href: string; permission?: string; }
+interface NavGroup { label: string; items: NavLeaf[]; permission?: string; }
+interface NavItem  { label: string; href?: string; groups?: NavGroup[]; permission?: string; }
 
 const NAV: NavItem[] = [
   { label: 'Home', href: '/' },
@@ -14,20 +18,21 @@ const NAV: NavItem[] = [
   // ── Procurement ────────────────────────────────────────────────────────────
   {
     label: 'Procurement',
+    permission: 'PROCUREMENT:VIEW',
     groups: [
       {
         label: 'Suppliers',
         items: [
-          { label: 'Supplier Catalog',    href: '/procurement/suppliers' },
-          { label: 'Supplier Price Lists', href: '/procurement/supplier-items' },
+          { label: 'Supplier Catalog',     href: '/procurement/suppliers',      permission: 'PROCUREMENT:VIEW' },
+          { label: 'Supplier Price Lists', href: '/procurement/supplier-items', permission: 'PROCUREMENT:VIEW' },
         ],
       },
       {
         label: 'Purchasing',
         items: [
-          { label: 'Purchase Orders',  href: '/procurement/purchase-orders' },
-          { label: 'Goods Receipts',   href: '/procurement/goods-receipts' },
-          { label: 'AP Invoices',      href: '/procurement/ap-invoices' },
+          { label: 'Purchase Orders', href: '/procurement/purchase-orders', permission: 'PROCUREMENT:VIEW' },
+          { label: 'Goods Receipts',  href: '/procurement/goods-receipts',  permission: 'PROCUREMENT:VIEW' },
+          { label: 'AP Invoices',     href: '/procurement/ap-invoices',     permission: 'AP:VIEW' },
         ],
       },
     ],
@@ -36,36 +41,37 @@ const NAV: NavItem[] = [
   // ── Inventory ──────────────────────────────────────────────────────────────
   {
     label: 'Inventory',
+    permission: 'INVENTORY:VIEW',
     groups: [
       {
         label: 'Catalog',
         items: [
-          { label: 'Items',              href: '/inventory/items' },
-          { label: 'Warehouses',         href: '/inventory/warehouses' },
-          { label: 'Macro Categories',   href: '/inventory/macro-categories' },
-          { label: 'Categories',         href: '/inventory/categories' },
-          { label: 'Consumption Groups', href: '/inventory/consumption-groups' },
+          { label: 'Items',              href: '/inventory/items',              permission: 'INVENTORY:VIEW' },
+          { label: 'Warehouses',         href: '/inventory/warehouses',         permission: 'INVENTORY:VIEW' },
+          { label: 'Macro Categories',   href: '/inventory/macro-categories',   permission: 'INVENTORY:VIEW' },
+          { label: 'Categories',         href: '/inventory/categories',         permission: 'INVENTORY:VIEW' },
+          { label: 'Consumption Groups', href: '/inventory/consumption-groups', permission: 'INVENTORY:VIEW' },
         ],
       },
       {
         label: 'Stock Control',
         items: [
-          { label: 'Stock Transactions',  href: '/inventory/stock-transactions' },
-          { label: 'Stock Balance',       href: '/inventory/stock-balance' },
-          { label: 'Stock Ledger',        href: '/inventory/ledger' },
-          { label: 'Stock Reconciliation',href: '/inventory/stock-reconciliation' },
-          { label: 'Label Printing',      href: '/inventory/labels' },
+          { label: 'Stock Transactions',   href: '/inventory/stock-transactions',  permission: 'INVENTORY:VIEW'    },
+          { label: 'Stock Balance',        href: '/inventory/stock-balance',        permission: 'INVENTORY:VIEW'    },
+          { label: 'Stock Ledger',         href: '/inventory/ledger',              permission: 'INVENTORY:VIEW'    },
+          { label: 'Stock Reconciliation', href: '/inventory/stock-reconciliation', permission: 'INVENTORY:COUNT'  },
+          { label: 'Label Printing',       href: '/inventory/labels',              permission: 'INVENTORY:VIEW'    },
         ],
       },
       {
         label: 'Analysis',
         items: [
-          { label: 'Stock Planning',       href: '/inventory/stock-planning' },
-          { label: 'Stock Aging',          href: '/inventory/stock-aging' },
-          { label: 'Inventory Valuation',  href: '/inventory/valuation' },
-          { label: 'Inventory Turnover',   href: '/inventory/inventory-turnover' },
-          { label: 'ABC Analysis',         href: '/inventory/abc-analysis' },
-          { label: 'Slow Moving Items',    href: '/inventory/slow-moving' },
+          { label: 'Stock Planning',      href: '/inventory/stock-planning',      permission: 'INVENTORY:VIEW' },
+          { label: 'Stock Aging',         href: '/inventory/stock-aging',         permission: 'INVENTORY:VIEW' },
+          { label: 'Inventory Valuation', href: '/inventory/valuation',           permission: 'INVENTORY:VIEW' },
+          { label: 'Inventory Turnover',  href: '/inventory/inventory-turnover',  permission: 'INVENTORY:VIEW' },
+          { label: 'ABC Analysis',        href: '/inventory/abc-analysis',        permission: 'INVENTORY:VIEW' },
+          { label: 'Slow Moving Items',   href: '/inventory/slow-moving',         permission: 'INVENTORY:VIEW' },
         ],
       },
     ],
@@ -74,18 +80,19 @@ const NAV: NavItem[] = [
   // ── Manufacturing ──────────────────────────────────────────────────────────
   {
     label: 'Manufacturing',
+    permission: 'MFG:VIEW',
     groups: [
       {
         label: 'Engineering',
         items: [
-          { label: 'Bill of Materials', href: '/manufacturing/bom' },
-          { label: 'Work Centers',      href: '/manufacturing/work-centers' },
+          { label: 'Bill of Materials', href: '/manufacturing/bom',          permission: 'MFG:VIEW' },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers', permission: 'MFG:VIEW' },
         ],
       },
       {
         label: 'Production',
         items: [
-          { label: 'Production Orders', href: '/manufacturing/production-orders' },
+          { label: 'Production Orders', href: '/manufacturing/production-orders', permission: 'MFG:VIEW' },
         ],
       },
     ],
@@ -94,18 +101,19 @@ const NAV: NavItem[] = [
   // ── Sales ──────────────────────────────────────────────────────────────────
   {
     label: 'Sales',
+    permission: 'SALES:VIEW',
     groups: [
       {
         label: 'Customers',
         items: [
-          { label: 'Customer Catalog', href: '/sales/customers' },
+          { label: 'Customer Catalog', href: '/sales/customers', permission: 'SALES:VIEW' },
         ],
       },
       {
         label: 'Orders & Billing',
         items: [
-          { label: 'Sales Orders', href: '/sales/sales-orders' },
-          { label: 'AR Invoices',  href: '/sales/invoices' },
+          { label: 'Sales Orders', href: '/sales/sales-orders', permission: 'SALES:VIEW' },
+          { label: 'AR Invoices',  href: '/sales/invoices',     permission: 'AR:VIEW'    },
         ],
       },
     ],
@@ -114,33 +122,34 @@ const NAV: NavItem[] = [
   // ── Financial ──────────────────────────────────────────────────────────────
   {
     label: 'Financial',
+    permission: 'ACCOUNTING:VIEW',
     groups: [
       {
         label: 'General Ledger',
         items: [
-          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
-          { label: 'Journal Entries',   href: '/accounting/journal-entries' },
-          { label: 'Fiscal Periods',    href: '/accounting/fiscal-periods' },
+          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts', permission: 'ACCOUNTING:VIEW' },
+          { label: 'Journal Entries',   href: '/accounting/journal-entries',   permission: 'ACCOUNTING:VIEW' },
+          { label: 'Fiscal Periods',    href: '/accounting/fiscal-periods',    permission: 'ACCOUNTING:VIEW' },
         ],
       },
       {
         label: 'Automation',
         items: [
-          { label: 'JE Review Queue',   href: '/accounting/je-queue' },
-          { label: 'Automation Config', href: '/accounting/automation' },
+          { label: 'JE Review Queue',   href: '/accounting/je-queue',   permission: 'ACCOUNTING:VIEW'   },
+          { label: 'Automation Config', href: '/accounting/automation',  permission: 'ADMIN:SETTINGS'    },
         ],
       },
       {
         label: 'Reports',
         items: [
-          { label: 'Financial Reports', href: '/accounting/reports' },
+          { label: 'Financial Reports', href: '/accounting/reports', permission: 'ACCOUNTING:VIEW' },
         ],
       },
       {
         label: 'Planning',
         items: [
-          { label: 'Budgets',   href: '/accounting/budgets' },
-          { label: 'Cash Flow', href: '/accounting/cash-flow' },
+          { label: 'Budgets',   href: '/accounting/budgets',   permission: 'ACCOUNTING:VIEW' },
+          { label: 'Cash Flow', href: '/accounting/cash-flow', permission: 'ACCOUNTING:VIEW' },
         ],
       },
     ],
@@ -149,49 +158,67 @@ const NAV: NavItem[] = [
   // ── Settings ───────────────────────────────────────────────────────────────
   {
     label: 'Settings',
+    permission: 'ADMIN:SETTINGS',
     groups: [
       {
         label: 'Access Control',
         items: [
-          { label: 'Tenants',          href: '/settings/tenants' },
-          { label: 'Users',            href: '/settings/users' },
-          { label: 'Roles & Permissions', href: '/settings/roles' },
+          { label: 'Tenants',              href: '/settings/tenants', permission: 'ADMIN:SETTINGS' },
+          { label: 'Users',                href: '/settings/users',   permission: 'ADMIN:SETTINGS' },
+          { label: 'Roles & Permissions',  href: '/settings/roles',   permission: 'ADMIN:SETTINGS' },
         ],
       },
       {
         label: 'System Config',
         items: [
-          { label: 'General Settings', href: '/settings/general' },
-          { label: 'Units of Measure', href: '/settings/uom' },
-          { label: 'Fiscal Calendar',  href: '/accounting/fiscal-periods' },
-          { label: 'JE Automation',    href: '/accounting/automation' },
+          { label: 'General Settings', href: '/settings/general',           permission: 'ADMIN:SETTINGS' },
+          { label: 'Units of Measure', href: '/settings/uom',               permission: 'ADMIN:SETTINGS' },
+          { label: 'Fiscal Calendar',  href: '/accounting/fiscal-periods',  permission: 'ADMIN:SETTINGS' },
+          { label: 'JE Automation',    href: '/accounting/automation',       permission: 'ADMIN:SETTINGS' },
         ],
       },
       {
         label: 'Data Management',
         items: [
-          { label: 'Bulk Import & Export', href: '/settings/bulk-import' },
+          { label: 'Bulk Import & Export', href: '/settings/bulk-import', permission: 'ADMIN:SETTINGS' },
         ],
       },
       {
         label: 'Master Data',
         items: [
-          { label: 'Items',            href: '/inventory/items' },
-          { label: 'Warehouses',       href: '/inventory/warehouses' },
-          { label: 'Categories',       href: '/inventory/categories' },
-          { label: 'Suppliers',        href: '/procurement/suppliers' },
-          { label: 'Customers',        href: '/sales/customers' },
-          { label: 'Work Centers',     href: '/manufacturing/work-centers' },
-          { label: 'Chart of Accounts',href: '/accounting/chart-of-accounts' },
+          { label: 'Items',             href: '/inventory/items',                permission: 'INVENTORY:VIEW'  },
+          { label: 'Warehouses',        href: '/inventory/warehouses',           permission: 'INVENTORY:VIEW'  },
+          { label: 'Categories',        href: '/inventory/categories',           permission: 'INVENTORY:VIEW'  },
+          { label: 'Suppliers',         href: '/procurement/suppliers',          permission: 'PROCUREMENT:VIEW'},
+          { label: 'Customers',         href: '/sales/customers',                permission: 'SALES:VIEW'      },
+          { label: 'Work Centers',      href: '/manufacturing/work-centers',     permission: 'MFG:VIEW'        },
+          { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts',   permission: 'ACCOUNTING:VIEW' },
         ],
       },
     ],
   },
 ];
 
+// ─── Permission helper ────────────────────────────────────────────────────────
+// Administrator role bypasses all permission checks
+function useHasPermission() {
+  const { user } = useAuth();
+  return (permission?: string): boolean => {
+    if (!permission) return true;                          // no restriction
+    if (!user) return false;
+    if (user.role === 'ADMINISTRATOR') return true;        // admin sees everything
+    const perms: string[] = (user as any).permissions ?? [];
+    return perms.includes(permission);
+  };
+}
+
 // ─── Nav dropdown component ────────────────────────────────────────────────────
 
-function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
+function NavDropdown({ item, isActive, hasPermission }: {
+  item: NavItem;
+  isActive: boolean;
+  hasPermission: (p?: string) => boolean;
+}) {
   const [open,       setOpen]       = useState(false);
   const [hoverGroup, setHoverGroup] = useState<string>('');
   const router     = useRouter();
@@ -199,14 +226,25 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
 
   const openMenu  = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    // Default to first visible group
+    const firstGroup = item.groups?.find(g => {
+      const visibleItems = g.items.filter(i => hasPermission(i.permission));
+      return visibleItems.length > 0;
+    });
     setOpen(true);
-    setHoverGroup(item.groups?.[0]?.label ?? '');
+    setHoverGroup(firstGroup?.label ?? item.groups?.[0]?.label ?? '');
   };
   const closeMenu = () => {
     closeTimer.current = setTimeout(() => setOpen(false), 200);
   };
 
   const currentGroup = item.groups?.find(g => g.label === hoverGroup);
+  const visibleLeaves = currentGroup?.items.filter(i => hasPermission(i.permission)) ?? [];
+
+  // Filter groups to only those with visible items
+  const visibleGroups = item.groups?.filter(g =>
+    g.items.some(i => hasPermission(i.permission))
+  ) ?? [];
 
   if (!item.groups) {
     return (
@@ -227,11 +265,11 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
         <path d="M1.5 3L4.5 6L7.5 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
 
-      {open && (
+      {open && visibleGroups.length > 0 && (
         <div className="dd-panel" onMouseEnter={openMenu} onMouseLeave={closeMenu}>
           {/* Left — group list */}
           <div className="dd-left">
-            {item.groups.map(g => (
+            {visibleGroups.map(g => (
               <div
                 key={g.label}
                 className={`dd-group${hoverGroup === g.label ? ' dd-group-on' : ''}`}
@@ -246,10 +284,10 @@ function NavDropdown({ item, isActive }: { item: NavItem; isActive: boolean }) {
           </div>
 
           {/* Right — items for active group */}
-          {currentGroup && (
+          {visibleLeaves.length > 0 && (
             <div className="dd-right">
-              <div className="dd-right-hdr">{currentGroup.label}</div>
-              {currentGroup.items.map(leaf => (
+              <div className="dd-right-hdr">{currentGroup?.label}</div>
+              {visibleLeaves.map(leaf => (
                 <div
                   key={leaf.href}
                   className="dd-leaf"
@@ -281,9 +319,10 @@ interface ERPShellProps {
 
 export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps) {
   const { user, tenantName, logout } = useAuth();
-  const router   = useRouter();
-  const pathname = usePathname();
+  const router        = useRouter();
+  const pathname      = usePathname();
   const [search, setSearch] = useState('');
+  const hasPermission = useHasPermission();
 
   const fullName  = user ? `${user.firstName} ${user.lastName}`.trim() : '';
   const initials  = fullName
@@ -299,13 +338,15 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
     return item.groups?.some(g => g.items.some(i => pathname.startsWith(i.href))) ?? false;
   };
 
+  // Filter top-level nav items by permission
+  const visibleNav = NAV.filter(item => hasPermission(item.permission));
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* ── Root layout ─────────────────────────────────────────────────── */
         .shell-root {
           font-family: 'IBM Plex Sans', sans-serif;
           height: 100vh;
@@ -317,7 +358,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           display: flex; flex-direction: column;
         }
 
-        /* ── Top bar ─────────────────────────────────────────────────────── */
         .shell-brand {
           height: 42px;
           background: rgba(8,6,14,0.97);
@@ -355,7 +395,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           box-shadow: 0 0 0 2px rgba(234,88,12,0.1);
         }
 
-        /* ── User area ───────────────────────────────────────────────────── */
         .shell-user {
           margin-left: auto;
           display: flex; align-items: center; gap: 10px; flex-shrink: 0;
@@ -384,7 +423,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .shell-signout:hover { color: #fb923c; background: rgba(251,146,60,0.08); }
 
-        /* ── Nav bar ─────────────────────────────────────────────────────── */
         .shell-nav {
           height: 34px;
           background: rgba(18,12,26,0.97);
@@ -397,7 +435,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .shell-nav::-webkit-scrollbar { display: none; }
 
-        /* ── Nav items ───────────────────────────────────────────────────── */
         .ni {
           display: flex; align-items: center; gap: 4px;
           padding: 0 11px; font-size: 12px;
@@ -407,16 +444,12 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           transition: color 0.15s, background 0.15s, border-color 0.15s;
           user-select: none; position: relative;
         }
-        .ni:hover, .ni-open {
-          color: rgba(255,255,255,0.85);
-          background: rgba(255,255,255,0.04);
-        }
+        .ni:hover, .ni-open { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
         .ni-active {
           color: #fb923c !important;
           border-bottom-color: #fb923c !important;
           background: rgba(251,146,60,0.05) !important;
         }
-        /* invisible bridge prevents gap closing dropdown */
         .ni-dd::after {
           content: "";
           position: absolute; top: 100%; left: 0;
@@ -424,7 +457,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           background: transparent;
         }
 
-        /* ── Dropdown panel ──────────────────────────────────────────────── */
         .dd-panel {
           position: absolute; top: 100%; left: 0;
           margin-top: 2px; min-width: 380px;
@@ -441,7 +473,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* Left column — group list */
         .dd-left {
           width: 155px; flex-shrink: 0;
           background: rgba(255,255,255,0.02);
@@ -463,7 +494,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           border: 0.5px solid rgba(251,146,60,0.22);
         }
 
-        /* Right column — leaf items */
         .dd-right {
           flex: 1; padding: 8px 8px 8px 6px;
           display: flex; flex-direction: column; gap: 1px;
@@ -485,7 +515,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .dd-leaf:hover { background: rgba(255,255,255,0.06); color: #f1ede8; }
 
-        /* ── Breadcrumb bar ──────────────────────────────────────────────── */
         .shell-sub { display: flex; align-items: center; padding: 10px 18px 6px; flex-shrink: 0; }
         .shell-bc  { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.3); }
         .shell-bc-sep  { color: rgba(255,255,255,0.15); }
@@ -493,7 +522,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-bc-link:hover { color: #fb923c; }
         .shell-bc-cur  { color: rgba(255,255,255,0.6); }
 
-        /* ── Page title & content ────────────────────────────────────────── */
         .shell-title   { font-size: 15px; font-weight: 500; color: #f1ede8; padding: 0 18px 8px; }
         .shell-content { flex: 1; overflow: hidden; min-height: 0; }
       `}</style>
@@ -502,7 +530,6 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
         {/* ── Top bar ── */}
         <div className="shell-brand">
-          {/* Logo mark */}
           <div className="shell-mark" onClick={() => router.push('/')}>
             <svg viewBox="0 0 26 26" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="13" cy="11" r="4"/>
@@ -514,43 +541,33 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
               <line x1="4"    y1="19"  x2="22"   y2="19" strokeWidth="2.2"/>
             </svg>
           </div>
-
-          {/* Wordmark */}
           <span className="shell-wordmark" onClick={() => router.push('/')}>Sun<span>set</span></span>
-
-          {/* Global search */}
           <input
             className="shell-search"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-
-          {/* User area */}
           <div className="shell-user">
-            {/* Company name */}
-            {tenantName && (
-              <span className="shell-tenant">{tenantName}</span>
-            )}
-
-            {/* Name + role */}
+            {tenantName && <span className="shell-tenant">{tenantName}</span>}
             <div>
               <div className="shell-uname">{fullName || user?.email || 'Admin'}</div>
               {roleLabel && <div className="shell-urole">{roleLabel}</div>}
             </div>
-
-            {/* Avatar */}
             <div className="shell-avatar">{initials}</div>
-
-            {/* Sign out */}
             <button className="shell-signout" onClick={logout}>Sign out</button>
           </div>
         </div>
 
-        {/* ── Nav bar ── */}
+        {/* ── Nav bar — filtered by permissions ── */}
         <div className="shell-nav">
-          {NAV.map(item => (
-            <NavDropdown key={item.label} item={item} isActive={isActive(item)} />
+          {visibleNav.map(item => (
+            <NavDropdown
+              key={item.label}
+              item={item}
+              isActive={isActive(item)}
+              hasPermission={hasPermission}
+            />
           ))}
         </div>
 
@@ -570,10 +587,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           </div>
         )}
 
-        {/* ── Page title ── */}
         {title && <div className="shell-title">{title}</div>}
-
-        {/* ── Page content ── */}
         <div className="shell-content">{children}</div>
       </div>
     </>
