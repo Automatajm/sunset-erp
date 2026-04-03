@@ -1,3 +1,6 @@
+// ============================================================================
+// FILE: frontend/app/inventory/items/page.tsx
+// ============================================================================
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
@@ -48,14 +51,6 @@ const EMPTY_FORM: CreateItemDto = {
 function getTypeConfig(t: ItemType) {
   return ITEM_TYPES.find(x => x.value === t) ?? ITEM_TYPES[0];
 }
-
-const FIELD: React.CSSProperties = {
-  background: '#0e0b1a',
-  border: '0.5px solid rgba(255,255,255,0.1)',
-  borderRadius: 7, padding: '9px 12px', fontSize: 13,
-  fontFamily: "'IBM Plex Sans',sans-serif",
-  color: '#f1ede8', outline: 'none', width: '100%',
-};
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
@@ -113,20 +108,10 @@ function StatsBar({ stats, activeType, onTypeClick }: {
         const count = stats.byType.find(b => b.type === t.value)?.count ?? 0;
         const isActive = activeType === t.value;
         return (
-          <div
-            key={t.value}
-            onClick={() => onTypeClick?.(isActive ? null : t.value)}
-            style={{
-              background: isActive ? t.bg : 'rgba(10,7,18,0.7)',
-              border: `0.5px solid ${isActive ? t.color : t.border}`,
-              borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110,
-              cursor: onTypeClick ? 'pointer' : 'default',
-              transition: 'all 0.15s',
-              boxShadow: isActive ? `0 0 12px ${t.bg}` : 'none',
-            }}
-          >
+          <div key={t.value} onClick={() => onTypeClick?.(isActive ? null : t.value)}
+            style={{ background: isActive ? t.bg : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? t.color : t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:onTypeClick ? 'pointer' : 'default', transition:'all 0.15s', boxShadow:isActive ? `0 0 12px ${t.bg}` : 'none' }}>
             <span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span>
-            <span style={{ fontSize:22, fontWeight:500, color: isActive ? t.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
+            <span style={{ fontSize:22, fontWeight:500, color:isActive ? t.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
           </div>
         );
       })}
@@ -156,6 +141,7 @@ interface SupplierFormState {
   supplierId: string; purchaseUomId: string; supplierItemCode: string;
   lastPrice: string; leadTimeDays: string; moq: string; isPreferred: boolean;
 }
+
 const EMPTY_SUP_FORM: SupplierFormState = {
   supplierId: '', purchaseUomId: '', supplierItemCode: '',
   lastPrice: '', leadTimeDays: '0', moq: '1', isPreferred: false,
@@ -171,19 +157,19 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
   const [supplierItems, setSupplierItems] = useState<SupplierItem[]>([]);
   const [suppliers,     setSuppliers]     = useState<any[]>([]);
   const [loading,       setLoading]       = useState(true);
-  const [addForm,       setAddForm]       = useState<SupplierFormState>(EMPTY_SUP_FORM);
+  const [addForm,       setAddForm]       = useState<SupplierFormState>({ ...EMPTY_SUP_FORM, purchaseUomId: (item as any).purchaseUomId ?? '' });
   const [adding,        setAdding]        = useState(false);
   const [addError,      setAddError]      = useState('');
   const [editingId,     setEditingId]     = useState<string | null>(null);
   const [saving,        setSaving]        = useState(false);
   const [supSearch,     setSupSearch]     = useState('');
 
+  // Derive the item's purchaseUom object for display
+  const itemPurchaseUom = uomUnits.find(u => u.id === (item as any).purchaseUomId);
+
   useImperativeHandle(ref, () => ({
-    handleAdd: async () => {
-      if (!addForm.supplierId || !addForm.purchaseUomId) {
-        setAddError('Supplier and Purchase UOM are required');
-        return;
-      }
+    submitAdd: async () => {
+      if (!addForm.supplierId) { setAddError('Supplier is required'); return; }
       await handleAdd({ preventDefault: () => {} } as React.FormEvent);
     },
     hasUnsavedData: () => !!(addForm.supplierId || addForm.supplierItemCode || addForm.lastPrice),
@@ -202,33 +188,44 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
+  // Keep purchaseUomId in sync if item changes (e.g. user edits UOM tab then comes back)
+  useEffect(() => {
+    setAddForm(f => ({ ...f, purchaseUomId: (item as any).purchaseUomId ?? '' }));
+  }, [(item as any).purchaseUomId]);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addForm.supplierId) { setAddError('Supplier is required'); return; }
-    if (!item.purchaseUomId) { setAddError('This item has no Purchase UOM configured. Go to the UOM tab and set it first.'); return; }
+    if (!(item as any).purchaseUomId) {
+      setAddError('This item has no Purchase UOM configured. Go to the UOM tab and set it first.');
+      return;
+    }
     setAdding(true); setAddError('');
     try {
       await supplierItemsApi.create({
-        itemId: item.id, supplierId: addForm.supplierId, purchaseUomId: addForm.purchaseUomId,
+        itemId:           item.id,
+        supplierId:       addForm.supplierId,
+        purchaseUomId:    (item as any).purchaseUomId,  // always from item, never from form
         supplierItemCode: addForm.supplierItemCode || undefined,
-        lastPrice: addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
-        leadTimeDays: Number(addForm.leadTimeDays) || 0,
-        moq: Number(addForm.moq) || 1,
-        isPreferred: addForm.isPreferred, isActive: true, packSize: 1,
+        lastPrice:        addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
+        leadTimeDays:     Number(addForm.leadTimeDays) || 0,
+        moq:              Number(addForm.moq) || 1,
+        isPreferred:      addForm.isPreferred,
+        isActive:         true,
+        packSize:         1,
       } as CreateSupplierItemDto);
-      setAddForm(EMPTY_SUP_FORM);
+      setAddForm({ ...EMPTY_SUP_FORM, purchaseUomId: (item as any).purchaseUomId ?? '' });
       setEditingId(null);
       await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to add supplier'); }
     finally { setAdding(false); }
   };
 
-  // Edit loads supplier data into the Add form above
   const handleEdit = (si: SupplierItem) => {
     setEditingId(si.id);
     setAddForm({
       supplierId:       si.supplier?.id ?? (si as any).supplierId ?? '',
-      purchaseUomId:    item.purchaseUomId ?? '',   // locked to item purchaseUomId
+      purchaseUomId:    (item as any).purchaseUomId ?? '',  // always locked to item
       supplierItemCode: (si as any).supplierItemCode ?? '',
       lastPrice:        si.lastPrice ? String(si.lastPrice) : '',
       leadTimeDays:     String(si.leadTimeDays ?? 0),
@@ -239,7 +236,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setAddForm(EMPTY_SUP_FORM);
+    setAddForm({ ...EMPTY_SUP_FORM, purchaseUomId: (item as any).purchaseUomId ?? '' });
     setAddError('');
   };
 
@@ -248,7 +245,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
     setSaving(true); setAddError('');
     try {
       await supplierItemsApi.update(editingId, {
-        purchaseUomId:    addForm.purchaseUomId || undefined,
+        purchaseUomId:    (item as any).purchaseUomId || undefined,  // locked to item
         supplierItemCode: addForm.supplierItemCode || undefined,
         lastPrice:        addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
         leadTimeDays:     Number(addForm.leadTimeDays) || 0,
@@ -256,7 +253,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
         isPreferred:      addForm.isPreferred,
       });
       setEditingId(null);
-      setAddForm(EMPTY_SUP_FORM);
+      setAddForm({ ...EMPTY_SUP_FORM, purchaseUomId: (item as any).purchaseUomId ?? '' });
       await fetch_();
     } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Failed to update'); }
     finally { setSaving(false); }
@@ -274,7 +271,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
     : supplierItems;
 
   const supplierOpts = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
-  const uomOpts = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
 
   const L: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
   const INP: React.CSSProperties = { background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' };
@@ -282,7 +278,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Add form — always visible */}
+      {/* Add / Edit form */}
       <div style={{ background: 'rgba(251,146,60,0.04)', border: '0.5px solid rgba(251,146,60,0.15)', borderRadius: 8, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 500, color: editingId ? '#4ade80' : '#fb923c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -294,45 +290,93 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             </button>
           )}
         </div>
-        {addError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5', marginBottom: 10 }}>{addError}</div>}
+
+        {addError && (
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5', marginBottom: 10 }}>
+            {addError}
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* Row 1: Supplier + Purchase UOM (locked) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Supplier *</label>
-              <SearchSelect options={supplierOpts} value={addForm.supplierId} onChange={v => setAddForm(f => ({ ...f, supplierId: v }))} placeholder="Search supplier…" clearLabel="— Select supplier —" />
+              <SearchSelect
+                options={supplierOpts}
+                value={addForm.supplierId}
+                onChange={v => setAddForm(f => ({ ...f, supplierId: v }))}
+                placeholder="Search supplier…"
+                clearLabel="— Select supplier —"
+                minWidth={220}
+              />
             </div>
+
+            {/* Purchase UOM — READ ONLY, locked to item.purchaseUomId */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={L}>Purchase UOM *</label>
-              <SearchSelect options={uomOpts} value={addForm.purchaseUomId} onChange={v => setAddForm(f => ({ ...f, purchaseUomId: v }))} placeholder="Search UOM…" clearLabel="— Select UOM —" />
+              <label style={L}>Purchase UOM</label>
+              {itemPurchaseUom ? (
+                <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(251,146,60,0.06)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:7, padding:'7px 12px', height:36 }}>
+                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'#fb923c', fontWeight:600 }}>
+                    {itemPurchaseUom.code}
+                  </span>
+                  <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>{itemPurchaseUom.name}</span>
+                  <span style={{ fontSize:10, color:'rgba(251,146,60,0.4)', marginLeft:'auto', whiteSpace:'nowrap' }}>
+                    🔒 from item
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(239,68,68,0.07)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 12px', fontSize:11, color:'#fca5a5', height:36 }}>
+                  ⚠ Set Purchase UOM in UOM tab first
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Row 2: Supplier Item Code + Last Price */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Supplier Item Code</label>
-              <input style={INP} placeholder="Supplier ref code" value={addForm.supplierItemCode} onChange={e => setAddForm(f => ({ ...f, supplierItemCode: e.target.value }))} />
+              <input style={INP} placeholder="Supplier ref code" value={addForm.supplierItemCode}
+                onChange={e => setAddForm(f => ({ ...f, supplierItemCode: e.target.value }))} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Last Price</label>
-              <input type="number" min="0" step="0.01" style={INP} placeholder="0.00" value={addForm.lastPrice} onChange={e => setAddForm(f => ({ ...f, lastPrice: e.target.value }))} />
+              <input type="number" min="0" step="0.01" style={INP} placeholder="0.00"
+                value={addForm.lastPrice} onChange={e => setAddForm(f => ({ ...f, lastPrice: e.target.value }))} />
             </div>
+          </div>
+
+          {/* Row 3: Lead Time + MOQ */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Lead Time (days)</label>
-              <input type="number" min="0" style={INP} value={addForm.leadTimeDays} onChange={e => setAddForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
+              <input type="number" min="0" style={INP} value={addForm.leadTimeDays}
+                onChange={e => setAddForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>MOQ</label>
-              <input type="number" min="1" style={INP} value={addForm.moq} onChange={e => setAddForm(f => ({ ...f, moq: e.target.value }))} />
+              <input type="number" min="1" style={INP} value={addForm.moq}
+                onChange={e => setAddForm(f => ({ ...f, moq: e.target.value }))} />
             </div>
           </div>
+
+          {/* Footer: preferred + action button */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={addForm.isPreferred} onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
+              <input type="checkbox" checked={addForm.isPreferred}
+                onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
               Set as preferred supplier
             </label>
             {editingId ? (
-              <button type="button" disabled={saving} onClick={handleSaveEdit} style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
+              <button type="button" disabled={saving} onClick={handleSaveEdit}
+                style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>
             ) : (
-              <button type="button" disabled={adding} onClick={handleAdd} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: adding ? 0.5 : 1 }}>
+              <button type="button" disabled={adding || !itemPurchaseUom} onClick={handleAdd}
+                style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: adding || !itemPurchaseUom ? 'not-allowed' : 'pointer', opacity: adding || !itemPurchaseUom ? 0.4 : 1 }}>
                 {adding ? 'Adding…' : '+ Add Supplier'}
               </button>
             )}
@@ -347,16 +391,11 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} assigned
           </div>
           {supplierItems.length > 0 && (
-            <input
-              value={supSearch}
-              onChange={e => setSupSearch(e.target.value)}
-              placeholder="Search supplier…"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', width: 160 }}
-            />
+            <input value={supSearch} onChange={e => setSupSearch(e.target.value)} placeholder="Search supplier…"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', width: 160 }} />
           )}
         </div>
 
-        {/* Scrollable container — fixed height, own scroll */}
         <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Loading…</div>
@@ -364,50 +403,44 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>
               {supSearch ? `No results for "${supSearch}"` : 'No suppliers yet — use the form above.'}
             </div>
-          ) : filteredSuppliers.map(si => {
-            return (
-              <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                    <div style={{ flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {si.supplier?.name}
-                        {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                        {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
-                      </div>
-                    </div>
-                    <div style={{ minWidth: 55, textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
-                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
-                    </div>
-                    <div style={{ minWidth: 70, textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Factor</div>
-                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{Number(si.conversionFactor).toFixed(4)}</span>
-                    </div>
-                    <div style={{ minWidth: 70, textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
-                      <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
-                    </div>
-                    <div style={{ minWidth: 45, textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
-                    </div>
-                    <div style={{ minWidth: 45, textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>MOQ</div>
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{(si as any).moq ?? 1}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
-                      {!si.isPreferred && (
-                        <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
-                      )}
-                      <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
-                      <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
-                    </div>
+          ) : filteredSuppliers.map(si => (
+            <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e2dfd8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {si.supplier?.name}
+                    {si.isPreferred && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
                   </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                    {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
+                  </div>
+                </div>
+                <div style={{ minWidth: 55, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
+                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#fb923c' }}>{si.purchaseUom?.code ?? '—'}</span>
+                </div>
+                <div style={{ minWidth: 70, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
+                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: '#e2dfd8' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
+                </div>
+                <div style={{ minWidth: 45, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
+                </div>
+                <div style={{ minWidth: 45, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>MOQ</div>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{(si as any).moq ?? 1}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
+                  {!si.isPreferred && (
+                    <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
+                  )}
+                  <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                  <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
+                </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -432,8 +465,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
 
   useEffect(() => {
     if (open) {
-      setError(''); setTab('general');
-      setEditMode(null);
+      setError(''); setTab('general'); setEditMode(null);
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
@@ -460,24 +492,14 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     }
   }, [open, initial]);
 
-  const set = (key: keyof CreateItemDto) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-      setForm(f => ({ ...f, [key]: e.target.value }));
-
-  const setNum = (key: keyof CreateItemDto) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm(f => ({ ...f, [key]: e.target.value === '' ? undefined : Number(e.target.value) }));
-
-  const setBool = (key: keyof CreateItemDto) => (v: boolean) =>
-    setForm(f => ({ ...f, [key]: v }));
+  const set    = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const setNum = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value === '' ? undefined : Number(e.target.value) }));
+  const setBool = (key: keyof CreateItemDto) => (v: boolean) => setForm(f => ({ ...f, [key]: v }));
 
   const buildPayload = (): CreateItemDto => {
     const p: any = { ...form };
-    ['categoryId','consumptionGroupId','purchaseUomId','storageUomId','consumptionUomId'].forEach(k => {
-      if (!p[k]) delete p[k];
-    });
-    ['standardCost','leadTimeDays','safetyStock','reorderPoint','reorderQuantity',
-     'purchaseToConsumptionFactor','storageToConsumptionFactor'].forEach(k => {
+    ['categoryId','consumptionGroupId','purchaseUomId','storageUomId','consumptionUomId'].forEach(k => { if (!p[k]) delete p[k]; });
+    ['standardCost','leadTimeDays','safetyStock','reorderPoint','reorderQuantity','purchaseToConsumptionFactor','storageToConsumptionFactor'].forEach(k => {
       if (p[k] === undefined || p[k] === null || p[k] === '') delete p[k];
       else p[k] = Number(p[k]);
     });
@@ -509,7 +531,6 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     : categories;
 
   const effectiveInitial = editMode ?? initial;
-
   if (!open) return null;
 
   const anyInit = effectiveInitial as any;
@@ -522,21 +543,26 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     ...(effectiveInitial ? [{ key: 'suppliers', label: `Suppliers${supCount ? ` (${supCount})` : ''}` }] : []),
   ];
 
+  // Build a synthetic item object that reflects current form state (so purchaseUomId is live)
+  const liveItem: Item = effectiveInitial
+    ? { ...effectiveInitial, purchaseUomId: form.purchaseUomId ?? (effectiveInitial as any).purchaseUomId } as any
+    : effectiveInitial as any;
+
   return (
     <>
       <style>{`
         .im-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
-        .im-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
-        .im-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
-        .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
+        .im-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative;overflow:visible}
+        .im-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none;border-radius:14px 14px 0 0}
+        .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0;border-radius:14px 14px 0 0;background:#0e0b1a;position:relative;z-index:1}
         .im-title{font-size:14px;font-weight:500;color:#f1ede8}
         .im-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
-        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
+        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:#0e0b1a;position:relative;z-index:1}
         .im-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap}
         .im-tab:hover{color:rgba(255,255,255,0.7)}
         .im-tab-active{color:#fb923c !important;border-bottom-color:#fb923c !important}
-        .im-scroll{flex:1;overflow-y:auto;min-height:0}
-        .im-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+        .im-scroll{flex:1;overflow-y:auto;min-height:0;overflow-x:visible}
+        .im-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow:visible}
         .im-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .im-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
         .im-field{display:flex;flex-direction:column;gap:5px}
@@ -550,7 +576,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
         .im-toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
         .im-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:#fca5a5}
-        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
+        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:#0e0b1a;border-radius:0 0 14px 14px;position:relative;z-index:1}
         .im-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
         .im-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .im-btn-save:disabled{opacity:0.5;cursor:not-allowed}
@@ -585,7 +611,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Code</label>
-                        <input className="im-input" placeholder="Auto-generated (e.g. ITEM-0001)" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
+                        <input className="im-input" placeholder="Auto-generated" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Item Type *</label>
@@ -613,6 +639,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                           onChange={v => { setMacroFilter(v); setForm(f => ({ ...f, categoryId: undefined })); }}
                           placeholder="Search macro category…"
                           clearLabel="— All macro categories —"
+                          minWidth={240}
                         />
                       </div>
                       <div className="im-field">
@@ -623,6 +650,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                           onChange={v => setForm(f => ({ ...f, categoryId: v || undefined }))}
                           placeholder="Search category…"
                           clearLabel="— Select category —"
+                          minWidth={240}
                         />
                       </div>
                     </div>
@@ -677,11 +705,10 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       Purchasing receives in <strong style={{ color:'#fb923c' }}>Purchase UOM</strong> ·
                       Warehouse manages in <strong style={{ color:'#60a5fa' }}>Storage UOM</strong> ·
                       Production consumes in <strong style={{ color:'#4ade80' }}>Consumption UOM</strong>.
-                      Conversion factors are auto-calculated from the catalog when possible.
                     </div>
                     <div className="im-field">
                       <label className="im-label">Base UOM (legacy) *</label>
-                      <p className="im-sublabel">Kept for backward compatibility. Set Consumption UOM for new items.</p>
+                      <p className="im-sublabel">Kept for backward compatibility.</p>
                       <input className="im-input" placeholder="PCS" value={form.baseUom} onChange={e => setForm(f => ({ ...f, baseUom: e.target.value }))} required />
                     </div>
 
@@ -689,12 +716,12 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Purchase UOM</label>
-                        <p className="im-sublabel">Unit used in POs and supplier quotes</p>
-                        <SearchSelect options={uomOpts} value={form.purchaseUomId ?? ''} onChange={v => setForm(f => ({ ...f, purchaseUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" />
+                        <p className="im-sublabel">Unit used in POs, GRNs and supplier quotes</p>
+                        <SearchSelect options={uomOpts} value={form.purchaseUomId ?? ''} onChange={v => setForm(f => ({ ...f, purchaseUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" minWidth={240} />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Purchase → Consumption Factor</label>
-                        <p className="im-sublabel">How many consumption units per 1 purchase unit</p>
+                        <p className="im-sublabel">Consumption units per 1 purchase unit</p>
                         <input className="im-input" type="number" min="0" step="0.000001" value={form.purchaseToConsumptionFactor ?? 1} onChange={setNum('purchaseToConsumptionFactor')} />
                       </div>
                     </div>
@@ -704,11 +731,11 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       <div className="im-field">
                         <label className="im-label">Storage UOM</label>
                         <p className="im-sublabel">Unit used for stock counting in warehouse</p>
-                        <SearchSelect options={uomOpts} value={form.storageUomId ?? ''} onChange={v => setForm(f => ({ ...f, storageUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" />
+                        <SearchSelect options={uomOpts} value={form.storageUomId ?? ''} onChange={v => setForm(f => ({ ...f, storageUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Same as consumption —" minWidth={240} />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Storage → Consumption Factor</label>
-                        <p className="im-sublabel">How many consumption units per 1 storage unit</p>
+                        <p className="im-sublabel">Consumption units per 1 storage unit</p>
                         <input className="im-input" type="number" min="0" step="0.000001" value={form.storageToConsumptionFactor ?? 1} onChange={setNum('storageToConsumptionFactor')} />
                       </div>
                     </div>
@@ -716,8 +743,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-section" style={{ color:'#4ade80', opacity:0.8 }}>Consumption — Production domain</div>
                     <div className="im-field">
                       <label className="im-label">Consumption UOM</label>
-                      <p className="im-sublabel">Unit used in BOM and production orders — base for all conversions</p>
-                      <SearchSelect options={uomOpts} value={form.consumptionUomId ?? ''} onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Select consumption UOM —" />
+                      <p className="im-sublabel">Unit used in BOM and production orders</p>
+                      <SearchSelect options={uomOpts} value={form.consumptionUomId ?? ''} onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Select consumption UOM —" minWidth={240} />
                     </div>
 
                     {form.consumptionUomId && (
@@ -733,16 +760,20 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                 )}
 
                 {/* SUPPLIERS */}
-                {tab === 'suppliers' && effectiveInitial && <SuppliersTab ref={suppliersTabRef} item={effectiveInitial} uomUnits={uomUnits} />}
+                {tab === 'suppliers' && effectiveInitial && (
+                  <SuppliersTab ref={suppliersTabRef} item={liveItem ?? effectiveInitial} uomUnits={uomUnits} />
+                )}
               </div>
 
               <div className="im-ftr">
-                <button type="button" className="im-btn-cancel" onClick={onClose}>{tab === 'suppliers' ? 'Close' : 'Cancel'}</button>
-                {tab !== 'suppliers' ? (
+                <button type="button" className="im-btn-cancel" onClick={onClose}>
+                  {tab === 'suppliers' ? 'Close' : 'Cancel'}
+                </button>
+                {tab !== 'suppliers' && (
                   <button type="submit" className="im-btn-save" disabled={submitting}>
                     {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
                   </button>
-                ) : null}
+                )}
               </div>
             </form>
           </div>
@@ -773,93 +804,35 @@ function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCanc
   );
 }
 
+// ─── Items Table Columns ──────────────────────────────────────────────────────
 
-// ─── Items Table Columns ─────────────────────────────────────────────────────
-
-function ITEMS_COLUMNS(
-  onEdit: (item: Item) => void,
-  onDelete: (item: Item) => void,
-): ERPColumn<Item>[] {
+function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => void): ERPColumn<Item>[] {
   return [
-    {
-      key: 'code', header: 'Code', width: 120, sortable: true,
-      value: (r) => r.code,
-      render: (r) => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span>,
-    },
-    {
-      key: 'name', header: 'Name', sortable: true,
-      value: (r) => r.name,
-      render: (r) => (
-        <div>
-          <div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>
-          {r.description && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.description}</div>}
-        </div>
-      ),
-    },
-    {
-      key: 'itemType', header: 'Type', width: 140, sortable: true,
-      value: (r) => r.itemType,
-      render: (r) => <TypeBadge type={r.itemType} />,
-    },
-    {
-      key: 'category', header: 'Category', width: 110, sortable: true,
-      value: (r) => (r as any).category?.code ?? '',
-      render: (r) => {
-        const a = r as any;
-        return a.category
-          ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'#a78bfa', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{a.category.code}</span>
-          : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>;
-      },
-    },
-    {
-      key: 'purchaseUom', header: 'Purchase', width: 90, sortable: true,
-      value: (r) => (r as any).purchaseUom?.code ?? '',
-      render: (r) => <UomBadge unit={(r as any).purchaseUom} />,
-    },
-    {
-      key: 'storageUom', header: 'Storage', width: 90, sortable: true,
-      value: (r) => (r as any).storageUom?.code ?? '',
-      render: (r) => <UomBadge unit={(r as any).storageUom} />,
-    },
-    {
-      key: 'consumptionUom', header: 'Consumption', width: 110, sortable: true,
-      value: (r) => (r as any).consumptionUom?.code ?? '',
-      render: (r) => <UomBadge unit={(r as any).consumptionUom} />,
-    },
-    {
-      key: 'suppliers', header: 'Suppliers', width: 100, sortable: true,
-      value: (r) => (r as any).supplierItems?.length ?? 0,
-      render: (r) => {
-        const count = (r as any).supplierItems?.length ?? 0;
-        return count > 0
-          ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{count} supplier{count !== 1 ? 's' : ''}</span>
-          : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>;
-      },
-    },
-    { key: 'isStockable',   header: 'S',  width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isStockable} /> },
-    { key: 'isPurchasable', header: 'P',  width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isPurchasable} /> },
-    { key: 'isSaleable',    header: 'Sa', width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isSaleable} /> },
-    { key: 'isManufacturable', header: 'M', width: 45, align: 'center', sortable: false, render: (r) => <BoolDot value={r.isManufacturable} /> },
+    { key: 'code', header: 'Code', width: 120, sortable: true, value: r => r.code, render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span> },
+    { key: 'name', header: 'Name', sortable: true, value: r => r.name, render: r => (<div><div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>{r.description && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.description}</div>}</div>) },
+    { key: 'itemType', header: 'Type', width: 140, sortable: true, value: r => r.itemType, render: r => <TypeBadge type={r.itemType} /> },
+    { key: 'category', header: 'Category', width: 110, sortable: true, value: r => (r as any).category?.code ?? '', render: r => { const a = r as any; return a.category ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'#a78bfa', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{a.category.code}</span> : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>; } },
+    { key: 'purchaseUom', header: 'Purchase', width: 90, sortable: true, value: r => (r as any).purchaseUom?.code ?? '', render: r => <UomBadge unit={(r as any).purchaseUom} /> },
+    { key: 'storageUom', header: 'Storage', width: 90, sortable: true, value: r => (r as any).storageUom?.code ?? '', render: r => <UomBadge unit={(r as any).storageUom} /> },
+    { key: 'consumptionUom', header: 'Consumption', width: 110, sortable: true, value: r => (r as any).consumptionUom?.code ?? '', render: r => <UomBadge unit={(r as any).consumptionUom} /> },
+    { key: 'suppliers', header: 'Suppliers', width: 100, sortable: true, value: r => (r as any).supplierItems?.length ?? 0, render: r => { const count = (r as any).supplierItems?.length ?? 0; return count > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{count} supplier{count !== 1 ? 's' : ''}</span> : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>; } },
+    { key: 'isStockable',      header: 'S',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isStockable} /> },
+    { key: 'isPurchasable',    header: 'P',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isPurchasable} /> },
+    { key: 'isSaleable',       header: 'Sa', width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isSaleable} /> },
+    { key: 'isManufacturable', header: 'M',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isManufacturable} /> },
     {
       key: '_actions', header: '', width: 110, sortable: false,
-      render: (r) => (
+      render: r => (
         <div style={{ display:'flex', gap:6 }}>
-          <button
-            className="itm-btn-edit"
-            onClick={e => { e.stopPropagation(); onEdit(r); }}
-          >Edit</button>
-          <button
-            className="itm-btn-del"
-            onClick={e => { e.stopPropagation(); onDelete(r); }}
-          >Delete</button>
+          <button className="itm-btn-edit" onClick={e => { e.stopPropagation(); onEdit(r); }}>Edit</button>
+          <button className="itm-btn-del"  onClick={e => { e.stopPropagation(); onDelete(r); }}>Delete</button>
         </div>
       ),
     },
   ];
 }
 
-
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ItemsPage() {
   const [items,           setItems]           = useState<Item[]>([]);
@@ -893,47 +866,23 @@ export default function ItemsPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Filter system
   const itemsFilters = useMemo<ERPFilter<Item>[]>(() => [
-    {
-      key: 'macroCategoryId', label: 'Macro Cat.', type: 'searchselect', placeholder: 'All Macro Categories',
-      options: macroCategories.map(mc => ({ value: mc.id, label: `${mc.code} — ${mc.name}` })),
-      filterFn: (row, val) => {
-        const cat = (row as any).category;
-        return cat?.macroCategoryId === val || cat?.macroCategory?.id === val;
-      },
-    },
-    {
-      key: 'categoryId', label: 'Category', type: 'searchselect', placeholder: 'All Categories',
-      options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}`, sublabel: (c as any).macroCategory?.name })),
-      filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val,
-    },
-    {
-      key: 'supplierId', label: 'Supplier', type: 'searchselect', placeholder: 'All Suppliers',
-      options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.category ?? undefined })),
-      filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val),
-    },
-    {
-      key: 'valuationMethod', label: 'Valuation', type: 'select', placeholder: 'All Methods',
-      options: [
-        { value: 'average',  label: 'Average' },
-        { value: 'fifo',     label: 'FIFO' },
-        { value: 'standard', label: 'Standard' },
-      ],
-      filterFn: (row, val) => row.valuationMethod === val,
-    },
-    { key: 'hasUomTriple',    label: 'UOM Triple',    type: 'boolean', placeholder: 'UOM Triple only',    filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
-    { key: 'isStockable',     label: 'Stockable',     type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable      : true },
-    { key: 'isPurchasable',   label: 'Purchasable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable    : true },
-    { key: 'isSaleable',      label: 'Saleable',      type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable       : true },
-    { key: 'isManufacturable',label: 'Manufacturable',type: 'boolean', filterFn: (row, val) => val === true ? row.isManufacturable : true },
+    { key: 'macroCategoryId', label: 'Macro Cat.', type: 'searchselect', placeholder: 'All Macro Categories', options: macroCategories.map(mc => ({ value: mc.id, label: `${mc.code} — ${mc.name}` })), filterFn: (row, val) => { const cat = (row as any).category; return cat?.macroCategoryId === val || cat?.macroCategory?.id === val; } },
+    { key: 'categoryId', label: 'Category', type: 'searchselect', placeholder: 'All Categories', options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}`, sublabel: (c as any).macroCategory?.name })), filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val },
+    { key: 'supplierId', label: 'Supplier', type: 'searchselect', placeholder: 'All Suppliers', options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.category ?? undefined })), filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val) },
+    { key: 'valuationMethod', label: 'Valuation', type: 'select', placeholder: 'All Methods', options: [{ value: 'average', label: 'Average' }, { value: 'fifo', label: 'FIFO' }, { value: 'standard', label: 'Standard' }], filterFn: (row, val) => row.valuationMethod === val },
+    { key: 'hasUomTriple',     label: 'UOM Triple',    type: 'boolean', placeholder: 'UOM Triple only', filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
+    { key: 'isStockable',      label: 'Stockable',     type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable      : true },
+    { key: 'isPurchasable',    label: 'Purchasable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable    : true },
+    { key: 'isSaleable',       label: 'Saleable',      type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable       : true },
+    { key: 'isManufacturable', label: 'Manufacturable',type: 'boolean', filterFn: (row, val) => val === true ? row.isManufacturable : true },
   ], [categories, macroCategories, pageSuppliers]);
+
   const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(itemsFilters);
 
   const filtered = useMemo(() => {
     const base = applyERPFilters(items, itemsFilters, filterVals);
-    if (!typeFilter) return base;
-    return base.filter(i => i.itemType === typeFilter);
+    return typeFilter ? base.filter(i => i.itemType === typeFilter) : base;
   }, [items, itemsFilters, filterVals, typeFilter]);
 
   const handleDelete = async () => {
@@ -950,34 +899,12 @@ export default function ItemsPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .itm-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;gap:0;overflow:hidden}
         .itm-toolbar{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-        .itm-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:240px}
-        .itm-search:focus{border-color:rgba(251,146,60,0.4)}
-        .itm-filter{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none}
-        .itm-filter option{background:#0e0b1a;color:#f1ede8}
-        .itm-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s;flex-shrink:0}
+        .itm-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);flex-shrink:0}
         .itm-btn-new:hover{opacity:0.88}
-        .itm-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden}
-        .itm-table{width:100%;border-collapse:collapse}
-        .itm-table thead th{padding:9px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left;white-space:nowrap}
-        .itm-table tbody td{padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04);vertical-align:middle;font-size:13px}
-        .itm-table tbody tr:last-child td{border-bottom:none}
-        .itm-table tbody tr:hover td{background:rgba(251,146,60,0.03)}
-        .itm-code{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fb923c}
-        .itm-name{color:#e2dfd8;font-weight:500}
-        .itm-muted{color:rgba(255,255,255,0.4);font-size:12px}
-        .itm-actions{display:flex;gap:6px}
-        .itm-btn-edit,.itm-btn-del{padding:5px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;transition:background 0.15s;white-space:nowrap}
-        .itm-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
-        .itm-btn-edit:hover{background:rgba(255,255,255,0.09)}
-        .itm-btn-del{background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.2)}
-        .itm-btn-del:hover{background:rgba(239,68,68,0.14)}
-        .itm-empty,.itm-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px}
-        .itm-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:#fb923c;animation:itm-spin 0.7s linear infinite}
-        @keyframes itm-spin{to{transform:rotate(360deg)}}
-        .itm-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 14px;border-top:0.5px solid rgba(255,255,255,0.04)}
         .itm-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#fca5a5}
-        .itm-cat{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500;color:#a78bfa;background:rgba(167,139,250,0.1);border:0.5px solid rgba(167,139,250,0.2)}
-        .itm-sup{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;color:#4ade80;background:rgba(74,222,128,0.08);border:0.5px solid rgba(74,222,128,0.2)}
+        .itm-btn-edit,.itm-btn-del{padding:5px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;white-space:nowrap}
+        .itm-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
+        .itm-btn-del{background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.2)}
       `}</style>
 
       <div className="itm-page">
@@ -985,13 +912,9 @@ export default function ItemsPage() {
 
         <div className="itm-toolbar">
           <div style={{ flex: 1 }}>
-            <ERPFilterBar
-              filters={itemsFilters}
-              values={filterVals}
-              onChange={setFilterVal}
+            <ERPFilterBar filters={itemsFilters} values={filterVals} onChange={setFilterVal}
               onReset={() => { resetFilters(); setTypeFilter(null); }}
-              activeCount={filterCount + (typeFilter ? 1 : 0)}
-            />
+              activeCount={filterCount + (typeFilter ? 1 : 0)} />
           </div>
           <button className="itm-btn-new" onClick={() => { setEditing(null); setModalOpen(true); }}>
             + New Item
@@ -1002,17 +925,11 @@ export default function ItemsPage() {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <ERPTable<Item>
-            columns={ITEMS_COLUMNS(
-              (item) => { setEditing(item); setModalOpen(true); },
-              (item) => setDeleting(item),
-            )}
-            data={filtered}
-            rowKey={row => row.id}
-            loading={loading}
+            columns={ITEMS_COLUMNS(item => { setEditing(item); setModalOpen(true); }, item => setDeleting(item))}
+            data={filtered} rowKey={row => row.id} loading={loading}
             exportFilename="items"
             emptyMessage={filterCount || typeFilter ? 'No items match your filters.' : 'No items yet.'}
-            defaultPageSize={25}
-            maxHeight="100%"
+            defaultPageSize={25} maxHeight="100%"
           />
         </div>
 
@@ -1025,7 +942,7 @@ export default function ItemsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={fetchAll}
-        onCreated={(created) => { setEditing(created); fetchAll(); }}
+        onCreated={created => { setEditing(created); fetchAll(); }}
         initial={editing}
         categories={categories} macroCategories={macroCategories} uomUnits={uomUnits}
       />
