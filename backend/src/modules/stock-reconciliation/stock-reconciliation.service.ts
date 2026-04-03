@@ -74,20 +74,19 @@ export class StockReconciliationService {
     });
     if (!session) throw new NotFoundException('Count session not found');
 
-    // Serialize Decimal fields
     return {
       ...session,
       totalVarianceValue: session.totalVarianceValue ? Number(session.totalVarianceValue) : null,
       lines: session.lines.map(l => ({
         ...l,
-        systemStorageQty:   Number(l.systemStorageQty),
-        systemPurchaseQty:  Number(l.systemPurchaseQty),
-        unitCostSnapshot:   Number(l.unitCostSnapshot),
-        countedStorageQty:  l.countedStorageQty  ? Number(l.countedStorageQty)  : null,
-        countedPurchaseQty: l.countedPurchaseQty ? Number(l.countedPurchaseQty) : null,
-        varianceStorageQty: l.varianceStorageQty ? Number(l.varianceStorageQty) : null,
-        variancePurchaseQty:l.variancePurchaseQty? Number(l.variancePurchaseQty): null,
-        varianceValue:      l.varianceValue      ? Number(l.varianceValue)      : null,
+        systemStorageQty:    Number(l.systemStorageQty),
+        systemPurchaseQty:   Number(l.systemPurchaseQty),
+        unitCostSnapshot:    Number(l.unitCostSnapshot),
+        countedStorageQty:   l.countedStorageQty   ? Number(l.countedStorageQty)   : null,
+        countedPurchaseQty:  l.countedPurchaseQty  ? Number(l.countedPurchaseQty)  : null,
+        varianceStorageQty:  l.varianceStorageQty  ? Number(l.varianceStorageQty)  : null,
+        variancePurchaseQty: l.variancePurchaseQty ? Number(l.variancePurchaseQty) : null,
+        varianceValue:       l.varianceValue       ? Number(l.varianceValue)       : null,
       })),
     };
   }
@@ -102,7 +101,6 @@ export class StockReconciliationService {
 
     const sessionNumber = await this.generateSessionNumber(tenantId);
 
-    // Get stock positions to snapshot
     const stockWhere: any = { tenantId, warehouseId: dto.warehouseId };
     if (dto.itemIds?.length) stockWhere.itemId = { in: dto.itemIds };
 
@@ -167,9 +165,6 @@ export class StockReconciliationService {
   }
 
   // ── Enter count for a line ─────────────────────────────────────────────────
-  // User enters EITHER countedStorageQty OR countedPurchaseQty
-  // System auto-converts the other via UomService
-  // Mutual exclusion enforced: last one entered wins
 
   async updateLine(tenantId: string, userId: string, sessionId: string, dto: UpdateCountLineDto) {
     const session = await this.prisma.stockCountSession.findFirst({
@@ -189,38 +184,32 @@ export class StockReconciliationService {
       throw new BadRequestException('Provide either countedStorageQty or countedPurchaseQty');
     }
 
-    // Get item conversion factors for manual calculation
     const item = await this.prisma.item.findFirst({
-      where: { id: line.itemId, tenantId },
+      where:  { id: line.itemId, tenantId },
       select: { storageToConsumptionFactor: true, purchaseToConsumptionFactor: true },
     });
     const storageFactor  = Number(item?.storageToConsumptionFactor  ?? 1);
     const purchaseFactor = Number(item?.purchaseToConsumptionFactor ?? 1);
-    // storageQty × storageFactor = consumptionQty
-    // purchaseQty × purchaseFactor = consumptionQty
-    // → storageQty = purchaseQty × (purchaseFactor / storageFactor)
-    // → purchaseQty = storageQty × (storageFactor / purchaseFactor)
 
     let countedStorageQty:  number;
     let countedPurchaseQty: number;
 
     if (dto.countedStorageQty !== undefined) {
-      // User entered storage → derive purchase
       countedStorageQty  = dto.countedStorageQty;
       countedPurchaseQty = storageFactor > 0 && purchaseFactor > 0
         ? Math.round(countedStorageQty * (storageFactor / purchaseFactor) * 1000) / 1000
         : countedStorageQty;
     } else {
-      // User entered purchase → derive storage
       countedPurchaseQty = dto.countedPurchaseQty!;
       countedStorageQty  = storageFactor > 0 && purchaseFactor > 0
         ? Math.round(countedPurchaseQty * (purchaseFactor / storageFactor) * 1000) / 1000
         : countedPurchaseQty;
     }
 
-    // Calculate variances
+    // Variances preserve sign — negative means shortage, positive means surplus
     const varianceStorageQty  = Math.round((countedStorageQty  - Number(line.systemStorageQty))  * 1000) / 1000;
     const variancePurchaseQty = Math.round((countedPurchaseQty - Number(line.systemPurchaseQty)) * 1000) / 1000;
+    // varianceValue is signed: negative = loss, positive = gain
     const varianceValue       = Math.round(variancePurchaseQty * Number(line.unitCostSnapshot) * 100) / 100;
 
     await this.prisma.stockCountLine.update({
@@ -257,8 +246,7 @@ export class StockReconciliationService {
       throw new BadRequestException(`${uncounted} line(s) have not been counted yet`);
     }
 
-    // Calculate summary
-    const linesWithVariance = session.lines.filter(l => Number(l.variancePurchaseQty ?? 0) !== 0).length;
+    const linesWithVariance  = session.lines.filter(l => Number(l.variancePurchaseQty ?? 0) !== 0).length;
     const totalVarianceValue = session.lines.reduce((s, l) => s + Number(l.varianceValue ?? 0), 0);
 
     await this.prisma.stockCountSession.update({
@@ -276,7 +264,6 @@ export class StockReconciliationService {
   }
 
   // ── Approve session (pending_approval → approved) ─────────────────────────
-  // Requires INVENTORY:APPROVE permission — checked in controller
 
   async approve(tenantId: string, userId: string, id: string, dto: ApproveSessionDto) {
     const session = await this.prisma.stockCountSession.findFirst({
@@ -302,8 +289,8 @@ export class StockReconciliationService {
   }
 
   // ── Post adjustments (approved → posted) ───────────────────────────────────
-  // Creates stock adjustment movements for lines with variance
-  // Requires INVENTORY:APPROVE permission
+  // FIX 1: movementValue is now SIGNED (negative for shortages, positive for surpluses)
+  // FIX 2: referenceId stores sessionNumber (readable) instead of UUID
 
   async post(tenantId: string, userId: string, id: string) {
     const session = await this.prisma.stockCountSession.findFirst({
@@ -321,16 +308,21 @@ export class StockReconciliationService {
       throw new BadRequestException(`Session is "${session.status}" — must be approved to post`);
     }
 
-    // Only post lines with variance
     const linesWithVariance = session.lines.filter(l => Number(l.variancePurchaseQty ?? 0) !== 0);
 
     await this.prisma.$transaction(async (tx) => {
       for (const line of linesWithVariance) {
-        const variancePurchaseQty = Number(line.variancePurchaseQty ?? 0);
-        const varianceStorageQty  = Number(line.varianceStorageQty  ?? 0);
+        const variancePurchaseQty = Number(line.variancePurchaseQty ?? 0); // SIGNED
+        const varianceStorageQty  = Number(line.varianceStorageQty  ?? 0); // SIGNED
         const unitCost            = Number(line.unitCostSnapshot);
-        const movementValue       = Math.round(variancePurchaseQty * unitCost * 100) / 100;
-        const isPositive          = variancePurchaseQty > 0;
+
+        // movementValue is SIGNED: negative = inventory loss, positive = inventory gain
+        const movementValue = Math.round(variancePurchaseQty * unitCost * 100) / 100;
+
+        // Physical quantity for the movement record is always positive (absolute)
+        const absStorageQty  = Math.abs(varianceStorageQty);
+        const absPurchaseQty = Math.abs(variancePurchaseQty);
+        const isPositive     = variancePurchaseQty > 0;
 
         // Generate movement number
         const year   = new Date().getFullYear();
@@ -346,28 +338,31 @@ export class StockReconciliationService {
           data: {
             tenantId,
             movementNumber,
-            movementType:      'adjustment',
-            movementDate:      new Date(),
-            itemId:            line.itemId,
-            toWarehouseId:     isPositive ? session.warehouseId : null,
-            fromWarehouseId:   isPositive ? null : session.warehouseId,
-            quantity:          new Decimal(Math.abs(varianceStorageQty)),
-            uom:               line.storageUom,
-            purchaseQty:       Math.abs(variancePurchaseQty),
-            purchaseUom:       line.purchaseUom,
-            consumptionQty:    Math.abs(variancePurchaseQty), // approx
-            consumptionUom:    line.purchaseUom,
-            unitCost:          new Decimal(unitCost),
-            unitCostAtMovement:new Decimal(unitCost),
-            movementValue:     new Decimal(movementValue),
-            referenceType:     'CYCLE_COUNT',
-            referenceId:       session.id,
-            notes:             `Cycle Count adjustment — ${session.sessionNumber}`,
-            createdBy:         userId,
+            movementType:       'adjustment',
+            movementDate:       new Date(),
+            itemId:             line.itemId,
+            // Positive variance: stock coming in → toWarehouse
+            // Negative variance: stock going out → fromWarehouse
+            toWarehouseId:      isPositive ? session.warehouseId : null,
+            fromWarehouseId:    isPositive ? null : session.warehouseId,
+            quantity:           new Decimal(absStorageQty),
+            uom:                line.storageUom,
+            purchaseQty:        absPurchaseQty,
+            purchaseUom:        line.purchaseUom,
+            consumptionQty:     absPurchaseQty,
+            consumptionUom:     line.purchaseUom,
+            unitCost:           new Decimal(unitCost),
+            unitCostAtMovement: new Decimal(unitCost),
+            // FIX: movementValue is signed — negative for shortages
+            movementValue:      new Decimal(movementValue),
+            referenceType:      'CYCLE_COUNT',
+            referenceId:        session.id,  // UUID required by schema
+            notes:              `Cycle Count ${session.sessionNumber}${variancePurchaseQty < 0 ? ' — shortage' : ' — surplus'}`,
+            createdBy:          userId,
           },
         });
 
-        // Update stock
+        // Update stock balance — allow negative to reach zero minimum
         const existing = await tx.stock.findFirst({
           where: { tenantId, itemId: line.itemId, warehouseId: session.warehouseId },
         });
@@ -384,18 +379,16 @@ export class StockReconciliationService {
           });
         }
 
-        // Mark line as adjusted with movement ref
         await tx.stockCountLine.update({
           where: { id: line.id },
           data:  {
-            status:              'adjusted',
+            status:               'adjusted',
             adjustmentMovementId: movement.id,
-            updatedBy:           userId,
+            updatedBy:            userId,
           },
         });
       }
 
-      // Mark session as posted
       await tx.stockCountSession.update({
         where: { id },
         data:  { status: 'posted', postedAt: new Date(), updatedBy: userId },

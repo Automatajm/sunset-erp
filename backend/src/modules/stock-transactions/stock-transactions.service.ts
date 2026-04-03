@@ -32,7 +32,6 @@ export class StockTransactionsService {
     const isIssue        = dto.transactionType === 'issue';
     const absQty         = Math.abs(dto.quantity);
 
-    // Calculate all 3 UOM quantities (ADR-014)
     const allQtys = await this.uom.calcAllQties(absQty, dto.itemId, tenantId);
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -127,11 +126,41 @@ export class StockTransactionsService {
     if (filters?.itemId)          where.itemId       = filters.itemId;
     if (filters?.transactionType) where.movementType = filters.transactionType;
 
-    return this.prisma.stockMovement.findMany({
+    const movements = await this.prisma.stockMovement.findMany({
       where,
       include: { item: true, fromWarehouse: true, toWarehouse: true },
       orderBy: { movementDate: 'desc' },
     });
+
+    // Batch resolve CYCLE_COUNT references → sessionNumber
+    const cycleCountIds = [...new Set(
+      movements
+        .filter(m => m.referenceType === 'CYCLE_COUNT' && m.referenceId)
+        .map(m => m.referenceId!)
+    )];
+
+    const cycleSessions = cycleCountIds.length > 0
+      ? await this.prisma.stockCountSession.findMany({
+          where:  { id: { in: cycleCountIds } },
+          select: { id: true, sessionNumber: true },
+        })
+      : [];
+    const cycleMap = new Map<string, string>(
+      cycleSessions.map(s => [s.id, s.sessionNumber] as [string, string])
+    );
+
+    return movements.map(m => ({
+      ...m,
+      quantity:       Number(m.quantity),
+      purchaseQty:    m.purchaseQty    ? Number(m.purchaseQty)    : null,
+      consumptionQty: m.consumptionQty ? Number(m.consumptionQty) : null,
+      // movementValue is signed — preserve sign for adjustments
+      movementValue:  m.movementValue  ? Number(m.movementValue)  : null,
+      // Resolve reference display
+      referenceDisplay: m.referenceType === 'CYCLE_COUNT' && m.referenceId
+        ? (cycleMap.get(m.referenceId) ?? m.referenceId)
+        : (m.referenceId ?? null),
+    }));
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -429,33 +458,35 @@ export class StockTransactionsService {
 
     let filtered = movements.filter(m => !filters?.itemType || m.item?.itemType === filters.itemType);
 
-    // ── Resolve reference numbers (batch lookup — no N+1) ─────────────────
-    const arIds  = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice'     && m.referenceId).map(m => m.referenceId!))];
-    const apIds  = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice'     && m.referenceId).map(m => m.referenceId!))];
-    const poIds  = [...new Set(filtered.filter(m => m.referenceType === 'purchase_order' && m.referenceId).map(m => m.referenceId!))];
-    const grnIds = [...new Set(filtered.filter(m =>
-      (m.referenceType === 'GRN' || m.referenceType === 'GRN_CANCEL') && m.referenceId
-    ).map(m => m.referenceId!))];
+    // ── Batch resolve all reference types ─────────────────────────────────
+    const arIds      = [...new Set(filtered.filter(m => m.referenceType === 'ar_invoice'     && m.referenceId).map(m => m.referenceId!))];
+    const apIds      = [...new Set(filtered.filter(m => m.referenceType === 'ap_invoice'     && m.referenceId).map(m => m.referenceId!))];
+    const poIds      = [...new Set(filtered.filter(m => m.referenceType === 'purchase_order' && m.referenceId).map(m => m.referenceId!))];
+    const grnIds     = [...new Set(filtered.filter(m => (m.referenceType === 'GRN' || m.referenceType === 'GRN_CANCEL') && m.referenceId).map(m => m.referenceId!))];
+    const cycleIds   = [...new Set(filtered.filter(m => m.referenceType === 'CYCLE_COUNT'    && m.referenceId).map(m => m.referenceId!))];
 
-    const [arInvoices, apInvoices, poOrders, grnReceipts] = await Promise.all([
-      arIds.length  > 0 ? this.prisma.arInvoice.findMany({    where: { id: { in: arIds  } }, select: { id: true, invoiceNumber: true } }) : [],
-      apIds.length  > 0 ? this.prisma.apInvoice.findMany({    where: { id: { in: apIds  } }, select: { id: true, invoiceNumber: true } }) : [],
-      poIds.length  > 0 ? this.prisma.purchaseOrder.findMany({ where: { id: { in: poIds  } }, select: { id: true, poNumber:      true } }) : [],
-      grnIds.length > 0 ? this.prisma.goodsReceipt.findMany({ where: { id: { in: grnIds } }, select: { id: true, grnNumber:     true } }) : [],
+    const [arInvoices, apInvoices, poOrders, grnReceipts, cycleSessions] = await Promise.all([
+      arIds.length    > 0 ? this.prisma.arInvoice.findMany({         where: { id: { in: arIds    } }, select: { id: true, invoiceNumber: true } }) : [],
+      apIds.length    > 0 ? this.prisma.apInvoice.findMany({         where: { id: { in: apIds    } }, select: { id: true, invoiceNumber: true } }) : [],
+      poIds.length    > 0 ? this.prisma.purchaseOrder.findMany({     where: { id: { in: poIds    } }, select: { id: true, poNumber:      true } }) : [],
+      grnIds.length   > 0 ? this.prisma.goodsReceipt.findMany({      where: { id: { in: grnIds   } }, select: { id: true, grnNumber:     true } }) : [],
+      cycleIds.length > 0 ? this.prisma.stockCountSession.findMany({ where: { id: { in: cycleIds } }, select: { id: true, sessionNumber: true } }) : [],
     ]);
 
-    const arMap  = new Map<string, string>(arInvoices.map(i  => [i.id, i.invoiceNumber] as [string, string]));
-    const apMap  = new Map<string, string>(apInvoices.map(i  => [i.id, i.invoiceNumber] as [string, string]));
-    const poMap  = new Map<string, string>((poOrders    as any[]).map(p => [p.id, p.poNumber]  as [string, string]));
-    const grnMap = new Map<string, string>((grnReceipts as any[]).map(g => [g.id, g.grnNumber] as [string, string]));
+    const arMap    = new Map<string, string>(arInvoices.map(i  => [i.id, i.invoiceNumber]  as [string, string]));
+    const apMap    = new Map<string, string>(apInvoices.map(i  => [i.id, i.invoiceNumber]  as [string, string]));
+    const poMap    = new Map<string, string>((poOrders    as any[]).map(p => [p.id, p.poNumber]      as [string, string]));
+    const grnMap   = new Map<string, string>((grnReceipts as any[]).map(g => [g.id, g.grnNumber]     as [string, string]));
+    const cycleMap = new Map<string, string>((cycleSessions as any[]).map(s => [s.id, s.sessionNumber] as [string, string]));
 
     const resolveRef = (m: any): string => {
       if (!m.referenceType || !m.referenceId)    return '—';
-      if (m.referenceType === 'ar_invoice')      return arMap.get(m.referenceId)  ?? m.referenceId;
-      if (m.referenceType === 'ap_invoice')      return apMap.get(m.referenceId)  ?? m.referenceId;
-      if (m.referenceType === 'purchase_order')  return poMap.get(m.referenceId)  ?? m.referenceId;
-      if (m.referenceType === 'GRN')             return grnMap.get(m.referenceId) ?? m.referenceId;
-      if (m.referenceType === 'GRN_CANCEL')      return (grnMap.get(m.referenceId) ?? m.referenceId) + ' (cancel)';
+      if (m.referenceType === 'ar_invoice')      return arMap.get(m.referenceId)    ?? m.referenceId;
+      if (m.referenceType === 'ap_invoice')      return apMap.get(m.referenceId)    ?? m.referenceId;
+      if (m.referenceType === 'purchase_order')  return poMap.get(m.referenceId)    ?? m.referenceId;
+      if (m.referenceType === 'GRN')             return grnMap.get(m.referenceId)   ?? m.referenceId;
+      if (m.referenceType === 'GRN_CANCEL')      return (grnMap.get(m.referenceId)  ?? m.referenceId) + ' (cancel)';
+      if (m.referenceType === 'CYCLE_COUNT')     return cycleMap.get(m.referenceId) ?? m.referenceId;
       if (m.referenceType === 'opening_balance') return 'Opening Balance';
       return m.referenceId ?? '—';
     };
@@ -479,8 +510,8 @@ export class StockTransactionsService {
         select: { itemId: true, fromWarehouseId: true, toWarehouseId: true, movementType: true, quantity: true },
       });
       for (const m of beforeMovements) {
-        const whId = m.toWarehouseId ?? m.fromWarehouseId ?? 'unknown';
-        const key  = `${m.itemId}:${whId}`;
+        const whId  = m.toWarehouseId ?? m.fromWarehouseId ?? 'unknown';
+        const key   = `${m.itemId}:${whId}`;
         if (!balanceMap[key]) balanceMap[key] = 0;
         balanceMap[key] += m.movementType === 'issue' ? -Number(m.quantity) : Number(m.quantity);
       }
@@ -500,6 +531,12 @@ export class StockTransactionsService {
       balanceMap[key]     += signedQty;
       const closingBalance = balanceMap[key];
 
+      // Use stored movementValue (signed) when available, otherwise compute
+      const storedValue = m.movementValue ? Number(m.movementValue) : null;
+      const displayValue = storedValue !== null
+        ? storedValue
+        : (isOut ? -totalValue : totalValue);
+
       return {
         id:              m.id,
         movementNumber:  m.movementNumber,
@@ -518,7 +555,7 @@ export class StockTransactionsService {
         consumptionQty:  m.consumptionQty ? Number(m.consumptionQty) : qty,
         consumptionUom:  m.consumptionUom ?? m.uom,
         unitCost,
-        movementValue:   m.movementValue  ? Number(m.movementValue)  : (isOut ? -totalValue : totalValue),
+        movementValue:   displayValue,
         totalValue:      isOut ? -totalValue : totalValue,
         openingBalance:  Math.round(openingBalance * 1000) / 1000,
         closingBalance:  Math.round(closingBalance * 1000) / 1000,
@@ -547,7 +584,7 @@ export class StockTransactionsService {
     };
   }
 
-  // ── Valuation (ADR-019: purchaseQty × unitCost) ────────────────────────────
+  // ── Valuation ──────────────────────────────────────────────────────────────
 
   async getValuation(tenantId: string, filters?: { warehouseId?: string; itemType?: string }) {
     const where: any = { tenantId };
@@ -629,10 +666,7 @@ export class StockTransactionsService {
       include: { salesOrder: { select: { id: true, soNumber: true, status: true, promisedDate: true } } },
     });
 
-    const poSupplyMap = new Map<string, {
-      totalPending: number;
-      orders: Array<{ poNumber: string; pending: number; expectedDate: string | null }>;
-    }>();
+    const poSupplyMap = new Map<string, { totalPending: number; orders: Array<{ poNumber: string; pending: number; expectedDate: string | null }> }>();
     for (const line of pendingPOLines) {
       const pending = Number(line.orderedQuantity) - Number(line.receivedQuantity);
       if (pending <= 0 || !line.itemId) continue;
@@ -642,10 +676,7 @@ export class StockTransactionsService {
       poSupplyMap.set(line.itemId, ex);
     }
 
-    const soDemandMap = new Map<string, {
-      totalDemand: number;
-      orders: Array<{ soNumber: string; demand: number; promisedDate: string | null }>;
-    }>();
+    const soDemandMap = new Map<string, { totalDemand: number; orders: Array<{ soNumber: string; demand: number; promisedDate: string | null }> }>();
     for (const line of openSOLines) {
       const demand = Number(line.orderedQuantity) - Number(line.shippedQuantity);
       if (demand <= 0 || !line.itemId) continue;
@@ -663,10 +694,10 @@ export class StockTransactionsService {
       const unitCost    = Number(s.unitCost ?? 0);
       const stockValue  = Math.round(purchaseQty * unitCost * 100) / 100;
 
-      const reorderPoint = Number(s.item.reorderPoint   ?? 0);
-      const safetyStock  = Number(s.item.safetyStock    ?? 0);
+      const reorderPoint = Number(s.item.reorderPoint    ?? 0);
+      const safetyStock  = Number(s.item.safetyStock     ?? 0);
       const reorderQty   = Number(s.item.reorderQuantity ?? 0);
-      const leadTimeDays = Number(s.item.leadTimeDays   ?? 0);
+      const leadTimeDays = Number(s.item.leadTimeDays    ?? 0);
 
       const poData   = poSupplyMap.get(s.itemId);
       const soData   = soDemandMap.get(s.itemId);
@@ -687,12 +718,8 @@ export class StockTransactionsService {
 
       const hasOpenPO       = poSupply > 0;
       const doubleOrderRisk = atp <= reorderPoint && hasOpenPO;
-      const nextReceipt     = poData?.orders
-        .filter(o => o.expectedDate)
-        .sort((a, b) => (a.expectedDate ?? '').localeCompare(b.expectedDate ?? ''))[0]?.expectedDate ?? null;
-      const daysUntilReorder = leadTimeDays > 0 && dailyDemand > 0
-        ? Math.floor((available - reorderPoint) / dailyDemand) - leadTimeDays
-        : null;
+      const nextReceipt     = poData?.orders.filter(o => o.expectedDate).sort((a, b) => (a.expectedDate ?? '').localeCompare(b.expectedDate ?? ''))[0]?.expectedDate ?? null;
+      const daysUntilReorder = leadTimeDays > 0 && dailyDemand > 0 ? Math.floor((available - reorderPoint) / dailyDemand) - leadTimeDays : null;
 
       return {
         itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
@@ -701,19 +728,15 @@ export class StockTransactionsService {
         onHandQty: onHand, reservedQty: reserved, availableQty: available,
         unitCost, stockValue,
         purchaseQty, purchaseUom: s.purchaseUom || s.item.baseUom,
-        poSupplyQty:       Math.round(poSupply       * 1000) / 1000,
-        soDemandQty:       Math.round(soDemand       * 1000) / 1000,
-        atpQty:            Math.round(atp            * 1000) / 1000,
-        projectedStockQty: Math.round(projectedStock * 1000) / 1000,
+        poSupplyQty: Math.round(poSupply * 1000) / 1000, soDemandQty: Math.round(soDemand * 1000) / 1000,
+        atpQty: Math.round(atp * 1000) / 1000, projectedStockQty: Math.round(projectedStock * 1000) / 1000,
         reorderPoint, safetyStock, reorderQty, leadTimeDays,
         suggestedOrderQty: Math.round(suggestedOrderQty * 1000) / 1000,
-        coverageDays:      coverageDays > 900 ? null : coverageDays,
-        dailyDemand:       Math.round(dailyDemand * 1000) / 1000,
-        daysUntilReorder,
-        alertLevel, hasOpenPO, doubleOrderRisk,
+        coverageDays: coverageDays > 900 ? null : coverageDays,
+        dailyDemand: Math.round(dailyDemand * 1000) / 1000,
+        daysUntilReorder, alertLevel, hasOpenPO, doubleOrderRisk,
         nextReceiptDate: nextReceipt,
-        openPOs: poData?.orders ?? [],
-        openSOs: soData?.orders ?? [],
+        openPOs: poData?.orders ?? [], openSOs: soData?.orders ?? [],
       };
     });
 
@@ -722,7 +745,7 @@ export class StockTransactionsService {
     return {
       rows: result,
       summary: {
-        total:           result.length,
+        total: result.length,
         critical:        result.filter(r => r.alertLevel === 'critical').length,
         warning:         result.filter(r => r.alertLevel === 'warning').length,
         overstock:       result.filter(r => r.alertLevel === 'overstock').length,
@@ -733,7 +756,7 @@ export class StockTransactionsService {
     };
   }
 
-  // ── ABC Analysis (ADR-019: value = purchaseQty × unitCost) ────────────────
+  // ── ABC Analysis ──────────────────────────────────────────────────────────
 
   async getAbcAnalysis(tenantId: string, filters?: { warehouseId?: string; itemType?: string }) {
     const where: any = { tenantId };
@@ -745,70 +768,42 @@ export class StockTransactionsService {
         item:      { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
         warehouse: { select: { id: true, code: true, name: true } },
       },
-      orderBy: [{ item: { code: 'asc' } }],
+      orderBy: [{ item: { code: 'asc' } }, { warehouse: { code: 'asc' } }],
     });
 
-    const itemMap = new Map<string, {
-      itemId: string; itemCode: string; itemName: string; itemType: string;
-      totalValue: number; totalPurchaseQty: number; unitCost: number;
-      warehouses: string[];
-    }>();
+    const itemMap = new Map<string, { itemId: string; itemCode: string; itemName: string; itemType: string; totalValue: number; totalPurchaseQty: number; unitCost: number; warehouses: string[] }>();
 
     for (const s of stock) {
       if (filters?.itemType && s.item.itemType !== filters.itemType) continue;
       const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
       const unitCost    = Number(s.unitCost ?? 0);
       const value       = Math.round(purchaseQty * unitCost * 100) / 100;
-
-      const ex = itemMap.get(s.item.id);
-      if (ex) {
-        ex.totalValue       += value;
-        ex.totalPurchaseQty += purchaseQty;
-        ex.warehouses.push(s.warehouse.code);
-      } else {
-        itemMap.set(s.item.id, {
-          itemId:           s.item.id,
-          itemCode:         s.item.code,
-          itemName:         s.item.name,
-          itemType:         s.item.itemType,
-          totalValue:       value,
-          totalPurchaseQty: purchaseQty,
-          unitCost,
-          warehouses:       [s.warehouse.code],
-        });
-      }
+      const ex          = itemMap.get(s.item.id);
+      if (ex) { ex.totalValue += value; ex.totalPurchaseQty += purchaseQty; ex.warehouses.push(s.warehouse.code); }
+      else itemMap.set(s.item.id, { itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType, totalValue: value, totalPurchaseQty: purchaseQty, unitCost, warehouses: [s.warehouse.code] });
     }
 
     const sorted     = [...itemMap.values()].sort((a, b) => b.totalValue - a.totalValue);
     const grandTotal = sorted.reduce((s, r) => s + r.totalValue, 0);
+    let cumulative   = 0;
 
-    let cumulative = 0;
     const rows = sorted.map((item, idx) => {
       cumulative += item.totalValue;
       const cumulativePct = grandTotal > 0 ? (cumulative / grandTotal) * 100 : 0;
       const valuePct      = grandTotal > 0 ? (item.totalValue / grandTotal) * 100 : 0;
       const abcClass      = cumulativePct <= 80 ? 'A' : cumulativePct <= 95 ? 'B' : 'C';
       return {
-        rank:             idx + 1,
-        itemId:           item.itemId,
-        itemCode:         item.itemCode,
-        itemName:         item.itemName,
-        itemType:         item.itemType,
-        totalValue:       Math.round(item.totalValue       * 100)   / 100,
-        totalPurchaseQty: Math.round(item.totalPurchaseQty * 1000)  / 1000,
-        unitCost:         Math.round(item.unitCost         * 10000) / 10000,
-        valuePct:         Math.round(valuePct              * 100)   / 100,
-        cumulativePct:    Math.round(cumulativePct         * 100)   / 100,
-        abcClass,
-        warehouses:       [...new Set(item.warehouses)],
+        rank: idx + 1, itemId: item.itemId, itemCode: item.itemCode, itemName: item.itemName, itemType: item.itemType,
+        totalValue: Math.round(item.totalValue * 100) / 100, totalPurchaseQty: Math.round(item.totalPurchaseQty * 1000) / 1000,
+        unitCost: Math.round(item.unitCost * 10000) / 10000, valuePct: Math.round(valuePct * 100) / 100,
+        cumulativePct: Math.round(cumulativePct * 100) / 100, abcClass, warehouses: [...new Set(item.warehouses)],
       };
     });
 
     return {
       rows,
       summary: {
-        grandTotal: Math.round(grandTotal * 100) / 100,
-        totalItems: rows.length,
+        grandTotal: Math.round(grandTotal * 100) / 100, totalItems: rows.length,
         classA: { count: rows.filter(r => r.abcClass === 'A').length, value: Math.round(rows.filter(r => r.abcClass === 'A').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
         classB: { count: rows.filter(r => r.abcClass === 'B').length, value: Math.round(rows.filter(r => r.abcClass === 'B').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
         classC: { count: rows.filter(r => r.abcClass === 'C').length, value: Math.round(rows.filter(r => r.abcClass === 'C').reduce((s, r) => s + r.totalValue, 0) * 100) / 100 },
@@ -832,11 +827,10 @@ export class StockTransactionsService {
     });
 
     const now = new Date();
-
     const lastMovements = await this.prisma.stockMovement.groupBy({
-      by:   ['itemId', 'fromWarehouseId', 'toWarehouseId'],
+      by: ['itemId', 'fromWarehouseId', 'toWarehouseId'],
       where: { tenantId },
-      _max:  { movementDate: true },
+      _max: { movementDate: true },
     });
 
     const lastMovMap = new Map<string, Date>();
@@ -858,32 +852,23 @@ export class StockTransactionsService {
         const storageQty  = Number(s.storageQty  ?? s.onHandQuantity);
         const unitCost    = Number(s.unitCost ?? 0);
         const totalValue  = Math.round(purchaseQty * unitCost * 100) / 100;
-
         const key         = `${s.itemId}:${s.warehouseId}`;
         const lastMovDate = lastMovMap.get(key) ?? null;
-        const daysSinceLastMovement = lastMovDate
-          ? Math.floor((now.getTime() - lastMovDate.getTime()) / (1000 * 60 * 60 * 24))
-          : null;
-
+        const daysSinceLastMovement = lastMovDate ? Math.floor((now.getTime() - lastMovDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
         let agingBucket: '0-30' | '31-60' | '61-90' | '91-180' | '180+' | 'no_movement';
-        if      (daysSinceLastMovement === null)    agingBucket = 'no_movement';
-        else if (daysSinceLastMovement <= 30)       agingBucket = '0-30';
-        else if (daysSinceLastMovement <= 60)       agingBucket = '31-60';
-        else if (daysSinceLastMovement <= 90)       agingBucket = '61-90';
-        else if (daysSinceLastMovement <= 180)      agingBucket = '91-180';
-        else                                        agingBucket = '180+';
-
+        if      (daysSinceLastMovement === null) agingBucket = 'no_movement';
+        else if (daysSinceLastMovement <= 30)    agingBucket = '0-30';
+        else if (daysSinceLastMovement <= 60)    agingBucket = '31-60';
+        else if (daysSinceLastMovement <= 90)    agingBucket = '61-90';
+        else if (daysSinceLastMovement <= 180)   agingBucket = '91-180';
+        else                                     agingBucket = '180+';
         return {
           itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType,
           warehouseId: s.warehouse.id, warehouseCode: s.warehouse.code, warehouseName: s.warehouse.name,
-          purchaseQty:  Math.round(purchaseQty * 1000) / 1000,
-          storageQty:   Math.round(storageQty  * 1000) / 1000,
-          uom:          s.storageUom  || s.item.baseUom,
-          purchaseUom:  s.purchaseUom || s.item.baseUom,
-          unitCost, totalValue,
-          lastMovementDate:      lastMovDate?.toISOString() ?? null,
-          daysSinceLastMovement,
-          agingBucket,
+          purchaseQty: Math.round(purchaseQty * 1000) / 1000, storageQty: Math.round(storageQty * 1000) / 1000,
+          uom: s.storageUom || s.item.baseUom, purchaseUom: s.purchaseUom || s.item.baseUom,
+          unitCost, totalValue, lastMovementDate: lastMovDate?.toISOString() ?? null,
+          daysSinceLastMovement, agingBucket,
           isSlowMoving: daysSinceLastMovement !== null && daysSinceLastMovement > 60,
           isDead:       daysSinceLastMovement !== null && daysSinceLastMovement > 180,
         };
@@ -894,229 +879,87 @@ export class StockTransactionsService {
         return b.daysSinceLastMovement - a.daysSinceLastMovement;
       });
 
-    const bucketSummary = {
-      'no_movement': { count: 0, value: 0 },
-      '0-30':        { count: 0, value: 0 },
-      '31-60':       { count: 0, value: 0 },
-      '61-90':       { count: 0, value: 0 },
-      '91-180':      { count: 0, value: 0 },
-      '180+':        { count: 0, value: 0 },
-    };
-    for (const r of rows) {
-      bucketSummary[r.agingBucket].count++;
-      bucketSummary[r.agingBucket].value = Math.round((bucketSummary[r.agingBucket].value + r.totalValue) * 100) / 100;
-    }
+    const bucketSummary: Record<string, { count: number; value: number }> = { 'no_movement': { count: 0, value: 0 }, '0-30': { count: 0, value: 0 }, '31-60': { count: 0, value: 0 }, '61-90': { count: 0, value: 0 }, '91-180': { count: 0, value: 0 }, '180+': { count: 0, value: 0 } };
+    for (const r of rows) { bucketSummary[r.agingBucket].count++; bucketSummary[r.agingBucket].value = Math.round((bucketSummary[r.agingBucket].value + r.totalValue) * 100) / 100; }
 
     return {
       rows,
       summary: {
-        totalItems:      rows.length,
-        totalValue:      Math.round(rows.reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
-        slowMovingCount: rows.filter(r => r.isSlowMoving).length,
-        slowMovingValue: Math.round(rows.filter(r => r.isSlowMoving).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
-        deadStockCount:  rows.filter(r => r.isDead).length,
-        deadStockValue:  Math.round(rows.filter(r => r.isDead).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
-        buckets:         bucketSummary,
+        totalItems: rows.length, totalValue: Math.round(rows.reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        slowMovingCount: rows.filter(r => r.isSlowMoving).length, slowMovingValue: Math.round(rows.filter(r => r.isSlowMoving).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        deadStockCount: rows.filter(r => r.isDead).length, deadStockValue: Math.round(rows.filter(r => r.isDead).reduce((s, r) => s + r.totalValue, 0) * 100) / 100,
+        buckets: bucketSummary,
       },
       asOf: new Date(),
     };
   }
 
   // ── Inventory Turnover ─────────────────────────────────────────────────────
-  // Turnover Ratio  = Annualized COGS / Average Inventory Value
-  // Days on Hand    = 365 / Turnover Ratio
-  // Average Inv.    = (Opening Value + Closing Value) / 2
-  // All values use purchaseUom × unitCost (ADR-019)
 
-  async getInventoryTurnover(tenantId: string, filters?: {
-    warehouseId?: string;
-    itemType?:    string;
-    dateFrom?:    string;
-    dateTo?:      string;
-  }) {
+  async getInventoryTurnover(tenantId: string, filters?: { warehouseId?: string; itemType?: string; dateFrom?: string; dateTo?: string }) {
     const now      = new Date();
     const dateFrom = filters?.dateFrom ? new Date(filters.dateFrom) : new Date(now.getFullYear(), 0, 1);
     const dateTo   = filters?.dateTo   ? new Date(filters.dateTo + 'T23:59:59Z') : now;
     const days     = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
 
-    // ── 1. Current stock positions (closing inventory) ─────────────────────
     const stockWhere: any = { tenantId };
     if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
-
-    const stock = await this.prisma.stock.findMany({
-      where: stockWhere,
-      include: {
-        item:      { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
-        warehouse: { select: { id: true, code: true, name: true } },
-      },
-    });
-
+    const stock = await this.prisma.stock.findMany({ where: stockWhere, include: { item: { select: { id: true, code: true, name: true, itemType: true, baseUom: true } }, warehouse: { select: { id: true, code: true, name: true } } } });
     const stockFiltered = stock.filter(s => !filters?.itemType || s.item.itemType === filters.itemType);
 
-    // ── 2. COGS in period = sum of issue movementValues ───────────────────
-    const issueWhere: any = {
-      tenantId,
-      movementType: 'issue',
-      movementDate: { gte: dateFrom, lte: dateTo },
-    };
-    if (filters?.warehouseId) {
-      issueWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId:   filters.warehouseId },
-      ];
-    }
-
-    const issues = await this.prisma.stockMovement.findMany({
-      where:   issueWhere,
-      include: { item: { select: { id: true, itemType: true } } },
-    });
-
+    const issueWhere: any = { tenantId, movementType: 'issue', movementDate: { gte: dateFrom, lte: dateTo } };
+    if (filters?.warehouseId) issueWhere.OR = [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }];
+    const issues = await this.prisma.stockMovement.findMany({ where: issueWhere, include: { item: { select: { id: true, itemType: true } } } });
     const cogsMap = new Map<string, number>();
     for (const mv of issues) {
       if (!mv.itemId) continue;
       if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const val = Math.abs(
-        mv.movementValue ? Number(mv.movementValue) : Number(mv.quantity) * Number(mv.unitCost ?? 0)
-      );
+      const val = Math.abs(mv.movementValue ? Number(mv.movementValue) : Number(mv.quantity) * Number(mv.unitCost ?? 0));
       cogsMap.set(mv.itemId, (cogsMap.get(mv.itemId) ?? 0) + val);
     }
 
-    // ── 3. Opening inventory (movements BEFORE dateFrom) ──────────────────
     const openingWhere: any = { tenantId, movementDate: { lt: dateFrom } };
-    if (filters?.warehouseId) {
-      openingWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId:   filters.warehouseId },
-      ];
-    }
-
-    const openingMovements = await this.prisma.stockMovement.findMany({
-      where:  openingWhere,
-      select: {
-        itemId: true, movementType: true,
-        purchaseQty: true, unitCost: true, movementValue: true,
-        item: { select: { id: true, itemType: true } },
-      },
-    });
-
-    const openingQtyMap  = new Map<string, number>();
-    const openingCostMap = new Map<string, number>();
+    if (filters?.warehouseId) openingWhere.OR = [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }];
+    const openingMovements = await this.prisma.stockMovement.findMany({ where: openingWhere, select: { itemId: true, movementType: true, purchaseQty: true, unitCost: true, movementValue: true, item: { select: { id: true, itemType: true } } } });
+    const openingQtyMap = new Map<string, number>(); const openingCostMap = new Map<string, number>();
     for (const mv of openingMovements) {
       if (!mv.itemId) continue;
       if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const qty     = Number(mv.purchaseQty ?? 0);
-      const isIssue = mv.movementType === 'issue';
+      const qty = Number(mv.purchaseQty ?? 0); const isIssue = mv.movementType === 'issue';
       openingQtyMap.set(mv.itemId, (openingQtyMap.get(mv.itemId) ?? 0) + (isIssue ? -qty : qty));
       if (!isIssue && mv.unitCost) openingCostMap.set(mv.itemId, Number(mv.unitCost));
     }
 
-    // ── 4. Aggregate by item across warehouses ────────────────────────────
-    const itemMap = new Map<string, {
-      itemId: string; itemCode: string; itemName: string; itemType: string;
-      closingValue: number; closingQty: number; unitCost: number;
-      warehouses: string[];
-    }>();
-
+    const itemMap = new Map<string, { itemId: string; itemCode: string; itemName: string; itemType: string; closingValue: number; closingQty: number; unitCost: number; warehouses: string[] }>();
     for (const s of stockFiltered) {
-      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
-      const unitCost    = Number(s.unitCost ?? 0);
-      const value       = Math.round(purchaseQty * unitCost * 100) / 100;
-
+      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity); const unitCost = Number(s.unitCost ?? 0); const value = Math.round(purchaseQty * unitCost * 100) / 100;
       const ex = itemMap.get(s.item.id);
-      if (ex) {
-        ex.closingValue += value;
-        ex.closingQty   += purchaseQty;
-        ex.warehouses.push(s.warehouse.code);
-      } else {
-        itemMap.set(s.item.id, {
-          itemId:       s.item.id,
-          itemCode:     s.item.code,
-          itemName:     s.item.name,
-          itemType:     s.item.itemType,
-          closingValue: value,
-          closingQty:   purchaseQty,
-          unitCost,
-          warehouses:   [s.warehouse.code],
-        });
-      }
+      if (ex) { ex.closingValue += value; ex.closingQty += purchaseQty; ex.warehouses.push(s.warehouse.code); }
+      else itemMap.set(s.item.id, { itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType, closingValue: value, closingQty: purchaseQty, unitCost, warehouses: [s.warehouse.code] });
     }
-
-    for (const [itemId, cogs] of cogsMap) {
-      const ex = itemMap.get(itemId);
-      if (ex) (ex as any).cogs = Math.round(cogs * 100) / 100;
-    }
+    for (const [itemId, cogs] of cogsMap) { const ex = itemMap.get(itemId); if (ex) (ex as any).cogs = Math.round(cogs * 100) / 100; }
 
     const rows = [...itemMap.values()].map(item => {
-      const cogs         = (item as any).cogs ?? 0;
-      const openingQty   = Math.max(0, openingQtyMap.get(item.itemId) ?? 0);
-      const openingCost  = openingCostMap.get(item.itemId) ?? item.unitCost;
-      const openingValue = Math.round(openingQty * openingCost * 100) / 100;
-      const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
-
-      // Annualize COGS if period < 365 days
-      const annualizedCogs   = days < 365 ? Math.round((cogs / days) * 365 * 100) / 100 : cogs;
-      const turnoverRatio    = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
-      const daysOnHand       = turnoverRatio && turnoverRatio > 0 ? Math.round((365 / turnoverRatio) * 10) / 10 : null;
-
+      const cogs = (item as any).cogs ?? 0; const openingQty = Math.max(0, openingQtyMap.get(item.itemId) ?? 0); const openingCost = openingCostMap.get(item.itemId) ?? item.unitCost;
+      const openingValue = Math.round(openingQty * openingCost * 100) / 100; const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
+      const annualizedCogs = days < 365 ? Math.round((cogs / days) * 365 * 100) / 100 : cogs;
+      const turnoverRatio  = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
+      const daysOnHand     = turnoverRatio && turnoverRatio > 0 ? Math.round((365 / turnoverRatio) * 10) / 10 : null;
       let performance: 'excellent' | 'good' | 'fair' | 'poor' | 'no_movement';
-      if      (cogs === 0)            performance = 'no_movement';
-      else if (!turnoverRatio)        performance = 'poor';
-      else if (turnoverRatio >= 12)   performance = 'excellent';
-      else if (turnoverRatio >= 6)    performance = 'good';
-      else if (turnoverRatio >= 3)    performance = 'fair';
-      else                            performance = 'poor';
-
-      return {
-        itemId:         item.itemId,
-        itemCode:       item.itemCode,
-        itemName:       item.itemName,
-        itemType:       item.itemType,
-        warehouses:     [...new Set(item.warehouses)],
-        openingValue,
-        closingValue:   Math.round(item.closingValue * 100) / 100,
-        avgInventory,
-        cogs,
-        annualizedCogs,
-        turnoverRatio,
-        daysOnHand,
-        performance,
-      };
+      if (cogs === 0) performance = 'no_movement'; else if (!turnoverRatio) performance = 'poor'; else if (turnoverRatio >= 12) performance = 'excellent'; else if (turnoverRatio >= 6) performance = 'good'; else if (turnoverRatio >= 3) performance = 'fair'; else performance = 'poor';
+      return { itemId: item.itemId, itemCode: item.itemCode, itemName: item.itemName, itemType: item.itemType, warehouses: [...new Set(item.warehouses)], openingValue, closingValue: Math.round(item.closingValue * 100) / 100, avgInventory, cogs, annualizedCogs, turnoverRatio, daysOnHand, performance };
     });
+    rows.sort((a, b) => { if (a.turnoverRatio === null) return -1; if (b.turnoverRatio === null) return 1; return a.turnoverRatio - b.turnoverRatio; });
 
-    // Sort by turnover ratio asc (poor performers first)
-    rows.sort((a, b) => {
-      if (a.turnoverRatio === null) return -1;
-      if (b.turnoverRatio === null) return 1;
-      return a.turnoverRatio - b.turnoverRatio;
-    });
-
-    const totalCogs         = Math.round(rows.reduce((s, r) => s + r.cogs,         0) * 100) / 100;
+    const totalCogs = Math.round(rows.reduce((s, r) => s + r.cogs, 0) * 100) / 100;
     const totalAvgInventory = Math.round(rows.reduce((s, r) => s + r.avgInventory, 0) * 100) / 100;
     const overallTurnover   = totalAvgInventory > 0 ? Math.round((totalCogs / totalAvgInventory) * 100) / 100 : null;
     const overallDaysOnHand = overallTurnover && overallTurnover > 0 ? Math.round((365 / overallTurnover) * 10) / 10 : null;
 
     return {
       rows,
-      summary: {
-        totalItems:         rows.length,
-        totalCogs,
-        totalAvgInventory,
-        totalClosingValue:  Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100,
-        overallTurnover,
-        overallDaysOnHand,
-        periodDays:         days,
-        excellentCount:     rows.filter(r => r.performance === 'excellent').length,
-        goodCount:          rows.filter(r => r.performance === 'good').length,
-        fairCount:          rows.filter(r => r.performance === 'fair').length,
-        poorCount:          rows.filter(r => r.performance === 'poor').length,
-        noMovementCount:    rows.filter(r => r.performance === 'no_movement').length,
-      },
-      period: {
-        dateFrom: dateFrom.toISOString().split('T')[0],
-        dateTo:   dateTo.toISOString().split('T')[0],
-        days,
-        isAnnualized: days < 365,
-      },
+      summary: { totalItems: rows.length, totalCogs, totalAvgInventory, totalClosingValue: Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100, overallTurnover, overallDaysOnHand, periodDays: days, excellentCount: rows.filter(r => r.performance === 'excellent').length, goodCount: rows.filter(r => r.performance === 'good').length, fairCount: rows.filter(r => r.performance === 'fair').length, poorCount: rows.filter(r => r.performance === 'poor').length, noMovementCount: rows.filter(r => r.performance === 'no_movement').length },
+      period: { dateFrom: dateFrom.toISOString().split('T')[0], dateTo: dateTo.toISOString().split('T')[0], days, isAnnualized: days < 365 },
       asOf: new Date(),
     };
   }
