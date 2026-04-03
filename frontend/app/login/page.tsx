@@ -14,23 +14,20 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, checkAuth } = useAuth();
 
-  // Step 1 — credentials
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
 
-  // Step 2 — tenant
-  const [step,      setStep]     = useState<Step>('credentials');
-  const [tenants,   setTenants]  = useState<TenantOption[]>([]);
-  const [tenantQ,   setTenantQ]  = useState('');
+  const [step,      setStep]      = useState<Step>('credentials');
+  const [tenants,   setTenants]   = useState<TenantOption[]>([]);
+  const [tenantQ,   setTenantQ]   = useState('');
   const [tenantSel, setTenantSel] = useState<TenantOption | null>(null);
-  const [ddOpen,    setDdOpen]   = useState(false);
-  const [tempToken, setTempToken] = useState(''); // token from step 1
+  const [ddOpen,    setDdOpen]    = useState(false);
+  const [tempToken, setTempToken] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
   const ddRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ddRef.current && !ddRef.current.contains(e.target as Node)) setDdOpen(false);
@@ -44,21 +41,17 @@ export default function LoginPage() {
     t.code.toLowerCase().includes(tenantQ.toLowerCase())
   );
 
-  // ── Step 1: validate credentials ─────────────────────────────────────────
   const handleCredentials = async () => {
     if (!email || !password) { setError('Email and password are required.'); return; }
     setLoading(true); setError('');
     try {
-      const res = await apiClient.post('/auth/login', { email, password });
+      const res  = await apiClient.post('/auth/login', { email, password });
       const data = res.data;
-
       if (data.requiresTenantSelection && data.tenants?.length > 0) {
-        // Multiple tenants — go to step 2
         setTempToken(data.access_token ?? '');
         setTenants(data.tenants);
         setStep('tenant');
       } else {
-        // Single tenant — direct login
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.tenant?.name) localStorage.setItem('tenant_name', data.tenant.name);
@@ -70,13 +63,11 @@ export default function LoginPage() {
     } finally { setLoading(false); }
   };
 
-  // ── Step 2: select tenant ─────────────────────────────────────────────────
   const handleSelectTenant = async () => {
     if (!tenantSel) { setError('Please select a company.'); return; }
     setLoading(true); setError('');
     try {
-      // Call select-tenant with the temp token
-      const res = await apiClient.post('/auth/select-tenant',
+      const res  = await apiClient.post('/auth/select-tenant',
         { tenantId: tenantSel.id },
         { headers: { Authorization: `Bearer ${tempToken}` } }
       );
@@ -112,6 +103,8 @@ export default function LoginPage() {
           display: flex; align-items: center; justify-content: center;
           font-family: 'IBM Plex Sans', sans-serif; padding: 24px;
         }
+        /* FIX: overflow:visible so dropdown escapes the card.
+           Visual border-radius preserved via .login-hdr clip. */
         .login-card {
           width: 100%; max-width: 400px;
           background: rgba(12,8,22,0.95);
@@ -119,17 +112,28 @@ export default function LoginPage() {
           border-radius: 16px;
           box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02) inset;
           backdrop-filter: blur(24px);
-          overflow: hidden; position: relative;
+          overflow: visible; position: relative;
         }
         .login-card::before {
           content: '';
           position: absolute; top: 0; left: 40px; right: 40px; height: 1px;
           background: linear-gradient(90deg, transparent, rgba(251,146,60,0.5), transparent);
+          border-radius: 16px 16px 0 0;
         }
+        /* Clip header so rounded corners still show at top */
         .login-hdr {
           padding: 32px 32px 24px;
           border-bottom: 0.5px solid rgba(255,255,255,0.05);
           text-align: center;
+          border-radius: 16px 16px 0 0;
+          overflow: hidden;
+        }
+        /* Clip body bottom corners */
+        .login-body {
+          padding: 28px 32px 32px;
+          display: flex; flex-direction: column; gap: 16px;
+          border-radius: 0 0 16px 16px;
+          overflow: visible;
         }
         .login-mark {
           width: 44px; height: 44px; border-radius: 12px; margin: 0 auto 14px;
@@ -144,7 +148,6 @@ export default function LoginPage() {
         }
         .login-wordmark span { color: #fb923c; }
         .login-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.06em; }
-        .login-body { padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 16px; }
         .login-field { display: flex; flex-direction: column; gap: 5px; }
         .login-label {
           font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
@@ -156,10 +159,7 @@ export default function LoginPage() {
           font-family: 'IBM Plex Sans', sans-serif; color: #f1ede8; outline: none;
           transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .login-input:focus {
-          border-color: rgba(251,146,60,0.4);
-          box-shadow: 0 0 0 2px rgba(234,88,12,0.1);
-        }
+        .login-input:focus { border-color: rgba(251,146,60,0.4); box-shadow: 0 0 0 2px rgba(234,88,12,0.1); }
         .login-input::placeholder { color: rgba(255,255,255,0.2); }
         .login-btn {
           padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 500;
@@ -185,7 +185,7 @@ export default function LoginPage() {
         }
         .login-step-line { flex: 1; height: 0.5px; background: rgba(255,255,255,0.08); }
 
-        /* Tenant dropdown */
+        /* Tenant dropdown — identical look to original */
         .td-trigger {
           display: flex; align-items: center; justify-content: space-between;
           padding: 10px 14px; background: rgba(255,255,255,0.04);
@@ -195,21 +195,28 @@ export default function LoginPage() {
         .td-trigger:hover { border-color: rgba(251,146,60,0.3); }
         .td-trigger-open { border-color: rgba(251,146,60,0.4) !important; box-shadow: 0 0 0 2px rgba(234,88,12,0.1); }
         .td-dropdown {
-          position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 200;
+          position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 9999;
           background: rgba(12,8,22,0.98); border: 0.5px solid rgba(251,146,60,0.2);
           border-radius: 10px; overflow: hidden;
           box-shadow: 0 16px 48px rgba(0,0,0,0.7);
           animation: dd-in 0.1s ease;
+          display: flex; flex-direction: column;
         }
         @keyframes dd-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-        .td-search {
-          padding: 10px 12px; border-bottom: 0.5px solid rgba(255,255,255,0.06);
+        .td-search { padding: 10px 12px; border-bottom: 0.5px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .td-list {
+          max-height: 220px; overflow-y: auto; overflow-x: hidden;
+          padding: 6px; display: flex; flex-direction: column; gap: 2px;
         }
-        .td-list { max-height: 220px; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+        .td-list::-webkit-scrollbar { width: 4px; }
+        .td-list::-webkit-scrollbar-track { background: transparent; }
+        .td-list::-webkit-scrollbar-thumb { background: rgba(251,146,60,0.3); border-radius: 4px; }
+        .td-list::-webkit-scrollbar-thumb:hover { background: rgba(251,146,60,0.5); }
         .td-item {
           padding: 9px 12px; border-radius: 7px; cursor: pointer;
           transition: background 0.1s, color 0.1s;
           display: flex; align-items: center; justify-content: space-between;
+          flex-shrink: 0;
         }
         .td-item:hover { background: rgba(251,146,60,0.08); }
         .td-item-sel { background: rgba(251,146,60,0.1) !important; }
@@ -218,7 +225,6 @@ export default function LoginPage() {
 
       <div className="login-root" onKeyDown={handleKey}>
         <div className="login-card">
-          {/* Header */}
           <div className="login-hdr">
             <div className="login-mark">
               <svg viewBox="0 0 26 26" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -235,9 +241,7 @@ export default function LoginPage() {
             <div className="login-sub">Enterprise Resource Planning</div>
           </div>
 
-          {/* Body */}
           <div className="login-body">
-
             {/* Step indicator */}
             <div className="login-step">
               <div className="login-step-dot" style={{
@@ -247,23 +251,17 @@ export default function LoginPage() {
               }}>
                 {step === 'credentials' ? '1' : '✓'}
               </div>
-              <span style={{ color: step === 'credentials' ? '#fb923c' : 'rgba(255,255,255,0.3)' }}>
-                Credentials
-              </span>
+              <span style={{ color: step === 'credentials' ? '#fb923c' : 'rgba(255,255,255,0.3)' }}>Credentials</span>
               <div className="login-step-line" />
               <div className="login-step-dot" style={{
                 background: step === 'tenant' ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.04)',
                 color:      step === 'tenant' ? '#fb923c' : 'rgba(255,255,255,0.2)',
                 border:     `0.5px solid ${step === 'tenant' ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.08)'}`,
-              }}>
-                2
-              </div>
-              <span style={{ color: step === 'tenant' ? '#fb923c' : 'rgba(255,255,255,0.25)' }}>
-                Company
-              </span>
+              }}>2</div>
+              <span style={{ color: step === 'tenant' ? '#fb923c' : 'rgba(255,255,255,0.25)' }}>Company</span>
             </div>
 
-            {/* ── Step 1: Credentials ── */}
+            {/* Step 1 */}
             {step === 'credentials' && (
               <>
                 <div className="login-field">
@@ -283,7 +281,7 @@ export default function LoginPage() {
               </>
             )}
 
-            {/* ── Step 2: Tenant Select ── */}
+            {/* Step 2 */}
             {step === 'tenant' && (
               <>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
@@ -291,7 +289,6 @@ export default function LoginPage() {
                   Select which one you want to work in.
                 </div>
 
-                {/* Searchable tenant dropdown */}
                 <div className="login-field" style={{ position: 'relative' }} ref={ddRef}>
                   <label className="login-label">Company</label>
                   <div
