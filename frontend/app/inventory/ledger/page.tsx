@@ -413,7 +413,7 @@ export default function StockLedgerPage() {
             exportFilename={`stock-ledger-${new Date().toISOString().split('T')[0]}`}
             emptyMessage="No stock movements. Apply filters or post transactions."
             defaultPageSize={25}
-            maxHeight="calc(100vh - 490px)"
+            maxHeight="calc(100vh - 420px)"
             toolbarLeft={
               data ? (
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
