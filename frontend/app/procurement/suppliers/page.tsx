@@ -26,6 +26,24 @@ const COUNTRIES     = [
   { code:'HT', name:'Haiti' }, { code:'PR', name:'Puerto Rico' },
 ];
 
+const SUPPLIER_CATEGORIES = [
+  'Manufacturer',
+  'Distributor',
+  'Wholesaler',
+  'Importer / Trader',
+  'Raw Material Supplier',
+  'Packaging Supplier',
+  'Equipment & Machinery',
+  'MRO & Maintenance',
+  'Service Provider',
+  'Logistics & Freight',
+  'Contractor',
+  'Utility & Energy',
+  'Technology & Software',
+  'Consulting',
+  'Other',
+];
+
 const EMPTY_FORM: CreateSupplierDto = {
   code:'', name:'', legalName:'', taxId:'', taxType:'',
   phone:'', email:'', website:'',
@@ -206,7 +224,10 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                       <div className="sm-field">
                         <label style={L}>Category</label>
-                        <input style={F} placeholder="Manufacturing" value={form.category} onChange={set('category')} />
+                        <select style={{ ...F, cursor:'pointer' }} value={form.category} onChange={set('category')}>
+                          <option value="">— Select category —</option>
+                          {SUPPLIER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
                       </div>
                     </div>
                     <div className="sm-field">
@@ -673,10 +694,7 @@ export default function SuppliersPage() {
   const [priceListSup, setPriceListSup] = useState<Supplier | null>(null);
   const [deleteBusy,   setDeleteBusy]   = useState(false);
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(suppliers.map(s => s.category).filter(Boolean))];
-    return cats.map(c => ({ value: c!, label: c! }));
-  }, [suppliers]);
+  const categories = SUPPLIER_CATEGORIES.map(c => ({ value: c, label: c }));
 
   const filterDefs = useMemo<ERPFilter<Supplier>[]>(() => [
     { key:'category', label:'Category', type:'select', placeholder:'All Categories', options:categories, filterFn:(row,val) => row.category === val },
