@@ -7,36 +7,37 @@ import { Type } from 'class-transformer';
 import { CreateGrnLineDto } from './create-grn-line.dto';
 
 export class CreateGoodsReceiptDto {
-  @ApiPropertyOptional({ example: 'uuid', description: 'PO UUID (optional — GRN can exist without PO)' })
+  @ApiPropertyOptional({ example: 'uuid', description: 'PO UUID (optional)' })
   @IsOptional()
   @IsUUID()
   poId?: string;
 
-  @ApiProperty({ example: 'uuid', description: 'Warehouse UUID where goods are received' })
+  @ApiPropertyOptional({ example: 'uuid', description: 'Supplier UUID (required for manual GRNs without PO)' })
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
+
+  @ApiProperty({ example: 'uuid', description: 'Warehouse UUID' })
   @IsUUID()
   warehouseId: string;
 
-  @ApiPropertyOptional({ example: '2026-04-01', description: 'Received date (defaults to today)' })
+  @ApiPropertyOptional({ example: '2026-04-01' })
   @IsOptional()
   @IsString()
   receivedDate?: string;
 
-  @ApiPropertyOptional({
-    example: 'complete',
-    description: 'Receipt condition: complete | partial | damaged | rejected',
-    default: 'complete',
-  })
+  @ApiPropertyOptional({ example: 'complete', default: 'complete' })
   @IsOptional()
   @IsString()
   @MaxLength(50)
   condition?: string;
 
-  @ApiPropertyOptional({ example: 'Delivered by truck, all items OK' })
+  @ApiPropertyOptional({ example: 'Delivered by truck' })
   @IsOptional()
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional({ example: 'INV-2026-00123', description: 'Supplier invoice / reference number for manual receipts' })
+  @ApiPropertyOptional({ example: 'INV-2026-00123', description: 'Supplier invoice number for manual receipts' })
   @IsOptional()
   @IsString()
   @MaxLength(100)

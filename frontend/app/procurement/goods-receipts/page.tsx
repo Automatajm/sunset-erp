@@ -387,6 +387,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     try {
       const dto: CreateGoodsReceiptDto = {
         poId:        selectedPo?.id,
+        supplierId:  mode === 'manual' ? (selectedSupplierId || undefined) : undefined,
         warehouseId,
         receivedDate: receivedDate || undefined,
         condition,

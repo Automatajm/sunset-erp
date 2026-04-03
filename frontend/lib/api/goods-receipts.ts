@@ -62,6 +62,7 @@ export interface CreateGrnLineDto {
 
 export interface CreateGoodsReceiptDto {
   poId?: string;
+  supplierId?: string;
   warehouseId: string;
   receivedDate?: string;
   condition?: string;
@@ -106,3 +107,6 @@ export const goodsReceiptsApi = {
     return res.data;
   },
 };
+// NOTE: goods-receipts.ts already has supplierId in CreateGoodsReceiptDto from previous version
+// Confirm the interface includes it:
+//   supplierId?: string;  ← add this if missing

@@ -437,6 +437,7 @@ model Supplier {
   apInvoices     ApInvoice[]
   supplierItems  SupplierItem[]
   supplierScores SupplierScore[]
+  goodsReceipts  GoodsReceipt[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, code])
@@ -1895,6 +1896,7 @@ model GoodsReceipt {
   tenantId     String   @map("tenant_id") @db.Uuid
   grnNumber    String   @map("grn_number") @db.VarChar(50)
   poId         String?  @map("po_id") @db.Uuid
+  supplierId   String?  @map("supplier_id") @db.Uuid
   warehouseId  String   @map("warehouse_id") @db.Uuid
   receivedDate DateTime @default(dbgenerated("CURRENT_DATE")) @map("received_date") @db.Date
   status       String   @default("posted") @db.VarChar(20)
@@ -1909,6 +1911,7 @@ model GoodsReceipt {
   deletedBy    String?   @map("deleted_by") @db.Uuid
   tenant        Tenant             @relation(fields: [tenantId],    references: [id])
   purchaseOrder PurchaseOrder?     @relation(fields: [poId],        references: [id])
+  supplier      Supplier?          @relation(fields: [supplierId],  references: [id])
   warehouse     Warehouse          @relation(fields: [warehouseId], references: [id])
   lines         GoodsReceiptLine[]
   apInvoices    ApInvoice[]        @relation("ApInvoiceGrn")

@@ -1184,6 +1184,7 @@ erDiagram
     String tenant_id 
     String grn_number 
     String po_id "❓"
+    String supplier_id "❓"
     String warehouse_id 
     DateTime received_date 
     String status 
@@ -1605,6 +1606,7 @@ erDiagram
     "in_supplier_items" }o--|| cfg_uom_units : "purchaseUom"
     "grn_receipts" }o--|| saas_tenants : "tenant"
     "grn_receipts" }o--|o po_purchase_orders : "purchaseOrder"
+    "grn_receipts" }o--|o po_suppliers : "supplier"
     "grn_receipts" }o--|| in_warehouses : "warehouse"
     "grn_receipt_lines" }o--|| saas_tenants : "tenant"
     "grn_receipt_lines" }o--|| grn_receipts : "goodsReceipt"

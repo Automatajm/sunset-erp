@@ -48,6 +48,20 @@ export class GoodsReceiptsService {
     return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
   }
 
+  // ── Resolve supplierId: from DTO, or from PO ───────────────────────────────
+
+  private async resolveSupplierID(dto: CreateGoodsReceiptDto, tenantId: string): Promise<string | null> {
+    if (dto.supplierId) return dto.supplierId;
+    if (dto.poId) {
+      const po = await this.prisma.purchaseOrder.findFirst({
+        where: { id: dto.poId, tenantId },
+        select: { supplierId: true },
+      });
+      return po?.supplierId ?? null;
+    }
+    return null;
+  }
+
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateGoodsReceiptDto) {
@@ -65,6 +79,9 @@ export class GoodsReceiptsService {
       if (!po) throw new NotFoundException(`Purchase order ${dto.poId} not found`);
       if (po.status === 'cancelled') throw new BadRequestException('Cannot receive against a cancelled PO');
     }
+
+    // Resolve supplierId (from DTO for manual, from PO for PO-linked)
+    const supplierId = await this.resolveSupplierID(dto, tenantId);
 
     // Validate items + pre-calculate UOM quantities for each line
     const lineData: Array<{
@@ -86,22 +103,16 @@ export class GoodsReceiptsService {
         if (!poLine) throw new NotFoundException(`PO line ${line.poLineId} not found`);
       }
 
-      // Find SupplierItem if PO exists (for most specific conversion factor)
+      // Find SupplierItem for conversion factor
       let supplierItemId: string | undefined;
-      if (dto.poId) {
-        const po = await this.prisma.purchaseOrder.findFirst({
-          where: { id: dto.poId, tenantId },
-          select: { supplierId: true },
+      const resolvedSupplierId = supplierId;
+      if (resolvedSupplierId) {
+        const si = await this.prisma.supplierItem.findFirst({
+          where: { tenantId, supplierId: resolvedSupplierId, itemId: line.itemId, deletedAt: null },
         });
-        if (po) {
-          const si = await this.prisma.supplierItem.findFirst({
-            where: { tenantId, supplierId: po.supplierId, itemId: line.itemId, deletedAt: null },
-          });
-          supplierItemId = si?.id;
-        }
+        supplierItemId = si?.id;
       }
 
-      // Calculate all 3 UOM quantities (ADR-014)
       const allQties = await this.uom.calcAllQties(
         Number(line.receivedQuantity),
         line.itemId,
@@ -120,12 +131,13 @@ export class GoodsReceiptsService {
           tenantId,
           grnNumber,
           poId:         dto.poId ?? null,
+          supplierId:   supplierId ?? null,
           warehouseId:  dto.warehouseId,
           receivedDate: dto.receivedDate ? new Date(dto.receivedDate) : new Date(),
           status:       'posted',
           condition:    dto.condition ?? 'complete',
           notes:        dto.notes ?? null,
-          supplierRef:  dto.supplierRef ?? null,   // ← NEW: supplier invoice ref
+          supplierRef:  dto.supplierRef ?? null,
           createdBy:    userId,
           updatedBy:    userId,
         },
@@ -138,16 +150,13 @@ export class GoodsReceiptsService {
         const allQtys = lineData[i];
         const unitCost = line.unitCost ? Number(line.unitCost) : null;
 
-        // Create stock movement with all 3 UOM quantities + financial fields
         const movementNumber = await this.generateMovementNumber(tx, tenantId);
 
-        // Get current stock WAC for movement snapshot
         const currentStock = await tx.stock.findFirst({
           where: { tenantId, itemId: line.itemId, warehouseId: dto.warehouseId },
         });
         const currentWAC = currentStock?.unitCost ? Number(currentStock.unitCost) : 0;
 
-        // Calculate WAC update (ADR-019)
         const incomingCost = unitCost ?? currentWAC;
         const wacResult = this.uom.calcNewWAC(
           currentStock ? Number(currentStock.purchaseQty ?? currentStock.onHandQuantity) : 0,
@@ -156,7 +165,6 @@ export class GoodsReceiptsService {
           incomingCost,
         );
 
-        // movementValue = financial value of this specific movement
         const movementValue = allQtys.purchaseQty * incomingCost;
 
         const movement = await tx.stockMovement.create({
@@ -167,16 +175,12 @@ export class GoodsReceiptsService {
             itemId:          line.itemId,
             fromWarehouseId: null,
             toWarehouseId:   dto.warehouseId,
-            // Storage UOM (existing fields — backward compat)
             quantity:        allQtys.storageQty,
             uom:             allQtys.storageUom,
-            // Purchase UOM (financial unit of record — ADR-014)
             purchaseQty:     allQtys.purchaseQty,
             purchaseUom:     allQtys.purchaseUom,
-            // Consumption UOM (production auxiliary — ADR-014)
             consumptionQty:  allQtys.consumptionQty,
             consumptionUom:  allQtys.consumptionUom,
-            // Costing (ADR-019)
             unitCost:              incomingCost,
             unitCostAtMovement:    incomingCost,
             movementValue:         Math.round(movementValue * 100) / 100,
@@ -188,7 +192,6 @@ export class GoodsReceiptsService {
           },
         });
 
-        // Create GRN line with all 3 UOM quantities + expiryDate
         await tx.goodsReceiptLine.create({
           data: {
             tenantId,
@@ -198,26 +201,22 @@ export class GoodsReceiptsService {
             itemId:           line.itemId,
             warehouseId:      dto.warehouseId,
             stockMovementId:  movement.id,
-            // Purchase UOM (receivedQuantity/uom = purchaseQty/purchaseUom)
             receivedQuantity: allQtys.purchaseQty,
             uom:              allQtys.purchaseUom,
-            // Storage UOM (auxiliary)
             storageQty:       allQtys.storageQty,
             storageUom:       allQtys.storageUom,
-            // Consumption UOM (auxiliary)
             consumptionQty:   allQtys.consumptionQty,
             consumptionUom:   allQtys.consumptionUom,
-            // Unit cost in purchaseUom (feeds WAC)
             unitCost:         unitCost,
             lotNumber:        line.lotNumber ?? null,
-            expiryDate:       line.expiryDate ? new Date(line.expiryDate) : null,  // ← NEW
+            expiryDate:       line.expiryDate ? new Date(line.expiryDate) : null,
             notes:            line.notes ?? null,
             createdBy:        userId,
             updatedBy:        userId,
           },
         });
 
-        // 3. Upsert stock with all 3 UOM quantities + new WAC (ADR-019)
+        // Upsert stock
         if (currentStock) {
           await tx.stock.update({
             where: { id: currentStock.id },
@@ -251,7 +250,6 @@ export class GoodsReceiptsService {
           });
         }
 
-        // 4. Update PO line received quantity if linked
         if (line.poLineId) {
           await tx.purchaseOrderLine.update({
             where: { id: line.poLineId },
@@ -260,14 +258,12 @@ export class GoodsReceiptsService {
         }
       }
 
-      // 5. Update PO status if all lines fully received
+      // Update PO status
       if (dto.poId) {
         const poLines = await tx.purchaseOrderLine.findMany({
           where: { purchaseOrderId: dto.poId, deletedAt: null },
         });
-        const allReceived = poLines.every(
-          l => Number(l.receivedQuantity) >= Number(l.orderedQuantity)
-        );
+        const allReceived = poLines.every(l => Number(l.receivedQuantity) >= Number(l.orderedQuantity));
         const anyReceived = poLines.some(l => Number(l.receivedQuantity) > 0);
         const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : 'confirmed';
         await tx.purchaseOrder.update({
@@ -289,6 +285,7 @@ export class GoodsReceiptsService {
       where:   { tenantId, deletedAt: null },
       include: {
         purchaseOrder: { select: { poNumber: true, supplier: { select: { name: true, code: true } } } },
+        supplier:      { select: { name: true, code: true } },
         warehouse:     { select: { code: true, name: true } },
         lines:         { where: { deletedAt: null }, include: { item: { select: { code: true, name: true } } } },
         _count:        { select: { lines: true } },
@@ -302,8 +299,9 @@ export class GoodsReceiptsService {
       totalValue:    g.lines.reduce(
         (sum, l) => sum + (Number(l.receivedQuantity) * Number(l.unitCost ?? 0)), 0
       ),
-      supplierName:  g.purchaseOrder?.supplier?.name ?? null,
-      supplierCode:  g.purchaseOrder?.supplier?.code ?? null,
+      // Prefer direct supplierId relation (manual GRNs); fall back to PO supplier
+      supplierName:  g.supplier?.name ?? g.purchaseOrder?.supplier?.name ?? null,
+      supplierCode:  g.supplier?.code ?? g.purchaseOrder?.supplier?.code ?? null,
       poNumber:      g.purchaseOrder?.poNumber ?? null,
       warehouseCode: g.warehouse.code,
       warehouseName: g.warehouse.name,
@@ -322,6 +320,7 @@ export class GoodsReceiptsService {
             supplier: { select: { name: true, code: true } },
           },
         },
+        supplier:  { select: { name: true, code: true } },
         warehouse: { select: { code: true, name: true } },
         lines: {
           where:   { deletedAt: null },
@@ -335,7 +334,14 @@ export class GoodsReceiptsService {
       },
     });
     if (!grn) throw new NotFoundException(`GRN ${id} not found`);
-    return grn;
+    return {
+      ...grn,
+      supplierName: grn.supplier?.name ?? grn.purchaseOrder?.supplier?.name ?? null,
+      supplierCode: grn.supplier?.code ?? grn.purchaseOrder?.supplier?.code ?? null,
+      poNumber:     grn.purchaseOrder?.poNumber ?? null,
+      warehouseCode: grn.warehouse.code,
+      warehouseName: grn.warehouse.name,
+    };
   }
 
   // ── Find by PO ─────────────────────────────────────────────────────────────
@@ -363,20 +369,18 @@ export class GoodsReceiptsService {
     });
   }
 
-  // ── Cancel (with WAC reversal — ADR-019) ───────────────────────────────────
+  // ── Cancel ─────────────────────────────────────────────────────────────────
 
   async cancel(tenantId: string, userId: string, id: string) {
     const grn = await this.findOne(tenantId, id);
     if (grn.status === 'cancelled') throw new ConflictException('GRN is already cancelled');
 
     await this.prisma.$transaction(async (tx) => {
-      // 1. Cancel GRN header
       await tx.goodsReceipt.update({
         where: { id },
         data:  { status: 'cancelled', updatedBy: userId },
       });
 
-      // 2. Reverse stock for each line
       for (const line of grn.lines) {
         const originalMovement = line.stockMovementId
           ? await tx.stockMovement.findFirst({ where: { id: line.stockMovementId } })
@@ -392,19 +396,16 @@ export class GoodsReceiptsService {
         const storageUom     = line.storageUom  ?? line.uom;
         const consumptionUom = line.consumptionUom ?? line.uom;
 
-        // Partial consumption guard (ADR-019)
         const currentStock = await tx.stock.findFirst({
           where: { tenantId, itemId: line.itemId, warehouseId: grn.warehouseId },
         });
         if (currentStock && Number(currentStock.purchaseQty) < purchaseQty) {
           throw new ConflictException(
             `Cannot cancel GRN ${grn.grnNumber}: stock for item ${line.itemId} ` +
-            `has been partially consumed (available: ${currentStock.purchaseQty}, ` +
-            `required to reverse: ${purchaseQty}).`
+            `has been partially consumed (available: ${currentStock.purchaseQty}, required: ${purchaseQty}).`
           );
         }
 
-        // Create reversal movement
         const reversalNumber = await this.generateMovementNumber(tx, tenantId);
         const movementValue  = -(purchaseQty * originalCost);
 
@@ -422,9 +423,9 @@ export class GoodsReceiptsService {
             purchaseUom:     line.uom,
             consumptionQty:  -consumptionQty,
             consumptionUom:  consumptionUom,
-            unitCost:              originalCost,
-            unitCostAtMovement:    originalCost,
-            movementValue:         Math.round(movementValue * 100) / 100,
+            unitCost:            originalCost,
+            unitCostAtMovement:  originalCost,
+            movementValue:       Math.round(movementValue * 100) / 100,
             referenceType:   'GRN_CANCEL',
             referenceId:     id,
             notes:           `Reversal of GRN ${grn.grnNumber}`,
@@ -432,14 +433,11 @@ export class GoodsReceiptsService {
           },
         });
 
-        // WAC reversal (ADR-019)
         if (currentStock) {
           const currentPurchaseQty = Number(currentStock.purchaseQty ?? currentStock.onHandQuantity);
           const currentUnitCost    = Number(currentStock.unitCost ?? 0);
-          const currentTotalValue  = currentPurchaseQty * currentUnitCost;
-          const reversalValue      = purchaseQty * originalCost;
           const newPurchaseQty     = currentPurchaseQty - purchaseQty;
-          const newTotalValue      = currentTotalValue - reversalValue;
+          const newTotalValue      = currentPurchaseQty * currentUnitCost - purchaseQty * originalCost;
           const newWAC             = newPurchaseQty > 0
             ? Math.round((newTotalValue / newPurchaseQty) * 10_000) / 10_000
             : 0;
@@ -456,7 +454,6 @@ export class GoodsReceiptsService {
           });
         }
 
-        // Reverse PO line received quantity
         if (line.poLineId) {
           await tx.purchaseOrderLine.update({
             where: { id: line.poLineId },
@@ -465,7 +462,6 @@ export class GoodsReceiptsService {
         }
       }
 
-      // 3. Update PO status if linked
       if (grn.poId) {
         const poLines = await tx.purchaseOrderLine.findMany({
           where: { purchaseOrderId: grn.poId, deletedAt: null },
@@ -509,19 +505,13 @@ export class GoodsReceiptsService {
         AND l.deleted_at IS NULL
     `;
 
-    return {
-      total, posted, cancelled, today,
-      totalValue: valueAgg[0]?.total_value ?? 0,
-    };
+    return { total, posted, cancelled, today, totalValue: valueAgg[0]?.total_value ?? 0 };
   }
 
   // ── Inventory Turnover ─────────────────────────────────────────────────────
 
   async getInventoryTurnover(tenantId: string, filters?: {
-    warehouseId?: string;
-    itemType?:    string;
-    dateFrom?:    string;
-    dateTo?:      string;
+    warehouseId?: string; itemType?: string; dateFrom?: string; dateTo?: string;
   }) {
     const now      = new Date();
     const dateFrom = filters?.dateFrom ? new Date(filters.dateFrom) : new Date(now.getFullYear(), 0, 1);
@@ -541,51 +531,27 @@ export class GoodsReceiptsService {
 
     const filtered = stock.filter(s => !filters?.itemType || s.item.itemType === filters.itemType);
 
-    const issueWhere: any = {
-      tenantId,
-      movementType: 'issue',
-      movementDate: { gte: dateFrom, lte: dateTo },
-    };
-    if (filters?.warehouseId) {
-      issueWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId:   filters.warehouseId },
-      ];
-    }
+    const issueWhere: any = { tenantId, movementType: 'issue', movementDate: { gte: dateFrom, lte: dateTo } };
+    if (filters?.warehouseId) issueWhere.OR = [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }];
 
     const issues = await this.prisma.stockMovement.findMany({
-      where:   issueWhere,
-      include: { item: { select: { id: true, itemType: true } } },
+      where: issueWhere, include: { item: { select: { id: true, itemType: true } } },
     });
 
     const cogsMap = new Map<string, number>();
     for (const mv of issues) {
       if (!mv.itemId) continue;
       if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const val = Math.abs(
-        mv.movementValue ? Number(mv.movementValue) : Number(mv.quantity) * Number(mv.unitCost ?? 0)
-      );
+      const val = Math.abs(mv.movementValue ? Number(mv.movementValue) : Number(mv.quantity) * Number(mv.unitCost ?? 0));
       cogsMap.set(mv.itemId, (cogsMap.get(mv.itemId) ?? 0) + val);
     }
 
-    const openingWhere: any = {
-      tenantId,
-      movementDate: { lt: dateFrom },
-    };
-    if (filters?.warehouseId) {
-      openingWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId:   filters.warehouseId },
-      ];
-    }
+    const openingWhere: any = { tenantId, movementDate: { lt: dateFrom } };
+    if (filters?.warehouseId) openingWhere.OR = [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }];
 
     const openingMovements = await this.prisma.stockMovement.findMany({
-      where:  openingWhere,
-      select: {
-        itemId: true, movementType: true,
-        purchaseQty: true, unitCost: true, movementValue: true,
-        item: { select: { id: true, itemType: true } },
-      },
+      where: openingWhere,
+      select: { itemId: true, movementType: true, purchaseQty: true, unitCost: true, movementValue: true, item: { select: { id: true, itemType: true } } },
     });
 
     const openingQtyMap  = new Map<string, number>();
@@ -593,44 +559,19 @@ export class GoodsReceiptsService {
     for (const mv of openingMovements) {
       if (!mv.itemId) continue;
       if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const qty     = Number(mv.purchaseQty ?? 0);
-      const isIssue = mv.movementType === 'issue';
-      const current = openingQtyMap.get(mv.itemId) ?? 0;
-      openingQtyMap.set(mv.itemId, current + (isIssue ? -qty : qty));
-      if (!isIssue && mv.unitCost) {
-        openingCostMap.set(mv.itemId, Number(mv.unitCost));
-      }
+      const qty = Number(mv.purchaseQty ?? 0);
+      openingQtyMap.set(mv.itemId, (openingQtyMap.get(mv.itemId) ?? 0) + (mv.movementType === 'issue' ? -qty : qty));
+      if (mv.movementType !== 'issue' && mv.unitCost) openingCostMap.set(mv.itemId, Number(mv.unitCost));
     }
 
-    const itemMap = new Map<string, {
-      itemId: string; itemCode: string; itemName: string; itemType: string;
-      closingValue: number; closingQty: number; unitCost: number;
-      cogs: number; warehouses: string[];
-    }>();
-
+    const itemMap = new Map<string, any>();
     for (const s of filtered) {
       const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
       const unitCost    = Number(s.unitCost ?? 0);
       const value       = Math.round(purchaseQty * unitCost * 100) / 100;
-
       const ex = itemMap.get(s.item.id);
-      if (ex) {
-        ex.closingValue += value;
-        ex.closingQty   += purchaseQty;
-        ex.warehouses.push(s.warehouse.code);
-      } else {
-        itemMap.set(s.item.id, {
-          itemId:       s.item.id,
-          itemCode:     s.item.code,
-          itemName:     s.item.name,
-          itemType:     s.item.itemType,
-          closingValue: value,
-          closingQty:   purchaseQty,
-          unitCost,
-          cogs:         0,
-          warehouses:   [s.warehouse.code],
-        });
-      }
+      if (ex) { ex.closingValue += value; ex.closingQty += purchaseQty; ex.warehouses.push(s.warehouse.code); }
+      else itemMap.set(s.item.id, { itemId: s.item.id, itemCode: s.item.code, itemName: s.item.name, itemType: s.item.itemType, closingValue: value, closingQty: purchaseQty, unitCost, cogs: 0, warehouses: [s.warehouse.code] });
     }
 
     for (const [itemId, cogs] of cogsMap) {
@@ -643,16 +584,9 @@ export class GoodsReceiptsService {
       const openingCost  = openingCostMap.get(item.itemId) ?? item.unitCost;
       const openingValue = Math.round(openingQty * openingCost * 100) / 100;
       const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
-
-      const annualizedCogs = days < 365
-        ? Math.round((item.cogs / days) * 365 * 100) / 100
-        : item.cogs;
-
-      const turnoverRatio = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
-      const daysOnHand    = turnoverRatio && turnoverRatio > 0
-        ? Math.round((365 / turnoverRatio) * 10) / 10
-        : null;
-
+      const annualizedCogs   = days < 365 ? Math.round((item.cogs / days) * 365 * 100) / 100 : item.cogs;
+      const turnoverRatio    = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
+      const daysOnHand       = turnoverRatio && turnoverRatio > 0 ? Math.round((365 / turnoverRatio) * 10) / 10 : null;
       let performance: 'excellent' | 'good' | 'fair' | 'poor' | 'no_movement';
       if (item.cogs === 0)          performance = 'no_movement';
       else if (!turnoverRatio)      performance = 'poor';
@@ -660,61 +594,20 @@ export class GoodsReceiptsService {
       else if (turnoverRatio >= 6)  performance = 'good';
       else if (turnoverRatio >= 3)  performance = 'fair';
       else                          performance = 'poor';
-
-      return {
-        itemId:         item.itemId,
-        itemCode:       item.itemCode,
-        itemName:       item.itemName,
-        itemType:       item.itemType,
-        warehouses:     [...new Set(item.warehouses)],
-        openingValue,
-        closingValue:   Math.round(item.closingValue * 100) / 100,
-        avgInventory,
-        cogs:           item.cogs,
-        annualizedCogs,
-        turnoverRatio,
-        daysOnHand,
-        performance,
-      };
+      return { itemId: item.itemId, itemCode: item.itemCode, itemName: item.itemName, itemType: item.itemType, warehouses: [...new Set(item.warehouses)], openingValue, closingValue: Math.round(item.closingValue * 100) / 100, avgInventory, cogs: item.cogs, annualizedCogs, turnoverRatio, daysOnHand, performance };
     });
 
-    rows.sort((a, b) => {
-      if (a.turnoverRatio === null) return -1;
-      if (b.turnoverRatio === null) return 1;
-      return a.turnoverRatio - b.turnoverRatio;
-    });
+    rows.sort((a, b) => a.turnoverRatio === null ? -1 : b.turnoverRatio === null ? 1 : a.turnoverRatio - b.turnoverRatio);
 
-    const totalCogs         = Math.round(rows.reduce((s, r) => s + r.cogs,         0) * 100) / 100;
+    const totalCogs         = Math.round(rows.reduce((s, r) => s + r.cogs, 0) * 100) / 100;
     const totalAvgInventory = Math.round(rows.reduce((s, r) => s + r.avgInventory, 0) * 100) / 100;
-    const overallTurnover   = totalAvgInventory > 0
-      ? Math.round((totalCogs / totalAvgInventory) * 100) / 100
-      : null;
-    const overallDaysOnHand = overallTurnover && overallTurnover > 0
-      ? Math.round((365 / overallTurnover) * 10) / 10
-      : null;
+    const overallTurnover   = totalAvgInventory > 0 ? Math.round((totalCogs / totalAvgInventory) * 100) / 100 : null;
+    const overallDaysOnHand = overallTurnover && overallTurnover > 0 ? Math.round((365 / overallTurnover) * 10) / 10 : null;
 
     return {
       rows,
-      summary: {
-        totalItems:         rows.length,
-        totalCogs,
-        totalAvgInventory,
-        totalClosingValue:  Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100,
-        overallTurnover,
-        overallDaysOnHand,
-        periodDays:         days,
-        excellentCount:     rows.filter(r => r.performance === 'excellent').length,
-        goodCount:          rows.filter(r => r.performance === 'good').length,
-        fairCount:          rows.filter(r => r.performance === 'fair').length,
-        poorCount:          rows.filter(r => r.performance === 'poor').length,
-        noMovementCount:    rows.filter(r => r.performance === 'no_movement').length,
-      },
-      period: {
-        dateFrom: dateFrom.toISOString().split('T')[0],
-        dateTo:   dateTo.toISOString().split('T')[0],
-        days,
-        isAnnualized: days < 365,
-      },
+      summary: { totalItems: rows.length, totalCogs, totalAvgInventory, totalClosingValue: Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100, overallTurnover, overallDaysOnHand, periodDays: days, excellentCount: rows.filter(r => r.performance === 'excellent').length, goodCount: rows.filter(r => r.performance === 'good').length, fairCount: rows.filter(r => r.performance === 'fair').length, poorCount: rows.filter(r => r.performance === 'poor').length, noMovementCount: rows.filter(r => r.performance === 'no_movement').length },
+      period: { dateFrom: dateFrom.toISOString().split('T')[0], dateTo: dateTo.toISOString().split('T')[0], days, isAnnualized: days < 365 },
       asOf: new Date(),
     };
   }
