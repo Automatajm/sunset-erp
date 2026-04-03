@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "po_suppliers" ADD COLUMN     "address" TEXT,
+ADD COLUMN     "bank_account" VARCHAR(100),
+ADD COLUMN     "bank_name" VARCHAR(255),
+ADD COLUMN     "bank_routing" VARCHAR(50),
+ADD COLUMN     "city" VARCHAR(100),
+ADD COLUMN     "contact_email" VARCHAR(255),
+ADD COLUMN     "contact_name" VARCHAR(255),
+ADD COLUMN     "contact_phone" VARCHAR(20),
+ADD COLUMN     "country" VARCHAR(2),
+ADD COLUMN     "delivery_lead_days" INTEGER,
+ADD COLUMN     "incoterms" VARCHAR(10),
+ADD COLUMN     "is_preferred" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "quality_rating" DECIMAL(3,2),
+ADD COLUMN     "tax_type" VARCHAR(50);

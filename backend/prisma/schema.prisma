@@ -422,6 +422,24 @@ model Supplier {
   minimumOrderAmount   Decimal? @map("minimum_order_amount")   @db.Decimal(15, 2)
   minimumOrderCurrency String?  @map("minimum_order_currency") @db.VarChar(3)
   category String? @db.VarChar(100)
+  // Address
+  address  String? @db.Text
+  city     String? @db.VarChar(100)
+  country  String? @db.VarChar(2)
+  // Operational contact (≠ corporate email)
+  contactName  String? @map("contact_name")  @db.VarChar(255)
+  contactPhone String? @map("contact_phone") @db.VarChar(20)
+  contactEmail String? @map("contact_email") @db.VarChar(255)
+  // Banking
+  bankName    String? @map("bank_name")    @db.VarChar(255)
+  bankAccount String? @map("bank_account") @db.VarChar(100)
+  bankRouting String? @map("bank_routing") @db.VarChar(50)
+  // Commercial
+  incoterms        String?  @db.VarChar(10)
+  deliveryLeadDays Int?     @map("delivery_lead_days")
+  taxType          String?  @map("tax_type")      @db.VarChar(50)
+  isPreferred      Boolean  @default(false)       @map("is_preferred")
+  qualityRating    Decimal? @map("quality_rating") @db.Decimal(3, 2)
   isActive Boolean @default(true) @map("is_active")
   notes    String? @db.Text
   createdAt DateTime  @default(now()) @map("created_at")

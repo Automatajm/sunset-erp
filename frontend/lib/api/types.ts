@@ -248,16 +248,12 @@ export interface StockTransaction {
   fromWarehouseId?: string;
   toWarehouseId?:   string;
   fromWarehouse?:   Warehouse;
-  // Storage UOM (backward compat)
   quantity: number;
   uom:      string;
-  // Purchase UOM — financial unit (Sprint 14A)
   purchaseQty?: number;
   purchaseUom?: string;
-  // Consumption UOM — production unit (Sprint 14A)
   consumptionQty?: number;
   consumptionUom?: string;
-  // Financial audit (Sprint 14A — ADR-019)
   unitCostAtMovement?: number;
   movementValue?:      number;
   unitCost?:           number;
@@ -284,7 +280,6 @@ export interface CreateStockTransactionDto {
   transactionDate?: string;
 }
 
-// Triple UOM stock balance (Sprint 14A — ADR-014, ADR-019)
 export interface StockBalance {
   id:         string;
   itemId:     string;
@@ -299,24 +294,19 @@ export interface StockBalance {
   };
   warehouseId: string;
   warehouse?:  { id: string; code: string; name: string };
-  // Purchase UOM — financial unit of record
   purchaseQty: number;
   purchaseUom: string;
   unitCost:    number;
   totalValue:  number;
-  // Storage UOM — warehouse operational
   onHandQuantity:  number;
   storageQty:      number;
   storageUom:      string;
   unitCostStorage: number;
-  // Consumption UOM — production operational
   consumptionQty:          number;
   consumptionUom:          string;
   unitCostConsumption:     number;
-  // Reserved / Available (in storageUom)
   reservedQuantity: number;
   availableQty:     number;
-  // Lot / Serial
   lotNumber?:    string;
   serialNumber?: string;
 }
@@ -324,35 +314,100 @@ export interface StockBalance {
 // ─── Procurement — Suppliers ──────────────────────────────────────────────────
 
 export interface Supplier {
-  id:           string;
-  code:         string;
-  name:         string;
-  legalName?:   string;
-  taxId?:       string;
-  phone?:       string;
-  email?:       string;
-  website?:     string;
-  paymentTerms?: string;
-  currency?:    string;
-  category?:    string;
-  notes?:       string;
-  isActive:     boolean;
-  createdAt:    string;
-  updatedAt:    string;
+  id:       string;
+  code:     string;
+  name:     string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+
+  // Identity
+  legalName?: string;
+  taxId?:     string;
+  taxType?:   string;
+
+  // Corporate contact
+  phone?:   string;
+  email?:   string;
+  website?: string;
+
+  // Operational contact
+  contactName?:  string;
+  contactPhone?: string;
+  contactEmail?: string;
+
+  // Address
+  address?: string;
+  city?:    string;
+  country?: string;
+
+  // Commercial
+  paymentTerms?:         string;
+  currency?:             string;
+  incoterms?:            string;
+  creditLimit?:          string;   // Decimal comes as string from Prisma
+  minimumOrderAmount?:   string;
+  minimumOrderCurrency?: string;
+  deliveryLeadDays?:     number;
+
+  // Classification
+  category?:      string;
+  isPreferred?:   boolean;
+  qualityRating?: string;  // Decimal comes as string from Prisma
+
+  // Banking
+  bankName?:    string;
+  bankAccount?: string;
+  bankRouting?: string;
+
+  // Notes
+  notes?: string;
 }
 
 export interface CreateSupplierDto {
-  code:          string;
-  name:          string;
-  legalName?:    string;
-  taxId?:        string;
-  phone?:        string;
-  email?:        string;
-  website?:      string;
-  paymentTerms?: string;
-  currency?:     string;
-  category?:     string;
-  notes?:        string;
+  // Identity
+  code:      string;
+  name:      string;
+  legalName?: string;
+  taxId?:     string;
+  taxType?:   string;
+
+  // Corporate contact
+  phone?:   string;
+  email?:   string;
+  website?: string;
+
+  // Operational contact
+  contactName?:  string;
+  contactPhone?: string;
+  contactEmail?: string;
+
+  // Address
+  address?: string;
+  city?:    string;
+  country?: string;
+
+  // Commercial
+  paymentTerms?:         string;
+  currency?:             string;
+  incoterms?:            string;
+  creditLimit?:          number;
+  minimumOrderAmount?:   number;
+  minimumOrderCurrency?: string;
+  deliveryLeadDays?:     number;
+
+  // Classification
+  category?:      string;
+  isPreferred?:   boolean;
+  qualityRating?: number;
+
+  // Banking
+  bankName?:    string;
+  bankAccount?: string;
+  bankRouting?: string;
+
+  // Notes
+  notes?: string;
 }
 
 export type UpdateSupplierDto = Partial<CreateSupplierDto>;

@@ -233,6 +233,20 @@ erDiagram
     Decimal minimum_order_amount "❓"
     String minimum_order_currency "❓"
     String category "❓"
+    String address "❓"
+    String city "❓"
+    String country "❓"
+    String contact_name "❓"
+    String contact_phone "❓"
+    String contact_email "❓"
+    String bank_name "❓"
+    String bank_account "❓"
+    String bank_routing "❓"
+    String incoterms "❓"
+    Int delivery_lead_days "❓"
+    String tax_type "❓"
+    Boolean is_preferred 
+    Decimal quality_rating "❓"
     Boolean is_active 
     String notes "❓"
     DateTime created_at 
