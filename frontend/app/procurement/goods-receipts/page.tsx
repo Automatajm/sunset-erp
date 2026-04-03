@@ -14,12 +14,14 @@ import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { itemsApi } from '@/lib/api/items';
 import { suppliersApi } from '@/lib/api/suppliers';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { DateSelection } from '@/components/ui/ERPDatePicker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PO {
-  id: string; poNumber: string;
+  id: string; poNumber: string; status: string;
+  warehouseId?: string;
   supplier?: { name: string; code: string };
   lines?: { id: string; itemId: string; item?: { code: string; name: string; baseUom: string }; orderedQuantity: string; receivedQuantity: string; uom: string; unitPrice: string }[];
 }
@@ -96,7 +98,6 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
       <div style={{ width:700, background:'#0a0712', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
 
-        {/* Header */}
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
             <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', ...MONO }}>{grn.grnNumber}</div>
@@ -117,7 +118,6 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:16 }}>
             {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
 
-            {/* Info grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
               {[
                 { label:'Received Date', value: fmtDate(detail.receivedDate) },
@@ -132,7 +132,6 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
               ))}
             </div>
 
-            {/* Lines table */}
             <div>
               <div style={{ fontSize:11, fontWeight:500, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Receipt Lines</div>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
@@ -200,64 +199,118 @@ interface NewGrnLine {
   uom: string; unitCost: string; lotNumber: string; notes: string;
   poLineId?: string;
 }
-const EMPTY_LINE: NewGrnLine = { itemId:'', receivedQuantity:'', uom:'', unitCost:'', lotNumber:'', notes:'' };
+const EMPTY_LINE: NewGrnLine = { itemId:'', receivedQuantity:'', uom:'PCS', unitCost:'', lotNumber:'', notes:'' };
+
+// Check if a line is complete enough to allow adding another
+function lineIsComplete(line: NewGrnLine): boolean {
+  return !!line.itemId && !!line.receivedQuantity && Number(line.receivedQuantity) > 0;
+}
 
 function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
   open: boolean; onClose: () => void; onSaved: () => void;
   warehouses: Warehouse[]; items: Item[];
 }) {
-  const [poSearch,    setPoSearch]    = useState('');
-  const [selectedPo,  setSelectedPo]  = useState<PO | null>(null);
-  const [poLoading,   setPoLoading]   = useState(false);
-  const [warehouseId, setWarehouseId] = useState('');
-  const [receivedDate,setReceivedDate]= useState('');
-  const [condition,   setCondition]   = useState('complete');
-  const [notes,       setNotes]       = useState('');
-  const [lines,       setLines]       = useState<NewGrnLine[]>([{ ...EMPTY_LINE }]);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [error,       setError]       = useState('');
+  const [selectedPoId,  setSelectedPoId]  = useState('');
+  const [selectedPo,    setSelectedPo]    = useState<PO | null>(null);
+  const [poOptions,     setPoOptions]     = useState<PO[]>([]);
+  const [poLoadingList, setPoLoadingList] = useState(false);
+  const [poLoadingDet,  setPoLoadingDet]  = useState(false);
+  const [warehouseId,   setWarehouseId]   = useState('');
+  const [receivedDate,  setReceivedDate]  = useState('');
+  const [condition,     setCondition]     = useState('complete');
+  const [notes,         setNotes]         = useState('');
+  const [lines,         setLines]         = useState<NewGrnLine[]>([{ ...EMPTY_LINE }]);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [error,         setError]         = useState('');
 
+  // Load receivable POs on mount
+  useEffect(() => {
+    if (!open) return;
+    setPoLoadingList(true);
+    purchaseOrdersApi.getAll({ status: 'confirmed' })
+      .then(all => {
+        // Include approved + partial (partial may not be supported by backend filter — merge both)
+        return purchaseOrdersApi.getAll({ status: 'partially_received' }).then(partial => {
+          const combined = [...(all as PO[]), ...(partial as PO[])];
+          // deduplicate by id
+          const deduped = Array.from(new Map(combined.map(p => [p.id, p])).values());
+          setPoOptions(deduped);
+        }).catch(() => setPoOptions(all as PO[]));
+      })
+      .catch(() => setPoOptions([]))
+      .finally(() => setPoLoadingList(false));
+  }, [open]);
+
+  // Reset on open
   useEffect(() => {
     if (open) {
-      setPoSearch(''); setSelectedPo(null); setWarehouseId('');
+      setSelectedPoId(''); setSelectedPo(null);
+      setWarehouseId('');
       setReceivedDate(new Date().toISOString().slice(0,10));
-      setCondition('complete'); setNotes(''); setLines([{ ...EMPTY_LINE }]); setError('');
+      setCondition('complete'); setNotes('');
+      setLines([{ ...EMPTY_LINE }]); setError('');
     }
   }, [open]);
 
-  const searchPo = async () => {
-    if (!poSearch.trim()) return;
-    setPoLoading(true);
+  // When PO is selected from SearchSelect → load detail
+  const handlePoSelect = useCallback(async (poId: string) => {
+    setSelectedPoId(poId);
+    if (!poId) {
+      setSelectedPo(null);
+      setLines([{ ...EMPTY_LINE }]);
+      setWarehouseId('');
+      return;
+    }
+    setPoLoadingDet(true);
     try {
-      const all = await purchaseOrdersApi.getAll();
-      const found = (all as PO[]).find(p => p.poNumber.toLowerCase() === poSearch.toLowerCase().trim());
-      if (!found) { setError(`PO ${poSearch} not found`); return; }
-      const detail = await purchaseOrdersApi.getById(found.id) as PO;
+      const detail = await purchaseOrdersApi.getById(poId) as PO;
       setSelectedPo(detail);
+      // Auto-fill warehouse from PO if available
+      if (detail.warehouseId) setWarehouseId(detail.warehouseId);
+      // Pre-populate lines from PO pending quantities
       if (detail.lines?.length) {
         setLines(detail.lines.map(l => ({
-          itemId: l.itemId, receivedQuantity: '', uom: l.uom,
-          unitCost: l.unitPrice ?? '', lotNumber: '', notes: '', poLineId: l.id,
+          itemId: l.itemId,
+          receivedQuantity: '',
+          uom: l.uom || l.item?.baseUom || 'PCS',
+          unitCost: l.unitPrice ?? '',
+          lotNumber: '', notes: '',
+          poLineId: l.id,
         })));
       }
       setError('');
-    } catch { setError('Failed to load PO.'); }
-    finally { setPoLoading(false); }
-  };
+    } catch { setError('Failed to load PO details.'); }
+    finally { setPoLoadingDet(false); }
+  }, []);
 
   const setLine = (idx: number, k: keyof NewGrnLine, v: string) =>
     setLines(ls => ls.map((l, i) => {
       if (i !== idx) return l;
       const upd = { ...l, [k]: v };
-      if (k === 'itemId') { const it = items.find(x => x.id === v); if (it) upd.uom = it.baseUom; }
+      // Auto-populate UOM when item is selected
+      if (k === 'itemId') {
+        const it = items.find(x => x.id === v);
+        if (it) upd.uom = it.baseUom;
+      }
       return upd;
     }));
+
+  // Add line — only if last line is complete
+  const handleAddLine = () => {
+    const lastLine = lines[lines.length - 1];
+    if (!lineIsComplete(lastLine)) {
+      setError('Complete the current line (item + quantity > 0) before adding a new one.');
+      return;
+    }
+    setError('');
+    setLines(ls => [...ls, { ...EMPTY_LINE }]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!warehouseId) { setError('Warehouse is required.'); return; }
     const validLines = lines.filter(l => l.itemId && l.receivedQuantity && Number(l.receivedQuantity) > 0);
-    if (!validLines.length) { setError('At least one line with quantity > 0 is required.'); return; }
+    if (!validLines.length) { setError('At least one line with item and quantity > 0 is required.'); return; }
     setSubmitting(true); setError('');
     try {
       const dto: CreateGoodsReceiptDto = {
@@ -283,54 +336,84 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(74,222,128,0.6)' };
   const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
 
+  // PO options for SearchSelect
+  const poSelectOptions = poOptions.map(p => ({
+    value: p.id,
+    label: p.poNumber,
+    sublabel: p.supplier?.name ?? '',
+  }));
+
+  // Item options for SearchSelect
+  const itemSelectOptions = items.map(it => ({
+    value: it.id,
+    label: it.code,
+    sublabel: it.name,
+  }));
+
   return (
     <>
       <style>{`
         .grn-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .grn-box{background:#0e0b1a;border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:900px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .grn-box{background:#0e0b1a;border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:960px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .grn-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);pointer-events:none}
         .grn-th{font-size:10px;color:rgba(74,222,128,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
         .grn-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
       `}</style>
       <div className="grn-overlay">
         <div className="grn-box">
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:1, borderRadius:'14px 14px 0 0' }}>
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:10, borderRadius:'14px 14px 0 0' }}>
             <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>New Goods Receipt (GRN)</span>
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
+
           <form onSubmit={handleSubmit}>
             <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
               {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
 
+              {/* ── Section: Link to PO ── */}
               <div className="grn-section"><span>Link to Purchase Order (optional)</span></div>
-              <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
-                <div style={{ display:'flex', flexDirection:'column', gap:5, flex:1 }}>
-                  <label style={LBL}>PO Number</label>
-                  <input style={INP} placeholder="e.g. PO-2026-0001" value={poSearch} onChange={e => setPoSearch(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchPo())} />
-                </div>
-                <button type="button" onClick={searchPo} disabled={poLoading}
-                  style={{ padding:'8px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.2)', color:'#60a5fa', fontFamily:"'IBM Plex Sans',sans-serif", whiteSpace:'nowrap', opacity:poLoading?0.5:1 }}>
-                  {poLoading ? 'Searching…' : 'Find PO'}
-                </button>
-                {selectedPo && (
-                  <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7 }}>
-                    <span style={{ fontSize:12, color:'#4ade80', fontFamily:"'IBM Plex Mono',monospace" }}>{selectedPo.poNumber}</span>
-                    <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>{selectedPo.supplier?.name}</span>
-                    <button type="button" onClick={() => { setSelectedPo(null); setPoSearch(''); setLines([{ ...EMPTY_LINE }]); }}
-                      style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.3)', fontSize:14 }}>×</button>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={LBL}>PO Number {poLoadingList && <span style={{ color:'rgba(255,255,255,0.3)', fontWeight:400 }}>— loading…</span>}</label>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ flex:1 }}>
+                    <SearchSelect
+                      options={poSelectOptions}
+                      value={selectedPoId}
+                      onChange={handlePoSelect}
+                      placeholder="Search PO number or supplier…"
+                      clearLabel="— No PO (manual receipt) —"
+                      minWidth={340}
+                    />
                   </div>
-                )}
+                  {poLoadingDet && (
+                    <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Loading PO…</span>
+                  )}
+                  {selectedPo && (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 10px', background:'rgba(74,222,128,0.06)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, flexShrink:0 }}>
+                      <span style={{ fontSize:11, color:'#4ade80', fontFamily:"'IBM Plex Mono',monospace" }}>{selectedPo.poNumber}</span>
+                      {selectedPo.supplier?.name && <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>{selectedPo.supplier.name}</span>}
+                      <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.05)', padding:'1px 6px', borderRadius:4 }}>{selectedPo.lines?.length} lines</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* ── Section: Receipt Details ── */}
               <div className="grn-section"><span>Receipt Details</span></div>
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                   <label style={LBL}>Warehouse *</label>
-                  <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
+                  <select
+                    value={warehouseId}
+                    onChange={e => setWarehouseId(e.target.value)}
+                    style={{ ...INP, cursor:'pointer', borderColor: selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)' }}>
                     <option value="">— Select warehouse —</option>
                     {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
                   </select>
+                  {selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId && (
+                    <span style={{ fontSize:9, color:'rgba(74,222,128,0.5)' }}>✓ auto-filled from PO</span>
+                  )}
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                   <label style={LBL}>Received Date</label>
@@ -348,12 +431,22 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                 </div>
               </div>
 
+              {/* ── Section: Lines ── */}
               <div className="grn-section">
                 <span>Receipt Lines</span>
                 {!selectedPo && (
                   <button type="button"
-                    style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'4px 10px', fontSize:11, color:'rgba(255,255,255,0.5)', cursor:'pointer', fontFamily:"'IBM Plex Sans',sans-serif" }}
-                    onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])}>
+                    title={!lineIsComplete(lines[lines.length - 1]) ? 'Complete the current line first' : 'Add line'}
+                    style={{
+                      background: lineIsComplete(lines[lines.length - 1]) ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.03)',
+                      border: `0.5px solid ${lineIsComplete(lines[lines.length - 1]) ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius:5, padding:'4px 10px', fontSize:11,
+                      color: lineIsComplete(lines[lines.length - 1]) ? '#4ade80' : 'rgba(255,255,255,0.25)',
+                      cursor: lineIsComplete(lines[lines.length - 1]) ? 'pointer' : 'not-allowed',
+                      fontFamily:"'IBM Plex Sans',sans-serif",
+                      transition:'all 0.15s',
+                    }}
+                    onClick={handleAddLine}>
                     + Add Line
                   </button>
                 )}
@@ -362,39 +455,62 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr>
-                    <th className="grn-th" style={{ width:220 }}>Item *</th>
-                    <th className="grn-th" style={{ width:100 }}>Qty Received *</th>
-                    <th className="grn-th" style={{ width:70 }}>UOM</th>
+                    <th className="grn-th" style={{ width:240 }}>Item *</th>
+                    <th className="grn-th" style={{ width:110 }}>Qty Received *</th>
+                    <th className="grn-th" style={{ width:80 }}>UOM</th>
                     <th className="grn-th" style={{ width:100 }}>Unit Cost</th>
                     <th className="grn-th" style={{ width:120 }}>Lot Number</th>
                     <th className="grn-th">Notes</th>
-                    {!selectedPo && <th className="grn-th" style={{ width:24 }}></th>}
+                    {!selectedPo && <th className="grn-th" style={{ width:28 }}></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((line, idx) => {
                     const poLine = selectedPo?.lines?.find(l => l.id === line.poLineId);
+                    const pendingQty = poLine
+                      ? Number(poLine.orderedQuantity) - Number(poLine.receivedQuantity)
+                      : null;
+                    const isLineComplete = lineIsComplete(line);
+
                     return (
-                      <tr key={idx}>
-                        <td style={{ padding:'4px 3px' }}>
+                      <tr key={idx} style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+
+                        {/* Item cell */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
                           {selectedPo && poLine ? (
-                            <div style={{ padding:'5px 7px', background:'rgba(255,255,255,0.02)', borderRadius:5, fontSize:12 }}>
+                            // PO-linked line: show item read-only
+                            <div style={{ padding:'5px 7px', background:'rgba(255,255,255,0.02)', borderRadius:5, fontSize:12, border:'0.5px solid rgba(255,255,255,0.06)' }}>
                               <span style={{ fontFamily:"'IBM Plex Mono',monospace", color:'#fb923c', fontSize:11 }}>{poLine.item?.code}</span>
                               <span style={{ color:'rgba(255,255,255,0.5)', marginLeft:6, fontSize:11 }}>{poLine.item?.name}</span>
                             </div>
                           ) : (
-                            <select style={{ ...LINE_INP, cursor:'pointer' }} value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                              <option value="">— Item —</option>
-                              {items.map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                            </select>
+                            // Manual: SearchSelect for item
+                            <SearchSelect
+                              options={itemSelectOptions}
+                              value={line.itemId}
+                              onChange={v => setLine(idx, 'itemId', v)}
+                              placeholder="Search item…"
+                              clearLabel="— Select item —"
+                              minWidth={200}
+                            />
                           )}
                         </td>
-                        <td style={{ padding:'4px 3px' }}>
+
+                        {/* Qty cell */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
                           <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                            <input style={{ ...LINE_INP, textAlign:'right', borderColor: line.receivedQuantity && Number(line.receivedQuantity) > 0 ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)' }}
+                            <input
+                              style={{
+                                ...LINE_INP, textAlign:'right',
+                                borderColor: line.receivedQuantity && Number(line.receivedQuantity) > 0
+                                  ? 'rgba(74,222,128,0.3)'
+                                  : 'rgba(255,255,255,0.1)',
+                              }}
                               type="number" min="0" step="0.001"
-                              placeholder={poLine ? `max ${Number(poLine.orderedQuantity) - Number(poLine.receivedQuantity)}` : '0'}
-                              value={line.receivedQuantity} onChange={e => setLine(idx, 'receivedQuantity', e.target.value)} />
+                              placeholder={pendingQty !== null ? `max ${pendingQty}` : '0'}
+                              value={line.receivedQuantity}
+                              onChange={e => setLine(idx, 'receivedQuantity', e.target.value)}
+                            />
                             {poLine && (
                               <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textAlign:'right' }}>
                                 ordered: {Number(poLine.orderedQuantity).toLocaleString()} · rcvd: {Number(poLine.receivedQuantity).toLocaleString()}
@@ -402,15 +518,49 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                             )}
                           </div>
                         </td>
-                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
-                        <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right' }} type="number" min="0" step="0.0001" placeholder={poLine ? String(poLine.unitPrice) : '0.00'} value={line.unitCost} onChange={e => setLine(idx, 'unitCost', e.target.value)} /></td>
-                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="LOT-001" value={line.lotNumber} onChange={e => setLine(idx, 'lotNumber', e.target.value)} /></td>
-                        <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="Optional…" value={line.notes} onChange={e => setLine(idx, 'notes', e.target.value)} /></td>
+
+                        {/* UOM cell — auto-filled, readonly if item selected */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
+                          <input
+                            style={{
+                              ...LINE_INP,
+                              color: line.uom ? '#fb923c' : 'rgba(255,255,255,0.4)',
+                              background: line.itemId || poLine ? 'rgba(251,146,60,0.04)' : 'rgba(255,255,255,0.04)',
+                              borderColor: line.uom ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.1)',
+                            }}
+                            placeholder="PCS"
+                            value={line.uom}
+                            onChange={e => setLine(idx, 'uom', e.target.value)}
+                          />
+                        </td>
+
+                        {/* Unit Cost */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
+                          <input
+                            style={{ ...LINE_INP, textAlign:'right' }}
+                            type="number" min="0" step="0.0001"
+                            placeholder={poLine ? String(poLine.unitPrice) : '0.00'}
+                            value={line.unitCost}
+                            onChange={e => setLine(idx, 'unitCost', e.target.value)}
+                          />
+                        </td>
+
+                        {/* Lot Number */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
+                          <input style={LINE_INP} placeholder="LOT-001" value={line.lotNumber} onChange={e => setLine(idx, 'lotNumber', e.target.value)} />
+                        </td>
+
+                        {/* Notes */}
+                        <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
+                          <input style={LINE_INP} placeholder="Optional…" value={line.notes} onChange={e => setLine(idx, 'notes', e.target.value)} />
+                        </td>
+
+                        {/* Remove button — manual only */}
                         {!selectedPo && (
-                          <td style={{ padding:'4px 3px' }}>
+                          <td style={{ padding:'4px 3px', verticalAlign:'top' }}>
                             {lines.length > 1 && (
                               <button type="button"
-                                style={{ width:20, height:20, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
+                                style={{ width:22, height:22, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
                                 onClick={() => setLines(ls => ls.filter((_,i) => i !== idx))}>×</button>
                             )}
                           </td>
@@ -420,11 +570,23 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, items }: {
                   })}
                 </tbody>
               </table>
+
+              {/* Line completion hint for manual mode */}
+              {!selectedPo && lines.length > 0 && !lineIsComplete(lines[lines.length - 1]) && lines.length > 1 && (
+                <div style={{ fontSize:11, color:'rgba(251,146,60,0.5)', padding:'4px 6px', background:'rgba(251,146,60,0.05)', borderRadius:6, border:'0.5px solid rgba(251,146,60,0.15)' }}>
+                  ⚠ Complete the last line (select item + enter quantity) to add more lines.
+                </div>
+              )}
             </div>
 
+            {/* Footer */}
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-              <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background:'linear-gradient(135deg,#166534,#15803d,#16a34a)', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(22,163,74,0.3)', opacity:submitting?0.5:1 }}>
+              <button type="button" onClick={onClose}
+                style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting}
+                style={{ background:'linear-gradient(135deg,#166534,#15803d,#16a34a)', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(22,163,74,0.3)', opacity:submitting?0.5:1 }}>
                 {submitting ? 'Creating…' : 'Create GRN'}
               </button>
             </div>
@@ -471,36 +633,30 @@ export default function GoodsReceiptsPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Filter definitions ─────────────────────────────────────────────────────
   const filterDefs = useMemo<ERPFilter<GoodsReceipt>[]>(() => [
-    // 1. Supplier — searchselect (derived from GRN supplierName)
     {
       key: 'supplierId', label: 'Supplier', type: 'searchselect',
       placeholder: 'Search supplier…', selectWidth: 200,
       options: suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` })),
       filterFn: (row, val) => (row as any).supplierId === val || row.supplierName === suppliers.find(s => s.id === val)?.name,
     },
-    // 2. PO Number — searchselect (derived from linked GRNs)
     {
       key: 'poId', label: 'PO Number', type: 'searchselect',
       placeholder: 'Search PO…', selectWidth: 175,
       options: Array.from(new Map(grns.filter(g => g.poId && g.poNumber).map(g => [g.poId!, { value: g.poId!, label: g.poNumber!, sublabel: g.supplierName ?? undefined }])).values()),
       filterFn: (row, val) => row.poId === val,
     },
-    // 3. Warehouse — searchselect
     {
       key: 'warehouseId', label: 'Warehouse', type: 'searchselect',
       placeholder: 'Search warehouse…', selectWidth: 190,
       options: warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` })),
       filterFn: (row, val) => row.warehouseId === val,
     },
-    // 4. Received Date — daterange
     {
       key: 'receivedDate', label: 'Received Date', type: 'daterange',
       placeholder: 'Received date…', dateWidth: 195,
       filterFn: (row, val) => dateInSelection(row.receivedDate, val as DateSelection),
     },
-    // 5. Condition — multiselect
     {
       key: 'condition', label: 'Condition', type: 'multiselect',
       options: Object.entries(CONDITION_CFG).map(([v, c]) => ({
@@ -509,7 +665,6 @@ export default function GoodsReceiptsPage() {
       })),
       filterFn: (row, val) => (val as string[]).includes(row.condition),
     },
-    // 6. Has PO — boolean toggle
     {
       key: 'hasPo', label: 'Linked to PO', type: 'boolean',
       placeholder: 'Linked to PO',
@@ -524,7 +679,6 @@ export default function GoodsReceiptsPage() {
     return statusFilter ? base.filter(g => g.status === statusFilter) : base;
   }, [grns, filterDefs, filterVals, statusFilter]);
 
-  // ── Columns ────────────────────────────────────────────────────────────────
   const columns = useMemo<ERPColumn<GoodsReceipt>[]>(() => [
     {
       key: 'grnNumber', header: 'GRN Number', width: 150, sortable: true,
@@ -602,10 +756,7 @@ export default function GoodsReceiptsPage() {
         .grn-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
         .grn-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
       `}</style>
-
       <div className="grn-page">
-
-        {/* Stats bar */}
         <div style={{ display:'flex', gap:10, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
           {stats && [
             { key:'posted',    label:'Posted',    value:stats.posted,    color:'#4ade80', border:'rgba(74,222,128,0.2)'  },
@@ -634,7 +785,6 @@ export default function GoodsReceiptsPage() {
           </div>
         </div>
 
-        {/* Toolbar + filters */}
         <div style={{ display:'flex', alignItems:'flex-end', gap:10, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
           <div style={{ flex:1 }}>
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
@@ -647,7 +797,6 @@ export default function GoodsReceiptsPage() {
 
         {error && <div className="grn-error">{error}</div>}
 
-        {/* Table */}
         <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <ERPTable<GoodsReceipt>
             columns={columns}
@@ -663,7 +812,13 @@ export default function GoodsReceiptsPage() {
         </div>
       </div>
 
-      <CreateGrnModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={fetchAll} warehouses={warehouses} items={items} />
+      <CreateGrnModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={fetchAll}
+        warehouses={warehouses}
+        items={items}
+      />
 
       {detailGrn && (
         <GrnDetailDrawer grn={detailGrn} onClose={() => setDetailGrn(null)} onAction={() => { setDetailGrn(null); fetchAll(); }} />
