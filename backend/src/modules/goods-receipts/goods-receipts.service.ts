@@ -125,6 +125,7 @@ export class GoodsReceiptsService {
           status:       'posted',
           condition:    dto.condition ?? 'complete',
           notes:        dto.notes ?? null,
+          supplierRef:  dto.supplierRef ?? null,   // ← NEW: supplier invoice ref
           createdBy:    userId,
           updatedBy:    userId,
         },
@@ -177,7 +178,7 @@ export class GoodsReceiptsService {
             consumptionUom:  allQtys.consumptionUom,
             // Costing (ADR-019)
             unitCost:              incomingCost,
-            unitCostAtMovement:    incomingCost,  // WAC snapshot for reversal
+            unitCostAtMovement:    incomingCost,
             movementValue:         Math.round(movementValue * 100) / 100,
             lotNumber:       line.lotNumber ?? null,
             referenceType:   'GRN',
@@ -187,7 +188,7 @@ export class GoodsReceiptsService {
           },
         });
 
-        // Create GRN line with all 3 UOM quantities
+        // Create GRN line with all 3 UOM quantities + expiryDate
         await tx.goodsReceiptLine.create({
           data: {
             tenantId,
@@ -209,6 +210,7 @@ export class GoodsReceiptsService {
             // Unit cost in purchaseUom (feeds WAC)
             unitCost:         unitCost,
             lotNumber:        line.lotNumber ?? null,
+            expiryDate:       line.expiryDate ? new Date(line.expiryDate) : null,  // ← NEW
             notes:            line.notes ?? null,
             createdBy:        userId,
             updatedBy:        userId,
@@ -220,17 +222,13 @@ export class GoodsReceiptsService {
           await tx.stock.update({
             where: { id: currentStock.id },
             data: {
-              // Purchase UOM (financial)
               purchaseQty:     wacResult.newPurchaseQty,
               purchaseUom:     allQtys.purchaseUom,
-              // Storage UOM (operational)
-              onHandQuantity:  { increment: allQtys.storageQty }, // backward compat
+              onHandQuantity:  { increment: allQtys.storageQty },
               storageQty:      { increment: allQtys.storageQty },
               storageUom:      allQtys.storageUom,
-              // Consumption UOM (operational)
               consumptionQty:  { increment: allQtys.consumptionQty },
               consumptionUom:  allQtys.consumptionUom,
-              // New WAC in purchaseUom (ADR-019)
               unitCost:        wacResult.newUnitCost,
             },
           });
@@ -240,18 +238,14 @@ export class GoodsReceiptsService {
               tenantId,
               itemId:          line.itemId,
               warehouseId:     dto.warehouseId,
-              // Purchase UOM
               purchaseQty:     allQtys.purchaseQty,
               purchaseUom:     allQtys.purchaseUom,
-              // Storage UOM
               onHandQuantity:  allQtys.storageQty,
               storageQty:      allQtys.storageQty,
               storageUom:      allQtys.storageUom,
-              // Consumption UOM
               consumptionQty:  allQtys.consumptionQty,
               consumptionUom:  allQtys.consumptionUom,
               reservedQuantity: 0,
-              // Initial WAC = incoming unit cost
               unitCost:        incomingCost,
             },
           });
@@ -275,7 +269,7 @@ export class GoodsReceiptsService {
           l => Number(l.receivedQuantity) >= Number(l.orderedQuantity)
         );
         const anyReceived = poLines.some(l => Number(l.receivedQuantity) > 0);
-        const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : 'approved';
+        const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : 'confirmed';
         await tx.purchaseOrder.update({
           where: { id: dto.poId },
           data:  { status: newStatus, updatedBy: userId },
@@ -305,7 +299,6 @@ export class GoodsReceiptsService {
     return grns.map(g => ({
       ...g,
       lineCount:     g._count.lines,
-      // totalValue uses purchaseQty × unitCost (ADR-019)
       totalValue:    g.lines.reduce(
         (sum, l) => sum + (Number(l.receivedQuantity) * Number(l.unitCost ?? 0)), 0
       ),
@@ -385,7 +378,6 @@ export class GoodsReceiptsService {
 
       // 2. Reverse stock for each line
       for (const line of grn.lines) {
-        // Get original movement to retrieve unitCostAtMovement for WAC reversal
         const originalMovement = line.stockMovementId
           ? await tx.stockMovement.findFirst({ where: { id: line.stockMovementId } })
           : null;
@@ -394,13 +386,13 @@ export class GoodsReceiptsService {
           ? Number(originalMovement.unitCostAtMovement)
           : Number(line.unitCost ?? 0);
 
-        const purchaseQty     = Number(line.receivedQuantity); // receivedQty = purchaseQty
-        const storageQty      = Number(line.storageQty  ?? line.receivedQuantity);
-        const consumptionQty  = Number(line.consumptionQty ?? line.receivedQuantity);
-        const storageUom      = line.storageUom  ?? line.uom;
-        const consumptionUom  = line.consumptionUom ?? line.uom;
+        const purchaseQty    = Number(line.receivedQuantity);
+        const storageQty     = Number(line.storageQty  ?? line.receivedQuantity);
+        const consumptionQty = Number(line.consumptionQty ?? line.receivedQuantity);
+        const storageUom     = line.storageUom  ?? line.uom;
+        const consumptionUom = line.consumptionUom ?? line.uom;
 
-        // Check for partial consumption guard (ADR-019)
+        // Partial consumption guard (ADR-019)
         const currentStock = await tx.stock.findFirst({
           where: { tenantId, itemId: line.itemId, warehouseId: grn.warehouseId },
         });
@@ -424,16 +416,12 @@ export class GoodsReceiptsService {
             itemId:          line.itemId,
             fromWarehouseId: grn.warehouseId,
             toWarehouseId:   null,
-            // Storage (backward compat)
             quantity:        -storageQty,
             uom:             storageUom,
-            // Purchase (financial)
             purchaseQty:     -purchaseQty,
             purchaseUom:     line.uom,
-            // Consumption
             consumptionQty:  -consumptionQty,
             consumptionUom:  consumptionUom,
-            // Costing
             unitCost:              originalCost,
             unitCostAtMovement:    originalCost,
             movementValue:         Math.round(movementValue * 100) / 100,
@@ -446,13 +434,13 @@ export class GoodsReceiptsService {
 
         // WAC reversal (ADR-019)
         if (currentStock) {
-          const currentPurchaseQty  = Number(currentStock.purchaseQty ?? currentStock.onHandQuantity);
-          const currentUnitCost     = Number(currentStock.unitCost ?? 0);
-          const currentTotalValue   = currentPurchaseQty * currentUnitCost;
-          const reversalValue       = purchaseQty * originalCost;
-          const newPurchaseQty      = currentPurchaseQty - purchaseQty;
-          const newTotalValue       = currentTotalValue - reversalValue;
-          const newWAC              = newPurchaseQty > 0
+          const currentPurchaseQty = Number(currentStock.purchaseQty ?? currentStock.onHandQuantity);
+          const currentUnitCost    = Number(currentStock.unitCost ?? 0);
+          const currentTotalValue  = currentPurchaseQty * currentUnitCost;
+          const reversalValue      = purchaseQty * originalCost;
+          const newPurchaseQty     = currentPurchaseQty - purchaseQty;
+          const newTotalValue      = currentTotalValue - reversalValue;
+          const newWAC             = newPurchaseQty > 0
             ? Math.round((newTotalValue / newPurchaseQty) * 10_000) / 10_000
             : 0;
 
@@ -460,7 +448,7 @@ export class GoodsReceiptsService {
             where: { id: currentStock.id },
             data: {
               purchaseQty:     newPurchaseQty,
-              onHandQuantity:  { decrement: storageQty },   // backward compat
+              onHandQuantity:  { decrement: storageQty },
               storageQty:      { decrement: storageQty },
               consumptionQty:  { decrement: consumptionQty },
               unitCost:        newWAC,
@@ -485,7 +473,7 @@ export class GoodsReceiptsService {
         const anyReceived = poLines.some(l => Number(l.receivedQuantity) > 0);
         await tx.purchaseOrder.update({
           where: { id: grn.poId },
-          data:  { status: anyReceived ? 'partial' : 'approved', updatedBy: userId },
+          data:  { status: anyReceived ? 'partial' : 'confirmed', updatedBy: userId },
         });
       }
     });
@@ -511,7 +499,6 @@ export class GoodsReceiptsService {
       }),
     ]);
 
-    // totalValue = purchaseQty × unitCost (ADR-019: financial unit of record)
     const valueAgg = await this.prisma.$queryRaw<{ total_value: number }[]>`
       SELECT COALESCE(SUM(l.received_quantity * COALESCE(l.unit_cost, 0)), 0)::float AS total_value
       FROM grn_receipt_lines l
@@ -527,27 +514,23 @@ export class GoodsReceiptsService {
       totalValue: valueAgg[0]?.total_value ?? 0,
     };
   }
+
   // ── Inventory Turnover ─────────────────────────────────────────────────────
-  // Turnover Ratio  = COGS (issues) / Average Inventory Value
-  // Days on Hand    = 365 / Turnover Ratio
-  // Average Inv.    = (Opening Value + Closing Value) / 2
-  // All values use purchaseUom × unitCost (ADR-019)
- 
+
   async getInventoryTurnover(tenantId: string, filters?: {
     warehouseId?: string;
     itemType?:    string;
-    dateFrom?:    string;  // YYYY-MM-DD  (default: Jan 1 current year)
-    dateTo?:      string;  // YYYY-MM-DD  (default: today)
+    dateFrom?:    string;
+    dateTo?:      string;
   }) {
     const now      = new Date();
     const dateFrom = filters?.dateFrom ? new Date(filters.dateFrom) : new Date(now.getFullYear(), 0, 1);
     const dateTo   = filters?.dateTo   ? new Date(filters.dateTo + 'T23:59:59Z') : now;
     const days     = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)));
- 
-    // ── 1. Current stock positions ─────────────────────────────────────────
+
     const stockWhere: any = { tenantId };
     if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
- 
+
     const stock = await this.prisma.stock.findMany({
       where: stockWhere,
       include: {
@@ -555,10 +538,9 @@ export class GoodsReceiptsService {
         warehouse: { select: { id: true, code: true, name: true } },
       },
     });
- 
+
     const filtered = stock.filter(s => !filters?.itemType || s.item.itemType === filters.itemType);
- 
-    // ── 2. COGS in period = sum of issue movementValues ───────────────────
+
     const issueWhere: any = {
       tenantId,
       movementType: 'issue',
@@ -570,13 +552,12 @@ export class GoodsReceiptsService {
         { toWarehouseId:   filters.warehouseId },
       ];
     }
- 
+
     const issues = await this.prisma.stockMovement.findMany({
       where:   issueWhere,
       include: { item: { select: { id: true, itemType: true } } },
     });
- 
-    // Group COGS by itemId
+
     const cogsMap = new Map<string, number>();
     for (const mv of issues) {
       if (!mv.itemId) continue;
@@ -586,8 +567,7 @@ export class GoodsReceiptsService {
       );
       cogsMap.set(mv.itemId, (cogsMap.get(mv.itemId) ?? 0) + val);
     }
- 
-    // ── 3. Opening inventory value (movements BEFORE dateFrom) ────────────
+
     const openingWhere: any = {
       tenantId,
       movementDate: { lt: dateFrom },
@@ -598,7 +578,7 @@ export class GoodsReceiptsService {
         { toWarehouseId:   filters.warehouseId },
       ];
     }
- 
+
     const openingMovements = await this.prisma.stockMovement.findMany({
       where:  openingWhere,
       select: {
@@ -607,35 +587,32 @@ export class GoodsReceiptsService {
         item: { select: { id: true, itemType: true } },
       },
     });
- 
-    // Calculate opening value per item (running balance × last unitCost before period)
+
     const openingQtyMap  = new Map<string, number>();
     const openingCostMap = new Map<string, number>();
     for (const mv of openingMovements) {
       if (!mv.itemId) continue;
       if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const qty      = Number(mv.purchaseQty ?? 0);
-      const isIssue  = mv.movementType === 'issue';
-      const current  = openingQtyMap.get(mv.itemId) ?? 0;
+      const qty     = Number(mv.purchaseQty ?? 0);
+      const isIssue = mv.movementType === 'issue';
+      const current = openingQtyMap.get(mv.itemId) ?? 0;
       openingQtyMap.set(mv.itemId, current + (isIssue ? -qty : qty));
       if (!isIssue && mv.unitCost) {
         openingCostMap.set(mv.itemId, Number(mv.unitCost));
       }
     }
- 
-    // ── 4. Build per-item rows ─────────────────────────────────────────────
-    // Aggregate by item (sum across warehouses)
+
     const itemMap = new Map<string, {
       itemId: string; itemCode: string; itemName: string; itemType: string;
       closingValue: number; closingQty: number; unitCost: number;
       cogs: number; warehouses: string[];
     }>();
- 
+
     for (const s of filtered) {
       const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
       const unitCost    = Number(s.unitCost ?? 0);
       const value       = Math.round(purchaseQty * unitCost * 100) / 100;
- 
+
       const ex = itemMap.get(s.item.id);
       if (ex) {
         ex.closingValue += value;
@@ -655,65 +632,58 @@ export class GoodsReceiptsService {
         });
       }
     }
- 
-    // Attach COGS
+
     for (const [itemId, cogs] of cogsMap) {
       const ex = itemMap.get(itemId);
       if (ex) ex.cogs = Math.round(cogs * 100) / 100;
     }
- 
+
     const rows = [...itemMap.values()].map(item => {
       const openingQty   = Math.max(0, openingQtyMap.get(item.itemId) ?? 0);
       const openingCost  = openingCostMap.get(item.itemId) ?? item.unitCost;
       const openingValue = Math.round(openingQty * openingCost * 100) / 100;
       const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
- 
-      // Annualize COGS if period < 365 days
+
       const annualizedCogs = days < 365
         ? Math.round((item.cogs / days) * 365 * 100) / 100
         : item.cogs;
- 
+
       const turnoverRatio = avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
       const daysOnHand    = turnoverRatio && turnoverRatio > 0
         ? Math.round((365 / turnoverRatio) * 10) / 10
         : null;
- 
-      // Performance classification
+
       let performance: 'excellent' | 'good' | 'fair' | 'poor' | 'no_movement';
-      if (item.cogs === 0)               performance = 'no_movement';
-      else if (!turnoverRatio)           performance = 'poor';
-      else if (turnoverRatio >= 12)      performance = 'excellent';
-      else if (turnoverRatio >= 6)       performance = 'good';
-      else if (turnoverRatio >= 3)       performance = 'fair';
-      else                               performance = 'poor';
- 
+      if (item.cogs === 0)          performance = 'no_movement';
+      else if (!turnoverRatio)      performance = 'poor';
+      else if (turnoverRatio >= 12) performance = 'excellent';
+      else if (turnoverRatio >= 6)  performance = 'good';
+      else if (turnoverRatio >= 3)  performance = 'fair';
+      else                          performance = 'poor';
+
       return {
         itemId:         item.itemId,
         itemCode:       item.itemCode,
         itemName:       item.itemName,
         itemType:       item.itemType,
         warehouses:     [...new Set(item.warehouses)],
-        // Values
         openingValue,
         closingValue:   Math.round(item.closingValue * 100) / 100,
         avgInventory,
         cogs:           item.cogs,
         annualizedCogs,
-        // Ratios
         turnoverRatio,
         daysOnHand,
         performance,
       };
     });
- 
-    // Sort by turnover ratio asc (poor performers first)
+
     rows.sort((a, b) => {
       if (a.turnoverRatio === null) return -1;
       if (b.turnoverRatio === null) return 1;
       return a.turnoverRatio - b.turnoverRatio;
     });
- 
-    // Summary
+
     const totalCogs         = Math.round(rows.reduce((s, r) => s + r.cogs,         0) * 100) / 100;
     const totalAvgInventory = Math.round(rows.reduce((s, r) => s + r.avgInventory, 0) * 100) / 100;
     const overallTurnover   = totalAvgInventory > 0
@@ -722,7 +692,7 @@ export class GoodsReceiptsService {
     const overallDaysOnHand = overallTurnover && overallTurnover > 0
       ? Math.round((365 / overallTurnover) * 10) / 10
       : null;
- 
+
     return {
       rows,
       summary: {

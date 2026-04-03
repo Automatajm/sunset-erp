@@ -1189,6 +1189,7 @@ erDiagram
     String status 
     String condition 
     String notes "❓"
+    String supplier_ref "❓"
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
@@ -1215,6 +1216,7 @@ erDiagram
     String consumption_uom "❓"
     Decimal unit_cost "❓"
     String lot_number "❓"
+    DateTime expiry_date "❓"
     String notes "❓"
     DateTime created_at 
     DateTime updated_at 

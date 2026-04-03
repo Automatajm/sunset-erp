@@ -1900,6 +1900,7 @@ model GoodsReceipt {
   status       String   @default("posted") @db.VarChar(20)
   condition    String   @default("complete") @db.VarChar(50)
   notes        String?  @db.Text
+  supplierRef  String?  @map("supplier_ref") @db.VarChar(100)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt      @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
@@ -1942,9 +1943,10 @@ model GoodsReceiptLine {
   consumptionUom String?  @map("consumption_uom") @db.VarChar(20)
 
   // unitCost = cost per purchaseUom unit (feeds WAC calculation)
-  unitCost  Decimal? @map("unit_cost") @db.Decimal(15, 4)
-  lotNumber String?  @map("lot_number") @db.VarChar(100)
-  notes     String?  @db.Text
+  unitCost   Decimal?  @map("unit_cost")   @db.Decimal(15, 4)
+  lotNumber  String?   @map("lot_number")  @db.VarChar(100)
+  expiryDate DateTime? @map("expiry_date") @db.Date
+  notes      String?   @db.Text
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt      @map("updated_at")
   deletedAt DateTime? @map("deleted_at")

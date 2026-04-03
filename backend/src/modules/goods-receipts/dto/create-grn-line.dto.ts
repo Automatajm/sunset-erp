@@ -2,7 +2,7 @@
 // FILE: backend/src/modules/goods-receipts/dto/create-grn-line.dto.ts
 // ============================================================================
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsNumber, IsPositive, MaxLength, Min } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsNumber, IsPositive, IsDateString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateGrnLineDto {
@@ -38,6 +38,11 @@ export class CreateGrnLineDto {
   @IsString()
   @MaxLength(100)
   lotNumber?: string;
+
+  @ApiPropertyOptional({ example: '2026-12-31', description: 'Expiry date for perishable / expiry-tracked items' })
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
 
   @ApiPropertyOptional({ example: 'Minor dents on packaging', description: 'Line notes' })
   @IsOptional()

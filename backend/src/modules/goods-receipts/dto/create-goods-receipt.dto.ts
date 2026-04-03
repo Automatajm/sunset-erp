@@ -36,6 +36,12 @@ export class CreateGoodsReceiptDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ example: 'INV-2026-00123', description: 'Supplier invoice / reference number for manual receipts' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  supplierRef?: string;
+
   @ApiProperty({ description: 'GRN lines', type: [CreateGrnLineDto] })
   @IsArray()
   @ValidateNested({ each: true })
