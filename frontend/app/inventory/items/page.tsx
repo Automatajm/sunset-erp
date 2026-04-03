@@ -204,7 +204,8 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.supplierId || !addForm.purchaseUomId) { setAddError('Supplier and Purchase UOM are required'); return; }
+    if (!addForm.supplierId) { setAddError('Supplier is required'); return; }
+    if (!item.purchaseUomId) { setAddError('This item has no Purchase UOM configured. Go to the UOM tab and set it first.'); return; }
     setAdding(true); setAddError('');
     try {
       await supplierItemsApi.create({
@@ -227,7 +228,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
     setEditingId(si.id);
     setAddForm({
       supplierId:       si.supplier?.id ?? (si as any).supplierId ?? '',
-      purchaseUomId:    si.purchaseUom?.id ?? (si as any).purchaseUomId ?? '',
+      purchaseUomId:    item.purchaseUomId ?? '',   // locked to item purchaseUomId
       supplierItemCode: (si as any).supplierItemCode ?? '',
       lastPrice:        si.lastPrice ? String(si.lastPrice) : '',
       leadTimeDays:     String(si.leadTimeDays ?? 0),

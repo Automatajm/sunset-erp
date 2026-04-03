@@ -1,5 +1,7 @@
-// --- supplier-items/supplier-items.service.ts ---
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+// ============================================================================
+// FILE: backend/src/modules/supplier-items/supplier-items.service.ts
+// ============================================================================
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
@@ -7,7 +9,7 @@ import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
 
 const INCLUDE = {
   supplier:    { select: { id: true, code: true, name: true } },
-  item:        { select: { id: true, code: true, name: true, consumptionUomId: true, baseUom: true } },
+  item:        { select: { id: true, code: true, name: true, consumptionUomId: true, baseUom: true, purchaseUomId: true } },
   purchaseUom: { select: { id: true, code: true, name: true, type: true, system: true } },
 };
 
@@ -18,7 +20,49 @@ export class SupplierItemsService {
     private uomService: UomService,
   ) {}
 
+  // ── UOM validation — core business rule ───────────────────────────────────
+  // A SupplierItem's purchaseUomId MUST match Item.purchaseUomId.
+  // If a supplier uses a different UOM for the same product, it's a different item.
+
+  private async validatePurchaseUom(
+    itemId: string,
+    tenantId: string,
+    purchaseUomId: string,
+  ): Promise<void> {
+    const item = await this.prisma.item.findFirst({
+      where: { id: itemId, tenantId },
+      select: { code: true, name: true, purchaseUomId: true, purchaseUom: { select: { code: true, name: true } } },
+    });
+    if (!item) throw new NotFoundException(`Item ${itemId} not found`);
+
+    // If the item has no purchaseUomId set, block the supplier assignment
+    if (!item.purchaseUomId) {
+      throw new BadRequestException(
+        `Item ${item.code} does not have a Purchase UOM configured. ` +
+        `Set the item's Purchase UOM before assigning suppliers.`
+      );
+    }
+
+    // Enforce UOM match
+    if (item.purchaseUomId !== purchaseUomId) {
+      const supplierUom = await this.prisma.uomUnit.findFirst({
+        where: { id: purchaseUomId },
+        select: { code: true, name: true },
+      });
+      throw new BadRequestException(
+        `Purchase UOM mismatch. Item ${item.code} uses ${item.purchaseUom?.code ?? item.purchaseUomId} ` +
+        `but supplier is configured with ${supplierUom?.code ?? purchaseUomId}. ` +
+        `If this supplier sells the product in a different unit, create a separate item for that presentation.`
+      );
+    }
+  }
+
+  // ── Create ─────────────────────────────────────────────────────────────────
+
   async create(tenantId: string, userId: string, dto: CreateSupplierItemDto) {
+    // Enforce UOM rule before anything else
+    await this.validatePurchaseUom(dto.itemId, tenantId, dto.purchaseUomId);
+
     // Check for existing entry — including soft-deleted ones
     const existing = await this.prisma.supplierItem.findFirst({
       where: { tenantId, supplierId: dto.supplierId, itemId: dto.itemId },
@@ -26,7 +70,7 @@ export class SupplierItemsService {
 
     if (existing) {
       if (existing.deletedAt) {
-        // Previously removed — reactivate and update with new data
+        // Previously removed — reactivate and update
         const reactivated = await this.prisma.supplierItem.update({
           where: { id: existing.id },
           data: {
@@ -48,20 +92,13 @@ export class SupplierItemsService {
         });
         return this.enrich(reactivated);
       } else {
-        // Active duplicate — reject clearly
         throw new ConflictException('This supplier already has an active entry for this item');
       }
     }
 
-    // Auto-calculate conversion factor from catalog when not explicitly provided
-    let conversionFactor = dto.conversionFactor ?? 1;
-    if (!dto.conversionFactor || dto.conversionFactor === 1) {
-      const item = await this.prisma.item.findFirst({ where: { id: dto.itemId, tenantId } });
-      if (item?.consumptionUomId && dto.purchaseUomId !== item.consumptionUomId) {
-        const autoFactor = await this.uomService.getConversionFactor(dto.purchaseUomId, item.consumptionUomId);
-        if (autoFactor) conversionFactor = autoFactor;
-      }
-    }
+    // conversionFactor = 1 since purchaseUom === item.purchaseUomId (same unit, no conversion needed)
+    // The triple UOM conversions are handled by Item.purchaseToConsumptionFactor
+    const conversionFactor = dto.conversionFactor ?? 1;
 
     if (dto.isPreferred) {
       await this.prisma.supplierItem.updateMany({
@@ -102,10 +139,12 @@ export class SupplierItemsService {
     return this.enrich(si);
   }
 
+  // ── Find All ───────────────────────────────────────────────────────────────
+
   async findAll(tenantId: string, filters?: { itemId?: string; supplierId?: string; isPreferred?: boolean }) {
     const where: any = { tenantId, deletedAt: null };
-    if (filters?.itemId)                   where.itemId      = filters.itemId;
-    if (filters?.supplierId)               where.supplierId  = filters.supplierId;
+    if (filters?.itemId)                    where.itemId      = filters.itemId;
+    if (filters?.supplierId)                where.supplierId  = filters.supplierId;
     if (filters?.isPreferred !== undefined) where.isPreferred = filters.isPreferred;
 
     const rows = await this.prisma.supplierItem.findMany({
@@ -133,8 +172,15 @@ export class SupplierItemsService {
     return this.enrich(si);
   }
 
+  // ── Update ─────────────────────────────────────────────────────────────────
+
   async update(tenantId: string, userId: string, id: string, dto: UpdateSupplierItemDto) {
     const si = await this.findOne(tenantId, id);
+
+    // If purchaseUomId is being changed, validate it against the item
+    if (dto.purchaseUomId) {
+      await this.validatePurchaseUom((si as any).itemId, tenantId, dto.purchaseUomId);
+    }
 
     if (dto.isPreferred) {
       await this.prisma.supplierItem.updateMany({
@@ -147,22 +193,15 @@ export class SupplierItemsService {
       });
     }
 
-    let conversionFactor = dto.conversionFactor;
-    if (dto.purchaseUomId && !dto.conversionFactor) {
-      const item = await this.prisma.item.findFirst({ where: { id: (si as any).itemId, tenantId } });
-      if (item?.consumptionUomId) {
-        const autoFactor = await this.uomService.getConversionFactor(dto.purchaseUomId, item.consumptionUomId);
-        if (autoFactor) conversionFactor = autoFactor;
-      }
-    }
-
     const updated = await this.prisma.supplierItem.update({
-      where:  { id },
-      data:   { ...dto, ...(conversionFactor !== undefined ? { conversionFactor } : {}), updatedBy: userId },
+      where:   { id },
+      data:    { ...dto, updatedBy: userId },
       include: INCLUDE,
     });
     return this.enrich(updated);
   }
+
+  // ── Remove ─────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
     await this.findOne(tenantId, id);
