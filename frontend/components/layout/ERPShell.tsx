@@ -28,12 +28,19 @@ const NAV: NavItem[] = [
         ],
       },
       {
-        label: 'Purchasing',
-        items: [
-          { label: 'Purchase Orders', href: '/procurement/purchase-orders', permission: 'PROCUREMENT:VIEW' },
-          { label: 'Goods Receipts',  href: '/procurement/goods-receipts',  permission: 'PROCUREMENT:VIEW' },
-          { label: 'AP Invoices',     href: '/procurement/ap-invoices',     permission: 'AP:VIEW' },
-        ],
+         label: 'Planning',
+         items: [
+           { label: 'General Needs', href: '/procurement/general-needs', permission: 'PROCUREMENT:VIEW' },
+           { label: 'RFQs',          href: '/procurement/rfqs',          permission: 'PROCUREMENT:VIEW' },
+         ],
+       },
+       {
+         label: 'Purchasing',
+         items: [
+           { label: 'Purchase Orders', href: '/procurement/purchase-orders', permission: 'PROCUREMENT:VIEW' },
+           { label: 'Goods Receipts',  href: '/procurement/goods-receipts',  permission: 'PROCUREMENT:VIEW' },
+           { label: 'AP Invoices',     href: '/procurement/ap-invoices',     permission: 'AP:VIEW' },
+         ],
       },
     ],
   },
