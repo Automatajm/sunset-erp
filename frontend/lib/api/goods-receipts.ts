@@ -15,6 +15,7 @@ export interface GrnLine {
   uom: string;
   unitCost?: string;
   lotNumber?: string;
+  expiryDate?: string;
   notes?: string;
 }
 
@@ -33,6 +34,7 @@ export interface GoodsReceipt {
   status: 'posted' | 'cancelled';
   condition: string;
   notes?: string;
+  supplierRef?: string;
   lineCount?: number;
   totalValue?: number;
   lines?: GrnLine[];
@@ -54,6 +56,7 @@ export interface CreateGrnLineDto {
   uom: string;
   unitCost?: number;
   lotNumber?: string;
+  expiryDate?: string;
   notes?: string;
 }
 
@@ -63,6 +66,7 @@ export interface CreateGoodsReceiptDto {
   receivedDate?: string;
   condition?: string;
   notes?: string;
+  supplierRef?: string;
   lines: CreateGrnLineDto[];
 }
 

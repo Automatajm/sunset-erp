@@ -12,7 +12,6 @@ import {
 import { goodsReceiptsApi, GoodsReceipt, GrnStats, CreateGoodsReceiptDto } from '@/lib/api/goods-receipts';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
-import { itemsApi } from '@/lib/api/items';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { supplierItemsApi } from '@/lib/api/supplier-items';
 import { SupplierItem } from '@/lib/api/types';
@@ -35,12 +34,10 @@ interface POLine {
   uom: string; unitPrice: string;
 }
 interface Warehouse { id: string; code: string; name: string; }
-interface Item      { id: string; code: string; name: string; baseUom: string; }
 interface Supplier  { id: string; code: string; name: string; }
 
-// Pool line — what gets added to the receipt
 interface PoolLine {
-  key:             string;   // unique client-side key
+  key:             string;
   itemId:          string;
   itemCode:        string;
   itemName:        string;
@@ -48,13 +45,12 @@ interface PoolLine {
   uom:             string;
   unitCost:        string;
   lotNumber:       string;
+  expiryDate:      string;
   notes:           string;
   poLineId?:       string;
-  // PO context fields (read-only)
   orderedQty?:     number;
   alreadyReceived?: number;
-  // Discrepancy tracking
-  skip:            boolean;   // user marked this line as "do not receive"
+  skip:            boolean;
   isFromPo:        boolean;
 }
 
@@ -126,7 +122,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
-      <div style={{ width:700, background:'#0a0712', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+      <div style={{ width:720, background:'#0a0712', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
             <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', ...MONO }}>{grn.grnNumber}</div>
@@ -140,11 +136,14 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
         </div>
+
         {loading ? (
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:16 }}>
             {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+
+            {/* Info grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
               {[
                 { label:'Received Date', value: fmtDate(detail.receivedDate) },
@@ -158,13 +157,23 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                 </div>
               ))}
             </div>
+
+            {/* Supplier ref */}
+            {(detail as any).supplierRef && (
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:'rgba(96,165,250,0.05)', border:'0.5px solid rgba(96,165,250,0.15)', borderRadius:7 }}>
+                <span style={{ fontSize:10, color:'rgba(96,165,250,0.5)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Supplier Ref</span>
+                <span style={{ ...MONO, fontSize:12, color:'#60a5fa' }}>{(detail as any).supplierRef}</span>
+              </div>
+            )}
+
+            {/* Lines table */}
             <div>
               <div style={{ fontSize:11, fontWeight:500, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Receipt Lines</div>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>
-                    {['#','Item','Qty Received','UOM','Unit Cost','Total','Lot'].map(h => (
-                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(74,222,128,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty Received','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                    {['#','Item','Qty','UOM','Unit Cost','Total','Lot','Expiry'].map(h => (
+                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(74,222,128,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -183,24 +192,32 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                         {line.unitCost ? fmtAmt(Number(line.receivedQuantity) * Number(line.unitCost)) : '—'}
                       </td>
                       <td style={{ padding:'8px', color:'rgba(255,255,255,0.35)', fontSize:11 }}>{line.lotNumber ?? '—'}</td>
+                      <td style={{ padding:'8px', fontSize:11 }}>
+                        {line.expiryDate ? (
+                          <span style={{ color: new Date(line.expiryDate) < new Date() ? '#f87171' : '#fbbf24', ...MONO }}>
+                            {fmtDateShort(line.expiryDate)}
+                          </span>
+                        ) : <span style={{ color:'rgba(255,255,255,0.2)' }}>—</span>}
+                      </td>
                     </tr>
                   ))}
                   <tr style={{ background:'rgba(255,255,255,0.02)' }}>
-                    <td colSpan={4} style={{ padding:'8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL VALUE</td>
-                    <td colSpan={2} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'#4ade80', fontSize:14 }}>
+                    <td colSpan={5} style={{ padding:'8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL VALUE</td>
+                    <td colSpan={3} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'#4ade80', fontSize:14 }}>
                       {fmtAmt(detail.lines?.reduce((sum, l) => sum + Number(l.receivedQuantity) * Number(l.unitCost ?? 0), 0) ?? 0)}
                     </td>
-                    <td />
                   </tr>
                 </tbody>
               </table>
             </div>
+
             {detail.notes && (
               <div style={{ background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
                 <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>Notes</div>
                 <div style={{ fontSize:12, color:'rgba(255,255,255,0.55)', lineHeight:1.6 }}>{detail.notes}</div>
               </div>
             )}
+
             {detail.status === 'posted' && (
               <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                 <button onClick={handleCancel} disabled={cancelBusy}
@@ -222,17 +239,16 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
   open: boolean; onClose: () => void; onSaved: () => void;
   warehouses: Warehouse[]; suppliers: Supplier[];
 }) {
-  // ── Mode ──────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<'po' | 'manual'>('po');
 
-  // ── PO mode state ──────────────────────────────────────────────────────────
+  // PO mode
   const [poOptions,    setPoOptions]    = useState<PO[]>([]);
   const [selectedPoId, setSelectedPoId] = useState('');
   const [selectedPo,   setSelectedPo]   = useState<PO | null>(null);
   const [poLoading,    setPoLoading]    = useState(false);
   const [poDetLoading, setPoDetLoading] = useState(false);
 
-  // ── Manual mode state ─────────────────────────────────────────────────────
+  // Manual mode
   const [selectedSupplierId,   setSelectedSupplierId]   = useState('');
   const [supplierItems,        setSupplierItems]        = useState<SupplierItem[]>([]);
   const [supplierItemsLoading, setSupplierItemsLoading] = useState(false);
@@ -240,16 +256,17 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
   const [itemDropOpen,         setItemDropOpen]         = useState(false);
   const itemDropRef = useRef<HTMLDivElement>(null);
 
-  // ── Shared state ───────────────────────────────────────────────────────────
-  const [warehouseId,   setWarehouseId]   = useState('');
-  const [receivedDate,  setReceivedDate]  = useState('');
-  const [condition,     setCondition]     = useState('complete');
-  const [notes,         setNotes]         = useState('');
-  const [pool,          setPool]          = useState<PoolLine[]>([]);
-  const [submitting,    setSubmitting]    = useState(false);
-  const [error,         setError]         = useState('');
+  // Shared
+  const [warehouseId,  setWarehouseId]  = useState('');
+  const [receivedDate, setReceivedDate] = useState('');
+  const [condition,    setCondition]    = useState('complete');
+  const [notes,        setNotes]        = useState('');
+  const [supplierRef,  setSupplierRef]  = useState('');
+  const [pool,         setPool]         = useState<PoolLine[]>([]);
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState('');
 
-  // ── Reset on open ─────────────────────────────────────────────────────────
+  // Reset on open
   useEffect(() => {
     if (!open) return;
     setMode('po');
@@ -257,12 +274,12 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     setSelectedSupplierId(''); setSupplierItems([]);
     setWarehouseId('');
     setReceivedDate(new Date().toISOString().slice(0,10));
-    setCondition('complete'); setNotes('');
+    setCondition('complete'); setNotes(''); setSupplierRef('');
     setPool([]); setError('');
     setItemSearch(''); setItemDropOpen(false);
   }, [open]);
 
-  // ── Load POs for SearchSelect ─────────────────────────────────────────────
+  // Load POs
   useEffect(() => {
     if (!open || mode !== 'po') return;
     setPoLoading(true);
@@ -276,7 +293,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
       .finally(() => setPoLoading(false));
   }, [open, mode]);
 
-  // ── Select PO → load detail & pre-populate pool ───────────────────────────
+  // Select PO
   const handlePoSelect = useCallback(async (poId: string) => {
     setSelectedPoId(poId);
     if (!poId) { setSelectedPo(null); setPool([]); setWarehouseId(''); return; }
@@ -295,6 +312,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
           uom:             l.uom || l.item?.baseUom || 'PCS',
           unitCost:        l.unitPrice ?? '',
           lotNumber:       '',
+          expiryDate:      '',
           notes:           '',
           poLineId:        l.id,
           orderedQty:      Number(l.orderedQuantity),
@@ -308,7 +326,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     finally { setPoDetLoading(false); }
   }, []);
 
-  // ── Load supplier items when supplier selected ────────────────────────────
+  // Load supplier items
   useEffect(() => {
     if (!selectedSupplierId) { setSupplierItems([]); return; }
     setSupplierItemsLoading(true);
@@ -318,7 +336,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
       .finally(() => setSupplierItemsLoading(false));
   }, [selectedSupplierId]);
 
-  // ── Close item dropdown on outside click ──────────────────────────────────
+  // Close item dropdown outside click
   useEffect(() => {
     if (!itemDropOpen) return;
     const handler = (e: MouseEvent) => {
@@ -329,9 +347,8 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     return () => document.removeEventListener('mousedown', handler);
   }, [itemDropOpen]);
 
-  // ── Add item from supplier catalog to pool ────────────────────────────────
+  // Add item to pool
   const addItemToPool = (si: SupplierItem) => {
-    // Prevent duplicate
     if (pool.some(p => p.itemId === si.itemId)) {
       setError(`${si.item?.code} is already in the receipt.`);
       return;
@@ -345,6 +362,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
       uom:         si.purchaseUom?.code ?? si.item?.baseUom ?? 'PCS',
       unitCost:    si.lastPrice ? String(si.lastPrice) : '',
       lotNumber:   '',
+      expiryDate:  '',
       notes:       '',
       skip:        false,
       isFromPo:    false,
@@ -354,15 +372,12 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     setError('');
   };
 
-  // ── Update pool line field ─────────────────────────────────────────────────
   const updateLine = (key: string, field: keyof PoolLine, value: any) =>
     setPool(prev => prev.map(l => l.key === key ? { ...l, [field]: value } : l));
 
-  // ── Remove from pool ───────────────────────────────────────────────────────
   const removeLine = (key: string) =>
     setPool(prev => prev.filter(l => l.key !== key));
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!warehouseId) { setError('Warehouse is required.'); return; }
@@ -371,11 +386,12 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     setSubmitting(true); setError('');
     try {
       const dto: CreateGoodsReceiptDto = {
-        poId: selectedPo?.id,
+        poId:        selectedPo?.id,
         warehouseId,
         receivedDate: receivedDate || undefined,
         condition,
-        notes: notes || undefined,
+        notes:       notes || undefined,
+        supplierRef: mode === 'manual' ? (supplierRef || undefined) : undefined,
         lines: validLines.map(l => ({
           poLineId:         l.poLineId,
           itemId:           l.itemId,
@@ -383,6 +399,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
           uom:              l.uom,
           unitCost:         l.unitCost ? Number(l.unitCost) : undefined,
           lotNumber:        l.lotNumber || undefined,
+          expiryDate:       l.expiryDate || undefined,
           notes:            l.notes || undefined,
         })),
       };
@@ -415,7 +432,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     <>
       <style>{`
         .grn-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .grn-box{background:#0e0b1a;border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:1000px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .grn-box{background:#0e0b1a;border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:1060px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .grn-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);pointer-events:none}
         .grn-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .grn-th{font-size:10px;color:rgba(74,222,128,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 8px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
@@ -429,6 +446,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
         .item-drop-row{padding:9px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.1s}
         .item-drop-row:hover{background:rgba(74,222,128,0.06)}
         .item-drop-row:not(:last-child){border-bottom:0.5px solid rgba(255,255,255,0.04)}
+        .grn-date-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%;color-scheme:dark}
+        .grn-date-inp::-webkit-calendar-picker-indicator{filter:invert(0.5) sepia(1) saturate(3) hue-rotate(10deg);cursor:pointer;opacity:0.6}
+        .grn-date-inp::-webkit-calendar-picker-indicator:hover{opacity:1}
       `}</style>
 
       <div className="grn-overlay">
@@ -437,10 +457,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:10, borderRadius:'14px 14px 0 0' }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>New Goods Receipt (GRN)</span>
-              {/* Mode tabs */}
               <div style={{ display:'flex', gap:4 }}>
                 <button className={`mode-tab ${mode === 'po' ? 'mode-tab-active' : 'mode-tab-inactive'}`}
-                  onClick={() => { setMode('po'); setPool([]); setSelectedSupplierId(''); }}>
+                  onClick={() => { setMode('po'); setPool([]); setSelectedSupplierId(''); setSupplierRef(''); }}>
                   From PO
                 </button>
                 <button className={`mode-tab ${mode === 'manual' ? 'mode-tab-active' : 'mode-tab-inactive'}`}
@@ -456,10 +475,13 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
             <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
               {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
 
-              {/* ── FROM PO mode ── */}
+              {/* ── FROM PO ── */}
               {mode === 'po' && (
                 <>
-                  <div className="grn-section"><span>Purchase Order</span>{poLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontSize:10 }}>Loading POs…</span>}</div>
+                  <div className="grn-section">
+                    <span>Purchase Order</span>
+                    {poLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontSize:10 }}>Loading POs…</span>}
+                  </div>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ flex:1 }}>
                       <label style={LBL}>PO Number (confirmed or partially received)</label>
@@ -484,7 +506,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                 </>
               )}
 
-              {/* ── MANUAL mode ── */}
+              {/* ── MANUAL ── */}
               {mode === 'manual' && (
                 <>
                   <div className="grn-section"><span>Vendor & Items</span></div>
@@ -500,11 +522,11 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                         minWidth={280}
                       />
                     </div>
-                    {/* Item search — only active when supplier selected */}
                     <div style={{ position:'relative' }} ref={itemDropRef}>
                       <label style={{ ...LBL, color: selectedSupplierId ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.2)' }}>
-                        Add Item {supplierItemsLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400 }}>— loading…</span>}
-                        {selectedSupplierId && !supplierItemsLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400 }}> — {supplierItems.length} items available</span>}
+                        Add Item
+                        {supplierItemsLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400 }}> — loading…</span>}
+                        {selectedSupplierId && !supplierItemsLoading && <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400 }}> — {supplierItems.length} available</span>}
                       </label>
                       <input
                         style={{ ...INP, opacity: selectedSupplierId ? 1 : 0.4, cursor: selectedSupplierId ? 'text' : 'not-allowed' }}
@@ -540,12 +562,13 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                 </>
               )}
 
-              {/* ── Receipt Details (shared) ── */}
+              {/* ── Receipt Details ── */}
               <div className="grn-section"><span>Receipt Details</span></div>
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
                 <div>
                   <label style={LBL}>Warehouse *</label>
-                  <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)} style={{ ...INP, cursor:'pointer', borderColor: selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)' }}>
+                  <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)}
+                    style={{ ...INP, cursor:'pointer', borderColor: selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)' }}>
                     <option value="">— Select warehouse —</option>
                     {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
                   </select>
@@ -555,7 +578,8 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                 </div>
                 <div>
                   <label style={LBL}>Received Date</label>
-                  <input type="date" value={receivedDate} onChange={e => setReceivedDate(e.target.value)} style={INP} />
+                  <input type="date" value={receivedDate} onChange={e => setReceivedDate(e.target.value)}
+                    style={{ ...INP, colorScheme:'dark' }} />
                 </div>
                 <div>
                   <label style={LBL}>Condition</label>
@@ -564,10 +588,23 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                   </select>
                 </div>
                 <div>
-                  <label style={LBL}>Header Notes</label>
+                  <label style={LBL}>Notes</label>
                   <input style={INP} placeholder="Optional…" value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
               </div>
+
+              {/* Supplier Ref — manual mode only */}
+              {mode === 'manual' && (
+                <div>
+                  <label style={{ ...LBL, color:'rgba(96,165,250,0.6)' }}>Supplier Invoice / Reference #</label>
+                  <input
+                    style={{ ...INP, borderColor:'rgba(96,165,250,0.2)', background:'rgba(96,165,250,0.03)' }}
+                    placeholder="e.g. INV-2026-00123 — supplier's invoice number"
+                    value={supplierRef}
+                    onChange={e => setSupplierRef(e.target.value)}
+                  />
+                </div>
+              )}
 
               {/* ── Pool / Lines ── */}
               <div className="grn-section">
@@ -587,11 +624,12 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                     <thead>
                       <tr style={{ background:'rgba(0,0,0,0.3)' }}>
                         {mode === 'po' && <th className="grn-th" style={{ width:32 }}>Skip</th>}
-                        <th className="grn-th" style={{ minWidth:180 }}>Item</th>
-                        <th className="grn-th" style={{ width:120 }}>Qty Received *</th>
-                        <th className="grn-th" style={{ width:75 }}>UOM</th>
-                        <th className="grn-th" style={{ width:110 }}>Unit Cost</th>
-                        <th className="grn-th" style={{ width:120 }}>Lot Number</th>
+                        <th className="grn-th" style={{ minWidth:160 }}>Item</th>
+                        <th className="grn-th" style={{ width:110 }}>Qty *</th>
+                        <th className="grn-th" style={{ width:70 }}>UOM</th>
+                        <th className="grn-th" style={{ width:100 }}>Unit Cost</th>
+                        <th className="grn-th" style={{ width:110 }}>Lot Number</th>
+                        <th className="grn-th" style={{ width:120 }}>Expiry Date</th>
                         <th className="grn-th">Notes</th>
                         {mode === 'manual' && <th className="grn-th" style={{ width:28 }}></th>}
                       </tr>
@@ -601,21 +639,18 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                         const pendingQty = line.isFromPo && line.orderedQty !== undefined && line.alreadyReceived !== undefined
                           ? line.orderedQty - line.alreadyReceived
                           : null;
+                        const isExpired = line.expiryDate && new Date(line.expiryDate) < new Date();
                         return (
                           <tr key={line.key} className={`pool-row${line.skip ? ' pool-row-skip' : ''}`}>
-                            {/* Skip checkbox — PO mode only */}
+                            {/* Skip */}
                             {mode === 'po' && (
                               <td style={{ padding:'8px', textAlign:'center', verticalAlign:'middle' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={line.skip}
+                                <input type="checkbox" checked={line.skip}
                                   onChange={e => updateLine(line.key, 'skip', e.target.checked)}
-                                  title="Skip this line (discrepancy)"
-                                  style={{ accentColor:'#f87171', cursor:'pointer' }}
-                                />
+                                  title="Skip this line" style={{ accentColor:'#f87171', cursor:'pointer' }} />
                               </td>
                             )}
-                            {/* Item — read-only display */}
+                            {/* Item */}
                             <td style={{ padding:'6px 8px', verticalAlign:'middle' }}>
                               <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
                                 <span style={{ ...MONO, fontSize:11, color:'#fb923c' }}>{line.itemCode}</span>
@@ -639,32 +674,47 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                               />
                             </td>
                             {/* UOM */}
-                            <td style={{ padding:'4px 4px', verticalAlign:'middle' }}>
+                            <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
                               <input
                                 style={{ ...LINE_INP, color:'#fb923c', background:'rgba(251,146,60,0.04)', borderColor:'rgba(251,146,60,0.2)' }}
-                                value={line.uom}
-                                disabled={line.skip}
+                                value={line.uom} disabled={line.skip}
                                 onChange={e => updateLine(line.key, 'uom', e.target.value)}
                               />
                             </td>
                             {/* Unit Cost */}
-                            <td style={{ padding:'4px 4px', verticalAlign:'middle' }}>
+                            <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
                               <input
                                 style={{ ...LINE_INP, textAlign:'right' }}
-                                type="number" min="0" step="0.0001"
-                                placeholder="0.00"
-                                value={line.unitCost}
-                                disabled={line.skip}
+                                type="number" min="0" step="0.0001" placeholder="0.00"
+                                value={line.unitCost} disabled={line.skip}
                                 onChange={e => updateLine(line.key, 'unitCost', e.target.value)}
                               />
                             </td>
                             {/* Lot */}
-                            <td style={{ padding:'4px 4px', verticalAlign:'middle' }}>
+                            <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
                               <input style={LINE_INP} placeholder="LOT-001" value={line.lotNumber} disabled={line.skip}
                                 onChange={e => updateLine(line.key, 'lotNumber', e.target.value)} />
                             </td>
+                            {/* Expiry Date */}
+                            <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
+                              <input
+                                type="date"
+                                className="grn-date-inp"
+                                style={{
+                                  borderColor: isExpired ? 'rgba(248,113,113,0.5)'
+                                    : line.expiryDate ? 'rgba(251,191,36,0.35)'
+                                    : 'rgba(255,255,255,0.1)',
+                                  color: isExpired ? '#f87171'
+                                    : line.expiryDate ? '#fbbf24'
+                                    : '#f1ede8',
+                                }}
+                                value={line.expiryDate}
+                                disabled={line.skip}
+                                onChange={e => updateLine(line.key, 'expiryDate', e.target.value)}
+                              />
+                            </td>
                             {/* Notes */}
-                            <td style={{ padding:'4px 4px', verticalAlign:'middle' }}>
+                            <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
                               <input style={LINE_INP} placeholder="Optional…" value={line.notes} disabled={line.skip}
                                 onChange={e => updateLine(line.key, 'notes', e.target.value)} />
                             </td>
@@ -687,7 +737,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
               {/* Skip notice */}
               {mode === 'po' && pool.some(l => l.skip) && (
                 <div style={{ fontSize:11, color:'rgba(251,146,60,0.6)', padding:'6px 10px', background:'rgba(251,146,60,0.05)', borderRadius:6, border:'0.5px solid rgba(251,146,60,0.15)', lineHeight:1.5 }}>
-                  ⚠ Skipped lines will not be received. Create a separate manual GRN referencing this PO for those items if needed, or raise a new PO for discrepant items.
+                  ⚠ Skipped lines will not be received. Create a separate manual GRN for those items if needed, or raise a new PO for discrepant items.
                 </div>
               )}
             </div>
@@ -796,11 +846,13 @@ export default function GoodsReceiptsPage() {
       render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#4ade80', fontWeight:500 }}>{r.grnNumber}</span>,
     },
     {
-      key: 'poNumber', header: 'PO Number', width: 130, sortable: true,
-      value: r => r.poNumber ?? '',
+      key: 'poNumber', header: 'PO / Ref', width: 140, sortable: true,
+      value: r => r.poNumber ?? (r as any).supplierRef ?? '',
       render: r => r.poNumber
         ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'#fb923c' }}>{r.poNumber}</span>
-        : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+        : (r as any).supplierRef
+          ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'#60a5fa' }}>{(r as any).supplierRef}</span>
+          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
       key: 'supplierName', header: 'Supplier', sortable: true,
