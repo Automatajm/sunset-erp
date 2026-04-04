@@ -1783,6 +1783,7 @@ model UomUnit {
   tenantSettingsMass   TenantSettings[] @relation("TenantMassUom")
   tenantSettingsLength TenantSettings[] @relation("TenantLengthUom")
   tenantSettingsArea   TenantSettings[] @relation("TenantAreaUom")
+  tenantSettingsCount  TenantSettings[] @relation("TenantCountUom")
   @@unique([code])
   @@index([type])
   @@index([system])
@@ -1814,6 +1815,7 @@ model TenantSettings {
   massBaseUomId   String? @map("mass_base_uom_id")   @db.Uuid
   lengthBaseUomId String? @map("length_base_uom_id") @db.Uuid
   areaBaseUomId   String? @map("area_base_uom_id")   @db.Uuid
+  countBaseUomId  String? @map("count_base_uom_id")  @db.Uuid
   updatedAt DateTime @updatedAt @map("updated_at")
   updatedBy String?  @map("updated_by") @db.Uuid
   tenant        Tenant   @relation(fields: [tenantId],       references: [id])
@@ -1821,6 +1823,7 @@ model TenantSettings {
   massBaseUom   UomUnit? @relation("TenantMassUom",   fields: [massBaseUomId],   references: [id])
   lengthBaseUom UomUnit? @relation("TenantLengthUom", fields: [lengthBaseUomId], references: [id])
   areaBaseUom   UomUnit? @relation("TenantAreaUom",   fields: [areaBaseUomId],   references: [id])
+  countBaseUom  UomUnit? @relation("TenantCountUom",  fields: [countBaseUomId],  references: [id])
   @@map("cfg_tenant_settings")
 }
 

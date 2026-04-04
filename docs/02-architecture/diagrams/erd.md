@@ -1114,6 +1114,7 @@ erDiagram
     String mass_base_uom_id "❓"
     String length_base_uom_id "❓"
     String area_base_uom_id "❓"
+    String count_base_uom_id "❓"
     DateTime updated_at 
     String updated_by "❓"
     }
@@ -1797,6 +1798,7 @@ erDiagram
     "cfg_tenant_settings" }o--|o cfg_uom_units : "massBaseUom"
     "cfg_tenant_settings" }o--|o cfg_uom_units : "lengthBaseUom"
     "cfg_tenant_settings" }o--|o cfg_uom_units : "areaBaseUom"
+    "cfg_tenant_settings" }o--|o cfg_uom_units : "countBaseUom"
     "in_macro_categories" }o--|| saas_tenants : "tenant"
     "in_categories" }o--|| saas_tenants : "tenant"
     "in_categories" }o--|| in_macro_categories : "macroCategory"

@@ -9,6 +9,7 @@ import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { itemsApi } from '@/lib/api/items';
+import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
 import { uomApi } from '@/lib/api/uom';
@@ -164,7 +165,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
   const [saving,        setSaving]        = useState(false);
   const [supSearch,     setSupSearch]     = useState('');
 
-  // Derive the item's purchaseUom object for display
   const itemPurchaseUom = uomUnits.find(u => u.id === (item as any).purchaseUomId);
 
   useImperativeHandle(ref, () => ({
@@ -188,7 +188,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  // Keep purchaseUomId in sync if item changes (e.g. user edits UOM tab then comes back)
   useEffect(() => {
     setAddForm(f => ({ ...f, purchaseUomId: (item as any).purchaseUomId ?? '' }));
   }, [(item as any).purchaseUomId]);
@@ -205,7 +204,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
       await supplierItemsApi.create({
         itemId:           item.id,
         supplierId:       addForm.supplierId,
-        purchaseUomId:    (item as any).purchaseUomId,  // always from item, never from form
+        purchaseUomId:    (item as any).purchaseUomId,
         supplierItemCode: addForm.supplierItemCode || undefined,
         lastPrice:        addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
         leadTimeDays:     Number(addForm.leadTimeDays) || 0,
@@ -225,7 +224,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
     setEditingId(si.id);
     setAddForm({
       supplierId:       si.supplier?.id ?? (si as any).supplierId ?? '',
-      purchaseUomId:    (item as any).purchaseUomId ?? '',  // always locked to item
+      purchaseUomId:    (item as any).purchaseUomId ?? '',
       supplierItemCode: (si as any).supplierItemCode ?? '',
       lastPrice:        si.lastPrice ? String(si.lastPrice) : '',
       leadTimeDays:     String(si.leadTimeDays ?? 0),
@@ -245,7 +244,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
     setSaving(true); setAddError('');
     try {
       await supplierItemsApi.update(editingId, {
-        purchaseUomId:    (item as any).purchaseUomId || undefined,  // locked to item
+        purchaseUomId:    (item as any).purchaseUomId || undefined,
         supplierItemCode: addForm.supplierItemCode || undefined,
         lastPrice:        addForm.lastPrice ? Number(addForm.lastPrice) : undefined,
         leadTimeDays:     Number(addForm.leadTimeDays) || 0,
@@ -277,8 +276,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Add / Edit form */}
       <div style={{ background: 'rgba(251,146,60,0.04)', border: '0.5px solid rgba(251,146,60,0.15)', borderRadius: 8, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 500, color: editingId ? '#4ade80' : '#fb923c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -298,8 +295,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-          {/* Row 1: Supplier + Purchase UOM (locked) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Supplier *</label>
@@ -312,19 +307,13 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
                 minWidth={220}
               />
             </div>
-
-            {/* Purchase UOM — READ ONLY, locked to item.purchaseUomId */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Purchase UOM</label>
               {itemPurchaseUom ? (
                 <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(251,146,60,0.06)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:7, padding:'7px 12px', height:36 }}>
-                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'#fb923c', fontWeight:600 }}>
-                    {itemPurchaseUom.code}
-                  </span>
+                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'#fb923c', fontWeight:600 }}>{itemPurchaseUom.code}</span>
                   <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>{itemPurchaseUom.name}</span>
-                  <span style={{ fontSize:10, color:'rgba(251,146,60,0.4)', marginLeft:'auto', whiteSpace:'nowrap' }}>
-                    🔒 from item
-                  </span>
+                  <span style={{ fontSize:10, color:'rgba(251,146,60,0.4)', marginLeft:'auto', whiteSpace:'nowrap' }}>🔒 from item</span>
                 </div>
               ) : (
                 <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(239,68,68,0.07)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 12px', fontSize:11, color:'#fca5a5', height:36 }}>
@@ -334,7 +323,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             </div>
           </div>
 
-          {/* Row 2: Supplier Item Code + Last Price */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Supplier Item Code</label>
@@ -348,7 +336,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             </div>
           </div>
 
-          {/* Row 3: Lead Time + MOQ */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={L}>Lead Time (days)</label>
@@ -362,7 +349,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             </div>
           </div>
 
-          {/* Footer: preferred + action button */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
               <input type="checkbox" checked={addForm.isPreferred}
@@ -384,7 +370,6 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
         </div>
       </div>
 
-      {/* Supplier list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
@@ -455,17 +440,19 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
   initial: Item | null;
   categories: Category[]; macroCategories: MacroCategory[]; uomUnits: UomUnit[];
 }) {
-  const [form,        setForm]        = useState<CreateItemDto>(EMPTY_FORM);
-  const [tab,         setTab]         = useState<'general' | 'uom' | 'suppliers'>('general');
-  const [editMode,    setEditMode]    = useState<Item | null>(null);
-  const suppliersTabRef = useRef<SuppliersTabHandle>(null);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [error,       setError]       = useState('');
-  const [macroFilter, setMacroFilter] = useState('');
+  const [form,             setForm]             = useState<CreateItemDto>(EMPTY_FORM);
+  const [tab,              setTab]              = useState<'general' | 'uom' | 'suppliers'>('general');
+  const [editMode,         setEditMode]         = useState<Item | null>(null);
+  const suppliersTabRef                         = useRef<SuppliersTabHandle>(null);
+  const [submitting,       setSubmitting]       = useState(false);
+  const [error,            setError]            = useState('');
+  const [macroFilter,      setMacroFilter]      = useState('');
+  const [consumptionGrps,  setConsumptionGrps]  = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
       setError(''); setTab('general'); setEditMode(null);
+      consumptionGroupsApi.getAll().then(setConsumptionGrps).catch(() => {});
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
@@ -492,8 +479,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     }
   }, [open, initial]);
 
-  const set    = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
-  const setNum = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value === '' ? undefined : Number(e.target.value) }));
+  const set     = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const setNum  = (key: keyof CreateItemDto) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value === '' ? undefined : Number(e.target.value) }));
   const setBool = (key: keyof CreateItemDto) => (v: boolean) => setForm(f => ({ ...f, [key]: v }));
 
   const buildPayload = (): CreateItemDto => {
@@ -533,9 +520,9 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
   const effectiveInitial = editMode ?? initial;
   if (!open) return null;
 
-  const anyInit = effectiveInitial as any;
+  const anyInit  = effectiveInitial as any;
   const supCount = anyInit?.supplierItems?.length ?? 0;
-  const uomOpts = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
+  const uomOpts  = uomUnits.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · ${u.system}` }));
 
   const TABS = [
     { key: 'general',   label: 'General' },
@@ -543,7 +530,6 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     ...(effectiveInitial ? [{ key: 'suppliers', label: `Suppliers${supCount ? ` (${supCount})` : ''}` }] : []),
   ];
 
-  // Build a synthetic item object that reflects current form state (so purchaseUomId is live)
   const liveItem: Item = effectiveInitial
     ? { ...effectiveInitial, purchaseUomId: form.purchaseUomId ?? (effectiveInitial as any).purchaseUomId } as any
     : effectiveInitial as any;
@@ -605,7 +591,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
               <div className="im-body">
                 {error && <div className="im-error">{error}</div>}
 
-                {/* GENERAL */}
+                {/* ── GENERAL TAB ── */}
                 {tab === 'general' && (
                   <>
                     <div className="im-row">
@@ -655,6 +641,33 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       </div>
                     </div>
 
+                    {/* ── Consumption Group ── */}
+                    <div className="im-field">
+                      <label className="im-label">Consumption Group</label>
+                      <p className="im-sublabel">Groups item by production UOM for MRP signal. The UOM shown is the production standard unit for this group.</p>
+                      <SearchSelect
+                        options={consumptionGrps.map(cg => ({
+                          value:    cg.id,
+                          label:    `${cg.code} — ${cg.name}`,
+                          sublabel: cg.consumptionUom ? `UOM: ${cg.consumptionUom.code} (${cg.consumptionUom.name})` : undefined,
+                        }))}
+                        value={form.consumptionGroupId ?? ''}
+                        onChange={v => setForm(f => ({ ...f, consumptionGroupId: v || undefined }))}
+                        placeholder="Search consumption group…"
+                        clearLabel="— None —"
+                        minWidth={240}
+                      />
+                      {/* Show selected group description */}
+                      {form.consumptionGroupId && (() => {
+                        const cg = consumptionGrps.find(g => g.id === form.consumptionGroupId);
+                        return cg?.description ? (
+                          <div style={{ fontSize: 11, color: 'rgba(52,211,153,0.6)', marginTop: 4, padding: '4px 8px', background: 'rgba(52,211,153,0.06)', borderRadius: 6, border: '0.5px solid rgba(52,211,153,0.15)' }}>
+                            {cg.description}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+
                     <div className="im-section">Valuation & Planning</div>
                     <div className="im-row">
                       <div className="im-field">
@@ -697,7 +710,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                   </>
                 )}
 
-                {/* UOM */}
+                {/* ── UOM TAB ── */}
                 {tab === 'uom' && (
                   <>
                     <div className="im-uom-info">
@@ -759,7 +772,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                   </>
                 )}
 
-                {/* SUPPLIERS */}
+                {/* ── SUPPLIERS TAB ── */}
                 {tab === 'suppliers' && effectiveInitial && (
                   <SuppliersTab ref={suppliersTabRef} item={liveItem ?? effectiveInitial} uomUnits={uomUnits} />
                 )}
@@ -808,18 +821,88 @@ function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCanc
 
 function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => void): ERPColumn<Item>[] {
   return [
-    { key: 'code', header: 'Code', width: 120, sortable: true, value: r => r.code, render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span> },
-    { key: 'name', header: 'Name', sortable: true, value: r => r.name, render: r => (<div><div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>{r.description && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.description}</div>}</div>) },
-    { key: 'itemType', header: 'Type', width: 140, sortable: true, value: r => r.itemType, render: r => <TypeBadge type={r.itemType} /> },
-    { key: 'category', header: 'Category', width: 110, sortable: true, value: r => (r as any).category?.code ?? '', render: r => { const a = r as any; return a.category ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'#a78bfa', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{a.category.code}</span> : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>; } },
-    { key: 'purchaseUom', header: 'Purchase', width: 90, sortable: true, value: r => (r as any).purchaseUom?.code ?? '', render: r => <UomBadge unit={(r as any).purchaseUom} /> },
-    { key: 'storageUom', header: 'Storage', width: 90, sortable: true, value: r => (r as any).storageUom?.code ?? '', render: r => <UomBadge unit={(r as any).storageUom} /> },
-    { key: 'consumptionUom', header: 'Consumption', width: 110, sortable: true, value: r => (r as any).consumptionUom?.code ?? '', render: r => <UomBadge unit={(r as any).consumptionUom} /> },
-    { key: 'suppliers', header: 'Suppliers', width: 100, sortable: true, value: r => (r as any).supplierItems?.length ?? 0, render: r => { const count = (r as any).supplierItems?.length ?? 0; return count > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{count} supplier{count !== 1 ? 's' : ''}</span> : <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>—</span>; } },
-    { key: 'isStockable',      header: 'S',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isStockable} /> },
-    { key: 'isPurchasable',    header: 'P',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isPurchasable} /> },
-    { key: 'isSaleable',       header: 'Sa', width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isSaleable} /> },
-    { key: 'isManufacturable', header: 'M',  width: 45, align: 'center', sortable: false, render: r => <BoolDot value={r.isManufacturable} /> },
+    {
+      key: 'code', header: 'Code', width: 110, sortable: true,
+      value: r => r.code,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c', fontWeight:500 }}>{r.code}</span>,
+    },
+    {
+      key: 'name', header: 'Name', width: 180, sortable: true,
+      value: r => r.name,
+      render: r => <span style={{ color:'#e2dfd8', fontWeight:500, fontSize:12 }}>{r.name}</span>,
+    },
+    {
+      key: 'macroCategory', header: 'Macro Cat.', width: 110, sortable: true,
+      value: r => (r as any).category?.macroCategory?.name ?? '',
+      render: r => {
+        const mc = (r as any).category?.macroCategory;
+        return mc
+          ? <span style={{ fontSize:11, color:'rgba(255,255,255,0.45)' }}>{mc.name}</span>
+          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+      },
+    },
+    {
+      key: 'category', header: 'Category', width: 130, sortable: true,
+      value: r => (r as any).category?.name ?? '',
+      render: r => {
+        const cat = (r as any).category;
+        return cat
+          ? <span style={{ fontSize:11, color:'#a78bfa' }}>{cat.name}</span>
+          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+      },
+    },
+    {
+      key: 'itemType', header: 'Type', width: 120, sortable: true,
+      value: r => r.itemType,
+      render: r => <TypeBadge type={r.itemType} />,
+    },
+    {
+      key: 'purchaseUom', header: 'Buy', width: 65, sortable: true,
+      value: r => (r as any).purchaseUom?.code ?? '',
+      render: r => <UomBadge unit={(r as any).purchaseUom} />,
+    },
+    {
+      key: 'storageUom', header: 'Store', width: 65, sortable: true,
+      value: r => (r as any).storageUom?.code ?? '',
+      render: r => <UomBadge unit={(r as any).storageUom} />,
+    },
+    {
+      key: 'consumptionUom', header: 'Cons.', width: 65, sortable: true,
+      value: r => (r as any).consumptionUom?.code ?? '',
+      render: r => <UomBadge unit={(r as any).consumptionUom} />,
+    },
+    {
+      key: 'consumptionGroup', header: 'Cons. Group', width: 170, sortable: true,
+      value: r => (r as any).consumptionGroup?.name ?? '',
+      render: r => {
+        const cg = (r as any).consumptionGroup;
+        if (!cg) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+        return (
+          <div>
+            <div style={{ fontSize:11, color:'#34d399', fontWeight:500 }}>{cg.name}</div>
+            {cg.description && (
+              <div style={{ fontSize:10, color:'rgba(52,211,153,0.45)', marginTop:1, maxWidth:155, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {cg.description}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'suppliers', header: 'Sup.', width: 55, align: 'center', sortable: true,
+      value: r => (r as any).supplierItems?.length ?? 0,
+      render: r => {
+        const count = (r as any).supplierItems?.length ?? 0;
+        return count > 0
+          ? <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'#4ade80' }}>{count}</span>
+          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+      },
+    },
+    { key: 'isStockable',      header: 'S',  width: 30, align: 'center', sortable: false, render: r => <BoolDot value={r.isStockable} /> },
+    { key: 'isPurchasable',    header: 'P',  width: 30, align: 'center', sortable: false, render: r => <BoolDot value={r.isPurchasable} /> },
+    { key: 'isSaleable',       header: 'Sa', width: 30, align: 'center', sortable: false, render: r => <BoolDot value={r.isSaleable} /> },
+    { key: 'isManufacturable', header: 'M',  width: 30, align: 'center', sortable: false, render: r => <BoolDot value={r.isManufacturable} /> },
     {
       key: '_actions', header: '', width: 110, sortable: false,
       render: r => (
@@ -868,14 +951,14 @@ export default function ItemsPage() {
 
   const itemsFilters = useMemo<ERPFilter<Item>[]>(() => [
     { key: 'macroCategoryId', label: 'Macro Cat.', type: 'searchselect', placeholder: 'All Macro Categories', options: macroCategories.map(mc => ({ value: mc.id, label: `${mc.code} — ${mc.name}` })), filterFn: (row, val) => { const cat = (row as any).category; return cat?.macroCategoryId === val || cat?.macroCategory?.id === val; } },
-    { key: 'categoryId', label: 'Category', type: 'searchselect', placeholder: 'All Categories', options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}`, sublabel: (c as any).macroCategory?.name })), filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val },
-    { key: 'supplierId', label: 'Supplier', type: 'searchselect', placeholder: 'All Suppliers', options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.category ?? undefined })), filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val) },
-    { key: 'valuationMethod', label: 'Valuation', type: 'select', placeholder: 'All Methods', options: [{ value: 'average', label: 'Average' }, { value: 'fifo', label: 'FIFO' }, { value: 'standard', label: 'Standard' }], filterFn: (row, val) => row.valuationMethod === val },
-    { key: 'hasUomTriple',     label: 'UOM Triple',    type: 'boolean', placeholder: 'UOM Triple only', filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId : true },
-    { key: 'isStockable',      label: 'Stockable',     type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable      : true },
-    { key: 'isPurchasable',    label: 'Purchasable',   type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable    : true },
-    { key: 'isSaleable',       label: 'Saleable',      type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable       : true },
-    { key: 'isManufacturable', label: 'Manufacturable',type: 'boolean', filterFn: (row, val) => val === true ? row.isManufacturable : true },
+    { key: 'categoryId',      label: 'Category',   type: 'searchselect', placeholder: 'All Categories',       options: categories.map(c => ({ value: c.id, label: `${c.code} — ${c.name}`, sublabel: (c as any).macroCategory?.name })), filterFn: (row, val) => (row as any).category?.id === val || row.categoryId === val },
+    { key: 'supplierId',      label: 'Supplier',   type: 'searchselect', placeholder: 'All Suppliers',        options: pageSuppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}`, sublabel: s.category ?? undefined })), filterFn: (row, val) => ((row as any).supplierItems ?? []).some((si: any) => si.supplierId === val || si.supplier?.id === val) },
+    { key: 'valuationMethod', label: 'Valuation',  type: 'select',       placeholder: 'All Methods',          options: [{ value: 'average', label: 'Average' }, { value: 'fifo', label: 'FIFO' }, { value: 'standard', label: 'Standard' }], filterFn: (row, val) => row.valuationMethod === val },
+    { key: 'hasUomTriple',     label: 'UOM Triple',     type: 'boolean', placeholder: 'UOM Triple only', filterFn: (row, val) => val === true ? !!(row as any).consumptionUomId  : true },
+    { key: 'isStockable',      label: 'Stockable',      type: 'boolean', filterFn: (row, val) => val === true ? row.isStockable      : true },
+    { key: 'isPurchasable',    label: 'Purchasable',    type: 'boolean', filterFn: (row, val) => val === true ? row.isPurchasable    : true },
+    { key: 'isSaleable',       label: 'Saleable',       type: 'boolean', filterFn: (row, val) => val === true ? row.isSaleable       : true },
+    { key: 'isManufacturable', label: 'Manufacturable', type: 'boolean', filterFn: (row, val) => val === true ? row.isManufacturable : true },
   ], [categories, macroCategories, pageSuppliers]);
 
   const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(itemsFilters);

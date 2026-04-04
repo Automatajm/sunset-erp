@@ -1,30 +1,35 @@
 // --- tenant-settings/dto/update-tenant-settings.dto.ts ---
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
- 
+
 export class UpdateTenantSettingsDto {
-  @ApiPropertyOptional({ example: 'metric', description: 'metric | imperial' })
+  @ApiPropertyOptional({ example: 'metric', description: 'metric | imperial | custom' })
   @IsOptional()
   @IsString()
   defaultUomSystem?: string;
- 
-  @ApiPropertyOptional({ description: 'Volume base UOM ID (LTR or GAL)' })
+
+  @ApiPropertyOptional({ description: 'Volume system UOM ID (e.g. LTR)' })
   @IsOptional()
   @IsUUID()
   volumeBaseUomId?: string;
- 
-  @ApiPropertyOptional({ description: 'Mass base UOM ID (KG or LB)' })
+
+  @ApiPropertyOptional({ description: 'Mass system UOM ID (e.g. KG)' })
   @IsOptional()
   @IsUUID()
   massBaseUomId?: string;
- 
-  @ApiPropertyOptional({ description: 'Length base UOM ID (M or FT)' })
+
+  @ApiPropertyOptional({ description: 'Length system UOM ID (e.g. M)' })
   @IsOptional()
   @IsUUID()
   lengthBaseUomId?: string;
- 
-  @ApiPropertyOptional({ description: 'Area base UOM ID (M2 or FT2)' })
+
+  @ApiPropertyOptional({ description: 'Area system UOM ID (e.g. M2)' })
   @IsOptional()
   @IsUUID()
   areaBaseUomId?: string;
+
+  @ApiPropertyOptional({ description: 'Count system UOM ID (e.g. PCS)' })
+  @IsOptional()
+  @IsUUID()
+  countBaseUomId?: string;
 }
