@@ -1,16 +1,23 @@
 "use client";
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { bomApi } from '@/lib/api/bom';
 import { itemsApi } from '@/lib/api/items';
+import { tenantSettingsApi } from '@/lib/api/tenant-settings';
 import { Item } from '@/lib/api/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface UomUnit { id: string; code: string; name: string; type: string; system: string }
+
 interface BomComponent {
   id: string; lineNumber: number; componentItemId: string;
-  componentItem?: { id: string; code: string; name: string; baseUom: string };
+  componentItem?: { id: string; code: string; name: string; baseUom: string; consumptionUomId?: string };
   quantityPer: number; uom: string; scrapPercent?: number; isPhantom?: boolean;
+  consumptionUomId?: string;
+  consumptionUom?: { id: string; code: string; name: string; type: string };
 }
 
 interface RoutingStep {
@@ -32,6 +39,8 @@ interface Bom {
 
 interface WorkCenter { id: string; code: string; name: string; costPerHour?: number }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function extractList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
   const d = data as Record<string, unknown>;
@@ -43,7 +52,11 @@ function fmtAmt(v: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
 }
 
-const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.CSSProperties;
+const UOM_COLOR: Record<string, string> = {
+  volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80', length: '#fbbf24', area: '#fb923c',
+};
+
+const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
 const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' };
 
 function Field({ label, color, children }: { label: string; color?: string; children: React.ReactNode }) {
@@ -52,6 +65,16 @@ function Field({ label, color, children }: { label: string; color?: string; chil
       <label style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: color ?? 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{label}</label>
       {children}
     </div>
+  );
+}
+
+function UomSystemBadge({ uom }: { uom?: { code: string; name: string; type: string } | null }) {
+  if (!uom) return <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>—</span>;
+  const color = UOM_COLOR[uom.type] ?? '#e2dfd8';
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, color, background: `${color}15`, border: `0.5px solid ${color}35` }}>
+      {uom.code}
+    </span>
   );
 }
 
@@ -70,16 +93,14 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
     setBusy(true); setError('');
     try {
       await bomApi.addRoutingStep(bomId, {
-        stepNumber: Number(form.stepNumber),
-        workCenterId: form.workCenterId,
+        stepNumber: Number(form.stepNumber), workCenterId: form.workCenterId,
         description: form.description || undefined,
-        setupTime: Number(form.setupTime) || 0,
-        runTimePerUnit: Number(form.runTimePerUnit) || 0,
+        setupTime: Number(form.setupTime) || 0, runTimePerUnit: Number(form.runTimePerUnit) || 0,
         notes: form.notes || undefined,
       });
       onSaved(); onClose();
     } catch (err) {
-      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed');
+      setError((err as any).response?.data?.message || 'Failed');
     } finally { setBusy(false); }
   };
 
@@ -105,18 +126,18 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
               </Field>
             </div>
             <Field label="Description" color="rgba(96,165,250,0.6)">
-              <input placeholder="e.g. Prep & Mix ingredients" style={INPUT} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              <input placeholder="e.g. Prep & Mix" style={INPUT} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Setup Time (hrs)" color="rgba(96,165,250,0.6)">
-                <input type="number" min="0" step="0.001" placeholder="0.5" style={INPUT} value={form.setupTime} onChange={e => setForm(f => ({ ...f, setupTime: e.target.value }))} />
+                <input type="number" min="0" step="0.001" style={INPUT} value={form.setupTime} onChange={e => setForm(f => ({ ...f, setupTime: e.target.value }))} />
               </Field>
               <Field label="Run Time / Unit (hrs)" color="rgba(96,165,250,0.6)">
-                <input type="number" min="0" step="0.000001" placeholder="0.004" style={INPUT} value={form.runTimePerUnit} onChange={e => setForm(f => ({ ...f, runTimePerUnit: e.target.value }))} />
+                <input type="number" min="0" step="0.000001" style={INPUT} value={form.runTimePerUnit} onChange={e => setForm(f => ({ ...f, runTimePerUnit: e.target.value }))} />
               </Field>
             </div>
             <Field label="Notes" color="rgba(96,165,250,0.6)">
-              <input placeholder="Optional notes" style={INPUT} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+              <input placeholder="Optional" style={INPUT} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
@@ -131,7 +152,7 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
   );
 }
 
-// ─── BOM Detail Panel (expandable) ───────────────────────────────────────────
+// ─── BOM Detail Panel (expanded row) ─────────────────────────────────────────
 
 function BomDetailPanel({ bom, workCenters, onRefresh }: {
   bom: Bom; workCenters: WorkCenter[]; onRefresh: () => void;
@@ -147,28 +168,21 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
 
   const loadRouting = useCallback(async () => {
     setLoadingRouting(true);
-    try {
-      const steps = await bomApi.getRouting(bom.id);
-      setRoutingSteps(Array.isArray(steps) ? steps : []);
-    } finally { setLoadingRouting(false); }
+    try { setRoutingSteps(Array.isArray(await bomApi.getRouting(bom.id)) ? await bomApi.getRouting(bom.id) as RoutingStep[] : []); }
+    finally { setLoadingRouting(false); }
   }, [bom.id]);
 
-  useEffect(() => {
-    if (tab === 'routing') loadRouting();
-  }, [tab, loadRouting]);
+  useEffect(() => { if (tab === 'routing') loadRouting(); }, [tab, loadRouting]);
 
   const handleEstimate = async () => {
-    const qty = Number(estimateQty);
-    if (!qty || qty <= 0) return;
+    const qty = Number(estimateQty); if (!qty || qty <= 0) return;
     setLoadingEstimate(true);
-    try { setEstimate(await bomApi.getLaborEstimate(bom.id, qty)); }
-    finally { setLoadingEstimate(false); }
+    try { setEstimate(await bomApi.getLaborEstimate(bom.id, qty)); } finally { setLoadingEstimate(false); }
   };
 
   const handleDeleteStep = async (stepId: string) => {
     setDeletingStep(stepId);
-    try { await bomApi.removeRoutingStep(bom.id, stepId); await loadRouting(); }
-    finally { setDeletingStep(null); }
+    try { await bomApi.removeRoutingStep(bom.id, stepId); await loadRouting(); } finally { setDeletingStep(null); }
   };
 
   const TAB = (active: boolean, color: string): React.CSSProperties => ({
@@ -180,37 +194,44 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
 
   return (
     <div style={{ padding: '10px 40px 16px', background: 'rgba(251,146,60,0.015)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
         <button style={TAB(tab === 'components', '#fb923c')} onClick={() => setTab('components')}>
           📋 Components ({bom.components?.length ?? bom._count?.components ?? 0})
         </button>
         <button style={TAB(tab === 'routing', '#60a5fa')} onClick={() => setTab('routing')}>
-          ⚙ Routing ({routingSteps.length || bom._count?.routings || bom.routings?.length || 0})
+          ⚙ Routing ({routingSteps.length || bom._count?.routings || 0})
         </button>
       </div>
 
-      {/* Components Tab */}
       {tab === 'components' && (
         bom.components && bom.components.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['#', 'Component', 'Qty Per', 'UOM', 'Scrap %', 'Phantom'].map(h => (
-                <th key={h} style={{ padding: `6px 14px 6px ${h === '#' ? '0' : '14px'}`, fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
+              <tr>{['#', 'Component', 'Qty Per', 'UOM (formulador)', 'Cons. UOM (MRP)', 'Scrap %', 'Phantom'].map(h => (
+                <th key={h} style={{ padding: '6px 12px 6px 0', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {bom.components.map(comp => (
                 <tr key={comp.id}>
-                  <td style={{ padding: '7px 14px 7px 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{comp.lineNumber}</td>
-                  <td style={{ padding: '7px 14px' }}>
+                  <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{comp.lineNumber}</td>
+                  <td style={{ padding: '7px 12px 7px 0' }}>
                     <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{comp.componentItem?.code}</span>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{comp.componentItem?.name}</span>
                   </td>
-                  <td style={{ padding: '7px 14px', ...MONO, color: '#e2dfd8' }}>{comp.quantityPer}</td>
-                  <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{comp.uom}</td>
-                  <td style={{ padding: '7px 14px', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? '#fbbf24' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
-                  <td style={{ padding: '7px 14px', fontSize: 11, color: comp.isPhantom ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>{comp.isPhantom ? 'Yes' : 'No'}</td>
+                  <td style={{ padding: '7px 12px 7px 0', ...MONO, color: '#e2dfd8' }}>{comp.quantityPer}</td>
+                  <td style={{ padding: '7px 12px 7px 0' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono',monospace" }}>{comp.uom}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>formulador libre</span>
+                  </td>
+                  <td style={{ padding: '7px 12px 7px 0' }}>
+                    <UomSystemBadge uom={comp.consumptionUom} />
+                    {!comp.consumptionUom && (
+                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>⚠ no configurado</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '7px 12px 7px 0', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? '#fbbf24' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
+                  <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: comp.isPhantom ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>{comp.isPhantom ? 'Yes' : 'No'}</td>
                 </tr>
               ))}
             </tbody>
@@ -220,7 +241,6 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
         )
       )}
 
-      {/* Routing Tab */}
       {tab === 'routing' && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -230,12 +250,9 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
               + Add Step
             </button>
           </div>
-
-          {loadingRouting ? (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
-          ) : routingSteps.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginBottom: 12 }}>No routing steps yet. Add steps to enable labor estimates and auto-suggest.</div>
-          ) : (
+          {loadingRouting ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
+          : routingSteps.length === 0 ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginBottom: 12 }}>No routing steps yet.</div>
+          : (
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 14 }}>
               <thead>
                 <tr>{['Step', 'Description', 'Work Center', 'Setup (h)', 'Run/Unit (h)', 'Rate/hr', ''].map(h => (
@@ -267,31 +284,24 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
               </tbody>
             </table>
           )}
-
-          {/* Labor Estimate Calculator */}
+          {/* Labor Estimate */}
           <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.12)', borderRadius: 8, padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.5)', marginBottom: 8 }}>Labor Estimate Calculator</div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                type="number" min="1" value={estimateQty}
-                onChange={e => setEstimateQty(e.target.value)}
-                style={{ ...INPUT, width: 120, padding: '6px 10px', fontSize: 12 }}
-                placeholder="Quantity"
-              />
+              <input type="number" min="1" value={estimateQty} onChange={e => setEstimateQty(e.target.value)} style={{ ...INPUT, width: 120, padding: '6px 10px', fontSize: 12 }} placeholder="Quantity" />
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>units</span>
               <button onClick={handleEstimate} disabled={loadingEstimate || routingSteps.length === 0}
                 style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingEstimate ? 0.5 : 1 }}>
                 {loadingEstimate ? 'Calculating…' : 'Calculate'}
               </button>
             </div>
-
             {estimate && (
               <div style={{ marginTop: 10, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Setup Hours',  value: `${estimate.totalSetupHours}h`,             color: 'rgba(255,255,255,0.5)' },
-                  { label: 'Run Hours',    value: `${estimate.totalRunHours}h`,               color: '#a78bfa' },
-                  { label: 'Total Hours',  value: `${estimate.totalLaborHours}h`,             color: '#60a5fa' },
-                  { label: 'Est. Cost',    value: fmtAmt(estimate.estimatedLaborCost),         color: '#4ade80' },
+                  { label: 'Setup Hours', value: `${estimate.totalSetupHours}h`, color: 'rgba(255,255,255,0.5)' },
+                  { label: 'Run Hours',   value: `${estimate.totalRunHours}h`,   color: '#a78bfa' },
+                  { label: 'Total Hours', value: `${estimate.totalLaborHours}h`, color: '#60a5fa' },
+                  { label: 'Est. Cost',   value: fmtAmt(estimate.estimatedLaborCost), color: '#4ade80' },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -305,9 +315,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
       )}
 
       {addRoutingOpen && (
-        <AddRoutingModal
-          bomId={bom.id}
-          workCenters={workCenters}
+        <AddRoutingModal bomId={bom.id} workCenters={workCenters}
           onClose={() => setAddRoutingOpen(false)}
           onSaved={() => { loadRouting(); onRefresh(); }}
         />
@@ -318,17 +326,39 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
 
 // ─── Create BOM Modal ─────────────────────────────────────────────────────────
 
-function BOMModal({ items, onClose, onSaved }: { items: Item[]; onClose: () => void; onSaved: () => void }) {
+interface CompRow {
+  componentItemId: string;
+  quantityPer: string;
+  uom: string;              // formulador libre
+  consumptionUomId: string; // system UOM — auto-filled from item, editable
+  scrapPercent: string;
+}
+
+function BOMModal({ items, systemUoms, onClose, onSaved }: {
+  items: Item[];
+  systemUoms: UomUnit[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [form, setForm] = useState({ parentItemId: '', bomNumber: '', version: '1' });
-  const [components, setComponents] = useState([{ componentItemId: '', quantityPer: '', uom: '', scrapPercent: '0' }]);
+  const [components, setComponents] = useState<CompRow[]>([
+    { componentItemId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' },
+  ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const setComp = (idx: number, k: string, v: string) =>
+  const setComp = (idx: number, k: keyof CompRow, v: string) =>
     setComponents(cs => cs.map((c, i) => {
       if (i !== idx) return c;
       const updated = { ...c, [k]: v };
-      if (k === 'componentItemId') { const it = items.find(x => x.id === v); if (it) updated.uom = it.baseUom; }
+      // When selecting component item: auto-fill uom from baseUom and consumptionUomId from item
+      if (k === 'componentItemId') {
+        const it = items.find(x => x.id === v) as any;
+        if (it) {
+          updated.uom = it.baseUom ?? '';
+          updated.consumptionUomId = it.consumptionUomId ?? '';
+        }
+      }
       return updated;
     }));
 
@@ -344,21 +374,27 @@ function BOMModal({ items, onClose, onSaved }: { items: Item[]; onClose: () => v
         bomNumber: form.bomNumber || undefined,
         version: Number(form.version) || 1,
         isActive: true,
-        components: validComps.map(c => ({
-          componentItemId: c.componentItemId,
-          quantity: Number(c.quantityPer),
-          uom: c.uom,
-          scrapPercent: Number(c.scrapPercent) || undefined,
+        components: validComps.map((c, i) => ({
+          componentItemId:  c.componentItemId,
+          quantity:         Number(c.quantityPer),
+          uom:              c.uom,
+          consumptionUomId: c.consumptionUomId || undefined,
+          scrapPercent:     Number(c.scrapPercent) || undefined,
+          lineNumber:       i + 1,
         })),
       });
       onSaved(); onClose();
-    } catch (err) { setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed.'); }
+    } catch (err) { setError((err as any).response?.data?.message || 'Failed.'); }
     finally { setBusy(false); }
   };
 
+  const itemOpts = items.filter(i => i.isManufacturable).map(i => ({ value: i.id, label: `${i.code} — ${i.name}` }));
+  const allItemOpts = items.map(i => ({ value: i.id, label: `${i.code} — ${i.name}` }));
+  const sysUomOpts = systemUoms.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · system` }));
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 720, margin: 'auto', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 800, margin: 'auto', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: '#0e0b1a', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Bill of Materials</span>
@@ -367,47 +403,116 @@ function BOMModal({ items, onClose, onSaved }: { items: Item[]; onClose: () => v
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
               <Field label="Parent Item *">
-                <select style={INPUT} value={form.parentItemId} onChange={e => setForm(f => ({ ...f, parentItemId: e.target.value }))}>
-                  <option value="">— Select item —</option>
-                  {items.filter(i => i.isManufacturable).map(i => <option key={i.id} value={i.id}>{i.code} — {i.name}</option>)}
-                </select>
+                <SearchSelect options={itemOpts} value={form.parentItemId}
+                  onChange={v => setForm(f => ({ ...f, parentItemId: v }))}
+                  placeholder="Search manufacturable item…" clearLabel="— Select —" minWidth={260} />
               </Field>
-              <Field label="BOM Number"><input style={INPUT} placeholder="BOM-001" value={form.bomNumber} onChange={e => setForm(f => ({ ...f, bomNumber: e.target.value }))} /></Field>
-              <Field label="Version"><input style={INPUT} type="number" min="1" value={form.version} onChange={e => setForm(f => ({ ...f, version: e.target.value }))} /></Field>
+              <Field label="BOM Number">
+                <input style={INPUT} placeholder="BOM-001" value={form.bomNumber} onChange={e => setForm(f => ({ ...f, bomNumber: e.target.value }))} />
+              </Field>
+              <Field label="Version">
+                <input style={INPUT} type="number" min="1" value={form.version} onChange={e => setForm(f => ({ ...f, version: e.target.value }))} />
+              </Field>
             </div>
+
+            {/* System UOM info box */}
+            {systemUoms.length === 0 && (
+              <div style={{ background: 'rgba(251,191,36,0.07)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'rgba(251,191,36,0.8)', display: 'flex', gap: 8 }}>
+                <span>⚠</span>
+                <span>No system UOMs configured. Go to <strong>Settings → General</strong> to configure them first. The Consumption UOM column will be empty.</span>
+              </div>
+            )}
+
             <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', padding: '4px 0 2px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Components</span>
-              <button type="button" onClick={() => setComponents(cs => [...cs, { componentItemId: '', quantityPer: '', uom: '', scrapPercent: '0' }])} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Add</button>
+              <button type="button"
+                onClick={() => setComponents(cs => [...cs, { componentItemId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' }])}
+                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                + Add row
+              </button>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>{['Component Item *', 'Qty Per *', 'UOM', 'Scrap %', ''].map(h => (
-                  <th key={h} style={{ fontSize: 10, color: 'rgba(251,146,60,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 6px', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {components.map((c, idx) => (
-                  <tr key={idx}>
-                    <td style={{ padding: '4px 3px' }}>
-                      <select style={{ ...INPUT, fontSize: 12, padding: '6px 8px' }} value={c.componentItemId} onChange={e => setComp(idx, 'componentItemId', e.target.value)}>
-                        <option value="">— Item —</option>
-                        {items.map(i => <option key={i.id} value={i.id}>{i.code} — {i.name}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ padding: '4px 3px', width: 80 }}><input style={{ ...INPUT, fontSize: 12, padding: '6px 8px', textAlign: 'right' }} type="number" min="0" step="0.001" placeholder="1" value={c.quantityPer} onChange={e => setComp(idx, 'quantityPer', e.target.value)} /></td>
-                    <td style={{ padding: '4px 3px', width: 70 }}><input style={{ ...INPUT, fontSize: 12, padding: '6px 8px' }} placeholder="PCS" value={c.uom} onChange={e => setComp(idx, 'uom', e.target.value)} /></td>
-                    <td style={{ padding: '4px 3px', width: 70 }}><input style={{ ...INPUT, fontSize: 12, padding: '6px 8px', textAlign: 'right' }} type="number" min="0" max="100" placeholder="0" value={c.scrapPercent} onChange={e => setComp(idx, 'scrapPercent', e.target.value)} /></td>
-                    <td style={{ padding: '4px 3px', width: 24 }}>{components.length > 1 && <button type="button" onClick={() => setComponents(cs => cs.filter((_, i) => i !== idx))} style={{ width: 20, height: 20, borderRadius: 4, background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+            {/* Components table header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 1fr 70px 24px', gap: 6 }}>
+              {['Component Item *', 'Qty Per *', 'UOM (libre)', 'Cons. UOM (MRP) *', 'Scrap %', ''].map(h => (
+                <span key={h} style={{ fontSize: 10, color: 'rgba(251,146,60,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 0' }}>{h}</span>
+              ))}
+            </div>
+
+            {/* Component rows */}
+            {components.map((c, idx) => {
+              const selItem = items.find(i => i.id === c.componentItemId) as any;
+              const itemConsUomId = selItem?.consumptionUomId ?? '';
+              return (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 1fr 70px 24px', gap: 6, alignItems: 'start' }}>
+                  {/* Component item */}
+                  <SearchSelect
+                    options={allItemOpts}
+                    value={c.componentItemId}
+                    onChange={v => setComp(idx, 'componentItemId', v)}
+                    placeholder="Search item…"
+                    clearLabel="— Item —"
+                    minWidth={200}
+                  />
+                  {/* Qty Per */}
+                  <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px', textAlign: 'right' }}
+                    type="number" min="0" step="0.001" placeholder="1"
+                    value={c.quantityPer} onChange={e => setComp(idx, 'quantityPer', e.target.value)} />
+                  {/* UOM libre */}
+                  <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px' }}
+                    placeholder="PCS" value={c.uom} onChange={e => setComp(idx, 'uom', e.target.value)} />
+                  {/* Consumption UOM — system UOM */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {systemUoms.length === 0 ? (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', padding: '7px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.06)' }}>
+                        No system UOMs
+                      </div>
+                    ) : (
+                      <SearchSelect
+                        options={sysUomOpts}
+                        value={c.consumptionUomId}
+                        onChange={v => setComp(idx, 'consumptionUomId', v)}
+                        placeholder="System UOM…"
+                        clearLabel="— None —"
+                        minWidth={160}
+                      />
+                    )}
+                    {/* Auto-filled indicator */}
+                    {itemConsUomId && itemConsUomId === c.consumptionUomId && (
+                      <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)' }}>✓ from item</span>
+                    )}
+                  </div>
+                  {/* Scrap % */}
+                  <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px', textAlign: 'right' }}
+                    type="number" min="0" max="100" placeholder="0"
+                    value={c.scrapPercent} onChange={e => setComp(idx, 'scrapPercent', e.target.value)} />
+                  {/* Remove */}
+                  {components.length > 1 && (
+                    <button type="button"
+                      onClick={() => setComponents(cs => cs.filter((_, i) => i !== idx))}
+                      style={{ width: 22, height: 22, borderRadius: 4, background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Legend */}
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', lineHeight: 1.7, background: 'rgba(255,255,255,0.02)', borderRadius: 7, padding: '8px 12px', border: '0.5px solid rgba(255,255,255,0.05)' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>UOM libre</strong> — el formulador expresa la cantidad en cualquier unidad (GAL, KG, PCS, etc.).<br />
+              <strong style={{ color: '#4ade80' }}>Cons. UOM</strong> — unidad de sistema (restringida). MRP convierte todo a esta unidad para agregar la demanda. Se auto-llena desde el item si está configurado.
+            </div>
           </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>{busy ? 'Creating…' : 'Create BOM'}</button>
+            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>
+              {busy ? 'Creating…' : 'Create BOM'}
+            </button>
           </div>
         </form>
       </div>
@@ -418,14 +523,14 @@ function BOMModal({ items, onClose, onSaved }: { items: Item[]; onClose: () => v
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BOMPage() {
-  const [list,       setList]       = useState<Bom[]>([]);
-  const [items,      setItems]      = useState<Item[]>([]);
+  const [list,        setList]        = useState<Bom[]>([]);
+  const [items,       setItems]       = useState<Item[]>([]);
+  const [systemUoms,  setSystemUoms]  = useState<UomUnit[]>([]);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState('');
-  const [expanded,   setExpanded]   = useState<string | null>(null);
-  const [detail,     setDetail]     = useState<Record<string, Bom>>({});
-  const [modalOpen,  setModalOpen]  = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [detail,      setDetail]      = useState<Record<string, Bom>>({});
+  const [modalOpen,   setModalOpen]   = useState(false);
 
   const fetchBoms = useCallback(async () => {
     try { setLoading(true); setList(extractList<Bom>(await bomApi.getAll())); }
@@ -436,22 +541,13 @@ export default function BOMPage() {
   useEffect(() => {
     fetchBoms();
     itemsApi.getAll().then(setItems).catch(() => {});
-    // Load work centers for routing modal
-    import('@/lib/api/production-orders').then(m => {
-      // reuse apiClient directly
-    }).catch(() => {});
-    // Fetch work centers via direct API call
+    tenantSettingsApi.getSystemUoms().then(s => setSystemUoms(s.list ?? [])).catch(() => {});
     import('@/lib/api/client').then(({ default: apiClient }) => {
-      apiClient.get('/work-centers').then(r => {
-        const wcs = Array.isArray(r.data) ? r.data : [];
-        setWorkCenters(wcs);
-      }).catch(() => {});
+      apiClient.get('/work-centers').then(r => setWorkCenters(Array.isArray(r.data) ? r.data : [])).catch(() => {});
     });
   }, [fetchBoms]);
 
   const handleExpand = async (bom: Bom) => {
-    if (expanded === bom.id) { setExpanded(null); return; }
-    setExpanded(bom.id);
     if (!detail[bom.id]) {
       try {
         const d = await bomApi.getById(bom.id);
@@ -460,29 +556,79 @@ export default function BOMPage() {
     }
   };
 
+  // ── Columns ──────────────────────────────────────────────────────────────
+
+  const columns = useMemo<ERPTreeColumn<Bom>[]>(() => [
+    {
+      key: 'bomNumber', header: 'BOM Number', sortable: true,
+      value: r => r.bomNumber,
+      render: r => <span style={{ ...MONO, color: '#fb923c', fontWeight: 500 }}>{r.bomNumber}</span>,
+    },
+    {
+      key: 'parentItem', header: 'Parent Item', sortable: true,
+      value: r => r.parentItem?.name ?? '',
+      render: r => (
+        <span>
+          <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{r.parentItem?.code}</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{r.parentItem?.name}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'version', header: 'Ver.', width: 60, sortable: true,
+      value: r => r.version ?? 1,
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>v{r.version ?? 1}</span>,
+    },
+    {
+      key: 'components', header: 'Components', width: 110, sortable: true,
+      value: r => r._count?.components ?? r.components?.length ?? 0,
+      render: r => {
+        const n = r._count?.components ?? r.components?.length ?? 0;
+        return <span style={{ fontSize: 12, color: n > 0 ? 'rgba(251,146,60,0.7)' : 'rgba(255,255,255,0.25)' }}>{n} comp.</span>;
+      },
+    },
+    {
+      key: 'routing', header: 'Routing', width: 100, sortable: true,
+      value: r => r._count?.routings ?? 0,
+      render: r => {
+        const n = r._count?.routings ?? 0;
+        return <span style={{ fontSize: 12, color: n > 0 ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>{n > 0 ? `${n} steps` : 'No routing'}</span>;
+      },
+    },
+    {
+      key: 'isActive', header: 'Status', width: 90, sortable: true,
+      value: r => r.isActive ? 'Active' : 'Inactive',
+      render: r => (
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, color: r.isActive ? '#4ade80' : '#f87171', background: r.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
+          {r.isActive ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: '_actions', header: '', width: 80, sortable: false,
+      render: r => (
+        <button onClick={e => { e.stopPropagation(); bomApi.remove(r.id).then(fetchBoms); }}
+          style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          Delete
+        </button>
+      ),
+    },
+  ], [fetchBoms]);
+
   return (
     <ERPShell breadcrumbs={['Home', 'Manufacturing', 'Bill of Materials']} title="Bill of Materials">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .bom-page { padding: 0 18px 24px; }
-        .bom-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; justify-content:flex-end; }
-        .bom-btn-new { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#c2410c,#ea580c,#f97316); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); }
-        .bom-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
-        .bom-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
-        .bom-table { width:100%; border-collapse:collapse; }
-        .bom-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; white-space:nowrap; }
-        .bom-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
-        .bom-table tbody tr:last-child td { border-bottom:none; }
-        .bom-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .bom-empty, .bom-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; }
-        .bom-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .bom-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#fca5a5; }
+        .bom-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden;gap:0}
+        .bom-toolbar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-shrink:0}
+        .bom-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3)}
+        .bom-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
       `}</style>
 
       <div className="bom-page">
         <div className="bom-toolbar">
           <button className="bom-btn-new" onClick={() => setModalOpen(true)}>
-            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" style={{ width: 13, height: 13 }}>
               <line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" />
             </svg>
             New BOM
@@ -491,71 +637,34 @@ export default function BOMPage() {
 
         {error && <div className="bom-error">{error}</div>}
 
-        <div className="bom-wrap">
-          {loading ? <div className="bom-loading">Loading…</div>
-            : list.length === 0 ? <div className="bom-empty">No BOMs yet.</div>
-            : (
-              <>
-                <table className="bom-table">
-                  <thead>
-                    <tr>{['BOM Number', 'Parent Item', 'Version', 'Components', 'Routing', 'Status', ''].map(h => <th key={h}>{h}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {list.map(bom => (
-                      <React.Fragment key={bom.id}>
-                        <tr style={{ cursor: 'pointer' }} onClick={() => handleExpand(bom)}>
-                          <td>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded === bom.id ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-                              <span style={{ ...MONO, color: '#fb923c', fontWeight: 500 }}>{bom.bomNumber}</span>
-                            </span>
-                          </td>
-                          <td>
-                            <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{bom.parentItem?.code}</span>
-                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{bom.parentItem?.name}</span>
-                          </td>
-                          <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>v{bom.version ?? 1}</span></td>
-                          <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{bom._count?.components ?? bom.components?.length ?? 0} components</span></td>
-                          <td>
-                            <span style={{ fontSize: 12, color: (bom._count?.routings ?? 0) > 0 ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>
-                              {(bom._count?.routings ?? 0) > 0 ? `${bom._count?.routings} steps` : 'No routing'}
-                            </span>
-                          </td>
-                          <td>
-                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, color: bom.isActive ? '#4ade80' : '#f87171', background: bom.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', border: `0.5px solid ${bom.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
-                              {bom.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td onClick={e => e.stopPropagation()}>
-                            <button onClick={() => bomApi.remove(bom.id).then(fetchBoms)}
-                              style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-
-                        {expanded === bom.id && detail[bom.id] && (
-                          <tr key={`${bom.id}-exp`}>
-                            <td colSpan={7} style={{ padding: 0 }}>
-                              <BomDetailPanel
-                                bom={detail[bom.id]}
-                                workCenters={workCenters}
-                                onRefresh={fetchBoms}
-                              />
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="bom-footer">{list.length} BOM{list.length !== 1 ? 's' : ''}</div>
-              </>
-            )}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTreeTable<Bom>
+            columns={columns}
+            data={list}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="boms"
+            emptyMessage="No BOMs yet."
+            defaultPageSize={25}
+            canExpand={() => true}
+            expandedRow={bom => {
+              const d = detail[bom.id];
+              if (!d) return <div style={{ padding: '12px 20px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading…</div>;
+              return <BomDetailPanel bom={d} workCenters={workCenters} onRefresh={fetchBoms} />;
+            }}
+            onRowClick={bom => handleExpand(bom)}
+          />
         </div>
       </div>
 
-      {modalOpen && <BOMModal items={items} onClose={() => setModalOpen(false)} onSaved={fetchBoms} />}
+      {modalOpen && (
+        <BOMModal
+          items={items}
+          systemUoms={systemUoms}
+          onClose={() => setModalOpen(false)}
+          onSaved={fetchBoms}
+        />
+      )}
     </ERPShell>
   );
 }

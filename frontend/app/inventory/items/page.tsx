@@ -10,12 +10,12 @@ import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { itemsApi } from '@/lib/api/items';
 import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
+import { tenantSettingsApi } from '@/lib/api/tenant-settings';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
 import { uomApi } from '@/lib/api/uom';
 import { supplierItemsApi } from '@/lib/api/supplier-items';
-import { suppliersApi } from '@/lib/api/suppliers';
-import type { ERPFilter } from '@/components/ui/ERPTable';
+import { suppliersApi } from '@/lib/api/suppliers';
 import {
   Item, CreateItemDto, ItemType,
   MacroCategory, Category, UomUnit,
@@ -448,11 +448,13 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
   const [error,            setError]            = useState('');
   const [macroFilter,      setMacroFilter]      = useState('');
   const [consumptionGrps,  setConsumptionGrps]  = useState<any[]>([]);
+  const [systemUoms,       setSystemUoms]        = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
       setError(''); setTab('general'); setEditMode(null);
       consumptionGroupsApi.getAll().then(setConsumptionGrps).catch(() => {});
+      tenantSettingsApi.getSystemUoms().then(s => setSystemUoms(s.list ?? [])).catch(() => {});
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
@@ -756,11 +758,18 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-section" style={{ color:'#4ade80', opacity:0.8 }}>Consumption — Production domain</div>
                     <div className="im-field">
                       <label className="im-label">Consumption UOM</label>
-                      <p className="im-sublabel">Unit used in BOM and production orders</p>
-                      <SearchSelect options={uomOpts} value={form.consumptionUomId ?? ''} onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))} placeholder="Search UOM…" clearLabel="— Select consumption UOM —" minWidth={240} />
+                      <p className="im-sublabel">Restricted to system UOMs — configured in Settings → General. MRP aggregates to this unit.</p>
+                      <SearchSelect
+                            options={systemUoms.map((u: any) => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · system unit` }))}
+                            value={form.consumptionUomId ?? ''}
+                            onChange={v => setForm(f => ({ ...f, consumptionUomId: v || undefined }))}
+                            placeholder="Search system UOM…"
+                            clearLabel="— Select system UOM —"
+                            minWidth={240}
+                          />
                     </div>
 
-                    {form.consumptionUomId && (
+                    {form.consumptionUomId && systemUoms.length > 0 && (
                       <div style={{ background:'rgba(74,222,128,0.04)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
                         <div style={{ color:'rgba(255,255,255,0.4)', marginBottom:6, fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Conversion Preview</div>
                         <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
