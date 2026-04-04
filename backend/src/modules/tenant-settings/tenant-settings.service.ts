@@ -9,6 +9,7 @@ const INCLUDE = {
   lengthBaseUom: true,
   areaBaseUom:   true,
   countBaseUom:  true,
+  timeBaseUom:   true,
 };
 
 @Injectable()
@@ -38,7 +39,7 @@ export class TenantSettingsService {
 
   /**
    * Returns only the configured system UOMs as a flat list.
-   * Used by ConsumptionGroup and Item modals to restrict UOM selection.
+   * Used by ConsumptionGroup, Item and BOM modals to restrict UOM selection.
    * A null entry means that UOM type has not been configured yet.
    */
   async getSystemUoms(tenantId: string) {
@@ -49,6 +50,7 @@ export class TenantSettingsService {
       length: s.lengthBaseUom ?? null,
       area:   s.areaBaseUom   ?? null,
       count:  s.countBaseUom  ?? null,
+      time:   s.timeBaseUom   ?? null,
       // Flat list for use in SearchSelect — only configured ones
       list: [
         s.volumeBaseUom,
@@ -56,6 +58,7 @@ export class TenantSettingsService {
         s.lengthBaseUom,
         s.areaBaseUom,
         s.countBaseUom,
+        s.timeBaseUom,
       ].filter(Boolean),
     };
   }

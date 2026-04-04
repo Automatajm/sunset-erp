@@ -22,6 +22,7 @@ interface SettingsForm {
   lengthBaseUomId?: string;
   areaBaseUomId?:   string;
   countBaseUomId?:  string;
+  timeBaseUomId?:   string;
 }
 
 const UOM_TYPE_COLOR: Record<string, string> = {
@@ -40,6 +41,7 @@ const UOM_ROWS = [
   { key: 'lengthBaseUomId',  label: 'Length',  type: 'length',  example: 'M / FT / CM' },
   { key: 'countBaseUomId',   label: 'Count',   type: 'count',   example: 'PCS / BOX / UNIT' },
   { key: 'areaBaseUomId',    label: 'Area',    type: 'area',    example: 'M2 / FT2' },
+  { key: 'timeBaseUomId',    label: 'Time',    type: 'time',    example: 'HR / MIN / DAY' },
 ] as const;
 
 // ─── Warning Modal ────────────────────────────────────────────────────────────
@@ -140,6 +142,7 @@ export default function GeneralSettingsPage() {
         lengthBaseUomId:  s.lengthBaseUomId  ?? '',
         areaBaseUomId:    s.areaBaseUomId    ?? '',
         countBaseUomId:   s.countBaseUomId   ?? '',
+        timeBaseUomId:    s.timeBaseUomId    ?? '',
       };
       setForm(snap);
       setSaved(snap);
@@ -221,6 +224,7 @@ export default function GeneralSettingsPage() {
       if (form.lengthBaseUomId)  payload.lengthBaseUomId  = form.lengthBaseUomId;
       if (form.areaBaseUomId)    payload.areaBaseUomId    = form.areaBaseUomId;
       if (form.countBaseUomId)   payload.countBaseUomId   = form.countBaseUomId;
+      if (form.timeBaseUomId)    payload.timeBaseUomId    = form.timeBaseUomId;
       const updated = await tenantSettingsApi.update(payload);
       const snap: SettingsForm = {
         defaultUomSystem: updated.defaultUomSystem,
@@ -229,6 +233,7 @@ export default function GeneralSettingsPage() {
         lengthBaseUomId:  updated.lengthBaseUomId  ?? '',
         areaBaseUomId:    updated.areaBaseUomId    ?? '',
         countBaseUomId:   updated.countBaseUomId   ?? '',
+        timeBaseUomId:    updated.timeBaseUomId    ?? '',
       };
       setForm(snap); setSaved(snap);
       setSuccess('Settings saved — system UOMs now available in ConsumptionGroups and Items.');
@@ -240,12 +245,22 @@ export default function GeneralSettingsPage() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const byType = (type: string) =>
-    units.filter(u => u.type === type).map(u => ({
-      value:    u.id,
-      label:    `${u.code} — ${u.name}`,
-      sublabel: `${u.system}${u.isBase ? ' · base' : ''}`,
-    }));
+  const byType = (type: string) => {
+    const sys = form.defaultUomSystem;
+    return units
+      .filter(u => {
+        if (u.type !== type) return false;
+        if (sys === 'custom') return true;
+        if (sys === 'metric')   return u.system === 'metric'   || u.system === 'universal';
+        if (sys === 'imperial') return u.system === 'imperial' || u.system === 'universal';
+        return true;
+      })
+      .map(u => ({
+        value:    u.id,
+        label:    `${u.code} — ${u.name}`,
+        sublabel: `${u.system}${u.isBase ? ' · base' : ''}`,
+      }));
+  };
 
   const isDirty     = (key: keyof SettingsForm) => form[key] !== saved[key];
   const hasAnyDirty = UOM_ROWS.some(r => isDirty(r.key as keyof SettingsForm)) || isDirty('defaultUomSystem');

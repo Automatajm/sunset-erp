@@ -32,4 +32,8 @@ export class UpdateTenantSettingsDto {
   @IsOptional()
   @IsUUID()
   countBaseUomId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  timeBaseUomId?: string;
 }

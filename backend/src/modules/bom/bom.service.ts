@@ -5,13 +5,49 @@ import { UpdateBomDto } from './dto/update-bom.dto';
 import { CreateBomRoutingDto, UpdateBomRoutingDto } from './dto/bom-routing.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
+// ── Shared includes ───────────────────────────────────────────────────────────
+
+const COMPONENT_INCLUDE = {
+  componentItem: {
+    select: {
+      id: true, code: true, name: true, baseUom: true,
+      consumptionUomId: true,
+    },
+  },
+  consumptionUom: {
+    select: { id: true, code: true, name: true, type: true, system: true },
+  },
+};
+
+const ROUTING_INCLUDE = {
+  workCenter: {
+    select: { id: true, code: true, name: true, costPerHour: true },
+  },
+};
+
+const BOM_FULL_INCLUDE = {
+  parentItem: { select: { id: true, code: true, name: true, baseUom: true } },
+  components: {
+    include:  COMPONENT_INCLUDE,
+    orderBy:  { lineNumber: 'asc' as const },
+  },
+  routings: {
+    where:    { deletedAt: null },
+    include:  ROUTING_INCLUDE,
+    orderBy:  { stepNumber: 'asc' as const },
+  },
+};
+
+const BOM_LIST_INCLUDE = {
+  parentItem: { select: { id: true, code: true, name: true } },
+  _count:     { select: { components: true, routings: true } },
+};
+
 @Injectable()
 export class BomService {
   constructor(private prisma: PrismaService) {}
 
-  // ─────────────────────────────────────────────
-  // EXISTING BOM CRUD (unchanged)
-  // ─────────────────────────────────────────────
+  // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, createBomDto: CreateBomDto) {
     const parentItem = await this.prisma.item.findFirst({
@@ -30,7 +66,7 @@ export class BomService {
     }
 
     const bomNumber = createBomDto.bomCode || await this.generateBomNumber(tenantId);
-    const existing = await this.prisma.bom.findFirst({
+    const existing  = await this.prisma.bom.findFirst({
       where: { tenantId, bomNumber, deletedAt: null },
     });
     if (existing) throw new ConflictException(`BOM with number ${bomNumber} already exists`);
@@ -42,38 +78,32 @@ export class BomService {
         tenantId,
         parentItemId: createBomDto.itemId,
         bomNumber,
-        version: versionNumber,
+        version:  versionNumber,
         isActive: createBomDto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
         components: {
           create: createBomDto.components.map((comp, index) => ({
             tenantId,
-            componentItemId: comp.componentItemId,
-            lineNumber: index + 1,
-            quantityPer: new Decimal(comp.quantity),
-            uom: comp.uom,
-            scrapPercent: new Decimal(comp.scrapPercent || 0),
-            createdBy: userId,
-            updatedBy: userId,
+            componentItemId:  comp.componentItemId,
+            lineNumber:       index + 1,
+            quantityPer:      new Decimal(comp.quantity),
+            uom:              comp.uom,
+            // consumptionUomId = system UOM for MRP aggregation (restricted on frontend)
+            consumptionUomId: comp.consumptionUomId ?? null,
+            scrapPercent:     new Decimal(comp.scrapPercent || 0),
+            createdBy:        userId,
+            updatedBy:        userId,
           })),
         },
       },
-      include: {
-        parentItem: { select: { id: true, code: true, name: true } },
-        components: {
-          include: { componentItem: { select: { id: true, code: true, name: true, baseUom: true } } },
-          orderBy: { lineNumber: 'asc' },
-        },
-        routings: {
-          include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
-          orderBy: { stepNumber: 'asc' },
-        },
-      },
+      include: BOM_FULL_INCLUDE,
     });
 
     return this.formatBomResponse(bom);
   }
+
+  // ── Find All ───────────────────────────────────────────────────────────────
 
   async findAll(tenantId: string, itemId?: string) {
     const where: any = { tenantId, deletedAt: null };
@@ -81,34 +111,23 @@ export class BomService {
 
     return this.prisma.bom.findMany({
       where,
-      include: {
-        parentItem: { select: { id: true, code: true, name: true } },
-        _count: { select: { components: true, routings: true } },
-      },
-      orderBy: { bomNumber: 'asc' },
+      include:  BOM_LIST_INCLUDE,
+      orderBy:  { bomNumber: 'asc' },
     });
   }
+
+  // ── Find One ───────────────────────────────────────────────────────────────
 
   async findOne(tenantId: string, id: string) {
     const bom = await this.prisma.bom.findFirst({
-      where: { id, tenantId, deletedAt: null },
-      include: {
-        parentItem: { select: { id: true, code: true, name: true, baseUom: true } },
-        components: {
-          include: { componentItem: { select: { id: true, code: true, name: true, baseUom: true } } },
-          orderBy: { lineNumber: 'asc' },
-        },
-        routings: {
-          where: { deletedAt: null },
-          include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
-          orderBy: { stepNumber: 'asc' },
-        },
-      },
+      where:   { id, tenantId, deletedAt: null },
+      include: BOM_FULL_INCLUDE,
     });
-
     if (!bom) throw new NotFoundException(`BOM with ID ${id} not found`);
     return this.formatBomResponse(bom);
   }
+
+  // ── Update ─────────────────────────────────────────────────────────────────
 
   async update(tenantId: string, userId: string, id: string, updateBomDto: UpdateBomDto) {
     await this.findOne(tenantId, id);
@@ -121,48 +140,50 @@ export class BomService {
     }
 
     const updateData: any = { updatedBy: userId };
-    if (updateBomDto.bomCode) updateData.bomNumber = updateBomDto.bomCode;
+    if (updateBomDto.bomCode)              updateData.bomNumber    = updateBomDto.bomCode;
     if (updateBomDto.description !== undefined) updateData.description = updateBomDto.description;
-    if (updateBomDto.version) updateData.version = parseInt(updateBomDto.version);
-    if (updateBomDto.isActive !== undefined) updateData.isActive = updateBomDto.isActive;
-    if (updateBomDto.itemId) updateData.parentItemId = updateBomDto.itemId;
+    if (updateBomDto.version)              updateData.version      = parseInt(updateBomDto.version);
+    if (updateBomDto.isActive !== undefined)    updateData.isActive    = updateBomDto.isActive;
+    if (updateBomDto.itemId)               updateData.parentItemId = updateBomDto.itemId;
 
     const bom = await this.prisma.bom.update({
-      where: { id },
-      data: updateData,
-      include: {
-        parentItem: true,
-        components: { include: { componentItem: true } },
-        routings: { include: { workCenter: true } },
-      },
+      where:   { id },
+      data:    updateData,
+      include: BOM_FULL_INCLUDE,
     });
 
     return this.formatBomResponse(bom);
   }
 
+  // ── Remove ─────────────────────────────────────────────────────────────────
+
   async remove(tenantId: string, userId: string, id: string) {
     await this.findOne(tenantId, id);
     await this.prisma.bom.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedBy: userId },
+      data:  { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'BOM deleted successfully', id };
   }
 
+  // ── Material Requirements ──────────────────────────────────────────────────
+
   async calculateMaterialRequirements(tenantId: string, id: string, quantity: number) {
     const bom = await this.findOne(tenantId, id);
 
-    const requirements = bom.components.map(comp => {
-      const requiredQty  = comp.quantityPer * quantity;
-      const scrapQty     = (requiredQty * comp.scrapPercent) / 100;
-      const totalQty     = requiredQty + scrapQty;
+    const requirements = bom.components.map((comp: any) => {
+      const requiredQty = comp.quantityPer * quantity;
+      const scrapQty    = (requiredQty * comp.scrapPercent) / 100;
+      const totalQty    = requiredQty + scrapQty;
       return {
-        componentItem: comp.componentItem,
-        quantityPerUnit: comp.quantityPer,
+        componentItem:    comp.componentItem,
+        quantityPerUnit:  comp.quantityPer,
         requiredQuantity: requiredQty,
-        scrapQuantity: scrapQty,
-        totalQuantity: totalQty,
-        uom: comp.uom,
+        scrapQuantity:    scrapQty,
+        totalQuantity:    totalQty,
+        uom:              comp.uom,
+        // MRP target UOM — what the engine will aggregate to
+        consumptionUom:   comp.consumptionUom ?? null,
       };
     });
 
@@ -174,9 +195,7 @@ export class BomService {
     };
   }
 
-  // ─────────────────────────────────────────────
-  // BOM ROUTING — CRUD
-  // ─────────────────────────────────────────────
+  // ── Routing: Add ──────────────────────────────────────────────────────────
 
   async addRoutingStep(tenantId: string, userId: string, bomId: string, dto: CreateBomRoutingDto) {
     await this.findOne(tenantId, bomId);
@@ -186,7 +205,6 @@ export class BomService {
     });
     if (!wc) throw new NotFoundException(`Work center ${dto.workCenterId} not found`);
 
-    // Check step number uniqueness
     const existing = await this.prisma.bomRouting.findFirst({
       where: { bomId, stepNumber: dto.stepNumber, deletedAt: null },
     });
@@ -196,34 +214,42 @@ export class BomService {
       data: {
         tenantId,
         bomId,
-        stepNumber: dto.stepNumber,
-        workCenterId: dto.workCenterId,
-        description: dto.description ?? null,
-        setupTime: new Decimal(dto.setupTime ?? 0),
+        stepNumber:     dto.stepNumber,
+        workCenterId:   dto.workCenterId,
+        description:    dto.description ?? null,
+        setupTime:      new Decimal(dto.setupTime ?? 0),
         runTimePerUnit: new Decimal(dto.runTimePerUnit ?? 0),
-        notes: dto.notes ?? null,
-        createdBy: userId,
-        updatedBy: userId,
+        notes:          dto.notes ?? null,
+        createdBy:      userId,
+        updatedBy:      userId,
       },
-      include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
+      include: ROUTING_INCLUDE,
     });
 
     return this.formatRoutingStep(step);
   }
 
+  // ── Routing: Get All ──────────────────────────────────────────────────────
+
   async getRoutingSteps(tenantId: string, bomId: string) {
     await this.findOne(tenantId, bomId);
 
     const steps = await this.prisma.bomRouting.findMany({
-      where: { bomId, tenantId, deletedAt: null },
-      include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
+      where:   { bomId, tenantId, deletedAt: null },
+      include: ROUTING_INCLUDE,
       orderBy: { stepNumber: 'asc' },
     });
 
     return steps.map(s => this.formatRoutingStep(s));
   }
 
-  async updateRoutingStep(tenantId: string, userId: string, bomId: string, stepId: string, dto: UpdateBomRoutingDto) {
+  // ── Routing: Update ───────────────────────────────────────────────────────
+
+  async updateRoutingStep(
+    tenantId: string, userId: string,
+    bomId: string, stepId: string,
+    dto: UpdateBomRoutingDto,
+  ) {
     await this.findOne(tenantId, bomId);
 
     const step = await this.prisma.bomRouting.findFirst({
@@ -255,13 +281,15 @@ export class BomService {
     if (dto.notes !== undefined)          data.notes          = dto.notes;
 
     const updated = await this.prisma.bomRouting.update({
-      where: { id: stepId },
+      where:   { id: stepId },
       data,
-      include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
+      include: ROUTING_INCLUDE,
     });
 
     return this.formatRoutingStep(updated);
   }
+
+  // ── Routing: Remove ───────────────────────────────────────────────────────
 
   async removeRoutingStep(tenantId: string, userId: string, bomId: string, stepId: string) {
     await this.findOne(tenantId, bomId);
@@ -273,34 +301,29 @@ export class BomService {
 
     await this.prisma.bomRouting.update({
       where: { id: stepId },
-      data: { deletedAt: new Date(), deletedBy: userId },
+      data:  { deletedAt: new Date(), deletedBy: userId },
     });
 
     return { message: 'Routing step deleted', id: stepId };
   }
 
-  // ─────────────────────────────────────────────
-  // BOM ROUTING — LABOR ESTIMATE
-  // ─────────────────────────────────────────────
+  // ── Routing: Labor Estimate ───────────────────────────────────────────────
 
   async getLaborEstimate(tenantId: string, bomId: string, quantity: number) {
     const bom = await this.findOne(tenantId, bomId);
 
     const steps = await this.prisma.bomRouting.findMany({
-      where: { bomId, tenantId, deletedAt: null, isActive: true },
-      include: { workCenter: { select: { id: true, code: true, name: true, costPerHour: true } } },
+      where:   { bomId, tenantId, deletedAt: null, isActive: true },
+      include: ROUTING_INCLUDE,
       orderBy: { stepNumber: 'asc' },
     });
 
     if (steps.length === 0) {
       return {
         bom: { id: bom.id, bomNumber: bom.bomNumber },
-        quantity,
-        steps: [],
-        totalSetupHours: 0,
-        totalRunHours: 0,
-        totalLaborHours: 0,
-        estimatedLaborCost: 0,
+        quantity, steps: [],
+        totalSetupHours: 0, totalRunHours: 0,
+        totalLaborHours: 0, estimatedLaborCost: 0,
         message: 'No routing steps defined for this BOM',
       };
     }
@@ -336,7 +359,7 @@ export class BomService {
     return {
       bom: { id: bom.id, bomNumber: bom.bomNumber, parentItem: bom.parentItem },
       quantity,
-      steps: stepDetails,
+      steps:               stepDetails,
       totalSetupHours,
       totalRunHours,
       totalLaborHours:     totalSetupHours + totalRunHours,
@@ -344,38 +367,35 @@ export class BomService {
     };
   }
 
-  // ─────────────────────────────────────────────
-  // MATERIAL SUGGESTIONS (for MO actuals pre-fill)
-  // ─────────────────────────────────────────────
+  // ── Material Suggestions ──────────────────────────────────────────────────
 
   async getMaterialSuggestions(tenantId: string, bomId: string, quantity: number) {
     const bom = await this.findOne(tenantId, bomId);
 
-    return bom.components.map(comp => {
-      const qtyRequired  = comp.quantityPer * quantity;
-      const scrapQty     = (qtyRequired * comp.scrapPercent) / 100;
-      const qtyPlanned   = qtyRequired + scrapQty;
+    return bom.components.map((comp: any) => {
+      const qtyRequired = comp.quantityPer * quantity;
+      const scrapQty    = (qtyRequired * comp.scrapPercent) / 100;
+      const qtyPlanned  = qtyRequired + scrapQty;
 
       return {
-        itemId:      comp.componentItem.id,
-        itemCode:    comp.componentItem.code,
-        itemName:    comp.componentItem.name,
-        qtyPlanned:  Math.ceil(qtyPlanned * 1000) / 1000,
-        uom:         comp.uom,
-        scrapPercent: comp.scrapPercent,
+        itemId:          comp.componentItem.id,
+        itemCode:        comp.componentItem.code,
+        itemName:        comp.componentItem.name,
+        qtyPlanned:      Math.ceil(qtyPlanned * 1000) / 1000,
+        uom:             comp.uom,
+        consumptionUom:  comp.consumptionUom ?? null,
+        scrapPercent:    comp.scrapPercent,
         note: comp.scrapPercent > 0 ? `Includes ${comp.scrapPercent}% scrap` : undefined,
       };
     });
   }
 
-  // ─────────────────────────────────────────────
-  // PRIVATE helpers
-  // ─────────────────────────────────────────────
+  // ── Private helpers ───────────────────────────────────────────────────────
 
   private async generateBomNumber(tenantId: string): Promise<string> {
     const prefix = `BOM-${new Date().getFullYear()}`;
-    const last = await this.prisma.bom.findFirst({
-      where: { tenantId, bomNumber: { startsWith: prefix } },
+    const last   = await this.prisma.bom.findFirst({
+      where:   { tenantId, bomNumber: { startsWith: prefix } },
       orderBy: { bomNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;

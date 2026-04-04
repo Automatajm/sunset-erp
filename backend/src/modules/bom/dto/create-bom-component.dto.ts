@@ -6,17 +6,24 @@ export class CreateBomComponentDto {
   @IsUUID()
   componentItemId: string;
 
-  @ApiProperty({ example: 2, description: 'Quantity required per parent unit' })
+  @ApiProperty({ example: 2, description: 'Quantity required per parent unit (in formulador UOM)' })
   @IsNumber()
   @Min(0.001)
   quantity: number;
 
-  @ApiProperty({ example: 'PCS', description: 'Unit of measure' })
+  @ApiProperty({ example: 'GAL', description: 'Formulador UOM — free, any unit the formulator uses' })
   @IsString()
   @MaxLength(20)
   uom: string;
 
-  @ApiPropertyOptional({ example: 5, description: 'Scrap percentage' })
+  @ApiPropertyOptional({
+    description: 'System UOM UUID for MRP aggregation — must be a configured tenant system UOM (= item.consumptionUomId)',
+  })
+  @IsOptional()
+  @IsUUID()
+  consumptionUomId?: string;
+
+  @ApiPropertyOptional({ example: 5, description: 'Scrap percentage (0-100)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
