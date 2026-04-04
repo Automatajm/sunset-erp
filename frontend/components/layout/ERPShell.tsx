@@ -100,6 +100,7 @@ const NAV: NavItem[] = [
       {
         label: 'Production',
         items: [
+          { label: 'Production Plans',  href: '/manufacturing/production-plans',  permission: 'MFG:VIEW' },
           { label: 'Production Orders', href: '/manufacturing/production-orders', permission: 'MFG:VIEW' },
         ],
       },
