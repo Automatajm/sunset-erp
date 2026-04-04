@@ -541,6 +541,7 @@ erDiagram
     String uom 
     Decimal scrap_percent 
     Boolean is_phantom 
+    String consumption_uom_id "❓"
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
@@ -583,6 +584,7 @@ erDiagram
     DateTime actual_end_date "❓"
     String status 
     String notes "❓"
+    String plan_line_id "❓"
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
@@ -1509,6 +1511,7 @@ erDiagram
     String source_type "❓"
     String source_mo_id "❓"
     String pr_line_id "❓"
+    String consumption_group_id "❓"
     String status 
     String notes "❓"
     DateTime created_at 
@@ -1609,6 +1612,53 @@ erDiagram
     String updated_by 
     }
   
+
+  "mfg_production_plans" {
+    String id "🗝️"
+    String tenant_id 
+    String plan_number 
+    String title 
+    String horizon 
+    String source 
+    DateTime period_start 
+    DateTime period_end 
+    String status 
+    String crp_status "❓"
+    DateTime crp_run_at "❓"
+    String crp_notes "❓"
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    String deleted_by "❓"
+    }
+  
+
+  "mfg_production_plan_lines" {
+    String id "🗝️"
+    String tenant_id 
+    String plan_id 
+    Int line_number 
+    String item_id 
+    String bom_id "❓"
+    Decimal planned_qty 
+    String uom 
+    DateTime planned_start 
+    DateTime planned_end 
+    Decimal produced_qty 
+    String so_line_id "❓"
+    String gn_line_id "❓"
+    String status 
+    String notes "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    DateTime deleted_at "❓"
+    String created_by 
+    String updated_by 
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1673,8 +1723,10 @@ erDiagram
     "mfg_bom_components" }o--|| saas_tenants : "tenant"
     "mfg_bom_components" }o--|| mfg_boms : "bom"
     "mfg_bom_components" }o--|| in_items : "componentItem"
+    "mfg_bom_components" }o--|o cfg_uom_units : "consumptionUom"
     "mfg_work_centers" }o--|| saas_tenants : "tenant"
     "mfg_production_orders" }o--|| saas_tenants : "tenant"
+    "mfg_production_orders" }o--|o mfg_production_plan_lines : "planLine"
     "so_customers" }o--|| saas_tenants : "tenant"
     "so_sales_orders" }o--|| saas_tenants : "tenant"
     "so_sales_orders" }o--|| so_customers : "customer"
@@ -1795,6 +1847,7 @@ erDiagram
     "po_general_need_lines" }o--|o in_items : "item"
     "po_general_need_lines" }o--|o po_suppliers : "suggestedSupplier"
     "po_general_need_lines" }o--|o po_purchase_requisition_lines : "purchaseRequisitionLine"
+    "po_general_need_lines" }o--|o in_consumption_groups : "consumptionGroup"
     "po_rfqs" }o--|| saas_tenants : "tenant"
     "po_rfqs" }o--|o po_purchase_requisitions : "purchaseRequisition"
     "po_rfqs" }o--|o po_general_needs : "generalNeed"
@@ -1811,4 +1864,10 @@ erDiagram
     "po_rfq_response_lines" }o--|| saas_tenants : "tenant"
     "po_rfq_response_lines" }o--|| po_rfq_suppliers : "rfqSupplier"
     "po_rfq_response_lines" }o--|| po_rfq_lines : "rfqLine"
+    "mfg_production_plans" }o--|| saas_tenants : "tenant"
+    "mfg_production_plan_lines" }o--|| saas_tenants : "tenant"
+    "mfg_production_plan_lines" }o--|| mfg_production_plans : "plan"
+    "mfg_production_plan_lines" }o--|| in_items : "item"
+    "mfg_production_plan_lines" }o--|o mfg_boms : "bom"
+    "mfg_production_plan_lines" }o--|o so_sales_order_lines : "soLine"
 ```

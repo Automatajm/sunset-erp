@@ -93,6 +93,8 @@ model Tenant {
   boms                Bom[]
   workCenters         WorkCenter[]
   productionOrders    ProductionOrder[]
+  productionPlans     ProductionPlan[]
+  productionPlanLines ProductionPlanLine[]
   customers           Customer[]
   salesOrders         SalesOrder[]
   accounts            Account[]
@@ -761,6 +763,7 @@ model Item {
   stockLocationUpdates StockLocationUpdate[]
   generalNeedLines     GeneralNeedLine[]
   rfqLines             RfqLine[]
+  productionPlanLines  ProductionPlanLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -954,8 +957,9 @@ model Bom {
   deletedBy String?   @map("deleted_by") @db.Uuid
   tenant     Tenant         @relation(fields: [tenantId], references: [id])
   parentItem Item           @relation("BomParentItem", fields: [parentItemId], references: [id])
-  components BomComponent[]
-  routings   BomRouting[]
+  components        BomComponent[]
+  routings          BomRouting[]
+  productionPlanLines ProductionPlanLine[]
   @@unique([tenantId, bomNumber, version])
   @@index([tenantId])
   @@index([tenantId, parentItemId])
@@ -971,17 +975,21 @@ model BomComponent {
   // quantityPer is in consumptionUom of the component item
   quantityPer     Decimal @map("quantity_per") @db.Decimal(15, 6)
   uom             String  @db.VarChar(20)
-  scrapPercent    Decimal @default(0) @map("scrap_percent") @db.Decimal(5, 2)
-  isPhantom       Boolean @default(false) @map("is_phantom")
+  scrapPercent     Decimal  @default(0) @map("scrap_percent") @db.Decimal(5, 2)
+  isPhantom        Boolean  @default(false) @map("is_phantom")
+  // UOM in which the formulador expresses the quantity (free)
+  // consumptionUomId = target UOM for MRP conversion (= item.consumptionUomId)
+  consumptionUomId String?  @map("consumption_uom_id") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-  tenant        Tenant @relation(fields: [tenantId], references: [id])
-  bom           Bom    @relation(fields: [bomId], references: [id], onDelete: Cascade)
-  componentItem Item   @relation(fields: [componentItemId], references: [id])
+  tenant          Tenant   @relation(fields: [tenantId],        references: [id])
+  bom             Bom      @relation(fields: [bomId],            references: [id], onDelete: Cascade)
+  componentItem   Item     @relation(fields: [componentItemId],  references: [id])
+  consumptionUom  UomUnit? @relation("BomComponentConsumptionUom", fields: [consumptionUomId], references: [id])
   @@index([tenantId])
   @@index([bomId])
   @@index([componentItemId])
@@ -1026,13 +1034,16 @@ model ProductionOrder {
   actualEndDate     DateTime? @map("actual_end_date") @db.Date
   status            String    @default("draft") @db.VarChar(20)
   notes             String?   @db.Text
+  // Sprint 16 — link to ProductionPlanLine (null = standalone MO)
+  planLineId        String?   @map("plan_line_id") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-  tenant            Tenant               @relation(fields: [tenantId], references: [id])
+  tenant            Tenant                @relation(fields: [tenantId],   references: [id])
+  planLine          ProductionPlanLine?   @relation(fields: [planLineId], references: [id])
   laborActuals      MoLaborActual[]
   materialActuals   MoMaterialActual[]
   variances         ProductionVariance[]
@@ -1142,9 +1153,10 @@ model SalesOrderLine {
   createdBy String    @map("created_by") @db.Uuid
   updatedBy String    @map("updated_by") @db.Uuid
   deletedBy String?   @map("deleted_by") @db.Uuid
-  tenant     Tenant     @relation(fields: [tenantId], references: [id])
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  item       Item       @relation(fields: [itemId], references: [id])
+  tenant              Tenant               @relation(fields: [tenantId],    references: [id])
+  salesOrder          SalesOrder           @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  item                Item                 @relation(fields: [itemId],       references: [id])
+  productionPlanLines ProductionPlanLine[]
   @@index([tenantId])
   @@index([salesOrderId])
   @@index([itemId])
@@ -1765,7 +1777,8 @@ model UomUnit {
   itemsConsumptionUom Item[]           @relation("ItemConsumptionUom")
   consumptionGroups   ConsumptionGroup[]
   supplierItems       SupplierItem[]
-  poLinePurchaseUom   PurchaseOrderLine[] @relation("PoLinePurchaseUom")
+  poLinePurchaseUom        PurchaseOrderLine[] @relation("PoLinePurchaseUom")
+  bomComponentConsumption  BomComponent[]      @relation("BomComponentConsumptionUom")
   tenantSettingsVolume TenantSettings[] @relation("TenantVolumeUom")
   tenantSettingsMass   TenantSettings[] @relation("TenantMassUom")
   tenantSettingsLength TenantSettings[] @relation("TenantLengthUom")
@@ -1878,7 +1891,8 @@ model ConsumptionGroup {
   deletedBy String?   @map("deleted_by") @db.Uuid
   tenant         Tenant  @relation(fields: [tenantId], references: [id])
   consumptionUom UomUnit @relation(fields: [consumptionUomId], references: [id])
-  items          Item[]
+  items            Item[]
+  generalNeedLines GeneralNeedLine[]
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("in_consumption_groups")
@@ -2458,9 +2472,11 @@ model GeneralNeedLine {
   sourceMoId    String?  @map("source_mo_id") @db.Uuid
   // FK to ProductionOrder
   // Conversion tracking
-  prLineId      String?  @map("pr_line_id") @db.Uuid
+  prLineId           String?  @map("pr_line_id") @db.Uuid
   // set when converted to PR
-  status        String   @default("pending") @db.VarChar(20)
+  // MRP signal — ConsumptionGroup (normalized production UOM)
+  consumptionGroupId String?  @map("consumption_group_id") @db.Uuid
+  status             String   @default("pending") @db.VarChar(20)
   // pending | converted | cancelled
   notes         String?  @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -2472,8 +2488,9 @@ model GeneralNeedLine {
   generalNeed       GeneralNeed          @relation(fields: [gnId],               references: [id], onDelete: Cascade)
   item              Item?                @relation(fields: [itemId],             references: [id])
   suggestedSupplier Supplier?            @relation("GnLineSuggestedSupplier",    fields: [suggestedSupplierId], references: [id])
-  purchaseRequisitionLine PurchaseRequisitionLine? @relation(fields: [prLineId], references: [id])
-  rfqLines                RfqLine[]                @relation("RfqLineFromGn")
+  purchaseRequisitionLine PurchaseRequisitionLine? @relation(fields: [prLineId],           references: [id])
+  consumptionGroup        ConsumptionGroup?         @relation(fields: [consumptionGroupId], references: [id])
+  rfqLines                RfqLine[]                 @relation("RfqLineFromGn")
   @@index([tenantId])
   @@index([gnId])
   @@index([itemId])
@@ -2624,6 +2641,104 @@ model RfqResponseLine {
   @@map("po_rfq_response_lines")
 }
 
+// ============================================================================
+// SPRINT 16 — PRODUCTION PLAN + MRP (mfg_*)
+// ProductionPlan → ProductionPlanLine → ProductionOrder (MO)
+// CRP hook: crpStatus on ProductionPlan for future capacity analysis
+// ============================================================================
+
+model ProductionPlan {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  planNumber  String    @map("plan_number") @db.VarChar(50)  // PP-YYYY-NNNN
+  title       String    @db.VarChar(255)
+  horizon     String    @db.VarChar(20)
+  // weekly | monthly | quarterly
+  source      String    @default("free") @db.VarChar(20)
+  // free | from_sales_orders
+  periodStart DateTime  @map("period_start") @db.Date
+  periodEnd   DateTime  @map("period_end")   @db.Date
+  status      String    @default("draft") @db.VarChar(20)
+  // draft | confirmed | in_progress | completed | cancelled
+
+  // ── CRP hook — Capacity Requirements Planning (Sprint 17+) ───────────────
+  // crpStatus: null = not run yet
+  // feasible  = all work centers can absorb the load
+  // constrained = partial feasibility, some steps need rescheduling
+  // infeasible  = cannot be executed with current capacity
+  crpStatus   String?   @map("crp_status")  @db.VarChar(20)
+  crpRunAt    DateTime? @map("crp_run_at")
+  crpNotes    String?   @map("crp_notes")   @db.Text
+
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt      @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String    @map("created_by") @db.Uuid
+  updatedBy   String    @map("updated_by") @db.Uuid
+  deletedBy   String?   @map("deleted_by") @db.Uuid
+
+  tenant Tenant               @relation(fields: [tenantId], references: [id])
+  lines  ProductionPlanLine[]
+
+  @@unique([tenantId, planNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, horizon])
+  @@index([periodStart])
+  @@map("mfg_production_plans")
+}
+
+model ProductionPlanLine {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  planId      String    @map("plan_id") @db.Uuid
+  lineNumber  Int       @map("line_number")
+  itemId      String    @map("item_id") @db.Uuid
+  bomId       String?   @map("bom_id") @db.Uuid
+
+  // Planned quantities
+  plannedQty  Decimal   @map("planned_qty") @db.Decimal(15, 3)
+  uom         String    @db.VarChar(20)
+
+  // Schedule
+  plannedStart DateTime @map("planned_start") @db.Date
+  plannedEnd   DateTime @map("planned_end")   @db.Date
+
+  // Actual vs Planned tracking
+  // producedQty updated when linked MOs are completed
+  producedQty  Decimal  @default(0) @map("produced_qty") @db.Decimal(15, 3)
+
+  // Source — if plan comes from Sales Orders
+  soLineId     String?  @map("so_line_id") @db.Uuid
+
+  // MRP signal — set when MRP generates a GN from this line
+  gnLineId     String?  @map("gn_line_id") @db.Uuid
+
+  status       String   @default("pending") @db.VarChar(20)
+  // pending | mo_created | in_progress | completed | cancelled
+
+  notes        String?  @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt      @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdBy    String    @map("created_by") @db.Uuid
+  updatedBy    String    @map("updated_by") @db.Uuid
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  plan            ProductionPlan  @relation(fields: [planId],   references: [id], onDelete: Cascade)
+  item            Item            @relation(fields: [itemId],   references: [id])
+  bom             Bom?            @relation(fields: [bomId],    references: [id])
+  soLine          SalesOrderLine? @relation(fields: [soLineId], references: [id])
+  productionOrders ProductionOrder[]
+
+  @@index([tenantId])
+  @@index([planId])
+  @@index([itemId])
+  @@index([status])
+  @@map("mfg_production_plan_lines")
+}
+
 
 // ============================================================================
 // END OF SCHEMA
@@ -2639,3 +2754,10 @@ model RfqResponseLine {
 //   po_consolidation_config (Sprint 14C)
 //   po_supplier_scores  (Sprint 14D)
 // ============================================================================
+// Sprint 16 additions:
+//   mfg_bom_components      — consumptionUomId (FK cfg_uom_units) for MRP UOM conversion
+//   po_general_need_lines   — consumptionGroupId (FK in_consumption_groups) for MRP signal
+//   mfg_production_orders   — planLineId (FK mfg_production_plan_lines)
+//   mfg_production_plans    — new (PP-YYYY-NNNN, horizon, crpStatus hook)
+//   mfg_production_plan_lines — new (planned vs actual, SO source, GN signal)
+// Sprint 14 additions:
