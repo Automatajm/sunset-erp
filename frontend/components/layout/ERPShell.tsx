@@ -30,7 +30,8 @@ const NAV: NavItem[] = [
       {
          label: 'Planning',
          items: [
-           { label: 'General Needs', href: '/procurement/general-needs', permission: 'PROCUREMENT:VIEW' },
+           { label: 'Purchase Requisitions', href: '/procurement/purchase-requisitions', permission: 'PROCUREMENT:VIEW' },
+          { label: 'General Needs', href: '/procurement/general-needs', permission: 'PROCUREMENT:VIEW' },
            { label: 'RFQs',          href: '/procurement/rfqs',          permission: 'PROCUREMENT:VIEW' },
          ],
        },

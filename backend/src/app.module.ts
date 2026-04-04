@@ -36,6 +36,7 @@ import { StockReconciliationModule } from './modules/stock-reconciliation/stock-
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { PurchaseRequisitionsModule } from './modules/purchase-requisitions/purchase-requisitions.module';
 import { GeneralNeedsModule } from './modules/general-needs/general-needs.module';
 import { RfqsModule } from './modules/rfqs/rfqs.module';
 
@@ -76,6 +77,7 @@ import { RfqsModule } from './modules/rfqs/rfqs.module';
     UsersModule,
     RolesModule,
     TenantsModule,
+    PurchaseRequisitionsModule,
     GeneralNeedsModule,
     RfqsModule,
   ],
