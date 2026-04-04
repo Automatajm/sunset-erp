@@ -2,87 +2,227 @@
 // frontend/app/inventory/consumption-groups/page.tsx
 // ============================================================================
 "use client";
-import { useEffect, useState, useCallback } from 'react';
+
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
-import { uomApi } from '@/lib/api/uom';
-import { ConsumptionGroup, UomUnit, CreateConsumptionGroupDto } from '@/lib/api/types';
- 
-const EMPTY_CG: CreateConsumptionGroupDto = { code: '', name: '', description: '', consumptionUomId: '', isActive: true };
- 
-function CgModal({ open, onClose, onSaved, initial, uomUnits }: {
+import { tenantSettingsApi } from '@/lib/api/tenant-settings';
+import { ConsumptionGroup, UomUnit } from '@/lib/api/types';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SystemUoms {
+  volume: UomUnit | null;
+  mass:   UomUnit | null;
+  length: UomUnit | null;
+  area:   UomUnit | null;
+  count:  UomUnit | null;
+  list:   UomUnit[];
+}
+
+// ─── UOM type colors ──────────────────────────────────────────────────────────
+
+const UOM_COLOR: Record<string, string> = {
+  volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80',
+  length: '#fbbf24', area: '#fb923c',
+};
+
+function UomBadge({ uom }: { uom?: UomUnit | null }) {
+  if (!uom) return <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span>;
+  const color = UOM_COLOR[uom.type] ?? '#e2dfd8';
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color, background: `${color}15`, border: `0.5px solid ${color}35` }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      {uom.code} — {uom.name}
+    </span>
+  );
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+interface CgForm {
+  name: string; description: string;
+  consumptionUomId: string; isActive: boolean;
+}
+
+const EMPTY: CgForm = { name: '', description: '', consumptionUomId: '', isActive: true };
+
+function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
   open: boolean; onClose: () => void; onSaved: () => void;
-  initial: ConsumptionGroup | null; uomUnits: UomUnit[];
+  initial: ConsumptionGroup | null;
+  systemUoms: SystemUoms;
 }) {
-  const [form, setForm] = useState(EMPTY_CG);
+  const [form,       setForm]       = useState<CgForm>(EMPTY);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
- 
+  const [error,      setError]      = useState('');
+
   useEffect(() => {
     if (open) {
       setError('');
       setForm(initial ? {
-        code: initial.code, name: initial.name, description: initial.description ?? '',
-        consumptionUomId: initial.consumptionUomId, isActive: initial.isActive,
-      } : EMPTY_CG);
+        name:             initial.name,
+        description:      initial.description ?? '',
+        consumptionUomId: initial.consumptionUomId ?? '',
+        isActive:         initial.isActive,
+      } : EMPTY);
     }
   }, [open, initial]);
- 
-  const set = (k: keyof CreateConsumptionGroupDto) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
- 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim() || !form.consumptionUomId) { setError('Code, name and UOM are required'); return; }
+    if (!form.name.trim() || !form.consumptionUomId) {
+      setError('Name and Consumption UOM are required');
+      return;
+    }
     setSubmitting(true); setError('');
     try {
-      if (initial) await consumptionGroupsApi.update(initial.id, form);
-      else          await consumptionGroupsApi.create(form);
+      if (initial) await consumptionGroupsApi.update(initial.id, form as any);
+      else         await consumptionGroupsApi.create(form as any);
       onSaved(); onClose();
-    } catch (err: any) { setError(err?.response?.data?.message ?? 'Operation failed'); }
-    finally { setSubmitting(false); }
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Operation failed');
+    } finally { setSubmitting(false); }
   };
- 
+
   if (!open) return null;
+
+  const selUom   = systemUoms.list.find(u => u.id === form.consumptionUomId);
+  const uomOpts  = systemUoms.list.map(u => ({
+    value:    u.id,
+    label:    `${u.code} — ${u.name}`,
+    sublabel: `${u.type} · system unit`,
+  }));
+
+  const INP: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+    borderRadius: 7, padding: '9px 12px', fontSize: 13,
+    fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%',
+  };
+  const LBL: React.CSSProperties = {
+    fontSize: 11, fontWeight: 500, letterSpacing: '0.08em',
+    textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)',
+  };
+
   return (
     <>
-      <style>{`.cgm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}.cgm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.cgm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06)}.cgm-title{font-size:13px;font-weight:500;color:#f1ede8}.cgm-close{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.4);font-size:15px;display:flex;align-items:center;justify-content:center}.cgm-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px}.cgm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cgm-field{display:flex;flex-direction:column;gap:5px}.cgm-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.55)}.cgm-sublabel{font-size:10px;color:rgba(255,255,255,0.3)}.cgm-input,.cgm-select,.cgm-textarea{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:#f1ede8;outline:none;width:100%}.cgm-input:focus,.cgm-select:focus,.cgm-textarea:focus{border-color:rgba(251,146,60,0.45)}.cgm-select option{background:#0e0b1a}.cgm-textarea{resize:vertical;min-height:56px}.cgm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:7px 12px;font-size:12px;color:#fca5a5}.cgm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:10px 18px 16px;border-top:0.5px solid rgba(255,255,255,0.06)}.cgm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 14px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.45);cursor:pointer}.cgm-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 18px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer}.cgm-btn-save:disabled{opacity:0.5;cursor:not-allowed}`}</style>
-      <div className="cgm-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <style>{`
+        .cgm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
+        .cgm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:520px;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
+        .cgm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
+      `}</style>
+      <div className="cgm-overlay">
         <div className="cgm-box">
-          <div className="cgm-hdr">
-            <span className="cgm-title">{initial ? 'Edit Consumption Group' : 'New Consumption Group'}</span>
-            <button className="cgm-close" onClick={onClose}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8' }}>
+              {initial ? `Edit — ${initial.code}` : 'New Consumption Group'}
+            </span>
           </div>
+
           <form onSubmit={handleSubmit}>
-            <div className="cgm-body">
-              {error && <div className="cgm-error">{error}</div>}
-              <div className="cgm-row">
-                <div className="cgm-field">
-                  <label className="cgm-label">Code *</label>
-                  <input className="cgm-input" placeholder="ADH-IND" value={form.code} onChange={set('code')} />
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {error && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>
+              )}
+
+              {/* Auto-code badge (edit mode only) */}
+              {initial && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)' }}>Code</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: '#fb923c', fontWeight: 500, background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 6, padding: '3px 10px' }}>{initial.code}</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>auto-generated</span>
                 </div>
-                <div className="cgm-field">
-                  <label className="cgm-label">Name *</label>
-                  <input className="cgm-input" placeholder="Industrial Adhesives" value={form.name} onChange={set('name')} />
-                </div>
+              )}
+
+              {/* Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={LBL}>Name *</label>
+                <input style={INP} placeholder="Industrial Adhesives" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
-              <div className="cgm-field">
-                <label className="cgm-label">Consumption UOM *</label>
-                <p className="cgm-sublabel">The unit Production uses — all items in the group must be convertible to this unit.</p>
-                <select className="cgm-select" value={form.consumptionUomId} onChange={set('consumptionUomId')}>
-                  <option value="">— Select UOM —</option>
-                  {uomUnits.map(u => <option key={u.id} value={u.id}>{u.code} — {u.name} ({u.type} · {u.system})</option>)}
-                </select>
+
+              {/* Consumption UOM — restricted to system UOMs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={LBL}>Consumption UOM *</label>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: 0, lineHeight: 1.5 }}>
+                  Restricted to <strong style={{ color: '#fb923c' }}>system UOMs</strong> configured in Settings → General.
+                  MRP aggregates all items in this group to this unit.
+                </p>
+
+                {systemUoms.list.length === 0 ? (
+                  <div style={{ background: 'rgba(251,191,36,0.07)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: 'rgba(251,191,36,0.8)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>⚠</span>
+                    <span>No system UOMs configured. Go to <strong>Settings → General</strong> and set at least one system UOM first.</span>
+                  </div>
+                ) : (
+                  <>
+                    <SearchSelect
+                      options={uomOpts}
+                      value={form.consumptionUomId}
+                      onChange={v => setForm(f => ({ ...f, consumptionUomId: v }))}
+                      placeholder="Search system UOM…"
+                      clearLabel="— Select system UOM —"
+                      minWidth={300}
+                    />
+                    {/* System UOM quick-select pills */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      {systemUoms.list.map(u => {
+                        const color   = UOM_COLOR[u.type] ?? '#e2dfd8';
+                        const active  = form.consumptionUomId === u.id;
+                        return (
+                          <button key={u.id} type="button"
+                            onClick={() => setForm(f => ({ ...f, consumptionUomId: u.id }))}
+                            style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400, color: active ? color : 'rgba(255,255,255,0.4)', background: active ? `${color}18` : 'rgba(255,255,255,0.03)', border: `0.5px solid ${active ? `${color}50` : 'rgba(255,255,255,0.09)'}`, transition: 'all 0.15s' }}>
+                            {u.code}
+                            <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>{u.type}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selUom && (
+                      <div style={{ fontSize: 11, color: UOM_COLOR[selUom.type] ?? '#e2dfd8', display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500 }}>{selUom.code}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.35)' }}>{selUom.name}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.2)' }}>{selUom.type} · {selUom.system}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              <div className="cgm-field">
-                <label className="cgm-label">Description</label>
-                <textarea className="cgm-textarea" placeholder="Optional…" value={form.description} onChange={set('description')} />
+
+              {/* Description */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={LBL}>Description</label>
+                <textarea
+                  style={{ ...INP, resize: 'vertical', minHeight: 56 }}
+                  placeholder="Optional description of this consumption group…"
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                />
               </div>
+
+              {/* Active toggle */}
+              {initial && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isActive ? '#e2dfd8' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
+                  <div onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
+                    style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, background: form.isActive ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.isActive ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
+                    <div style={{ position: 'absolute', top: 2, left: form.isActive ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                  </div>
+                  Active
+                </label>
+              )}
             </div>
-            <div className="cgm-ftr">
-              <button type="button" className="cgm-btn-cancel" onClick={onClose}>Cancel</button>
-              <button type="submit" className="cgm-btn-save" disabled={submitting}>
-                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create'}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <button type="button" onClick={onClose}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting || systemUoms.list.length === 0}
+                style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting || systemUoms.list.length === 0 ? 0.5 : 1, boxShadow: '0 3px 12px rgba(234,88,12,0.35)' }}>
+                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Group'}
               </button>
             </div>
           </form>
@@ -91,91 +231,218 @@ function CgModal({ open, onClose, onSaved, initial, uomUnits }: {
     </>
   );
 }
- 
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function ConsumptionGroupsPage() {
-  const [items,    setItems]    = useState<ConsumptionGroup[]>([]);
-  const [uomUnits, setUomUnits] = useState<UomUnit[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState('');
-  const [search,   setSearch]   = useState('');
-  const [modal,    setModal]    = useState(false);
-  const [editing,  setEditing]  = useState<ConsumptionGroup | null>(null);
- 
+  const [groups,     setGroups]     = useState<ConsumptionGroup[]>([]);
+  const [systemUoms, setSystemUoms] = useState<SystemUoms>({ volume: null, mass: null, length: null, area: null, count: null, list: [] });
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [modal,      setModal]      = useState(false);
+  const [editing,    setEditing]    = useState<ConsumptionGroup | null>(null);
+  const [activeType, setActiveType] = useState<string | null>(null);
+
   const fetch_ = useCallback(async () => {
     try {
       setLoading(true);
-      const [cg, u] = await Promise.all([consumptionGroupsApi.getAll(), uomApi.getUnits()]);
-      setItems(cg); setUomUnits(u);
+      const [cg, sys] = await Promise.all([
+        consumptionGroupsApi.getAll(),
+        tenantSettingsApi.getSystemUoms(),
+      ]);
+      setGroups(cg);
+      setSystemUoms(sys as SystemUoms);
     } catch { setError('Failed to load'); }
     finally { setLoading(false); }
   }, []);
- 
+
   useEffect(() => { fetch_(); }, [fetch_]);
- 
-  const filtered = search
-    ? items.filter(i => i.code.toLowerCase().includes(search.toLowerCase()) || i.name.toLowerCase().includes(search.toLowerCase()))
-    : items;
- 
-  const TYPE_COLORS: Record<string, string> = {
-    volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80', length: '#fbbf24',
-  };
- 
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+
+  const uomTypeOptions = useMemo(() =>
+    systemUoms.list.map(u => ({
+      value:  u.type,
+      label:  `${u.code} (${u.type})`,
+      color:  UOM_COLOR[u.type] ?? '#e2dfd8',
+      bg:     `${UOM_COLOR[u.type] ?? '#e2dfd8'}15`,
+      border: `${UOM_COLOR[u.type] ?? '#e2dfd8'}35`,
+    })), [systemUoms.list]);
+
+  const filterDefs = useMemo<ERPFilter<ConsumptionGroup>[]>(() => [
+    {
+      key: 'uomType', label: 'UOM Type', type: 'multiselect',
+      options: uomTypeOptions,
+      filterFn: (row, val) => {
+        const arr = val as string[];
+        return arr.includes((row as any).consumptionUom?.type ?? '');
+      },
+    },
+    {
+      key: 'isActive', label: 'Active only', type: 'boolean',
+      placeholder: 'Active only',
+      filterFn: (row, val) => val === true ? row.isActive : true,
+    },
+  ], [uomTypeOptions]);
+
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+
+  const filtered = useMemo(() => {
+    const base = applyERPFilters(groups, filterDefs, filterVals);
+    return activeType ? base.filter(g => (g as any).consumptionUom?.type === activeType) : base;
+  }, [groups, filterDefs, filterVals, activeType]);
+
+  // ── Stats cards ────────────────────────────────────────────────────────────
+
+  const statsByType = useMemo(() => {
+    const map: Record<string, number> = {};
+    groups.forEach(g => {
+      const t = (g as any).consumptionUom?.type ?? 'unconfigured';
+      map[t] = (map[t] ?? 0) + 1;
+    });
+    return map;
+  }, [groups]);
+
+  // ── Columns ────────────────────────────────────────────────────────────────
+
+  const columns = useMemo<ERPColumn<ConsumptionGroup>[]>(() => [
+    {
+      key: 'code', header: 'Code', width: 120, sortable: true,
+      value: r => r.code,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#fb923c', fontWeight: 500 }}>{r.code}</span>,
+    },
+    {
+      key: 'name', header: 'Name', sortable: true,
+      value: r => r.name,
+      render: r => <span style={{ color: '#e2dfd8', fontWeight: 500 }}>{r.name}</span>,
+    },
+    {
+      key: 'description', header: 'Description', sortable: false,
+      value: r => r.description ?? '',
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r.description || '—'}</span>,
+    },
+    {
+      key: 'consumptionUom', header: 'System UOM', width: 200, sortable: true,
+      value: r => (r as any).consumptionUom?.code ?? '',
+      render: r => <UomBadge uom={(r as any).consumptionUom} />,
+    },
+    {
+      key: 'items', header: 'Items', width: 70, align: 'center', sortable: true,
+      value: r => (r as any)._count?.items ?? 0,
+      render: r => {
+        const n = (r as any)._count?.items ?? 0;
+        return <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: n > 0 ? 'rgba(251,146,60,0.7)' : 'rgba(255,255,255,0.25)' }}>{n}</span>;
+      },
+    },
+    {
+      key: 'isActive', header: 'Status', width: 90, sortable: true,
+      value: r => r.isActive ? 'Active' : 'Inactive',
+      render: r => (
+        <span style={{ fontSize: 11, color: r.isActive ? '#4ade80' : 'rgba(255,255,255,0.3)', background: r.isActive ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 9px', borderRadius: 20 }}>
+          {r.isActive ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: '_actions', header: '', width: 80, sortable: false,
+      render: r => (
+        <button onClick={e => { e.stopPropagation(); setEditing(r); setModal(true); }}
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          Edit
+        </button>
+      ),
+    },
+  ], []);
+
   return (
     <ERPShell breadcrumbs={['Home', 'Inventory', 'Consumption Groups']} title="Consumption Groups">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .cgp-page{padding:0 18px 24px}.cgp-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}.cgp-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:#e2dfd8;outline:none;width:260px}.cgp-search:focus{border-color:rgba(251,146,60,0.4)}.cgp-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s}.cgp-btn-new:hover{opacity:0.88}.cgp-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden}.cgp-table{width:100%;border-collapse:collapse}.cgp-table thead th{padding:9px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left}.cgp-table tbody td{padding:10px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle}.cgp-table tbody tr:last-child td{border-bottom:none}.cgp-table tbody tr:hover td{background:rgba(251,146,60,0.03)}.cgp-code{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#fb923c}.cgp-muted{color:rgba(255,255,255,0.4);font-size:12px}.cgp-actions{display:flex;gap:6px}.cgp-btn-edit{padding:4px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:0.5px solid rgba(255,255,255,0.1)}.cgp-btn-edit:hover{background:rgba(255,255,255,0.09)}.cgp-empty,.cgp-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px}.cgp-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 14px;border-top:0.5px solid rgba(255,255,255,0.04)}.cgp-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:#fca5a5}.cgp-uom-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
-      `}</style>
+      <style>{`.cgp-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;gap:0;overflow:hidden}`}</style>
+
       <div className="cgp-page">
-        {error && <div className="cgp-error">{error}</div>}
-        <div className="cgp-toolbar">
-          <input className="cgp-search" placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
-          <button className="cgp-btn-new" onClick={() => { setEditing(null); setModal(true); }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
-            New Group
+
+        {/* ── Stats cards ── */}
+        {groups.length > 0 && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+            {/* Total */}
+            <div onClick={() => setActiveType(null)}
+              style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80, cursor: 'pointer' }}>
+              <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
+              <span style={{ fontSize: 22, fontWeight: 500, color: '#fb923c', fontFamily: "'IBM Plex Mono',monospace" }}>{groups.length}</span>
+            </div>
+            {/* By UOM type */}
+            {systemUoms.list.map(u => {
+              const count   = statsByType[u.type] ?? 0;
+              const color   = UOM_COLOR[u.type] ?? '#e2dfd8';
+              const isActive = activeType === u.type;
+              return (
+                <div key={u.type} onClick={() => setActiveType(prev => prev === u.type ? null : u.type)}
+                  style={{ background: isActive ? `${color}12` : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? color : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 90, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  <span style={{ fontSize: 10, color: isActive ? color : `${color}80`, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{u.code}</span>
+                  <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? color : '#f1ede8', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+                </div>
+              );
+            })}
+            {/* Unconfigured */}
+            {(statsByType['unconfigured'] ?? 0) > 0 && (
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 90 }}>
+                <span style={{ fontSize: 10, color: 'rgba(248,113,113,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>No UOM</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: '#f87171', fontFamily: "'IBM Plex Mono',monospace" }}>{statsByType['unconfigured']}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── System UOMs warning if not configured ── */}
+        {systemUoms.list.length === 0 && !loading && (
+          <div style={{ background: 'rgba(251,191,36,0.07)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 8, padding: '10px 16px', marginBottom: 10, fontSize: 12, color: 'rgba(251,191,36,0.8)', flexShrink: 0, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span>⚠</span>
+            <span>No system UOMs configured. Go to <strong>Settings → General</strong> to configure them before creating consumption groups.</span>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#fca5a5', flexShrink: 0 }}>{error}</div>
+        )}
+
+        {/* ── Toolbar ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <ERPFilterBar
+              filters={filterDefs}
+              values={filterVals}
+              onChange={setFilterVal}
+              onReset={() => { resetFilters(); setActiveType(null); }}
+              activeCount={filterCount + (activeType ? 1 : 0)}
+            />
+          </div>
+          <button onClick={() => { setEditing(null); setModal(true); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
+            + New Group
           </button>
         </div>
-        <div className="cgp-wrap">
-          {loading ? <div className="cgp-loading">Loading…</div>
-          : filtered.length === 0 ? <div className="cgp-empty">{search ? 'No results.' : 'No consumption groups yet.'}</div>
-          : (
-            <>
-              <table className="cgp-table">
-                <thead><tr><th>Code</th><th>Name</th><th>Consumption UOM</th><th>Items</th><th>Status</th><th></th></tr></thead>
-                <tbody>
-                  {filtered.map(cg => {
-                    const uom = cg.consumptionUom;
-                    const color = TYPE_COLORS[uom?.type ?? ''] ?? '#e2dfd8';
-                    return (
-                      <tr key={cg.id}>
-                        <td><span className="cgp-code">{cg.code}</span></td>
-                        <td style={{ color: '#e2dfd8', fontWeight: 500 }}>{cg.name}</td>
-                        <td>
-                          {uom ? (
-                            <span className="cgp-uom-badge" style={{ color, background: `${color}15`, border: `0.5px solid ${color}35` }}>
-                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                              {uom.code} — {uom.name}
-                            </span>
-                          ) : <span className="cgp-muted">—</span>}
-                        </td>
-                        <td><span style={{ fontSize: 12, color: 'rgba(251,146,60,0.7)' }}>{cg._count?.items ?? 0}</span></td>
-                        <td><span style={{ fontSize: 12, color: cg.isActive ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{cg.isActive ? 'Active' : 'Inactive'}</span></td>
-                        <td>
-                          <div className="cgp-actions">
-                            <button className="cgp-btn-edit" onClick={() => { setEditing(cg); setModal(true); }}>Edit</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div className="cgp-footer">{filtered.length} of {items.length} consumption groups</div>
-            </>
-          )}
+
+        {/* ── Table ── */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTable<ConsumptionGroup>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="consumption-groups"
+            emptyMessage={filterCount || activeType ? 'No groups match your filters.' : 'No consumption groups yet.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+          />
         </div>
       </div>
-      <CgModal open={modal} onClose={() => setModal(false)} onSaved={fetch_} initial={editing} uomUnits={uomUnits} />
+
+      <CgModal
+        open={modal}
+        onClose={() => setModal(false)}
+        onSaved={fetch_}
+        initial={editing}
+        systemUoms={systemUoms}
+      />
     </ERPShell>
   );
 }

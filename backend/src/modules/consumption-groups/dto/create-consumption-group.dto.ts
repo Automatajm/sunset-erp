@@ -1,27 +1,24 @@
 // --- consumption-groups/dto/create-consumption-group.dto.ts ---
-import { IsString, IsOptional, IsBoolean, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsBoolean, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
- 
+
 export class CreateConsumptionGroupDto {
-  @ApiProperty({ example: 'ADH-INDUSTRIAL', description: 'Unique consumption group code' })
-  @IsString()
-  @MaxLength(50)
-  code: string;
- 
-  @ApiProperty({ example: 'Industrial Adhesives', description: 'Group name' })
+  // NOTE: code is auto-generated (CG-YYYY-NNNN) — not accepted from client
+
+  @ApiProperty({ example: 'Industrial Adhesives' })
   @IsString()
   @MaxLength(255)
   name: string;
- 
-  @ApiPropertyOptional({ example: 'All adhesive materials expressed in LTR for production planning' })
+
+  @ApiPropertyOptional({ description: 'Optional description' })
   @IsOptional()
   @IsString()
   description?: string;
- 
-  @ApiProperty({ description: 'UOM ID that production uses — all items in group share this unit' })
+
+  @ApiProperty({ description: 'System UOM UUID — must be one of the tenant system UOMs' })
   @IsUUID()
   consumptionUomId: string;
- 
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
