@@ -91,7 +91,7 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.stepNumber || !form.workCenterId) { setError('Step number and work center required'); return; }
-    setBusy(true); setError('');
+    setBusy(true); setError(''); console.log('PAYLOAD', JSON.stringify({ parentItemId: form.parentItemId, components: validComps }, null, 2));
     try {
       await bomApi.addRoutingStep(bomId, {
         stepNumber: Number(form.stepNumber), workCenterId: form.workCenterId,
@@ -368,9 +368,11 @@ function BOMModal({ items, consumptionGroups, systemUoms, onClose, onSaved }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.parentItemId) { setError('Parent item required.'); return; }
-    const validComps = components.filter(c => c.consumptionGroupId && c.quantityPer);
+    const validComps = components.filter(c => c.consumptionGroupId && c.consumptionGroupId.length === 36 && Number(c.quantityPer) > 0);
     if (validComps.length === 0) { setError('At least one component required.'); return; }
-    setBusy(true); setError('');
+    const missingUom = validComps.find(c => !c.uom);
+    if (missingUom) { setError('Select a formulador UOM for all components.'); return; }
+    setBusy(true); setError(''); console.log('PAYLOAD', JSON.stringify({ parentItemId: form.parentItemId, components: validComps }, null, 2));
     try {
       await bomApi.create({
         parentItemId: form.parentItemId,

@@ -5,6 +5,7 @@ import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { bomApi } from '@/lib/api/bom';
 import { itemsApi } from '@/lib/api/items';
+import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
 import { tenantSettingsApi } from '@/lib/api/tenant-settings';
 import { Item } from '@/lib/api/types';
 
@@ -13,8 +14,8 @@ import { Item } from '@/lib/api/types';
 interface UomUnit { id: string; code: string; name: string; type: string; system: string }
 
 interface BomComponent {
-  id: string; lineNumber: number; componentItemId: string;
-  componentItem?: { id: string; code: string; name: string; baseUom: string; consumptionUomId?: string };
+  id: string; lineNumber: number; consumptionGroupId: string;
+  consumptionGroup?: { id: string; code: string; name: string; description?: string; consumptionUom?: { code: string; name: string; type: string } };
   quantityPer: number; uom: string; scrapPercent?: number; isPhantom?: boolean;
   consumptionUomId?: string;
   consumptionUom?: { id: string; code: string; name: string; type: string };
@@ -207,7 +208,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
         bom.components && bom.components.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['#', 'Component', 'Qty Per', 'UOM (formulador)', 'Cons. UOM (MRP)', 'Scrap %', 'Phantom'].map(h => (
+              <tr>{['#', 'Consumption Group', 'Qty Per', 'UOM (formulador)', 'Cons. UOM (MRP)', 'Scrap %', 'Phantom'].map(h => (
                 <th key={h} style={{ padding: '6px 12px 6px 0', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
               ))}</tr>
             </thead>
@@ -216,17 +217,17 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                 <tr key={comp.id}>
                   <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{comp.lineNumber}</td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
-                    <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{comp.componentItem?.code}</span>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{comp.componentItem?.name}</span>
+                    <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{comp.consumptionGroup?.code}</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{comp.consumptionGroup?.name}</span>
                   </td>
                   <td style={{ padding: '7px 12px 7px 0', ...MONO, color: '#e2dfd8' }}>{comp.quantityPer}</td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono',monospace" }}>{comp.uom}</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>formulador libre</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>libre</span>
                   </td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
-                    <UomSystemBadge uom={comp.consumptionUom} />
-                    {!comp.consumptionUom && (
+                    <UomSystemBadge uom={comp.consumptionUom ?? comp.consumptionGroup?.consumptionUom} />
+                    {!comp.consumptionUom && !comp.consumptionGroup?.consumptionUom && (
                       <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>⚠ no configurado</span>
                     )}
                   </td>
@@ -327,22 +328,24 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
 // ─── Create BOM Modal ─────────────────────────────────────────────────────────
 
 interface CompRow {
-  componentItemId: string;
+  consumptionGroupId: string;
   quantityPer: string;
   uom: string;              // formulador libre
-  consumptionUomId: string; // system UOM — auto-filled from item, editable
+  consumptionUomId: string; // system UOM — auto-filled from group
   scrapPercent: string;
 }
 
-function BOMModal({ items, systemUoms, onClose, onSaved }: {
+function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSaved }: {
   items: Item[];
+  consumptionGroups: any[];
   systemUoms: UomUnit[];
+  allUoms: UomUnit[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({ parentItemId: '', bomNumber: '', version: '1' });
   const [components, setComponents] = useState<CompRow[]>([
-    { componentItemId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' },
+    { consumptionGroupId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' },
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -351,12 +354,12 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
     setComponents(cs => cs.map((c, i) => {
       if (i !== idx) return c;
       const updated = { ...c, [k]: v };
-      // When selecting component item: auto-fill uom from baseUom and consumptionUomId from item
-      if (k === 'componentItemId') {
-        const it = items.find(x => x.id === v) as any;
-        if (it) {
-          updated.uom = it.baseUom ?? '';
-          updated.consumptionUomId = it.consumptionUomId ?? '';
+      // When selecting consumption group: auto-fill consumptionUomId from group
+      if (k === 'consumptionGroupId') {
+        const cg = consumptionGroups.find(x => x.id === v) as any;
+        if (cg) {
+          updated.consumptionUomId = cg.consumptionUomId ?? '';
+          updated.uom = ''; // reset formulador UOM — must match new group's dimension
         }
       }
       return updated;
@@ -365,7 +368,7 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.parentItemId) { setError('Parent item required.'); return; }
-    const validComps = components.filter(c => c.componentItemId && c.quantityPer);
+    const validComps = components.filter(c => c.consumptionGroupId && c.quantityPer);
     if (validComps.length === 0) { setError('At least one component required.'); return; }
     setBusy(true); setError('');
     try {
@@ -374,14 +377,18 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
         bomNumber: form.bomNumber || undefined,
         version: Number(form.version) || 1,
         isActive: true,
-        components: validComps.map((c, i) => ({
-          componentItemId:  c.componentItemId,
-          quantity:         Number(c.quantityPer),
-          uom:              c.uom,
-          consumptionUomId: c.consumptionUomId || undefined,
-          scrapPercent:     Number(c.scrapPercent) || undefined,
-          lineNumber:       i + 1,
-        })),
+        components: validComps.map((c, i) => {
+          // uom is stored as UomUnit id — resolve to code for backend
+          const uomUnit = allUoms.find(u => u.id === c.uom);
+          return {
+            consumptionGroupId: c.consumptionGroupId,
+            quantity:           Number(c.quantityPer),
+            uom:                uomUnit?.code ?? c.uom,
+            consumptionUomId:   c.consumptionUomId || undefined,
+            scrapPercent:       Number(c.scrapPercent) || undefined,
+            lineNumber:         i + 1,
+          };
+        }),
       });
       onSaved(); onClose();
     } catch (err) { setError((err as any).response?.data?.message || 'Failed.'); }
@@ -389,7 +396,16 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
   };
 
   const itemOpts = items.filter(i => i.isManufacturable).map(i => ({ value: i.id, label: `${i.code} — ${i.name}` }));
-  const allItemOpts = items.map(i => ({ value: i.id, label: `${i.code} — ${i.name}` }));
+  const cgOpts   = consumptionGroups.map((cg: any) => ({
+    value:    cg.id,
+    label:    `${cg.code} — ${cg.name}`,
+    sublabel: cg.consumptionUom ? `${cg.consumptionUom.code} · ${cg.consumptionUom.type}` : undefined,
+  }));
+  const allUomOpts = allUoms.map(u => ({
+    value:    u.id,
+    label:    `${u.code} — ${u.name}`,
+    sublabel: `${u.type} · ${u.system}`,
+  }));
   const sysUomOpts = systemUoms.map(u => ({ value: u.id, label: `${u.code} — ${u.name}`, sublabel: `${u.type} · system` }));
 
   return (
@@ -436,59 +452,81 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
             </div>
 
             {/* Components table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 1fr 70px 24px', gap: 6 }}>
-              {['Component Item *', 'Qty Per *', 'UOM (libre)', 'Cons. UOM (MRP) *', 'Scrap %', ''].map(h => (
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 70px 24px', gap: 6 }}>
+              {['Consumption Group', 'Qty Per *', 'UOM Formulador', 'Cons. UOM (MRP)', 'Scrap %', ''].map(h => (
                 <span key={h} style={{ fontSize: 10, color: 'rgba(251,146,60,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 0' }}>{h}</span>
               ))}
             </div>
 
             {/* Component rows */}
             {components.map((c, idx) => {
-              const selItem = items.find(i => i.id === c.componentItemId) as any;
-              const itemConsUomId = selItem?.consumptionUomId ?? '';
+              const selCg = consumptionGroups.find(g => g.id === c.consumptionGroupId) as any;
+              const cgConsUom = selCg?.consumptionUom ?? null;
+              const cgType = cgConsUom?.type ?? null;
+
+              // UOM formulador restringido a la misma dimensión del grupo
+              const filteredUomOpts = cgType
+                ? allUomOpts.filter(u => allUoms.find(x => x.id === u.value)?.type === cgType)
+                : allUomOpts;
               return (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 1fr 70px 24px', gap: 6, alignItems: 'start' }}>
-                  {/* Component item */}
-                  <SearchSelect
-                    options={allItemOpts}
-                    value={c.componentItemId}
-                    onChange={v => setComp(idx, 'componentItemId', v)}
-                    placeholder="Search item…"
-                    clearLabel="— Item —"
-                    minWidth={200}
-                  />
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 70px 24px', gap: 6, alignItems: 'start' }}>
+
+                  {/* Consumption Group — editable SearchSelect */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <SearchSelect
+                      options={cgOpts}
+                      value={c.consumptionGroupId}
+                      onChange={v => setComp(idx, 'consumptionGroupId', v)}
+                      placeholder="Search group…"
+                      clearLabel="— Select group —"
+                      minWidth={200}
+                    />
+                  </div>
+
                   {/* Qty Per */}
                   <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px', textAlign: 'right' }}
                     type="number" min="0" step="0.001" placeholder="1"
                     value={c.quantityPer} onChange={e => setComp(idx, 'quantityPer', e.target.value)} />
-                  {/* UOM libre */}
-                  <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px' }}
-                    placeholder="PCS" value={c.uom} onChange={e => setComp(idx, 'uom', e.target.value)} />
-                  {/* Consumption UOM — system UOM */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {systemUoms.length === 0 ? (
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', padding: '7px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.06)' }}>
-                        No system UOMs
-                      </div>
-                    ) : (
-                      <SearchSelect
-                        options={sysUomOpts}
-                        value={c.consumptionUomId}
-                        onChange={v => setComp(idx, 'consumptionUomId', v)}
-                        placeholder="System UOM…"
-                        clearLabel="— None —"
-                        minWidth={160}
-                      />
+
+                  {/* UOM formulador — SearchSelect filtrado por dimensión del grupo */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <SearchSelect
+                      options={filteredUomOpts}
+                      value={c.uom}
+                      onChange={v => setComp(idx, 'uom', v)}
+                      placeholder={cgType ? `UOM (${cgType})…` : 'Selecciona grupo primero…'}
+                      clearLabel="— UOM —"
+                      minWidth={140}
+                    />
+                    {!cgType && (
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>Selecciona un grupo para ver UOMs disponibles</span>
                     )}
-                    {/* Auto-filled indicator */}
-                    {itemConsUomId && itemConsUomId === c.consumptionUomId && (
-                      <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)' }}>✓ from item</span>
+                    {cgType && filteredUomOpts.length === 0 && (
+                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.5)' }}>⚠ No hay UOMs de tipo {cgType}</span>
                     )}
                   </div>
+
+                  {/* Cons. UOM — BLOQUEADO, auto-fill del grupo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, minHeight: 34 }}>
+                    {cgConsUom ? (
+                      <>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: UOM_COLOR[cgConsUom.type] ?? '#e2dfd8', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: UOM_COLOR[cgConsUom.type] ?? '#e2dfd8', fontWeight: 500 }}>{cgConsUom.code}</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{cgConsUom.name}</span>
+                        <span style={{ fontSize: 9, color: 'rgba(74,222,128,0.5)', marginLeft: 'auto' }}>✓ grupo</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+                        {c.consumptionGroupId ? '⚠ grupo sin UOM' : '— selecciona grupo —'}
+                      </span>
+                    )}
+                  </div>
+
                   {/* Scrap % */}
                   <input style={{ ...INPUT, fontSize: 12, padding: '7px 8px', textAlign: 'right' }}
                     type="number" min="0" max="100" placeholder="0"
                     value={c.scrapPercent} onChange={e => setComp(idx, 'scrapPercent', e.target.value)} />
+
                   {/* Remove */}
                   {components.length > 1 && (
                     <button type="button"
@@ -503,8 +541,9 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
 
             {/* Legend */}
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', lineHeight: 1.7, background: 'rgba(255,255,255,0.02)', borderRadius: 7, padding: '8px 12px', border: '0.5px solid rgba(255,255,255,0.05)' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>Consumption Group</strong> — representa la necesidad genérica de producción (ej: "Adhesivo Industrial KG"). Agrupa todos los items de compra que satisfacen esa necesidad.<br />
               <strong style={{ color: 'rgba(255,255,255,0.4)' }}>UOM libre</strong> — el formulador expresa la cantidad en cualquier unidad (GAL, KG, PCS, etc.).<br />
-              <strong style={{ color: '#4ade80' }}>Cons. UOM</strong> — unidad de sistema (restringida). MRP convierte todo a esta unidad para agregar la demanda. Se auto-llena desde el item si está configurado.
+              <strong style={{ color: '#4ade80' }}>Cons. UOM</strong> — unidad de sistema. MRP convierte la UOM libre → Cons. UOM para agregar la demanda total del grupo.
             </div>
           </div>
 
@@ -523,10 +562,12 @@ function BOMModal({ items, systemUoms, onClose, onSaved }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BOMPage() {
-  const [list,        setList]        = useState<Bom[]>([]);
-  const [items,       setItems]       = useState<Item[]>([]);
-  const [systemUoms,  setSystemUoms]  = useState<UomUnit[]>([]);
-  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
+  const [list,        setList]             = useState<Bom[]>([]);
+  const [items,       setItems]            = useState<Item[]>([]);
+  const [consumptionGroups, setConsumptionGroups] = useState<any[]>([]);
+  const [systemUoms,  setSystemUoms]       = useState<UomUnit[]>([]);
+  const [allUoms,     setAllUoms]          = useState<UomUnit[]>([]);
+  const [workCenters, setWorkCenters]      = useState<WorkCenter[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
   const [detail,      setDetail]      = useState<Record<string, Bom>>({});
@@ -541,8 +582,10 @@ export default function BOMPage() {
   useEffect(() => {
     fetchBoms();
     itemsApi.getAll().then(setItems).catch(() => {});
+    consumptionGroupsApi.getAll().then(setConsumptionGroups).catch(() => {});
     tenantSettingsApi.getSystemUoms().then(s => setSystemUoms(s.list ?? [])).catch(() => {});
     import('@/lib/api/client').then(({ default: apiClient }) => {
+      apiClient.get('/uom/units').then(r => setAllUoms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
       apiClient.get('/work-centers').then(r => setWorkCenters(Array.isArray(r.data) ? r.data : [])).catch(() => {});
     });
   }, [fetchBoms]);
@@ -660,7 +703,9 @@ export default function BOMPage() {
       {modalOpen && (
         <BOMModal
           items={items}
+          consumptionGroups={consumptionGroups}
           systemUoms={systemUoms}
+          allUoms={allUoms}
           onClose={() => setModalOpen(false)}
           onSaved={fetchBoms}
         />

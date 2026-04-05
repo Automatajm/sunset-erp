@@ -20,9 +20,17 @@ export const bomApi = {
     return res.data;
   },
   create: async (data: {
-    parentItemId: string; bomNumber?: string; version?: number; isActive?: boolean;
-    effectiveFrom?: string; effectiveTo?: string;
-    components: { componentItemId: string; quantity: number; uom: string; scrapPercent?: number; isPhantom?: boolean }[];
+    parentItemId:   string;
+    bomNumber?:     string;
+    version?:       number;
+    isActive?:      boolean;
+    components: {
+      consumptionGroupId: string;
+      quantity:           number;
+      uom:                string;
+      consumptionUomId?:  string;
+      scrapPercent?:      number;
+    }[];
   }) => {
     const payload = {
       itemId:   data.parentItemId,
@@ -30,10 +38,11 @@ export const bomApi = {
       version:  data.version?.toString(),
       isActive: data.isActive,
       components: data.components.map(c => ({
-        componentItemId: c.componentItemId,
-        quantity:        c.quantity,
-        uom:             c.uom,
-        scrapPercent:    c.scrapPercent,
+        consumptionGroupId: c.consumptionGroupId,
+        quantity:           c.quantity,
+        uom:                c.uom,
+        consumptionUomId:   c.consumptionUomId,
+        scrapPercent:       c.scrapPercent,
       })),
     };
     const res = await apiClient.post('/bom', payload);
@@ -53,15 +62,24 @@ export const bomApi = {
     return res.data;
   },
   addRoutingStep: async (bomId: string, data: {
-    stepNumber: number; workCenterId: string; description?: string;
-    setupTime?: number; runTimePerUnit?: number; notes?: string;
+    stepNumber:      number;
+    workCenterId:    string;
+    description?:   string;
+    setupTime?:     number;
+    runTimePerUnit?: number;
+    notes?:         string;
   }) => {
     const res = await apiClient.post(`/bom/${bomId}/routing`, data);
     return res.data;
   },
   updateRoutingStep: async (bomId: string, stepId: string, data: {
-    stepNumber?: number; workCenterId?: string; description?: string;
-    setupTime?: number; runTimePerUnit?: number; isActive?: boolean; notes?: string;
+    stepNumber?:     number;
+    workCenterId?:   string;
+    description?:   string;
+    setupTime?:     number;
+    runTimePerUnit?: number;
+    isActive?:      boolean;
+    notes?:         string;
   }) => {
     const res = await apiClient.patch(`/bom/${bomId}/routing/${stepId}`, data);
     return res.data;
