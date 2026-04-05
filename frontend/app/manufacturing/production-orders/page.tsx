@@ -256,18 +256,19 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
       const suggestions = await bomApi.getMaterialSuggestions(mo.bomId, mo.quantityToProduce);
       const list = Array.isArray(suggestions) ? suggestions : [];
       setBomSuggestions(list);
-      setBomSelected(new Set(list.map((s: any) => s.itemId)));
+      setBomSelected(new Set(list.map((s: any) => s.consumptionGroupId ?? s.itemId).filter(Boolean)));
     } catch { setBomSuggestions([]); }
     finally { setLoadingBom(false); }
   };
 
   const handleConfirmBomSuggestions = async () => {
     if (!bomSuggestions) return;
-    const selected = bomSuggestions.filter(s => bomSelected.has(s.itemId));
+    const selected = bomSuggestions.filter((s: any) => bomSelected.has(s.consumptionGroupId ?? s.itemId));
     if (selected.length === 0) return;
     setLoadingBom(true);
     try {
       for (const s of selected) {
+        if (!s.itemId) continue;
         await (productionOrdersApi as any).addMaterialActual(mo.id, {
           itemId: s.itemId, qtyPlanned: s.qtyPlanned, qtyActual: s.qtyPlanned, unitCost: 0, notes: s.note,
         });
@@ -488,7 +489,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                   BOM Suggestions — select materials to add
                 </span>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button onClick={() => setBomSelected(new Set(bomSuggestions.map(s => s.itemId)))}
+                  <button onClick={() => setBomSelected(new Set(bomSuggestions.map((s: any) => s.consumptionGroupId ?? s.itemId)))}
                     style={{ fontSize: 11, color: 'rgba(251,146,60,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                     Select all
                   </button>
@@ -509,15 +510,15 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                 </thead>
                 <tbody>
                   {bomSuggestions.map((s: any) => {
-                    const checked = bomSelected.has(s.itemId);
+                    const checked = bomSelected.has(s.consumptionGroupId ?? s.itemId);
                     return (
-                      <tr key={s.itemId} style={{ opacity: checked ? 1 : 0.4, cursor: 'pointer' }}
-                        onClick={() => setBomSelected(prev => { const n = new Set(prev); checked ? n.delete(s.itemId) : n.add(s.itemId); return n; })}>
+                      <tr key={s.consumptionGroupId ?? s.itemId ?? s.consumptionGroupCode} style={{ opacity: checked ? 1 : 0.4, cursor: 'pointer' }}
+                        onClick={() => setBomSelected(prev => { const k = s.consumptionGroupId ?? s.itemId; const n = new Set(prev); checked ? n.delete(k) : n.add(k); return n; })}>
                         <td style={{ padding: '5px 8px', textAlign: 'center' }}>
                           <input type="checkbox" style={{ ...CB_STYLE, accentColor: '#fb923c' }} checked={checked} onChange={() => {}} />
                         </td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: '#fb923c', fontSize: 11 }}>{s.itemCode}</td>
-                        <td style={{ padding: '5px 8px', fontSize: 12, color: '#e2dfd8' }}>{s.itemName}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: '#fb923c', fontSize: 11 }}>{s.consumptionGroupCode ?? s.itemCode ?? '—'}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: '#e2dfd8' }}>{s.consumptionGroupName ?? s.itemName ?? '—'}</td>
                         <td style={{ padding: '5px 8px', ...MONO, color: '#fb923c', textAlign: 'right', fontWeight: 500 }}>{fmtNum(s.qtyPlanned)}</td>
                         <td style={{ padding: '5px 8px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.uom}</td>
                         <td style={{ padding: '5px 8px', fontSize: 11, color: '#fbbf24' }}>{s.note || '—'}</td>
