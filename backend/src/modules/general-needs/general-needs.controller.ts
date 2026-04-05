@@ -7,9 +7,11 @@ import {
   ApiResponse, ApiParam, ApiQuery,
 } from '@nestjs/swagger';
 import { GeneralNeedsService } from './general-needs.service';
+import { MrpService } from './mrp.service';
 import { CreateGeneralNeedDto } from './dto/create-general-need.dto';
 import { UpdateGeneralNeedDto } from './dto/update-general-need.dto';
 import { UpdateGeneralNeedLineDto } from './dto/update-general-need-line.dto';
+import { RunMrpDto } from './dto/run-mrp.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -19,7 +21,10 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class GeneralNeedsController {
-  constructor(private readonly generalNeedsService: GeneralNeedsService) {}
+  constructor(
+    private readonly generalNeedsService: GeneralNeedsService,
+    private readonly mrpService: MrpService,
+  ) {}
 
   @Post()
   @RequirePermissions('PROCUREMENT:CREATE')
@@ -106,9 +111,8 @@ export class GeneralNeedsController {
 
   @Post(':id/explode-mos')
   @RequirePermissions('PROCUREMENT:CREATE')
-  @ApiOperation({ summary: 'Explode BOM from selected MOs into GN lines' })
+  @ApiOperation({ summary: 'Explode BOM from selected MOs into GN lines (legacy)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
-  @ApiResponse({ status: 201, description: 'GN lines created from MO BOMs' })
   async explodeFromMos(
     @Request() req,
     @Param('id') id: string,
@@ -119,6 +123,43 @@ export class GeneralNeedsController {
       req.user.id,
       id,
       body.moIds,
+    );
+  }
+
+  // ── MRP Engine ─────────────────────────────────────────────────────────────
+
+  @Post(':id/run-mrp')
+  @RequirePermissions('PROCUREMENT:CREATE')
+  @ApiOperation({
+    summary: 'Run MRP explosion — explode Production Orders into General Need lines',
+    description: `
+Explodes selected Production Orders via their BOMs into aggregated GeneralNeedLines.
+
+Flow:
+  1. For each MO → load BOM components (consumptionGroupId, quantityPer, uom)
+  2. Convert formulador UOM → system consumptionUom via UomConversion catalog
+  3. Multiply by MO.quantityToProduce
+  4. Aggregate by ConsumptionGroup (sum quantities in consumptionUom)
+  5. Create one GeneralNeedLine per group with preferred supplier suggestion
+
+Requirements:
+  - BOM components must have ConsumptionGroups configured
+  - ConsumptionGroups must have a system UOM (consumptionUomId)
+  - UomConversion must exist for formulador → consumptionUom (same dimension)
+    `,
+  })
+  @ApiParam({ name: 'id', description: 'GeneralNeed UUID' })
+  @ApiResponse({ status: 201, description: 'MRP explosion complete — GN lines created' })
+  async runMrp(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: RunMrpDto,
+  ) {
+    return this.mrpService.runMrp(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      dto.moIds,
     );
   }
 
