@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -258,7 +258,7 @@ export class BudgetsService {
                   include: {
                     components: {
                       where: { deletedAt: null },
-                      include: { componentItem: true },
+                      include: { consumptionGroup: { select: { id: true, code: true, name: true } } },
                     },
                     routings: {
                       where: { isActive: true, deletedAt: null },
@@ -328,11 +328,11 @@ export class BudgetsService {
           // Materials
           for (const comp of bom.components) {
             const totalQty    = Number(comp.quantityPer) * qty * (1 + Number(comp.scrapPercent) / 100);
-            const unitCost    = comp.componentItem.standardCost ? Number(comp.componentItem.standardCost) : 0;
+            const unitCost    = 0;
             const matAmount   = totalQty * unitCost;
             if (matAmount <= 0) continue;
-            addAmount(defaultMaterialAcct.id, costPeriod, matAmount, `Material: ${comp.componentItem.code}`);
-            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'material', component: comp.componentItem.code, period: costPeriod, qty: totalQty, unitCost, amount: matAmount });
+            addAmount(defaultMaterialAcct.id, costPeriod, matAmount, `Material: ${(comp as any).consumptionGroup?.code ?? 'unknown'}`);
+            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'material', component: (comp as any).consumptionGroup?.code ?? 'unknown', period: costPeriod, qty: totalQty, unitCost, amount: matAmount });
           }
 
           // Labor

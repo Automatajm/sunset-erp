@@ -1,23 +1,23 @@
-﻿import { IsUUID, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+import { IsUUID, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBomComponentDto {
-  @ApiProperty({ description: 'Component item UUID' })
+  @ApiProperty({ description: 'Consumption Group UUID — represents the generic material need (replaces specific item)' })
   @IsUUID()
-  componentItemId: string;
+  consumptionGroupId: string;
 
-  @ApiProperty({ example: 2, description: 'Quantity required per parent unit (in formulador UOM)' })
+  @ApiProperty({ example: 2.5, description: 'Quantity per parent unit — expressed in formulador UOM (free)' })
   @IsNumber()
   @Min(0.001)
   quantity: number;
 
-  @ApiProperty({ example: 'GAL', description: 'Formulador UOM — free, any unit the formulator uses' })
+  @ApiProperty({ example: 'GAL', description: 'Formulador UOM — free, any unit the formulator uses (GAL, KG, PCS, etc.)' })
   @IsString()
   @MaxLength(20)
   uom: string;
 
   @ApiPropertyOptional({
-    description: 'System UOM UUID for MRP aggregation — must be a configured tenant system UOM (= item.consumptionUomId)',
+    description: 'System UOM UUID — auto-filled from consumptionGroup.consumptionUomId. MRP converts formulador UOM → this unit.',
   })
   @IsOptional()
   @IsUUID()

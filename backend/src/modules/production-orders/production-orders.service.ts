@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from './dto/update-production-order.dto';
@@ -25,7 +25,7 @@ export class ProductionOrdersService {
   async create(tenantId: string, userId: string, dto: CreateProductionOrderDto) {
     const bom = await this.prisma.bom.findFirst({
       where: { id: dto.bomId, tenantId, deletedAt: null },
-      include: { parentItem: true, components: { include: { componentItem: true } } },
+      include: { parentItem: true, components: { include: { consumptionGroup: true, consumptionUom: true } } },
     });
     if (!bom) throw new NotFoundException('BOM not found');
 
@@ -77,7 +77,7 @@ export class ProductionOrdersService {
     if (order.bomId) {
       bom = await this.prisma.bom.findFirst({
         where: { id: order.bomId },
-        include: { parentItem: true, components: { include: { componentItem: true } } },
+        include: { parentItem: true, components: { include: { consumptionGroup: true, consumptionUom: true } } },
       });
     }
     return this.formatMo(order, bom);

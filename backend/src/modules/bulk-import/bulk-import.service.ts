@@ -985,7 +985,7 @@ export class BulkImportService {
               await this.prisma.bomComponent.create({
                 data: {
                   tenantId, bomId: existing.id,
-                  componentItemId: compItem.id,
+                  consumptionGroupId: compItem.id,
                   lineNumber:      idx + 1,
                   quantityPer:     new Decimal(Number(r.quantityPer) || 1),
                   uom:             this.str(r, 'uom') ?? compItem.baseUom,
@@ -1013,7 +1013,7 @@ export class BulkImportService {
         }
         components.push({
           tenantId,
-          componentItemId: compItem.id,
+          consumptionGroupId: compItem.id,
           lineNumber:      idx + 1,
           quantityPer:     new Decimal(Number(r.quantityPer) || 1),
           uom:             this.str(r, 'uom') ?? compItem.baseUom,

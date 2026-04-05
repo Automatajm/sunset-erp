@@ -536,7 +536,7 @@ erDiagram
     String tenant_id 
     String bom_id 
     Int line_number 
-    String component_item_id 
+    String consumption_group_id 
     Decimal quantity_per 
     String uom 
     Decimal scrap_percent 
@@ -1724,7 +1724,7 @@ erDiagram
     "mfg_boms" }o--|| in_items : "parentItem"
     "mfg_bom_components" }o--|| saas_tenants : "tenant"
     "mfg_bom_components" }o--|| mfg_boms : "bom"
-    "mfg_bom_components" }o--|| in_items : "componentItem"
+    "mfg_bom_components" }o--|| in_consumption_groups : "consumptionGroup"
     "mfg_bom_components" }o--|o cfg_uom_units : "consumptionUom"
     "mfg_work_centers" }o--|| saas_tenants : "tenant"
     "mfg_production_orders" }o--|| saas_tenants : "tenant"

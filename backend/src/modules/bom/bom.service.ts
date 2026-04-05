@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { UpdateBomDto } from './dto/update-bom.dto';
@@ -8,10 +8,13 @@ import { Decimal } from '@prisma/client/runtime/library';
 // ── Shared includes ───────────────────────────────────────────────────────────
 
 const COMPONENT_INCLUDE = {
-  componentItem: {
+  consumptionGroup: {
     select: {
-      id: true, code: true, name: true, baseUom: true,
+      id: true, code: true, name: true, description: true,
       consumptionUomId: true,
+      consumptionUom: {
+        select: { id: true, code: true, name: true, type: true, system: true },
+      },
     },
   },
   consumptionUom: {
@@ -50,19 +53,19 @@ export class BomService {
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, createBomDto: CreateBomDto) {
+    // Validate parent item
     const parentItem = await this.prisma.item.findFirst({
       where: { id: createBomDto.itemId, tenantId, deletedAt: null },
     });
     if (!parentItem) throw new NotFoundException('Parent item not found');
 
-    for (const component of createBomDto.components) {
-      const componentItem = await this.prisma.item.findFirst({
-        where: { id: component.componentItemId, tenantId, deletedAt: null },
+    // Validate all consumption groups exist
+    for (const comp of createBomDto.components) {
+      const cg = await this.prisma.consumptionGroup.findFirst({
+        where: { id: comp.consumptionGroupId, tenantId, deletedAt: null },
+        include: { consumptionUom: true },
       });
-      if (!componentItem) throw new NotFoundException(`Component item ${component.componentItemId} not found`);
-      if (component.componentItemId === createBomDto.itemId) {
-        throw new BadRequestException('Item cannot be a component of itself');
-      }
+      if (!cg) throw new NotFoundException(`Consumption group ${comp.consumptionGroupId} not found`);
     }
 
     const bomNumber = createBomDto.bomCode || await this.generateBomNumber(tenantId);
@@ -83,17 +86,26 @@ export class BomService {
         createdBy: userId,
         updatedBy: userId,
         components: {
-          create: createBomDto.components.map((comp, index) => ({
-            tenantId,
-            componentItemId:  comp.componentItemId,
-            lineNumber:       index + 1,
-            quantityPer:      new Decimal(comp.quantity),
-            uom:              comp.uom,
-            // consumptionUomId = system UOM for MRP aggregation (restricted on frontend)
-            consumptionUomId: comp.consumptionUomId ?? null,
-            scrapPercent:     new Decimal(comp.scrapPercent || 0),
-            createdBy:        userId,
-            updatedBy:        userId,
+          create: await Promise.all(createBomDto.components.map(async (comp, index) => {
+            // Auto-fill consumptionUomId from the group if not provided
+            let consumptionUomId = comp.consumptionUomId ?? null;
+            if (!consumptionUomId) {
+              const cg = await this.prisma.consumptionGroup.findFirst({
+                where: { id: comp.consumptionGroupId, tenantId },
+              });
+              consumptionUomId = cg?.consumptionUomId ?? null;
+            }
+            return {
+              tenantId,
+              consumptionGroupId: comp.consumptionGroupId,
+              lineNumber:         index + 1,
+              quantityPer:        new Decimal(comp.quantity),
+              uom:                comp.uom,
+              consumptionUomId,
+              scrapPercent:       new Decimal(comp.scrapPercent || 0),
+              createdBy:          userId,
+              updatedBy:          userId,
+            };
           })),
         },
       },
@@ -140,11 +152,11 @@ export class BomService {
     }
 
     const updateData: any = { updatedBy: userId };
-    if (updateBomDto.bomCode)              updateData.bomNumber    = updateBomDto.bomCode;
-    if (updateBomDto.description !== undefined) updateData.description = updateBomDto.description;
-    if (updateBomDto.version)              updateData.version      = parseInt(updateBomDto.version);
-    if (updateBomDto.isActive !== undefined)    updateData.isActive    = updateBomDto.isActive;
-    if (updateBomDto.itemId)               updateData.parentItemId = updateBomDto.itemId;
+    if (updateBomDto.bomCode)                   updateData.bomNumber    = updateBomDto.bomCode;
+    if (updateBomDto.description !== undefined)  updateData.description  = updateBomDto.description;
+    if (updateBomDto.version)                    updateData.version      = parseInt(updateBomDto.version);
+    if (updateBomDto.isActive !== undefined)     updateData.isActive     = updateBomDto.isActive;
+    if (updateBomDto.itemId)                     updateData.parentItemId = updateBomDto.itemId;
 
     const bom = await this.prisma.bom.update({
       where:   { id },
@@ -176,14 +188,13 @@ export class BomService {
       const scrapQty    = (requiredQty * comp.scrapPercent) / 100;
       const totalQty    = requiredQty + scrapQty;
       return {
-        componentItem:    comp.componentItem,
+        consumptionGroup: comp.consumptionGroup,
         quantityPerUnit:  comp.quantityPer,
         requiredQuantity: requiredQty,
         scrapQuantity:    scrapQty,
         totalQuantity:    totalQty,
-        uom:              comp.uom,
-        // MRP target UOM — what the engine will aggregate to
-        consumptionUom:   comp.consumptionUom ?? null,
+        uom:              comp.uom,            // formulador UOM
+        consumptionUom:   comp.consumptionUom, // system UOM — MRP target
       };
     });
 
@@ -193,6 +204,29 @@ export class BomService {
       requirements,
       totalComponents: requirements.length,
     };
+  }
+
+  // ── Material Suggestions (for MO actuals pre-fill) ────────────────────────
+
+  async getMaterialSuggestions(tenantId: string, bomId: string, quantity: number) {
+    const bom = await this.findOne(tenantId, bomId);
+
+    return bom.components.map((comp: any) => {
+      const qtyRequired = comp.quantityPer * quantity;
+      const scrapQty    = (qtyRequired * comp.scrapPercent) / 100;
+      const qtyPlanned  = qtyRequired + scrapQty;
+
+      return {
+        consumptionGroupId:   comp.consumptionGroup.id,
+        consumptionGroupCode: comp.consumptionGroup.code,
+        consumptionGroupName: comp.consumptionGroup.name,
+        qtyPlanned:           Math.ceil(qtyPlanned * 1000) / 1000,
+        uom:                  comp.uom,
+        consumptionUom:       comp.consumptionUom ?? null,
+        scrapPercent:         comp.scrapPercent,
+        note: comp.scrapPercent > 0 ? `Includes ${comp.scrapPercent}% scrap` : undefined,
+      };
+    });
   }
 
   // ── Routing: Add ──────────────────────────────────────────────────────────
@@ -233,13 +267,11 @@ export class BomService {
 
   async getRoutingSteps(tenantId: string, bomId: string) {
     await this.findOne(tenantId, bomId);
-
     const steps = await this.prisma.bomRouting.findMany({
       where:   { bomId, tenantId, deletedAt: null },
       include: ROUTING_INCLUDE,
       orderBy: { stepNumber: 'asc' },
     });
-
     return steps.map(s => this.formatRoutingStep(s));
   }
 
@@ -365,29 +397,6 @@ export class BomService {
       totalLaborHours:     totalSetupHours + totalRunHours,
       estimatedLaborCost:  totalCost,
     };
-  }
-
-  // ── Material Suggestions ──────────────────────────────────────────────────
-
-  async getMaterialSuggestions(tenantId: string, bomId: string, quantity: number) {
-    const bom = await this.findOne(tenantId, bomId);
-
-    return bom.components.map((comp: any) => {
-      const qtyRequired = comp.quantityPer * quantity;
-      const scrapQty    = (qtyRequired * comp.scrapPercent) / 100;
-      const qtyPlanned  = qtyRequired + scrapQty;
-
-      return {
-        itemId:          comp.componentItem.id,
-        itemCode:        comp.componentItem.code,
-        itemName:        comp.componentItem.name,
-        qtyPlanned:      Math.ceil(qtyPlanned * 1000) / 1000,
-        uom:             comp.uom,
-        consumptionUom:  comp.consumptionUom ?? null,
-        scrapPercent:    comp.scrapPercent,
-        note: comp.scrapPercent > 0 ? `Includes ${comp.scrapPercent}% scrap` : undefined,
-      };
-    });
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

@@ -751,7 +751,6 @@ model Item {
   purchaseOrderLines PurchaseOrderLine[]
   salesOrderLines    SalesOrderLine[]
   boms               Bom[]               @relation("BomParentItem")
-  bomComponents      BomComponent[]
   arInvoiceLines     ArInvoiceLine[]
   moMaterialActuals  MoMaterialActual[]
   apInvoiceLines     ApInvoiceLine[]
@@ -967,32 +966,34 @@ model Bom {
 }
 
 model BomComponent {
-  id              String  @id @default(uuid()) @db.Uuid
-  tenantId        String  @map("tenant_id") @db.Uuid
-  bomId           String  @map("bom_id") @db.Uuid
-  lineNumber      Int     @map("line_number")
-  componentItemId String  @map("component_item_id") @db.Uuid
-  // quantityPer is in consumptionUom of the component item
-  quantityPer     Decimal @map("quantity_per") @db.Decimal(15, 6)
-  uom             String  @db.VarChar(20)
-  scrapPercent     Decimal  @default(0) @map("scrap_percent") @db.Decimal(5, 2)
-  isPhantom        Boolean  @default(false) @map("is_phantom")
-  // UOM in which the formulador expresses the quantity (free)
-  // consumptionUomId = target UOM for MRP conversion (= item.consumptionUomId)
-  consumptionUomId String?  @map("consumption_uom_id") @db.Uuid
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  createdBy String    @map("created_by") @db.Uuid
-  updatedBy String    @map("updated_by") @db.Uuid
-  deletedBy String?   @map("deleted_by") @db.Uuid
-  tenant          Tenant   @relation(fields: [tenantId],        references: [id])
-  bom             Bom      @relation(fields: [bomId],            references: [id], onDelete: Cascade)
-  componentItem   Item     @relation(fields: [componentItemId],  references: [id])
-  consumptionUom  UomUnit? @relation("BomComponentConsumptionUom", fields: [consumptionUomId], references: [id])
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  bomId              String   @map("bom_id") @db.Uuid
+  lineNumber         Int      @map("line_number")
+  // consumptionGroupId = el grupo que representa la necesidad (reemplaza componentItemId)
+  consumptionGroupId String   @map("consumption_group_id") @db.Uuid
+  // quantityPer en uom libre del formulador
+  quantityPer        Decimal  @map("quantity_per") @db.Decimal(15, 6)
+  uom                String   @db.VarChar(20)
+  scrapPercent       Decimal  @default(0) @map("scrap_percent") @db.Decimal(5, 2)
+  isPhantom          Boolean  @default(false) @map("is_phantom")
+  // consumptionUomId = auto-fill desde consumptionGroup.consumptionUomId
+  consumptionUomId   String?  @map("consumption_uom_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt      @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  createdBy  String    @map("created_by") @db.Uuid
+  updatedBy  String    @map("updated_by") @db.Uuid
+  deletedBy  String?   @map("deleted_by") @db.Uuid
+
+  tenant             Tenant           @relation(fields: [tenantId],           references: [id])
+  bom                Bom              @relation(fields: [bomId],              references: [id], onDelete: Cascade)
+  consumptionGroup   ConsumptionGroup @relation(fields: [consumptionGroupId], references: [id])
+  consumptionUom     UomUnit?         @relation("BomComponentConsumptionUom", fields: [consumptionUomId], references: [id])
+
   @@index([tenantId])
   @@index([bomId])
-  @@index([componentItemId])
+  @@index([consumptionGroupId])
   @@map("mfg_bom_components")
 }
 
@@ -1898,6 +1899,7 @@ model ConsumptionGroup {
   tenant         Tenant  @relation(fields: [tenantId], references: [id])
   consumptionUom UomUnit @relation(fields: [consumptionUomId], references: [id])
   items            Item[]
+  bomComponents    BomComponent[]
   generalNeedLines GeneralNeedLine[]
   @@unique([tenantId, code])
   @@index([tenantId])

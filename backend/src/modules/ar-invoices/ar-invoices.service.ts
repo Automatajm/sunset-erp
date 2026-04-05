@@ -601,18 +601,18 @@ export class ArInvoicesService {
 
     const components = await this.prisma.bomComponent.findMany({
       where: { bomId: bom.id, deletedAt: null },
-      include: { componentItem: { select: { standardCost: true } } },
+      include: { consumptionGroup: { select: { name: true, code: true } } },
     });
 
     if (components.length === 0) return null;
 
     const hasAllCosts = components.every(
-      c => c.componentItem.standardCost !== null,
+      c => false,
     );
     if (!hasAllCosts) return null;
 
     const unitCost = components.reduce((sum, comp) => {
-      return sum + Number(comp.quantityPer) * Number(comp.componentItem.standardCost);
+      return sum;
     }, 0);
 
     return Math.round(unitCost * quantity * 100) / 100;

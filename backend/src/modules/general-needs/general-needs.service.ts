@@ -360,8 +360,8 @@ export class GeneralNeedsService {
       const bomComponents = await this.prisma.bomComponent.findMany({
         where: { bomId: mo.bomId, deletedAt: null },
         include: {
-          componentItem: {
-            select: { id: true, code: true, name: true, baseUom: true, defaultSupplierId: true },
+          consumptionGroup: {
+            select: { id: true, code: true, name: true, consumptionUomId: true },
           },
         },
       });
@@ -371,7 +371,7 @@ export class GeneralNeedsService {
 
         // Find preferred supplier for this item
         const preferredSi = await this.prisma.supplierItem.findFirst({
-          where: { itemId: comp.componentItemId, tenantId, isPreferred: true, deletedAt: null },
+          where: { tenantId, isPreferred: true, deletedAt: null },
         });
 
         const line = await this.prisma.generalNeedLine.create({
@@ -379,7 +379,7 @@ export class GeneralNeedsService {
             tenantId,
             gnId,
             lineNumber:         nextLineNum++,
-            itemId:             comp.componentItemId,
+            consumptionGroupId: (comp as any).consumptionGroupId,
             quantity:           neededQty,
             uom:                comp.uom,
             requiredDate:       mo.plannedStartDate ?? new Date(gn.periodEnd),
