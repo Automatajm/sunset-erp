@@ -1,6 +1,12 @@
-﻿import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../database/prisma.service';
+import { CacheService } from '../../common/services/cache.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SelectTenantDto } from './dto/select-tenant.dto';
@@ -11,6 +17,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private cache: CacheService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -65,10 +72,7 @@ export class AuthService {
       throw new UnauthorizedException('Account is deactivated');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.passwordHash,
-    );
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -195,8 +199,12 @@ export class AuthService {
       include: {
         user: {
           select: {
-            id: true, email: true, firstName: true, lastName: true,
-            status: true, avatarUrl: true,
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            status: true,
+            avatarUrl: true,
             userRoles: {
               where: { tenantId },
               include: { role: { select: { id: true, code: true, name: true } } },
@@ -208,16 +216,18 @@ export class AuthService {
     });
 
     return userTenants
-      .filter(ut => ut.user.status === 'active')
-      .map(ut => ({
-        id:        ut.user.id,
-        email:     ut.user.email,
+      .filter((ut) => ut.user.status === 'active')
+      .map((ut) => ({
+        id: ut.user.id,
+        email: ut.user.email,
         firstName: ut.user.firstName,
-        lastName:  ut.user.lastName,
-        fullName:  `${ut.user.firstName} ${ut.user.lastName}`,
+        lastName: ut.user.lastName,
+        fullName: `${ut.user.firstName} ${ut.user.lastName}`,
         avatarUrl: ut.user.avatarUrl,
-        roles:     ut.user.userRoles.map(r => ({
-          id: r.role.id, code: r.role.code, name: r.role.name,
+        roles: ut.user.userRoles.map((r) => ({
+          id: r.role.id,
+          code: r.role.code,
+          name: r.role.name,
         })),
       }));
   }
@@ -233,5 +243,65 @@ export class AuthService {
 
     const { passwordHash, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+
+  // ── RBAC context resolution (shared by JwtStrategy + PermissionsGuard) ──────
+  // Single source of truth for a user's effective role + permissions in a tenant.
+  // `role` is the earliest-assigned role's code; `permissions` is the union of
+  // every assigned role's permission codes for that tenant.
+  //
+  // Backed by a Redis cache keyed `permissions:${userId}:${tenantId}` (TTL 15 min)
+  // via CacheService, which is fail-open: any cache error falls back to the DB, so
+  // auth never breaks. Invalidation lives in CacheService.clearPermissionCache,
+  // called by the Roles/Users services when roles or role-permissions change.
+  async resolveTenantContext(
+    userId: string,
+    tenantId: string | null,
+  ): Promise<{ role: string; permissions: string[] }> {
+    if (!tenantId) {
+      return { role: 'user', permissions: [] };
+    }
+
+    // Cache lookup (returns null on miss or any Redis error).
+    const cached = await this.cache.getPermissionContext(userId, tenantId);
+    if (cached) {
+      return cached;
+    }
+
+    // Cache miss — resolve from the DB and populate the cache (best-effort).
+    const context = await this.queryTenantContext(userId, tenantId);
+    await this.cache.setPermissionContext(userId, tenantId, context);
+    return context;
+  }
+
+  private async queryTenantContext(
+    userId: string,
+    tenantId: string,
+  ): Promise<{ role: string; permissions: string[] }> {
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId, tenantId },
+      include: {
+        role: {
+          include: {
+            rolePermissions: {
+              include: { permission: { select: { code: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const permissions = new Set<string>();
+    for (const userRole of userRoles) {
+      for (const rolePermission of userRole.role.rolePermissions) {
+        permissions.add(rolePermission.permission.code);
+      }
+    }
+
+    return {
+      role: userRoles[0]?.role.code ?? 'user',
+      permissions: Array.from(permissions),
+    };
   }
 }

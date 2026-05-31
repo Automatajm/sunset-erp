@@ -2,14 +2,21 @@
 // FILE: backend/src/modules/users/users.service.ts
 // ============================================================================
 import {
-  Injectable, NotFoundException, ConflictException, BadRequestException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { CacheService } from '../../common/services/cache.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
   // ── List users in tenant ──────────────────────────────────────────────────
 
@@ -19,8 +26,14 @@ export class UsersService {
       include: {
         user: {
           select: {
-            id: true, email: true, firstName: true, lastName: true,
-            status: true, avatarUrl: true, lastLoginAt: true, createdAt: true,
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            status: true,
+            avatarUrl: true,
+            lastLoginAt: true,
+            createdAt: true,
             userRoles: {
               where: { tenantId },
               include: { role: { select: { id: true, code: true, name: true } } },
@@ -31,19 +44,21 @@ export class UsersService {
       orderBy: { user: { firstName: 'asc' } },
     });
 
-    return userTenants.map(ut => ({
-      id:          ut.user.id,
-      email:       ut.user.email,
-      firstName:   ut.user.firstName,
-      lastName:    ut.user.lastName,
-      fullName:    `${ut.user.firstName} ${ut.user.lastName}`,
-      status:      ut.user.status,
-      avatarUrl:   ut.user.avatarUrl,
+    return userTenants.map((ut) => ({
+      id: ut.user.id,
+      email: ut.user.email,
+      firstName: ut.user.firstName,
+      lastName: ut.user.lastName,
+      fullName: `${ut.user.firstName} ${ut.user.lastName}`,
+      status: ut.user.status,
+      avatarUrl: ut.user.avatarUrl,
       lastLoginAt: ut.user.lastLoginAt,
-      createdAt:   ut.user.createdAt,
-      isActive:    ut.isActive,
-      roles:       ut.user.userRoles.map(r => ({
-        id: r.role.id, code: r.role.code, name: r.role.name,
+      createdAt: ut.user.createdAt,
+      isActive: ut.isActive,
+      roles: ut.user.userRoles.map((r) => ({
+        id: r.role.id,
+        code: r.role.code,
+        name: r.role.name,
       })),
     }));
   }
@@ -56,9 +71,15 @@ export class UsersService {
       include: {
         user: {
           select: {
-            id: true, email: true, firstName: true, lastName: true,
-            status: true, avatarUrl: true, phone: true,
-            lastLoginAt: true, createdAt: true,
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            status: true,
+            avatarUrl: true,
+            phone: true,
+            lastLoginAt: true,
+            createdAt: true,
             userRoles: {
               where: { tenantId },
               include: { role: { select: { id: true, code: true, name: true } } },
@@ -70,30 +91,39 @@ export class UsersService {
     if (!ut) throw new NotFoundException('User not found in this tenant');
 
     return {
-      id:          ut.user.id,
-      email:       ut.user.email,
-      firstName:   ut.user.firstName,
-      lastName:    ut.user.lastName,
-      fullName:    `${ut.user.firstName} ${ut.user.lastName}`,
-      status:      ut.user.status,
-      avatarUrl:   ut.user.avatarUrl,
-      phone:       ut.user.phone,
+      id: ut.user.id,
+      email: ut.user.email,
+      firstName: ut.user.firstName,
+      lastName: ut.user.lastName,
+      fullName: `${ut.user.firstName} ${ut.user.lastName}`,
+      status: ut.user.status,
+      avatarUrl: ut.user.avatarUrl,
+      phone: ut.user.phone,
       lastLoginAt: ut.user.lastLoginAt,
-      createdAt:   ut.user.createdAt,
-      isActive:    ut.isActive,
-      roles:       ut.user.userRoles.map(r => ({
-        id: r.role.id, code: r.role.code, name: r.role.name,
+      createdAt: ut.user.createdAt,
+      isActive: ut.isActive,
+      roles: ut.user.userRoles.map((r) => ({
+        id: r.role.id,
+        code: r.role.code,
+        name: r.role.name,
       })),
     };
   }
 
   // ── Create user and add to tenant ─────────────────────────────────────────
 
-  async create(tenantId: string, creatorId: string, dto: {
-    email: string; password: string;
-    firstName: string; lastName: string;
-    phone?: string; roleIds?: string[];
-  }) {
+  async create(
+    tenantId: string,
+    creatorId: string,
+    dto: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      phone?: string;
+      roleIds?: string[];
+    },
+  ) {
     // Check email uniqueness
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) {
@@ -118,13 +148,13 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: {
-        email:        dto.email,
+        email: dto.email,
         passwordHash,
-        firstName:    dto.firstName,
-        lastName:     dto.lastName,
-        phone:        dto.phone,
-        status:       'active',
-        userTenants:  { create: { tenantId, isActive: true } },
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        status: 'active',
+        userTenants: { create: { tenantId, isActive: true } },
       },
     });
 
@@ -137,15 +167,22 @@ export class UsersService {
 
   // ── Update user ───────────────────────────────────────────────────────────
 
-  async update(tenantId: string, userId: string, dto: {
-    firstName?: string; lastName?: string; phone?: string; status?: string;
-  }) {
+  async update(
+    tenantId: string,
+    userId: string,
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      status?: string;
+    },
+  ) {
     const ut = await this.prisma.userTenant.findFirst({ where: { tenantId, userId } });
     if (!ut) throw new NotFoundException('User not found in this tenant');
 
     await this.prisma.user.update({
       where: { id: userId },
-      data:  { ...dto, updatedAt: new Date() },
+      data: { ...dto, updatedAt: new Date() },
     });
 
     return this.findOne(tenantId, userId);
@@ -159,7 +196,7 @@ export class UsersService {
 
     await this.prisma.userTenant.update({
       where: { id: ut.id },
-      data:  { isActive },
+      data: { isActive },
     });
 
     return this.findOne(tenantId, userId);
@@ -184,9 +221,12 @@ export class UsersService {
 
     // Add new roles
     await this.prisma.userRole.createMany({
-      data: roleIds.map(roleId => ({ userId, roleId, tenantId })),
+      data: roleIds.map((roleId) => ({ userId, roleId, tenantId })),
       skipDuplicates: true,
     });
+
+    // This user's effective permissions just changed — drop the stale cache entry.
+    await this.cache.clearPermissionCache(userId, tenantId);
 
     return this.findOne(tenantId, userId);
   }
@@ -200,7 +240,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({
       where: { id: userId },
-      data:  { passwordHash, passwordChangedAt: new Date() },
+      data: { passwordHash, passwordChangedAt: new Date() },
     });
 
     return { message: 'Password reset successfully' };

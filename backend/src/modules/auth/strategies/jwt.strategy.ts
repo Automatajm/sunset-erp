@@ -4,14 +4,12 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
-import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
     private authService: AuthService,
-    private prisma: PrismaService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -27,36 +25,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const tenantId = payload.tenantId || null;
 
-    // Resolve primary role for this tenant
-    let role        = 'user';
-    let permissions: string[] = [];
-
-    if (tenantId) {
-      const userRole = await this.prisma.userRole.findFirst({
-        where: { userId: user.id, tenantId },
-        include: {
-          role: {
-            include: {
-              rolePermissions: {
-                include: { permission: { select: { code: true } } },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      if (userRole) {
-        role        = userRole.role.code;
-        permissions = userRole.role.rolePermissions.map(rp => rp.permission.code);
-      }
-    }
+    // Resolve role + permissions for this tenant (shared resolver, union of all roles)
+    const { role, permissions } = await this.authService.resolveTenantContext(user.id, tenantId);
 
     return {
-      id:          user.id,
-      email:       user.email,
-      firstName:   user.firstName,
-      lastName:    user.lastName,
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       tenantId,
       role,
       permissions,

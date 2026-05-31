@@ -1,25 +1,16 @@
-﻿import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../database/prisma.service';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(
-    private reflector: Reflector,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private reflector: Reflector) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
-      PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+  canActivate(context: ExecutionContext): boolean {
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true; // No permissions required
@@ -36,57 +27,18 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('No tenant selected');
     }
 
-    // Get user's permissions for this tenant
-    const userPermissions = await this.getUserPermissions(
-      user.id,
-      user.tenantId,
+    // Permissions were resolved by JwtStrategy on this same request
+    // (PermissionsGuard always runs after JwtAuthGuard) — no second DB query.
+    const heldPermissions: string[] = user.permissions ?? [];
+
+    const missing = requiredPermissions.filter(
+      (permission) => !heldPermissions.includes(permission),
     );
 
-    // Check if user has all required permissions
-    const hasAllPermissions = requiredPermissions.every((permission) =>
-      userPermissions.includes(permission),
-    );
-
-    if (!hasAllPermissions) {
-      throw new ForbiddenException(
-        `Missing required permissions: ${requiredPermissions.join(', ')}`,
-      );
+    if (missing.length > 0) {
+      throw new ForbiddenException(`Missing required permissions: ${missing.join(', ')}`);
     }
 
     return true;
-  }
-
-  private async getUserPermissions(
-    userId: string,
-    tenantId: string,
-  ): Promise<string[]> {
-    const userRoles = await this.prisma.userRole.findMany({
-      where: {
-        userId,
-        tenantId,
-      },
-      include: {
-        role: {
-          include: {
-            rolePermissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Extract unique permission codes
-    const permissions = new Set<string>();
-    
-    for (const userRole of userRoles) {
-      for (const rolePermission of userRole.role.rolePermissions) {
-        permissions.add(rolePermission.permission.code);
-      }
-    }
-
-    return Array.from(permissions);
   }
 }

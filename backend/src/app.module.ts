@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
+import { RedisModule } from './database/redis.module';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { ItemsModule } from './modules/items/items.module';
@@ -45,6 +47,8 @@ import { RfqsModule } from './modules/rfqs/rfqs.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    RedisModule,
+    CommonModule,
     AuthModule,
     SuppliersModule,
     ItemsModule,
