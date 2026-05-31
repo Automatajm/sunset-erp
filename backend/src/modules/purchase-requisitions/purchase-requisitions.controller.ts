@@ -1,10 +1,24 @@
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { PurchaseRequisitionsService } from './purchase-requisitions.service';
 import { CreatePurchaseRequisitionDto } from './dto/create-purchase-requisition.dto';
@@ -31,11 +45,11 @@ export class PurchaseRequisitionsController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all Purchase Requisitions' })
-  @ApiQuery({ name: 'status',   required: false })
+  @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'priority', required: false })
   async findAll(
     @Request() req,
-    @Query('status')   status?: string,
+    @Query('status') status?: string,
     @Query('priority') priority?: string,
   ) {
     return this.prService.findAll(req.user.tenantId, status, priority);
@@ -53,22 +67,21 @@ export class PurchaseRequisitionsController {
   @RequirePermissions('PROCUREMENT:EDIT')
   @ApiOperation({ summary: 'Update PR header (draft or submitted only)' })
   @ApiParam({ name: 'id', description: 'PR UUID' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: UpdatePurchaseRequisitionDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdatePurchaseRequisitionDto) {
     return this.prService.update(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Patch(':id/status/:status')
   @RequirePermissions('PROCUREMENT:APPROVE')
   @ApiOperation({ summary: 'Transition PR status' })
-  @ApiParam({ name: 'id',     description: 'PR UUID' })
-  @ApiParam({ name: 'status', description: 'submitted | approved | rejected | cancelled | in_progress | completed' })
+  @ApiParam({ name: 'id', description: 'PR UUID' })
+  @ApiParam({
+    name: 'status',
+    description: 'submitted | approved | rejected | cancelled | in_progress | completed',
+  })
   async updateStatus(
     @Request() req,
-    @Param('id')     id: string,
+    @Param('id') id: string,
     @Param('status') status: string,
     @Body() body: { reason?: string },
   ) {
@@ -83,7 +96,8 @@ export class PurchaseRequisitionsController {
   async convertToRfq(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: {
+    @Body()
+    body: {
       lineIds: string[];
       rfqTitle: string;
       supplierIds: string[];

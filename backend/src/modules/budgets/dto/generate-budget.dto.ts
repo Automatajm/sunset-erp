@@ -13,7 +13,8 @@ export class GenerateBudgetFromSoDto {
   soStatuses: string[];
 
   @ApiPropertyOptional({
-    description: 'Overwrite existing budget lines for the same account+period. Default: false (skip duplicates)',
+    description:
+      'Overwrite existing budget lines for the same account+period. Default: false (skip duplicates)',
     example: false,
   })
   @IsOptional()

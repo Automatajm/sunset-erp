@@ -1,4 +1,9 @@
-﻿import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
@@ -23,18 +28,18 @@ export class ChartOfAccountsService {
     return this.prisma.account.create({
       data: {
         tenantId,
-        accountNumber:        dto.accountNumber,
-        name:                 dto.name,
-        accountType:          dto.accountType,
-        accountCategory:      dto.accountCategory ?? null,
-        parentAccountId:      dto.parentAccountId ?? null,
-        currency:             dto.currency ?? 'USD',
-        isActive:             dto.isActive ?? true,
-        allowManualPosting:   dto.allowManualPosting ?? true,
+        accountNumber: dto.accountNumber,
+        name: dto.name,
+        accountType: dto.accountType,
+        accountCategory: dto.accountCategory ?? null,
+        parentAccountId: dto.parentAccountId ?? null,
+        currency: dto.currency ?? 'USD',
+        isActive: dto.isActive ?? true,
+        allowManualPosting: dto.allowManualPosting ?? true,
         requireReconciliation: false,
-        isSystem:             false,
-        createdBy:            userId,
-        updatedBy:            userId,
+        isSystem: false,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
   }
@@ -67,19 +72,22 @@ export class ChartOfAccountsService {
       where: { tenantId, deletedAt: null },
       orderBy: { accountNumber: 'asc' },
     });
-    const grouped = accounts.reduce((acc, a) => {
-      (acc[a.accountType] ??= []).push(a);
-      return acc;
-    }, {} as Record<string, typeof accounts>);
+    const grouped = accounts.reduce(
+      (acc, a) => {
+        (acc[a.accountType] ??= []).push(a);
+        return acc;
+      },
+      {} as Record<string, typeof accounts>,
+    );
     return {
       byType: grouped,
       summary: {
         totalAccounts: accounts.length,
-        assets:      grouped['asset']?.length     ?? 0,
+        assets: grouped['asset']?.length ?? 0,
         liabilities: grouped['liability']?.length ?? 0,
-        equity:      grouped['equity']?.length    ?? 0,
-        revenue:     grouped['revenue']?.length   ?? 0,
-        expense:     grouped['expense']?.length   ?? 0,
+        equity: grouped['equity']?.length ?? 0,
+        revenue: grouped['revenue']?.length ?? 0,
+        expense: grouped['expense']?.length ?? 0,
       },
     };
   }
@@ -93,12 +101,12 @@ export class ChartOfAccountsService {
       if (dup) throw new ConflictException(`Account ${dto.accountNumber} already exists`);
     }
     const data: Record<string, unknown> = { updatedBy: userId };
-    if (dto.accountNumber !== undefined)     data.accountNumber     = dto.accountNumber;
-    if (dto.name !== undefined)              data.name              = dto.name;
-    if (dto.accountType !== undefined)       data.accountType       = dto.accountType;
-    if (dto.accountCategory !== undefined)   data.accountCategory   = dto.accountCategory;
-    if (dto.currency !== undefined)          data.currency          = dto.currency;
-    if (dto.isActive !== undefined)          data.isActive          = dto.isActive;
+    if (dto.accountNumber !== undefined) data.accountNumber = dto.accountNumber;
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.accountType !== undefined) data.accountType = dto.accountType;
+    if (dto.accountCategory !== undefined) data.accountCategory = dto.accountCategory;
+    if (dto.currency !== undefined) data.currency = dto.currency;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.allowManualPosting !== undefined) data.allowManualPosting = dto.allowManualPosting;
     return this.prisma.account.update({ where: { id }, data });
   }

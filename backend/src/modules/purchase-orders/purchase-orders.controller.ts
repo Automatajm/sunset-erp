@@ -1,10 +1,24 @@
 ﻿import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
@@ -59,11 +73,7 @@ export class PurchaseOrdersController {
   @ApiOperation({ summary: 'Transition purchase order status' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
   @ApiParam({ name: 'status', description: 'confirmed | cancelled | closed' })
-  async updateStatus(
-    @Request() req,
-    @Param('id') id: string,
-    @Param('status') status: string,
-  ) {
+  async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.purchaseOrdersService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
 
@@ -74,11 +84,7 @@ export class PurchaseOrdersController {
   @ApiResponse({ status: 200, description: 'Goods received, stock updated' })
   @ApiResponse({ status: 400, description: 'PO not in receivable status or quantity exceeded' })
   @ApiResponse({ status: 404, description: 'PO, line, or warehouse not found' })
-  async receive(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: ReceivePurchaseOrderDto,
-  ) {
+  async receive(@Request() req, @Param('id') id: string, @Body() dto: ReceivePurchaseOrderDto) {
     return this.purchaseOrdersService.receive(req.user.tenantId, req.user.id, id, dto);
   }
 

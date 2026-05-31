@@ -1,4 +1,9 @@
-﻿import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateFiscalPeriodDto } from './dto/create-fiscal-period.dto';
 import { UpdateFiscalPeriodDto } from './dto/update-fiscal-period.dto';
@@ -18,7 +23,9 @@ export class FiscalPeriodsService {
     });
 
     if (existing) {
-      throw new ConflictException(`Fiscal period ${createFiscalPeriodDto.periodCode} already exists`);
+      throw new ConflictException(
+        `Fiscal period ${createFiscalPeriodDto.periodCode} already exists`,
+      );
     }
 
     // If setting as current, unset other current periods
@@ -110,7 +117,12 @@ export class FiscalPeriodsService {
     return period;
   }
 
-  async update(tenantId: string, userId: string, id: string, updateFiscalPeriodDto: UpdateFiscalPeriodDto) {
+  async update(
+    tenantId: string,
+    userId: string,
+    id: string,
+    updateFiscalPeriodDto: UpdateFiscalPeriodDto,
+  ) {
     await this.findOne(tenantId, id);
 
     if (updateFiscalPeriodDto.periodCode) {
@@ -124,7 +136,9 @@ export class FiscalPeriodsService {
       });
 
       if (existing) {
-        throw new ConflictException(`Fiscal period ${updateFiscalPeriodDto.periodCode} already exists`);
+        throw new ConflictException(
+          `Fiscal period ${updateFiscalPeriodDto.periodCode} already exists`,
+        );
       }
     }
 
@@ -149,12 +163,15 @@ export class FiscalPeriodsService {
 
     if (updateFiscalPeriodDto.periodCode) updateData.periodCode = updateFiscalPeriodDto.periodCode;
     if (updateFiscalPeriodDto.periodName) updateData.periodName = updateFiscalPeriodDto.periodName;
-    if (updateFiscalPeriodDto.startDate) updateData.startDate = new Date(updateFiscalPeriodDto.startDate);
+    if (updateFiscalPeriodDto.startDate)
+      updateData.startDate = new Date(updateFiscalPeriodDto.startDate);
     if (updateFiscalPeriodDto.endDate) updateData.endDate = new Date(updateFiscalPeriodDto.endDate);
     if (updateFiscalPeriodDto.fiscalYear) updateData.fiscalYear = updateFiscalPeriodDto.fiscalYear;
-    if (updateFiscalPeriodDto.fiscalQuarter !== undefined) updateData.fiscalQuarter = updateFiscalPeriodDto.fiscalQuarter;
+    if (updateFiscalPeriodDto.fiscalQuarter !== undefined)
+      updateData.fiscalQuarter = updateFiscalPeriodDto.fiscalQuarter;
     if (updateFiscalPeriodDto.status) updateData.status = updateFiscalPeriodDto.status;
-    if (updateFiscalPeriodDto.isCurrent !== undefined) updateData.isCurrent = updateFiscalPeriodDto.isCurrent;
+    if (updateFiscalPeriodDto.isCurrent !== undefined)
+      updateData.isCurrent = updateFiscalPeriodDto.isCurrent;
 
     const period = await this.prisma.fiscalPeriod.update({
       where: { id },
@@ -183,7 +200,7 @@ export class FiscalPeriodsService {
 
     if (unpostedEntries > 0) {
       throw new BadRequestException(
-        `Cannot close period. ${unpostedEntries} unposted journal entries found. Please post or delete them first.`
+        `Cannot close period. ${unpostedEntries} unposted journal entries found. Please post or delete them first.`,
       );
     }
 
@@ -290,7 +307,7 @@ export class FiscalPeriodsService {
 
     if (entriesCount > 0) {
       throw new BadRequestException(
-        `Cannot delete period. ${entriesCount} journal entries exist for this period.`
+        `Cannot delete period. ${entriesCount} journal entries exist for this period.`,
       );
     }
 

@@ -12,7 +12,10 @@ export class CreateWorkCenterDto {
   @MaxLength(255)
   name: string;
 
-  @ApiPropertyOptional({ example: 'machine', description: 'Type: machine, labor, assembly, quality' })
+  @ApiPropertyOptional({
+    example: 'machine',
+    description: 'Type: machine, labor, assembly, quality',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)

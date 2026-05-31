@@ -6,7 +6,7 @@ export class CreateJournalEntryLineDto {
   @IsUUID()
   accountId: string;
 
-  @ApiProperty({ example: 1000.00, description: 'Debit amount' })
+  @ApiProperty({ example: 1000.0, description: 'Debit amount' })
   @IsNumber()
   @Min(0)
   debitAmount: number;

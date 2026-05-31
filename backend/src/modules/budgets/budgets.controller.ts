@@ -49,11 +49,11 @@ export class BudgetsController {
   @RequirePermissions('ACCOUNTING:VIEW')
   @ApiOperation({ summary: 'Get all budgets' })
   @ApiQuery({ name: 'fiscalYear', required: false })
-  @ApiQuery({ name: 'status',     required: false })
+  @ApiQuery({ name: 'status', required: false })
   async findAll(
     @Request() req,
     @Query('fiscalYear') fiscalYear?: string,
-    @Query('status')     status?: string,
+    @Query('status') status?: string,
   ) {
     return this.budgetsService.findAll(req.user.tenantId, fiscalYear, status);
   }
@@ -70,11 +70,7 @@ export class BudgetsController {
   @RequirePermissions('ACCOUNTING:EDIT')
   @ApiOperation({ summary: 'Update budget' })
   @ApiParam({ name: 'id', description: 'Budget UUID' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updateBudgetDto: UpdateBudgetDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() updateBudgetDto: UpdateBudgetDto) {
     return this.budgetsService.update(req.user.tenantId, req.user.id, id, updateBudgetDto);
   }
 
@@ -98,34 +94,41 @@ export class BudgetsController {
     @Param('id') id: string,
     @Body() createBudgetLineDto: CreateBudgetLineDto,
   ) {
-    return this.budgetsService.addBudgetLine(req.user.tenantId, req.user.id, id, createBudgetLineDto);
+    return this.budgetsService.addBudgetLine(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      createBudgetLineDto,
+    );
   }
 
   @Patch(':id/lines/:lineId')
   @RequirePermissions('ACCOUNTING:EDIT')
   @ApiOperation({ summary: 'Update budget line' })
-  @ApiParam({ name: 'id',     description: 'Budget UUID' })
+  @ApiParam({ name: 'id', description: 'Budget UUID' })
   @ApiParam({ name: 'lineId', description: 'Budget line UUID' })
   async updateBudgetLine(
     @Request() req,
-    @Param('id')     id: string,
+    @Param('id') id: string,
     @Param('lineId') lineId: string,
     @Body() updateData: Partial<CreateBudgetLineDto>,
   ) {
-    return this.budgetsService.updateBudgetLine(req.user.tenantId, req.user.id, id, lineId, updateData);
+    return this.budgetsService.updateBudgetLine(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      lineId,
+      updateData,
+    );
   }
 
   @Delete(':id/lines/:lineId')
   @RequirePermissions('ACCOUNTING:DELETE')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete budget line' })
-  @ApiParam({ name: 'id',     description: 'Budget UUID' })
+  @ApiParam({ name: 'id', description: 'Budget UUID' })
   @ApiParam({ name: 'lineId', description: 'Budget line UUID' })
-  async removeBudgetLine(
-    @Request() req,
-    @Param('id')     id: string,
-    @Param('lineId') lineId: string,
-  ) {
+  async removeBudgetLine(@Request() req, @Param('id') id: string, @Param('lineId') lineId: string) {
     return this.budgetsService.removeBudgetLine(req.user.tenantId, req.user.id, id, lineId);
   }
 
@@ -146,12 +149,12 @@ export class BudgetsController {
   @ApiOperation({ summary: 'Get budget vs actual report' })
   @ApiParam({ name: 'id', description: 'Budget UUID' })
   @ApiQuery({ name: 'startPeriod', required: false, description: 'YYYY-MM' })
-  @ApiQuery({ name: 'endPeriod',   required: false, description: 'YYYY-MM' })
+  @ApiQuery({ name: 'endPeriod', required: false, description: 'YYYY-MM' })
   async getBudgetVsActual(
     @Request() req,
     @Param('id') id: string,
     @Query('startPeriod') startPeriod?: string,
-    @Query('endPeriod')   endPeriod?: string,
+    @Query('endPeriod') endPeriod?: string,
   ) {
     return this.budgetsService.getBudgetVsActual(req.user.tenantId, id, startPeriod, endPeriod);
   }
@@ -162,7 +165,8 @@ export class BudgetsController {
   @RequirePermissions('ACCOUNTING:CREATE')
   @ApiOperation({
     summary: 'Generate budget lines from Sales Orders via MRP',
-    description: 'Revenue → promisedDate period. Materials + Labor → (promisedDate - leadTimeDays) period.',
+    description:
+      'Revenue → promisedDate period. Materials + Labor → (promisedDate - leadTimeDays) period.',
   })
   @ApiParam({ name: 'id', description: 'Budget UUID' })
   @ApiResponse({ status: 201, description: 'Budget lines generated' })

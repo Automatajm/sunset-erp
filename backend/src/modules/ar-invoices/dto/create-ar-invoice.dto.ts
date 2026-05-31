@@ -1,7 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString, IsUUID, IsOptional, IsNumber, IsArray,
-  ValidateNested, IsDateString, Min,
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+  IsDateString,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -26,7 +32,7 @@ export class CreateArInvoiceLineDto {
   @IsString()
   uom?: string;
 
-  @ApiProperty({ example: 150.00 })
+  @ApiProperty({ example: 150.0 })
   @IsNumber()
   @Min(0)
   unitPrice: number;
@@ -37,7 +43,7 @@ export class CreateArInvoiceLineDto {
   @Min(0)
   discountPercent?: number;
 
-  @ApiPropertyOptional({ example: 500.00, description: 'Cost of goods for CoGS JE' })
+  @ApiPropertyOptional({ example: 500.0, description: 'Cost of goods for CoGS JE' })
   @IsOptional()
   @IsNumber()
   @Min(0)

@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Request,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -46,30 +37,48 @@ export class StockTransactionsController {
 
   @Get('abc')
   @RequirePermissions('INVENTORY:VIEW')
-  @ApiOperation({ summary: 'ABC Analysis — items ranked by value with cumulative % and A/B/C classification' })
+  @ApiOperation({
+    summary: 'ABC Analysis — items ranked by value with cumulative % and A/B/C classification',
+  })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiQuery({
+    name: 'itemType',
+    required: false,
+    description: 'raw_material | finished_good | consumable',
+  })
   @ApiResponse({ status: 200, description: 'ABC Analysis report' })
   async getAbcAnalysis(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('itemType')    itemType?:    string,
+    @Query('itemType') itemType?: string,
   ) {
-    return this.stockTransactionsService.getAbcAnalysis(req.user.tenantId, { warehouseId, itemType });
+    return this.stockTransactionsService.getAbcAnalysis(req.user.tenantId, {
+      warehouseId,
+      itemType,
+    });
   }
- 
+
   @Get('aging')
   @RequirePermissions('INVENTORY:VIEW')
-  @ApiOperation({ summary: 'Stock Aging — days since last movement per item/warehouse, bucketed by age' })
+  @ApiOperation({
+    summary: 'Stock Aging — days since last movement per item/warehouse, bucketed by age',
+  })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiQuery({
+    name: 'itemType',
+    required: false,
+    description: 'raw_material | finished_good | consumable',
+  })
   @ApiResponse({ status: 200, description: 'Stock aging report' })
   async getStockAging(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('itemType')    itemType?:    string,
+    @Query('itemType') itemType?: string,
   ) {
-    return this.stockTransactionsService.getStockAging(req.user.tenantId, { warehouseId, itemType });
+    return this.stockTransactionsService.getStockAging(req.user.tenantId, {
+      warehouseId,
+      itemType,
+    });
   }
 
   @Get()
@@ -115,13 +124,13 @@ export class StockTransactionsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Stock planning — ATP, alerts, coverage, PO/SO demand' })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'itemType',    required: false })
-  @ApiQuery({ name: 'alertOnly',   required: false })
+  @ApiQuery({ name: 'itemType', required: false })
+  @ApiQuery({ name: 'alertOnly', required: false })
   async getStockPlanning(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('itemType')    itemType?:    string,
-    @Query('alertOnly')   alertOnly?:   string,
+    @Query('itemType') itemType?: string,
+    @Query('alertOnly') alertOnly?: string,
   ) {
     return this.stockTransactionsService.getStockPlanning(req.user.tenantId, {
       warehouseId,
@@ -132,27 +141,47 @@ export class StockTransactionsController {
 
   @Get('ledger')
   @RequirePermissions('INVENTORY:VIEW')
-  @ApiOperation({ summary: 'Stock ledger — enriched movements with running balance, reference numbers and totals' })
-  @ApiQuery({ name: 'itemId',          required: false })
-  @ApiQuery({ name: 'warehouseId',     required: false })
-  @ApiQuery({ name: 'itemType',        required: false, description: 'finished_good | raw_material | consumable' })
-  @ApiQuery({ name: 'movementType',    required: false, description: 'receipt | issue | transfer | adjustment | opening_balance' })
-  @ApiQuery({ name: 'referenceNumber', required: false, description: 'Filter by document number (INV-2026-0001)' })
-  @ApiQuery({ name: 'dateFrom',        required: false, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'dateTo',          required: false, description: 'YYYY-MM-DD' })
+  @ApiOperation({
+    summary: 'Stock ledger — enriched movements with running balance, reference numbers and totals',
+  })
+  @ApiQuery({ name: 'itemId', required: false })
+  @ApiQuery({ name: 'warehouseId', required: false })
+  @ApiQuery({
+    name: 'itemType',
+    required: false,
+    description: 'finished_good | raw_material | consumable',
+  })
+  @ApiQuery({
+    name: 'movementType',
+    required: false,
+    description: 'receipt | issue | transfer | adjustment | opening_balance',
+  })
+  @ApiQuery({
+    name: 'referenceNumber',
+    required: false,
+    description: 'Filter by document number (INV-2026-0001)',
+  })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD' })
   @ApiResponse({ status: 200, description: 'Stock ledger with running balance and totals' })
   async getLedger(
     @Request() req,
-    @Query('itemId')          itemId?:          string,
-    @Query('warehouseId')     warehouseId?:     string,
-    @Query('itemType')        itemType?:        string,
-    @Query('movementType')    movementType?:    string,
+    @Query('itemId') itemId?: string,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('itemType') itemType?: string,
+    @Query('movementType') movementType?: string,
     @Query('referenceNumber') referenceNumber?: string,
-    @Query('dateFrom')        dateFrom?:        string,
-    @Query('dateTo')          dateTo?:          string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     return this.stockTransactionsService.getLedger(req.user.tenantId, {
-      itemId, warehouseId, itemType, movementType, referenceNumber, dateFrom, dateTo,
+      itemId,
+      warehouseId,
+      itemType,
+      movementType,
+      referenceNumber,
+      dateFrom,
+      dateTo,
     });
   }
 
@@ -160,12 +189,16 @@ export class StockTransactionsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Inventory valuation — onHand × WAC unit cost per item/warehouse' })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
+  @ApiQuery({
+    name: 'itemType',
+    required: false,
+    description: 'raw_material | finished_good | consumable',
+  })
   @ApiResponse({ status: 200, description: 'Inventory valuation report' })
   async getValuation(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('itemType')    itemType?: string,
+    @Query('itemType') itemType?: string,
   ) {
     return this.stockTransactionsService.getValuation(req.user.tenantId, { warehouseId, itemType });
   }
@@ -174,19 +207,30 @@ export class StockTransactionsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Inventory Turnover — COGS / Avg Inventory, Days on Hand per item' })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'itemType',    required: false, description: 'raw_material | finished_good | consumable' })
-  @ApiQuery({ name: 'dateFrom',    required: false, description: 'YYYY-MM-DD (default: Jan 1 current year)' })
-  @ApiQuery({ name: 'dateTo',      required: false, description: 'YYYY-MM-DD (default: today)' })
+  @ApiQuery({
+    name: 'itemType',
+    required: false,
+    description: 'raw_material | finished_good | consumable',
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'YYYY-MM-DD (default: Jan 1 current year)',
+  })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD (default: today)' })
   @ApiResponse({ status: 200, description: 'Inventory turnover report' })
   async getInventoryTurnover(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('itemType')    itemType?:    string,
-    @Query('dateFrom')    dateFrom?:    string,
-    @Query('dateTo')      dateTo?:      string,
+    @Query('itemType') itemType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     return this.stockTransactionsService.getInventoryTurnover(req.user.tenantId, {
-      warehouseId, itemType, dateFrom, dateTo,
+      warehouseId,
+      itemType,
+      dateFrom,
+      dateTo,
     });
   }
 

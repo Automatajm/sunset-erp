@@ -137,10 +137,7 @@ export class CashFlowService {
     await this.findOne(tenantId, id);
 
     // Check projection code uniqueness if changing
-    if (
-      updateCashFlowProjectionDto.projectionCode &&
-      updateCashFlowProjectionDto.projectionCode
-    ) {
+    if (updateCashFlowProjectionDto.projectionCode && updateCashFlowProjectionDto.projectionCode) {
       const existing = await this.prisma.cashFlowProjection.findFirst({
         where: {
           tenantId,
@@ -307,12 +304,7 @@ export class CashFlowService {
     return updated;
   }
 
-  async removeCashFlowLine(
-    tenantId: string,
-    userId: string,
-    projectionId: string,
-    lineId: string,
-  ) {
+  async removeCashFlowLine(tenantId: string, userId: string, projectionId: string, lineId: string) {
     await this.findOne(tenantId, projectionId);
 
     const line = await this.prisma.cashFlowLine.findFirst({
@@ -438,18 +430,10 @@ export class CashFlowService {
     } = {},
   ) {
     const projection = await this.findOne(tenantId, projectionId);
-    const {
-      includeAR     = true,
-      includePO     = true,
-      includeBudget = true,
-    } = options;
+    const { includeAR = true, includePO = true, includeBudget = true } = options;
 
-    const startDate = options.startDate
-      ? new Date(options.startDate)
-      : projection.startDate;
-    const endDate = options.endDate
-      ? new Date(options.endDate)
-      : projection.endDate;
+    const startDate = options.startDate ? new Date(options.startDate) : projection.startDate;
+    const endDate = options.endDate ? new Date(options.endDate) : projection.endDate;
 
     const linesToCreate: any[] = [];
 
@@ -469,13 +453,13 @@ export class CashFlowService {
         linesToCreate.push({
           tenantId,
           cashFlowProjectionId: projectionId,
-          lineDate:    new Date(inv.invoiceDate),
-          lineType:    'inflow',
-          category:    'ar_collection',
-          amount:      new Decimal(inv.totalAmount),
+          lineDate: new Date(inv.invoiceDate),
+          lineType: 'inflow',
+          category: 'ar_collection',
+          amount: new Decimal(inv.totalAmount),
           description: `AR ${inv.invoiceNumber} - ${inv.customer?.name ?? ''}`,
-          createdBy:   userId,
-          updatedBy:   userId,
+          createdBy: userId,
+          updatedBy: userId,
         });
       }
     }
@@ -500,13 +484,13 @@ export class CashFlowService {
         linesToCreate.push({
           tenantId,
           cashFlowProjectionId: projectionId,
-          lineDate:    payDate,
-          lineType:    'outflow',
-          category:    'ap_payment',
-          amount:      new Decimal(po.total),
+          lineDate: payDate,
+          lineType: 'outflow',
+          category: 'ap_payment',
+          amount: new Decimal(po.total),
           description: `PO ${po.poNumber} - ${po.supplier?.name ?? ''}`,
-          createdBy:   userId,
-          updatedBy:   userId,
+          createdBy: userId,
+          updatedBy: userId,
         });
       }
     }
@@ -525,7 +509,7 @@ export class CashFlowService {
         },
         include: {
           account: { select: { accountNumber: true, name: true } },
-          budget:  { select: { budgetCode: true } },
+          budget: { select: { budgetCode: true } },
         },
       });
 
@@ -537,13 +521,13 @@ export class CashFlowService {
           tenantId,
           cashFlowProjectionId: projectionId,
           lineDate,
-          lineType:    'outflow',
-          category:    'opex_budget',
-          amount:      new Decimal(bl.budgetAmount),
+          lineType: 'outflow',
+          category: 'opex_budget',
+          amount: new Decimal(bl.budgetAmount),
           description: `Budget ${bl.account.accountNumber} ${bl.account.name} ${bl.fiscalPeriod}`,
-          accountId:   bl.accountId,
-          createdBy:   userId,
-          updatedBy:   userId,
+          accountId: bl.accountId,
+          createdBy: userId,
+          updatedBy: userId,
         });
       }
     }
@@ -556,12 +540,16 @@ export class CashFlowService {
     await this.prisma.cashFlowLine.createMany({ data: linesToCreate });
 
     return {
-      message:      `Cash flow populated from data`,
+      message: `Cash flow populated from data`,
       linesCreated: linesToCreate.length,
       breakdown: {
-        arInflows:     includeAR     ? linesToCreate.filter(l => l.category === 'ar_collection').length : 0,
-        poOutflows:    includePO     ? linesToCreate.filter(l => l.category === 'ap_payment').length    : 0,
-        budgetOutflows: includeBudget ? linesToCreate.filter(l => l.category === 'opex_budget').length  : 0,
+        arInflows: includeAR
+          ? linesToCreate.filter((l) => l.category === 'ar_collection').length
+          : 0,
+        poOutflows: includePO ? linesToCreate.filter((l) => l.category === 'ap_payment').length : 0,
+        budgetOutflows: includeBudget
+          ? linesToCreate.filter((l) => l.category === 'opex_budget').length
+          : 0,
       },
     };
   }

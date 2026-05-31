@@ -2,19 +2,23 @@
 // FILE: backend/src/modules/stock-reconciliation/stock-count-assignment.controller.ts
 // ============================================================================
 import {
-  Controller, Get, Post, Delete,
-  Param, Body, Request, UseGuards,
-  HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Request,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { StockCountAssignmentService } from './stock-count-assignment.service';
-import { CreateAssignmentDto }         from './dto/create-assignment.dto';
-import { JwtAuthGuard }                from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard }            from '../../common/guards/permissions.guard';
-import { RequirePermissions }          from '../../common/decorators/permissions.decorator';
+import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Stock Count Assignments')
 @Controller('stock-reconciliation/:sessionId/assignments')
@@ -62,11 +66,11 @@ export class StockCountAssignmentController {
   @RequirePermissions('INVENTORY:APPROVE')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove assignment and release lines' })
-  @ApiParam({ name: 'sessionId',    description: 'Session UUID' })
+  @ApiParam({ name: 'sessionId', description: 'Session UUID' })
   @ApiParam({ name: 'assignmentId', description: 'Assignment UUID' })
   async remove(
     @Request() req,
-    @Param('sessionId')    sessionId:    string,
+    @Param('sessionId') sessionId: string,
     @Param('assignmentId') assignmentId: string,
   ) {
     return this.service.remove(req.user.tenantId, sessionId, assignmentId);

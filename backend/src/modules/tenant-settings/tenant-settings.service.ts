@@ -5,11 +5,11 @@ import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 
 const INCLUDE = {
   volumeBaseUom: true,
-  massBaseUom:   true,
+  massBaseUom: true,
   lengthBaseUom: true,
-  areaBaseUom:   true,
-  countBaseUom:  true,
-  timeBaseUom:   true,
+  areaBaseUom: true,
+  countBaseUom: true,
+  timeBaseUom: true,
 };
 
 @Injectable()
@@ -18,12 +18,12 @@ export class TenantSettingsService {
 
   async getOrCreate(tenantId: string) {
     const existing = await this.prisma.tenantSettings.findUnique({
-      where:   { tenantId },
+      where: { tenantId },
       include: INCLUDE,
     });
     if (existing) return existing;
     return this.prisma.tenantSettings.create({
-      data:    { tenantId, defaultUomSystem: 'metric' },
+      data: { tenantId, defaultUomSystem: 'metric' },
       include: INCLUDE,
     });
   }
@@ -31,8 +31,8 @@ export class TenantSettingsService {
   async update(tenantId: string, userId: string, dto: UpdateTenantSettingsDto) {
     await this.getOrCreate(tenantId);
     return this.prisma.tenantSettings.update({
-      where:   { tenantId },
-      data:    { ...dto, updatedBy: userId },
+      where: { tenantId },
+      data: { ...dto, updatedBy: userId },
       include: INCLUDE,
     });
   }
@@ -46,11 +46,11 @@ export class TenantSettingsService {
     const s = await this.getOrCreate(tenantId);
     return {
       volume: s.volumeBaseUom ?? null,
-      mass:   s.massBaseUom   ?? null,
+      mass: s.massBaseUom ?? null,
       length: s.lengthBaseUom ?? null,
-      area:   s.areaBaseUom   ?? null,
-      count:  s.countBaseUom  ?? null,
-      time:   s.timeBaseUom   ?? null,
+      area: s.areaBaseUom ?? null,
+      count: s.countBaseUom ?? null,
+      time: s.timeBaseUom ?? null,
       // Flat list for use in SearchSelect — only configured ones
       list: [
         s.volumeBaseUom,

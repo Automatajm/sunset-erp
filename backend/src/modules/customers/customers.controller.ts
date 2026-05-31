@@ -11,13 +11,7 @@
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -39,11 +33,7 @@ export class CustomersController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Customer code already exists' })
   async create(@Request() req, @Body() createCustomerDto: CreateCustomerDto) {
-    return this.customersService.create(
-      req.user.tenantId,
-      req.user.id,
-      createCustomerDto,
-    );
+    return this.customersService.create(req.user.tenantId, req.user.id, createCustomerDto);
   }
 
   @Get()
@@ -79,12 +69,7 @@ export class CustomersController {
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,
   ) {
-    return this.customersService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateCustomerDto,
-    );
+    return this.customersService.update(req.user.tenantId, req.user.id, id, updateCustomerDto);
   }
 
   @Delete(':id')

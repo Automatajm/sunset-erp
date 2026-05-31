@@ -8,9 +8,9 @@ import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 
 const TYPE_PREFIX: Record<string, string> = {
-  regular:     'REG',
+  regular: 'REG',
   consignment: 'CON',
-  transit:     'TRN',
+  transit: 'TRN',
 };
 
 @Injectable()
@@ -22,7 +22,7 @@ export class WarehousesService {
   private async generateCode(tenantId: string, warehouseType: string): Promise<string> {
     const prefix = `WH-${TYPE_PREFIX[warehouseType] ?? 'REG'}`;
     const last = await this.prisma.warehouse.findFirst({
-      where:   { tenantId, code: { startsWith: prefix }, deletedAt: null },
+      where: { tenantId, code: { startsWith: prefix }, deletedAt: null },
       orderBy: { code: 'desc' },
     });
     if (!last) return `${prefix}-001`;
@@ -49,10 +49,10 @@ export class WarehousesService {
       data: {
         tenantId,
         code,
-        name:                    dto.name,
+        name: dto.name,
         warehouseType,
-        address:                 dto.address ?? null,
-        isActive:                dto.isActive ?? true,
+        address: dto.address ?? null,
+        isActive: dto.isActive ?? true,
         locationTrackingEnabled: dto.locationTrackingEnabled ?? false,
         createdBy: userId,
         updatedBy: userId,
@@ -70,7 +70,7 @@ export class WarehousesService {
 
   async findAll(tenantId: string) {
     const warehouses = await this.prisma.warehouse.findMany({
-      where:   { tenantId, deletedAt: null },
+      where: { tenantId, deletedAt: null },
       include: { _count: { select: { stock: true, zones: true } } },
       orderBy: { code: 'asc' },
     });
@@ -79,13 +79,15 @@ export class WarehousesService {
     // then map by warehouseId
 
     // Level capacity (used when no bins)
-    const levelCaps = await this.prisma.$queryRaw<{
-      warehouse_id: string;
-      cap_kg: number | null;
-      cap_ltr: number | null;
-      cap_pallets: number | null;
-      bin_count: number;
-    }[]>`
+    const levelCaps = await this.prisma.$queryRaw<
+      {
+        warehouse_id: string;
+        cap_kg: number | null;
+        cap_ltr: number | null;
+        cap_pallets: number | null;
+        bin_count: number;
+      }[]
+    >`
       SELECT
         z.warehouse_id,
         SUM(l.max_weight_kg)::float   AS cap_kg,
@@ -103,12 +105,14 @@ export class WarehousesService {
     `;
 
     // Bin capacity (overrides level capacity when bins exist)
-    const binCaps = await this.prisma.$queryRaw<{
-      warehouse_id: string;
-      cap_kg: number | null;
-      cap_ltr: number | null;
-      cap_pallets: number | null;
-    }[]>`
+    const binCaps = await this.prisma.$queryRaw<
+      {
+        warehouse_id: string;
+        cap_kg: number | null;
+        cap_ltr: number | null;
+        cap_pallets: number | null;
+      }[]
+    >`
       SELECT
         z.warehouse_id,
         SUM(b.max_weight_kg)::float   AS cap_kg,
@@ -125,34 +129,35 @@ export class WarehousesService {
     `;
 
     // Build maps
-    const levelMap  = new Map(levelCaps.map(r => [r.warehouse_id, r]));
-    const binMap    = new Map(binCaps.map(r => [r.warehouse_id, r]));
+    const levelMap = new Map(levelCaps.map((r) => [r.warehouse_id, r]));
+    const binMap = new Map(binCaps.map((r) => [r.warehouse_id, r]));
 
-    return warehouses.map(w => {
+    return warehouses.map((w) => {
       const lc = levelMap.get(w.id);
       const bc = binMap.get(w.id);
 
       // Use bin capacity if bins exist, otherwise level capacity
-      const hasBins    = lc ? lc.bin_count > 0 : false;
-      const capKg      = hasBins ? (bc?.cap_kg      ?? null) : (lc?.cap_kg      ?? null);
-      const capLtr     = hasBins ? (bc?.cap_ltr     ?? null) : (lc?.cap_ltr     ?? null);
-      const capPallets = hasBins ? (bc?.cap_pallets  ?? null) : (lc?.cap_pallets  ?? null);
+      const hasBins = lc ? lc.bin_count > 0 : false;
+      const capKg = hasBins ? (bc?.cap_kg ?? null) : (lc?.cap_kg ?? null);
+      const capLtr = hasBins ? (bc?.cap_ltr ?? null) : (lc?.cap_ltr ?? null);
+      const capPallets = hasBins ? (bc?.cap_pallets ?? null) : (lc?.cap_pallets ?? null);
 
       const stockCount = w._count.stock;
 
       // Occupancy % — uses pallets as primary metric, falls back to lines vs capacity
       // If no capacity configured → null (not applicable)
-      const occupancyPct = capPallets && capPallets > 0
-        ? Math.min(100, Math.round((stockCount / capPallets) * 100))
-        : null;
+      const occupancyPct =
+        capPallets && capPallets > 0
+          ? Math.min(100, Math.round((stockCount / capPallets) * 100))
+          : null;
 
       return {
         ...w,
         stockCount,
-        zoneCount:    w._count.zones,
+        zoneCount: w._count.zones,
         // Capacity totals
-        capacityKg:      capKg      ? Number(capKg)      : null,
-        capacityLtr:     capLtr     ? Number(capLtr)     : null,
+        capacityKg: capKg ? Number(capKg) : null,
+        capacityLtr: capLtr ? Number(capLtr) : null,
         capacityPallets: capPallets ? Number(capPallets) : null,
         // Occupancy
         occupancyPct,
@@ -164,14 +169,14 @@ export class WarehousesService {
 
   async findOne(tenantId: string, id: string) {
     const warehouse = await this.prisma.warehouse.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: { _count: { select: { stock: true, zones: true } } },
     });
     if (!warehouse) throw new NotFoundException(`Warehouse with ID ${id} not found`);
     return {
       ...warehouse,
       stockCount: warehouse._count.stock,
-      zoneCount:  warehouse._count.zones,
+      zoneCount: warehouse._count.zones,
     };
   }
 
@@ -192,7 +197,7 @@ export class WarehousesService {
                   where: { deletedAt: null },
                   include: {
                     bins: {
-                      where:   { deletedAt: null },
+                      where: { deletedAt: null },
                       include: { _count: { select: { stock: true } } },
                       orderBy: { code: 'asc' },
                     },
@@ -218,50 +223,70 @@ export class WarehousesService {
     await this.findOne(tenantId, warehouseId);
 
     const stockAgg = await this.prisma.stock.aggregate({
-      where:  { tenantId, warehouseId },
-      _sum:   { onHandQuantity: true },
+      where: { tenantId, warehouseId },
+      _sum: { onHandQuantity: true },
       _count: { id: true },
     });
 
-    const zoneCount  = await this.prisma.warehouseZone.count({ where: { warehouseId, deletedAt: null } });
-    const aisleCount = await this.prisma.warehouseAisle.count({ where: { tenantId, deletedAt: null, zone: { warehouseId } } });
-    const rackCount  = await this.prisma.warehouseRack.count({ where: { tenantId, deletedAt: null, aisle: { zone: { warehouseId } } } });
-    const levelCount = await this.prisma.warehouseLevel.count({ where: { tenantId, deletedAt: null, rack: { aisle: { zone: { warehouseId } } } } });
-    const binCount   = await this.prisma.warehouseBin.count({ where: { tenantId, deletedAt: null, level: { rack: { aisle: { zone: { warehouseId } } } } } });
+    const zoneCount = await this.prisma.warehouseZone.count({
+      where: { warehouseId, deletedAt: null },
+    });
+    const aisleCount = await this.prisma.warehouseAisle.count({
+      where: { tenantId, deletedAt: null, zone: { warehouseId } },
+    });
+    const rackCount = await this.prisma.warehouseRack.count({
+      where: { tenantId, deletedAt: null, aisle: { zone: { warehouseId } } },
+    });
+    const levelCount = await this.prisma.warehouseLevel.count({
+      where: { tenantId, deletedAt: null, rack: { aisle: { zone: { warehouseId } } } },
+    });
+    const binCount = await this.prisma.warehouseBin.count({
+      where: { tenantId, deletedAt: null, level: { rack: { aisle: { zone: { warehouseId } } } } },
+    });
 
     const levelCap = await this.prisma.warehouseLevel.aggregate({
       where: { tenantId, deletedAt: null, rack: { aisle: { zone: { warehouseId } } } },
-      _sum:  { maxWeightKg: true, maxVolumeLtr: true, maxPallets: true },
+      _sum: { maxWeightKg: true, maxVolumeLtr: true, maxPallets: true },
     });
     const binCap = await this.prisma.warehouseBin.aggregate({
       where: { tenantId, deletedAt: null, level: { rack: { aisle: { zone: { warehouseId } } } } },
-      _sum:  { maxWeightKg: true, maxVolumeLtr: true, maxPallets: true },
+      _sum: { maxWeightKg: true, maxVolumeLtr: true, maxPallets: true },
     });
 
-    const totalCapacity = binCount > 0 ? {
-      maxWeightKg:  binCap._sum.maxWeightKg,
-      maxVolumeLtr: binCap._sum.maxVolumeLtr,
-      maxPallets:   binCap._sum.maxPallets,
-    } : {
-      maxWeightKg:  levelCap._sum.maxWeightKg,
-      maxVolumeLtr: levelCap._sum.maxVolumeLtr,
-      maxPallets:   levelCap._sum.maxPallets,
-    };
+    const totalCapacity =
+      binCount > 0
+        ? {
+            maxWeightKg: binCap._sum.maxWeightKg,
+            maxVolumeLtr: binCap._sum.maxVolumeLtr,
+            maxPallets: binCap._sum.maxPallets,
+          }
+        : {
+            maxWeightKg: levelCap._sum.maxWeightKg,
+            maxVolumeLtr: levelCap._sum.maxVolumeLtr,
+            maxPallets: levelCap._sum.maxPallets,
+          };
 
     const capPallets = totalCapacity.maxPallets ? Number(totalCapacity.maxPallets) : null;
-    const occupancyPct = capPallets && capPallets > 0
-      ? Math.min(100, Math.round((stockAgg._count.id / capPallets) * 100))
-      : null;
+    const occupancyPct =
+      capPallets && capPallets > 0
+        ? Math.min(100, Math.round((stockAgg._count.id / capPallets) * 100))
+        : null;
 
     return {
-      stockLines:   stockAgg._count.id,
-      totalOnHand:  stockAgg._sum.onHandQuantity,
+      stockLines: stockAgg._count.id,
+      totalOnHand: stockAgg._sum.onHandQuantity,
       occupancyPct,
-      locations: { zones: zoneCount, aisles: aisleCount, racks: rackCount, levels: levelCount, bins: binCount },
-      capacity:  {
-        maxWeightKg:  totalCapacity.maxWeightKg  ? Number(totalCapacity.maxWeightKg)  : null,
+      locations: {
+        zones: zoneCount,
+        aisles: aisleCount,
+        racks: rackCount,
+        levels: levelCount,
+        bins: binCount,
+      },
+      capacity: {
+        maxWeightKg: totalCapacity.maxWeightKg ? Number(totalCapacity.maxWeightKg) : null,
         maxVolumeLtr: totalCapacity.maxVolumeLtr ? Number(totalCapacity.maxVolumeLtr) : null,
-        maxPallets:   totalCapacity.maxPallets   ? Number(totalCapacity.maxPallets)   : null,
+        maxPallets: totalCapacity.maxPallets ? Number(totalCapacity.maxPallets) : null,
       },
     };
   }
@@ -280,7 +305,7 @@ export class WarehousesService {
     }
     return this.prisma.warehouse.update({
       where: { id },
-      data:  { ...dto, updatedBy: userId },
+      data: { ...dto, updatedBy: userId },
     });
   }
 
@@ -290,7 +315,7 @@ export class WarehousesService {
     await this.findOne(tenantId, id);
     await this.prisma.warehouse.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Warehouse deleted successfully', id };
   }

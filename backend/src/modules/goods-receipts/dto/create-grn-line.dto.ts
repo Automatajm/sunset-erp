@@ -2,11 +2,23 @@
 // FILE: backend/src/modules/goods-receipts/dto/create-grn-line.dto.ts
 // ============================================================================
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsNumber, IsPositive, IsDateString, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsNumber,
+  IsPositive,
+  IsDateString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateGrnLineDto {
-  @ApiPropertyOptional({ example: 'uuid', description: 'PO line UUID (links to PO line for 3-way match)' })
+  @ApiPropertyOptional({
+    example: 'uuid',
+    description: 'PO line UUID (links to PO line for 3-way match)',
+  })
   @IsOptional()
   @IsUUID()
   poLineId?: string;
@@ -26,7 +38,7 @@ export class CreateGrnLineDto {
   @MaxLength(20)
   uom: string;
 
-  @ApiPropertyOptional({ example: 3.50, description: 'Unit cost at receipt' })
+  @ApiPropertyOptional({ example: 3.5, description: 'Unit cost at receipt' })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -39,7 +51,10 @@ export class CreateGrnLineDto {
   @MaxLength(100)
   lotNumber?: string;
 
-  @ApiPropertyOptional({ example: '2026-12-31', description: 'Expiry date for perishable / expiry-tracked items' })
+  @ApiPropertyOptional({
+    example: '2026-12-31',
+    description: 'Expiry date for perishable / expiry-tracked items',
+  })
   @IsOptional()
   @IsDateString()
   expiryDate?: string;

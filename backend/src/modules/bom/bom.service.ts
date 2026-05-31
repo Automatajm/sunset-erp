@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { UpdateBomDto } from './dto/update-bom.dto';
@@ -10,7 +15,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 const COMPONENT_INCLUDE = {
   consumptionGroup: {
     select: {
-      id: true, code: true, name: true, description: true,
+      id: true,
+      code: true,
+      name: true,
+      description: true,
       consumptionUomId: true,
       consumptionUom: {
         select: { id: true, code: true, name: true, type: true, system: true },
@@ -31,19 +39,19 @@ const ROUTING_INCLUDE = {
 const BOM_FULL_INCLUDE = {
   parentItem: { select: { id: true, code: true, name: true, baseUom: true } },
   components: {
-    include:  COMPONENT_INCLUDE,
-    orderBy:  { lineNumber: 'asc' as const },
+    include: COMPONENT_INCLUDE,
+    orderBy: { lineNumber: 'asc' as const },
   },
   routings: {
-    where:    { deletedAt: null },
-    include:  ROUTING_INCLUDE,
-    orderBy:  { stepNumber: 'asc' as const },
+    where: { deletedAt: null },
+    include: ROUTING_INCLUDE,
+    orderBy: { stepNumber: 'asc' as const },
   },
 };
 
 const BOM_LIST_INCLUDE = {
   parentItem: { select: { id: true, code: true, name: true } },
-  _count:     { select: { components: true, routings: true } },
+  _count: { select: { components: true, routings: true } },
 };
 
 @Injectable()
@@ -65,11 +73,12 @@ export class BomService {
         where: { id: comp.consumptionGroupId, tenantId, deletedAt: null },
         include: { consumptionUom: true },
       });
-      if (!cg) throw new NotFoundException(`Consumption group ${comp.consumptionGroupId} not found`);
+      if (!cg)
+        throw new NotFoundException(`Consumption group ${comp.consumptionGroupId} not found`);
     }
 
-    const bomNumber = createBomDto.bomCode || await this.generateBomNumber(tenantId);
-    const existing  = await this.prisma.bom.findFirst({
+    const bomNumber = createBomDto.bomCode || (await this.generateBomNumber(tenantId));
+    const existing = await this.prisma.bom.findFirst({
       where: { tenantId, bomNumber, deletedAt: null },
     });
     if (existing) throw new ConflictException(`BOM with number ${bomNumber} already exists`);
@@ -81,32 +90,34 @@ export class BomService {
         tenantId,
         parentItemId: createBomDto.itemId,
         bomNumber,
-        version:  versionNumber,
+        version: versionNumber,
         isActive: createBomDto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
         components: {
-          create: await Promise.all(createBomDto.components.map(async (comp, index) => {
-            // Auto-fill consumptionUomId from the group if not provided
-            let consumptionUomId = comp.consumptionUomId ?? null;
-            if (!consumptionUomId) {
-              const cg = await this.prisma.consumptionGroup.findFirst({
-                where: { id: comp.consumptionGroupId, tenantId },
-              });
-              consumptionUomId = cg?.consumptionUomId ?? null;
-            }
-            return {
-              tenantId,
-              consumptionGroupId: comp.consumptionGroupId,
-              lineNumber:         index + 1,
-              quantityPer:        new Decimal(comp.quantity),
-              uom:                comp.uom,
-              consumptionUomId,
-              scrapPercent:       new Decimal(comp.scrapPercent || 0),
-              createdBy:          userId,
-              updatedBy:          userId,
-            };
-          })),
+          create: await Promise.all(
+            createBomDto.components.map(async (comp, index) => {
+              // Auto-fill consumptionUomId from the group if not provided
+              let consumptionUomId = comp.consumptionUomId ?? null;
+              if (!consumptionUomId) {
+                const cg = await this.prisma.consumptionGroup.findFirst({
+                  where: { id: comp.consumptionGroupId, tenantId },
+                });
+                consumptionUomId = cg?.consumptionUomId ?? null;
+              }
+              return {
+                tenantId,
+                consumptionGroupId: comp.consumptionGroupId,
+                lineNumber: index + 1,
+                quantityPer: new Decimal(comp.quantity),
+                uom: comp.uom,
+                consumptionUomId,
+                scrapPercent: new Decimal(comp.scrapPercent || 0),
+                createdBy: userId,
+                updatedBy: userId,
+              };
+            }),
+          ),
         },
       },
       include: BOM_FULL_INCLUDE,
@@ -123,8 +134,8 @@ export class BomService {
 
     return this.prisma.bom.findMany({
       where,
-      include:  BOM_LIST_INCLUDE,
-      orderBy:  { bomNumber: 'asc' },
+      include: BOM_LIST_INCLUDE,
+      orderBy: { bomNumber: 'asc' },
     });
   }
 
@@ -132,7 +143,7 @@ export class BomService {
 
   async findOne(tenantId: string, id: string) {
     const bom = await this.prisma.bom.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: BOM_FULL_INCLUDE,
     });
     if (!bom) throw new NotFoundException(`BOM with ID ${id} not found`);
@@ -148,19 +159,20 @@ export class BomService {
       const existing = await this.prisma.bom.findFirst({
         where: { tenantId, bomNumber: updateBomDto.bomCode, id: { not: id }, deletedAt: null },
       });
-      if (existing) throw new ConflictException(`BOM with number ${updateBomDto.bomCode} already exists`);
+      if (existing)
+        throw new ConflictException(`BOM with number ${updateBomDto.bomCode} already exists`);
     }
 
     const updateData: any = { updatedBy: userId };
-    if (updateBomDto.bomCode)                   updateData.bomNumber    = updateBomDto.bomCode;
-    if (updateBomDto.description !== undefined)  updateData.description  = updateBomDto.description;
-    if (updateBomDto.version)                    updateData.version      = parseInt(updateBomDto.version);
-    if (updateBomDto.isActive !== undefined)     updateData.isActive     = updateBomDto.isActive;
-    if (updateBomDto.itemId)                     updateData.parentItemId = updateBomDto.itemId;
+    if (updateBomDto.bomCode) updateData.bomNumber = updateBomDto.bomCode;
+    if (updateBomDto.description !== undefined) updateData.description = updateBomDto.description;
+    if (updateBomDto.version) updateData.version = parseInt(updateBomDto.version);
+    if (updateBomDto.isActive !== undefined) updateData.isActive = updateBomDto.isActive;
+    if (updateBomDto.itemId) updateData.parentItemId = updateBomDto.itemId;
 
     const bom = await this.prisma.bom.update({
-      where:   { id },
-      data:    updateData,
+      where: { id },
+      data: updateData,
       include: BOM_FULL_INCLUDE,
     });
 
@@ -173,7 +185,7 @@ export class BomService {
     await this.findOne(tenantId, id);
     await this.prisma.bom.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'BOM deleted successfully', id };
   }
@@ -185,21 +197,26 @@ export class BomService {
 
     const requirements = bom.components.map((comp: any) => {
       const requiredQty = comp.quantityPer * quantity;
-      const scrapQty    = (requiredQty * comp.scrapPercent) / 100;
-      const totalQty    = requiredQty + scrapQty;
+      const scrapQty = (requiredQty * comp.scrapPercent) / 100;
+      const totalQty = requiredQty + scrapQty;
       return {
         consumptionGroup: comp.consumptionGroup,
-        quantityPerUnit:  comp.quantityPer,
+        quantityPerUnit: comp.quantityPer,
         requiredQuantity: requiredQty,
-        scrapQuantity:    scrapQty,
-        totalQuantity:    totalQty,
-        uom:              comp.uom,            // formulador UOM
-        consumptionUom:   comp.consumptionUom, // system UOM — MRP target
+        scrapQuantity: scrapQty,
+        totalQuantity: totalQty,
+        uom: comp.uom, // formulador UOM
+        consumptionUom: comp.consumptionUom, // system UOM — MRP target
       };
     });
 
     return {
-      bom: { id: bom.id, bomNumber: bom.bomNumber, parentItem: bom.parentItem, version: bom.version },
+      bom: {
+        id: bom.id,
+        bomNumber: bom.bomNumber,
+        parentItem: bom.parentItem,
+        version: bom.version,
+      },
       productionQuantity: quantity,
       requirements,
       totalComponents: requirements.length,
@@ -213,17 +230,17 @@ export class BomService {
 
     return bom.components.map((comp: any) => {
       const qtyRequired = comp.quantityPer * quantity;
-      const scrapQty    = (qtyRequired * comp.scrapPercent) / 100;
-      const qtyPlanned  = qtyRequired + scrapQty;
+      const scrapQty = (qtyRequired * comp.scrapPercent) / 100;
+      const qtyPlanned = qtyRequired + scrapQty;
 
       return {
-        consumptionGroupId:   comp.consumptionGroup.id,
+        consumptionGroupId: comp.consumptionGroup.id,
         consumptionGroupCode: comp.consumptionGroup.code,
         consumptionGroupName: comp.consumptionGroup.name,
-        qtyPlanned:           Math.ceil(qtyPlanned * 1000) / 1000,
-        uom:                  comp.uom,
-        consumptionUom:       comp.consumptionUom ?? null,
-        scrapPercent:         comp.scrapPercent,
+        qtyPlanned: Math.ceil(qtyPlanned * 1000) / 1000,
+        uom: comp.uom,
+        consumptionUom: comp.consumptionUom ?? null,
+        scrapPercent: comp.scrapPercent,
         note: comp.scrapPercent > 0 ? `Includes ${comp.scrapPercent}% scrap` : undefined,
       };
     });
@@ -248,14 +265,14 @@ export class BomService {
       data: {
         tenantId,
         bomId,
-        stepNumber:     dto.stepNumber,
-        workCenterId:   dto.workCenterId,
-        description:    dto.description ?? null,
-        setupTime:      new Decimal(dto.setupTime ?? 0),
+        stepNumber: dto.stepNumber,
+        workCenterId: dto.workCenterId,
+        description: dto.description ?? null,
+        setupTime: new Decimal(dto.setupTime ?? 0),
         runTimePerUnit: new Decimal(dto.runTimePerUnit ?? 0),
-        notes:          dto.notes ?? null,
-        createdBy:      userId,
-        updatedBy:      userId,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
       include: ROUTING_INCLUDE,
     });
@@ -268,18 +285,20 @@ export class BomService {
   async getRoutingSteps(tenantId: string, bomId: string) {
     await this.findOne(tenantId, bomId);
     const steps = await this.prisma.bomRouting.findMany({
-      where:   { bomId, tenantId, deletedAt: null },
+      where: { bomId, tenantId, deletedAt: null },
       include: ROUTING_INCLUDE,
       orderBy: { stepNumber: 'asc' },
     });
-    return steps.map(s => this.formatRoutingStep(s));
+    return steps.map((s) => this.formatRoutingStep(s));
   }
 
   // ── Routing: Update ───────────────────────────────────────────────────────
 
   async updateRoutingStep(
-    tenantId: string, userId: string,
-    bomId: string, stepId: string,
+    tenantId: string,
+    userId: string,
+    bomId: string,
+    stepId: string,
     dto: UpdateBomRoutingDto,
   ) {
     await this.findOne(tenantId, bomId);
@@ -304,16 +323,16 @@ export class BomService {
     }
 
     const data: any = { updatedBy: userId };
-    if (dto.stepNumber !== undefined)     data.stepNumber     = dto.stepNumber;
-    if (dto.workCenterId)                 data.workCenterId   = dto.workCenterId;
-    if (dto.description !== undefined)    data.description    = dto.description;
-    if (dto.setupTime !== undefined)      data.setupTime      = new Decimal(dto.setupTime);
+    if (dto.stepNumber !== undefined) data.stepNumber = dto.stepNumber;
+    if (dto.workCenterId) data.workCenterId = dto.workCenterId;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.setupTime !== undefined) data.setupTime = new Decimal(dto.setupTime);
     if (dto.runTimePerUnit !== undefined) data.runTimePerUnit = new Decimal(dto.runTimePerUnit);
-    if (dto.isActive !== undefined)       data.isActive       = dto.isActive;
-    if (dto.notes !== undefined)          data.notes          = dto.notes;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
+    if (dto.notes !== undefined) data.notes = dto.notes;
 
     const updated = await this.prisma.bomRouting.update({
-      where:   { id: stepId },
+      where: { id: stepId },
       data,
       include: ROUTING_INCLUDE,
     });
@@ -333,7 +352,7 @@ export class BomService {
 
     await this.prisma.bomRouting.update({
       where: { id: stepId },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
 
     return { message: 'Routing step deleted', id: stepId };
@@ -345,7 +364,7 @@ export class BomService {
     const bom = await this.findOne(tenantId, bomId);
 
     const steps = await this.prisma.bomRouting.findMany({
-      where:   { bomId, tenantId, deletedAt: null, isActive: true },
+      where: { bomId, tenantId, deletedAt: null, isActive: true },
       include: ROUTING_INCLUDE,
       orderBy: { stepNumber: 'asc' },
     });
@@ -353,49 +372,52 @@ export class BomService {
     if (steps.length === 0) {
       return {
         bom: { id: bom.id, bomNumber: bom.bomNumber },
-        quantity, steps: [],
-        totalSetupHours: 0, totalRunHours: 0,
-        totalLaborHours: 0, estimatedLaborCost: 0,
+        quantity,
+        steps: [],
+        totalSetupHours: 0,
+        totalRunHours: 0,
+        totalLaborHours: 0,
+        estimatedLaborCost: 0,
         message: 'No routing steps defined for this BOM',
       };
     }
 
     let totalSetupHours = 0;
-    let totalRunHours   = 0;
-    let totalCost       = 0;
+    let totalRunHours = 0;
+    let totalCost = 0;
 
-    const stepDetails = steps.map(s => {
-      const setup    = Number(s.setupTime);
+    const stepDetails = steps.map((s) => {
+      const setup = Number(s.setupTime);
       const runTotal = Number(s.runTimePerUnit) * quantity;
-      const total    = setup + runTotal;
-      const rate     = s.workCenter.costPerHour ? Number(s.workCenter.costPerHour) : 0;
-      const cost     = total * rate;
+      const total = setup + runTotal;
+      const rate = s.workCenter.costPerHour ? Number(s.workCenter.costPerHour) : 0;
+      const cost = total * rate;
 
       totalSetupHours += setup;
-      totalRunHours   += runTotal;
-      totalCost       += cost;
+      totalRunHours += runTotal;
+      totalCost += cost;
 
       return {
-        stepNumber:     s.stepNumber,
-        description:    s.description,
-        workCenter:     s.workCenter,
-        setupTime:      setup,
+        stepNumber: s.stepNumber,
+        description: s.description,
+        workCenter: s.workCenter,
+        setupTime: setup,
         runTimePerUnit: Number(s.runTimePerUnit),
-        totalRunHours:  runTotal,
-        totalHours:     total,
-        costPerHour:    rate,
-        estimatedCost:  cost,
+        totalRunHours: runTotal,
+        totalHours: total,
+        costPerHour: rate,
+        estimatedCost: cost,
       };
     });
 
     return {
       bom: { id: bom.id, bomNumber: bom.bomNumber, parentItem: bom.parentItem },
       quantity,
-      steps:               stepDetails,
+      steps: stepDetails,
       totalSetupHours,
       totalRunHours,
-      totalLaborHours:     totalSetupHours + totalRunHours,
-      estimatedLaborCost:  totalCost,
+      totalLaborHours: totalSetupHours + totalRunHours,
+      estimatedLaborCost: totalCost,
     };
   }
 
@@ -403,8 +425,8 @@ export class BomService {
 
   private async generateBomNumber(tenantId: string): Promise<string> {
     const prefix = `BOM-${new Date().getFullYear()}`;
-    const last   = await this.prisma.bom.findFirst({
-      where:   { tenantId, bomNumber: { startsWith: prefix } },
+    const last = await this.prisma.bom.findFirst({
+      where: { tenantId, bomNumber: { startsWith: prefix } },
       orderBy: { bomNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
@@ -417,7 +439,7 @@ export class BomService {
       ...bom,
       components: bom.components?.map((comp: any) => ({
         ...comp,
-        quantityPer:  Number(comp.quantityPer),
+        quantityPer: Number(comp.quantityPer),
         scrapPercent: Number(comp.scrapPercent),
       })),
       routings: bom.routings?.map((r: any) => this.formatRoutingStep(r)),
@@ -427,7 +449,7 @@ export class BomService {
   private formatRoutingStep(step: any) {
     return {
       ...step,
-      setupTime:      Number(step.setupTime),
+      setupTime: Number(step.setupTime),
       runTimePerUnit: Number(step.runTimePerUnit),
     };
   }

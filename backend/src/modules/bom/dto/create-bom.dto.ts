@@ -1,4 +1,12 @@
-﻿import { IsUUID, IsString, IsOptional, IsArray, ValidateNested, IsBoolean, MaxLength } from 'class-validator';
+﻿import {
+  IsUUID,
+  IsString,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsBoolean,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateBomComponentDto } from './create-bom-component.dto';

@@ -9,31 +9,31 @@ import { Decimal } from '@prisma/client/runtime/library';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface MrpGroupDemand {
-  consumptionGroupId:   string;
+  consumptionGroupId: string;
   consumptionGroupCode: string;
   consumptionGroupName: string;
-  consumptionUomId:     string;
-  consumptionUomCode:   string;
-  totalQty:             number;   // aggregated in consumptionUom
+  consumptionUomId: string;
+  consumptionUomCode: string;
+  totalQty: number; // aggregated in consumptionUom
   sources: {
-    moId:       string;
-    moNumber:   string;
-    bomId:      string;
+    moId: string;
+    moNumber: string;
+    bomId: string;
     lineNumber: number;
-    qtyFormulador:   number;
-    uomFormulador:   string;
-    qtyConverted:    number;
+    qtyFormulador: number;
+    uomFormulador: string;
+    qtyConverted: number;
     conversionFactor: number;
     plannedStart: Date | null;
   }[];
 }
 
 export interface MrpResult {
-  gnId:          string;
-  gnNumber:      string;
-  linesCreated:  number;
-  groups:        MrpGroupDemand[];
-  warnings:      string[];
+  gnId: string;
+  gnNumber: string;
+  linesCreated: number;
+  groups: MrpGroupDemand[];
+  warnings: string[];
 }
 
 // ── MRP Engine ────────────────────────────────────────────────────────────────
@@ -55,9 +55,9 @@ export class MrpService {
    */
   async runMrp(
     tenantId: string,
-    userId:   string,
-    gnId:     string,
-    moIds:    string[],
+    userId: string,
+    gnId: string,
+    moIds: string[],
   ): Promise<MrpResult> {
     // 1. Validate GeneralNeed exists and is in editable state
     const gn = await this.prisma.generalNeed.findFirst({
@@ -73,18 +73,20 @@ export class MrpService {
     // 2. Load Production Orders with BOM components
     const mos = await this.prisma.productionOrder.findMany({
       where: {
-        id:        { in: moIds },
+        id: { in: moIds },
         tenantId,
         deletedAt: null,
-        status:    { in: ['draft', 'released', 'in_progress'] },
+        status: { in: ['draft', 'released', 'in_progress'] },
       },
     });
 
     if (mos.length === 0) {
-      throw new NotFoundException('No valid Production Orders found (must be draft, released, or in_progress)');
+      throw new NotFoundException(
+        'No valid Production Orders found (must be draft, released, or in_progress)',
+      );
     }
 
-    const warnings: string[]                             = [];
+    const warnings: string[] = [];
     const demandMap = new Map<string, MrpGroupDemand>(); // key = consumptionGroupId
 
     // 3. Explode each MO's BOM
@@ -99,7 +101,9 @@ export class MrpService {
         include: {
           consumptionGroup: {
             select: {
-              id: true, code: true, name: true,
+              id: true,
+              code: true,
+              name: true,
               consumptionUomId: true,
               consumptionUom: {
                 select: { id: true, code: true, name: true, type: true },
@@ -123,7 +127,9 @@ export class MrpService {
       for (const comp of components) {
         const cg = (comp as any).consumptionGroup;
         if (!cg) {
-          warnings.push(`BOM component line ${comp.lineNumber} in MO ${mo.poNumber} has no ConsumptionGroup — skipped`);
+          warnings.push(
+            `BOM component line ${comp.lineNumber} in MO ${mo.poNumber} has no ConsumptionGroup — skipped`,
+          );
           continue;
         }
 
@@ -138,7 +144,7 @@ export class MrpService {
         const uomFormulador = comp.uom; // formulador UOM code (string)
 
         // 4. Convert formulador UOM → consumptionUom via UomConversion catalog
-        let qtyConverted     = qtyFormulador;
+        let qtyConverted = qtyFormulador;
         let conversionFactor = 1;
 
         if (uomFormulador !== consUom.code) {
@@ -156,7 +162,7 @@ export class MrpService {
               where: {
                 fromUomId_toUomId: {
                   fromUomId: fromUom.id,
-                  toUomId:   consUom.id,
+                  toUomId: consUom.id,
                 },
               },
             });
@@ -164,11 +170,11 @@ export class MrpService {
             if (!conversion) {
               warnings.push(
                 `No conversion found: ${uomFormulador} → ${consUom.code} ` +
-                `(MO ${mo.poNumber}, component ${comp.lineNumber}) — using 1:1`,
+                  `(MO ${mo.poNumber}, component ${comp.lineNumber}) — using 1:1`,
               );
             } else {
               conversionFactor = Number(conversion.factor);
-              qtyConverted     = Math.round(qtyFormulador * conversionFactor * 1_000_000) / 1_000_000;
+              qtyConverted = Math.round(qtyFormulador * conversionFactor * 1_000_000) / 1_000_000;
             }
           }
         }
@@ -177,39 +183,41 @@ export class MrpService {
         const key = cg.id;
         if (!demandMap.has(key)) {
           demandMap.set(key, {
-            consumptionGroupId:   cg.id,
+            consumptionGroupId: cg.id,
             consumptionGroupCode: cg.code,
             consumptionGroupName: cg.name,
-            consumptionUomId:     consUom.id,
-            consumptionUomCode:   consUom.code,
-            totalQty:             0,
-            sources:              [],
+            consumptionUomId: consUom.id,
+            consumptionUomCode: consUom.code,
+            totalQty: 0,
+            sources: [],
           });
         }
 
         const demand = demandMap.get(key)!;
         demand.totalQty = Math.round((demand.totalQty + qtyConverted) * 1_000_000) / 1_000_000;
         demand.sources.push({
-          moId:             mo.id,
-          moNumber:         mo.poNumber,
-          bomId:            mo.bomId,
-          lineNumber:       comp.lineNumber,
+          moId: mo.id,
+          moNumber: mo.poNumber,
+          bomId: mo.bomId,
+          lineNumber: comp.lineNumber,
           qtyFormulador,
           uomFormulador,
           qtyConverted,
           conversionFactor,
-          plannedStart:     mo.plannedStartDate,
+          plannedStart: mo.plannedStartDate,
         });
       }
     }
 
     if (demandMap.size === 0) {
-      throw new BadRequestException('MRP explosion produced no demand — check BOM components and ConsumptionGroup configuration');
+      throw new BadRequestException(
+        'MRP explosion produced no demand — check BOM components and ConsumptionGroup configuration',
+      );
     }
 
     // 6. Get last line number in GN
     const lastLine = await this.prisma.generalNeedLine.findFirst({
-      where:   { gnId, tenantId, deletedAt: null },
+      where: { gnId, tenantId, deletedAt: null },
       orderBy: { lineNumber: 'desc' },
     });
     let nextLineNum = (lastLine?.lineNumber ?? 0) + 1;
@@ -223,51 +231,55 @@ export class MrpService {
         where: {
           tenantId,
           consumptionGroupId: demand.consumptionGroupId,
-          deletedAt:          null,
-          isPurchasable:      true,
+          deletedAt: null,
+          isPurchasable: true,
         },
         include: {
           supplierItems: {
-            where:   { isPreferred: true, deletedAt: null },
+            where: { isPreferred: true, deletedAt: null },
             include: { supplier: { select: { id: true, code: true, name: true } } },
-            take:    1,
+            take: 1,
           },
         },
       });
 
-      const preferredSupplierId  = preferredItem?.supplierItems?.[0]?.supplierId  ?? null;
-      const estimatedUnitCost    = preferredItem?.supplierItems?.[0]?.lastPrice
+      const preferredSupplierId = preferredItem?.supplierItems?.[0]?.supplierId ?? null;
+      const estimatedUnitCost = preferredItem?.supplierItems?.[0]?.lastPrice
         ? Number(preferredItem.supplierItems[0].lastPrice)
         : null;
 
       // Earliest required date from MO planned starts
-      const requiredDate = demand.sources
-        .map(s => s.plannedStart)
-        .filter((d): d is Date => d !== null)
-        .sort((a, b) => a.getTime() - b.getTime())[0] ?? new Date(gn.periodEnd);
+      const requiredDate =
+        demand.sources
+          .map((s) => s.plannedStart)
+          .filter((d): d is Date => d !== null)
+          .sort((a, b) => a.getTime() - b.getTime())[0] ?? new Date(gn.periodEnd);
 
       // Build notes with source breakdown
-      const notesLines = demand.sources.map(s =>
-        `MO ${s.moNumber}: ${s.qtyFormulador} ${s.uomFormulador}` +
-        (s.conversionFactor !== 1 ? ` × ${s.conversionFactor} = ${s.qtyConverted} ${demand.consumptionUomCode}` : ''),
+      const notesLines = demand.sources.map(
+        (s) =>
+          `MO ${s.moNumber}: ${s.qtyFormulador} ${s.uomFormulador}` +
+          (s.conversionFactor !== 1
+            ? ` × ${s.conversionFactor} = ${s.qtyConverted} ${demand.consumptionUomCode}`
+            : ''),
       );
 
       const line = await this.prisma.generalNeedLine.create({
         data: {
           tenantId,
           gnId,
-          lineNumber:         nextLineNum++,
+          lineNumber: nextLineNum++,
           consumptionGroupId: demand.consumptionGroupId,
-          quantity:           new Decimal(demand.totalQty),
-          uom:                demand.consumptionUomCode,
+          quantity: new Decimal(demand.totalQty),
+          uom: demand.consumptionUomCode,
           requiredDate,
           suggestedSupplierId: preferredSupplierId,
-          estimatedUnitCost:   estimatedUnitCost ? new Decimal(estimatedUnitCost) : null,
-          sourceType:          'mo',
-          status:              'pending',
-          notes:               `MRP Explode — ${demand.consumptionGroupCode}\n${notesLines.join('\n')}`,
-          createdBy:           userId,
-          updatedBy:           userId,
+          estimatedUnitCost: estimatedUnitCost ? new Decimal(estimatedUnitCost) : null,
+          sourceType: 'mo',
+          status: 'pending',
+          notes: `MRP Explode — ${demand.consumptionGroupCode}\n${notesLines.join('\n')}`,
+          createdBy: userId,
+          updatedBy: userId,
         },
       });
 
@@ -277,14 +289,14 @@ export class MrpService {
     // 8. Update GN source to mrp_explode
     await this.prisma.generalNeed.update({
       where: { id: gnId },
-      data:  { source: 'mrp_explode', status: 'in_progress', updatedBy: userId },
+      data: { source: 'mrp_explode', status: 'in_progress', updatedBy: userId },
     });
 
     return {
       gnId,
-      gnNumber:     gn.gnNumber,
+      gnNumber: gn.gnNumber,
       linesCreated: createdLines.length,
-      groups:       Array.from(demandMap.values()),
+      groups: Array.from(demandMap.values()),
       warnings,
     };
   }

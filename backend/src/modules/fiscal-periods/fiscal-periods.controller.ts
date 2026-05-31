@@ -41,11 +41,7 @@ export class FiscalPeriodsController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Period code already exists' })
   async create(@Request() req, @Body() createFiscalPeriodDto: CreateFiscalPeriodDto) {
-    return this.fiscalPeriodsService.create(
-      req.user.tenantId,
-      req.user.id,
-      createFiscalPeriodDto,
-    );
+    return this.fiscalPeriodsService.create(req.user.tenantId, req.user.id, createFiscalPeriodDto);
   }
 
   @Get()
@@ -155,7 +151,10 @@ export class FiscalPeriodsController {
   @ApiOperation({ summary: 'Delete fiscal period (soft delete)' })
   @ApiParam({ name: 'id', description: 'Fiscal period UUID' })
   @ApiResponse({ status: 200, description: 'Fiscal period deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Cannot delete closed/locked periods or periods with entries' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot delete closed/locked periods or periods with entries',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.fiscalPeriodsService.remove(req.user.tenantId, req.user.id, id);

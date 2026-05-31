@@ -10,7 +10,10 @@ export class CreateLevelDto {
   @IsUUID()
   rackId: string;
 
-  @ApiProperty({ example: '01', description: 'Level code. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL' })
+  @ApiProperty({
+    example: '01',
+    description: 'Level code. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL',
+  })
   @IsString()
   @MaxLength(10)
   code: string;

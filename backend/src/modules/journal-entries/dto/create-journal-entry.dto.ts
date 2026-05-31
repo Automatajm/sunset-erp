@@ -1,4 +1,12 @@
-﻿import { IsString, IsDateString, IsArray, ValidateNested, IsOptional, MaxLength, ArrayMinSize } from 'class-validator';
+﻿import {
+  IsString,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+  MaxLength,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateJournalEntryLineDto } from './create-journal-entry-line.dto';

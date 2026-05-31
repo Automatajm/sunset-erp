@@ -1,20 +1,40 @@
 // --- categories/categories.controller.ts ---
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
- 
+
 @ApiTags('Categories')
 @Controller('categories')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
- 
+
   @Post()
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create category (must belong to a MacroCategory)' })
@@ -24,7 +44,7 @@ export class CategoriesController {
   async create(@Request() req, @Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(req.user.tenantId, req.user.id, dto);
   }
- 
+
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all categories' })
@@ -33,7 +53,7 @@ export class CategoriesController {
   async findAll(@Request() req, @Query('macroCategoryId') macroCategoryId?: string) {
     return this.categoriesService.findAll(req.user.tenantId, macroCategoryId);
   }
- 
+
   @Get(':id')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get category by ID' })
@@ -43,7 +63,7 @@ export class CategoriesController {
   async findOne(@Request() req, @Param('id') id: string) {
     return this.categoriesService.findOne(req.user.tenantId, id);
   }
- 
+
   @Patch(':id')
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update category' })
@@ -54,7 +74,7 @@ export class CategoriesController {
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(req.user.tenantId, req.user.id, id, dto);
   }
- 
+
   @Delete(':id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)

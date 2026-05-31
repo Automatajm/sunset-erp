@@ -1,8 +1,19 @@
-﻿import { IsString, IsUUID, IsNumber, IsOptional, IsDateString, Min, MaxLength } from 'class-validator';
+﻿import {
+  IsString,
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsDateString,
+  Min,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateStockTransactionDto {
-  @ApiProperty({ example: 'receipt', description: 'Transaction type: receipt, issue, transfer, adjustment' })
+  @ApiProperty({
+    example: 'receipt',
+    description: 'Transaction type: receipt, issue, transfer, adjustment',
+  })
   @IsString()
   @MaxLength(50)
   transactionType: string;
@@ -24,7 +35,10 @@ export class CreateStockTransactionDto {
   @MaxLength(20)
   uom: string;
 
-  @ApiPropertyOptional({ example: 45.50, description: 'Unit cost in purchaseUom (used for WAC calculation on receipts)' })
+  @ApiPropertyOptional({
+    example: 45.5,
+    description: 'Unit cost in purchaseUom (used for WAC calculation on receipts)',
+  })
   @IsOptional()
   @IsNumber()
   unitCost?: number;

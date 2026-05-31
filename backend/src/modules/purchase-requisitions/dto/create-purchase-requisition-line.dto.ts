@@ -1,6 +1,12 @@
 import {
-  IsString, IsOptional, IsUUID, IsNumber,
-  IsDateString, Min, MaxLength, IsEnum,
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  IsDateString,
+  Min,
+  MaxLength,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -36,7 +42,7 @@ export class CreatePurchaseRequisitionLineDto {
   @MaxLength(20)
   uom: string;
 
-  @ApiPropertyOptional({ example: 12.50 })
+  @ApiPropertyOptional({ example: 12.5 })
   @IsOptional()
   @IsNumber()
   @Min(0)

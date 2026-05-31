@@ -1,21 +1,16 @@
 ﻿// ============================================================================
 // FILE: backend/src/modules/items/dto/create-item.dto.ts
 // ============================================================================
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsNumber,
-  IsUUID,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID, MaxLength, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateItemDto {
   // ── Identity ────────────────────────────────────────────────────────────────
 
-  @ApiPropertyOptional({ example: 'ITEM001', description: 'Item code — auto-generated if omitted (ITEM-0001, ITEM-0002, …)' })
+  @ApiPropertyOptional({
+    example: 'ITEM001',
+    description: 'Item code — auto-generated if omitted (ITEM-0001, ITEM-0002, …)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)
@@ -31,7 +26,10 @@ export class CreateItemDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'raw_material', description: 'raw_material | finished_good | work_in_progress | service' })
+  @ApiProperty({
+    example: 'raw_material',
+    description: 'raw_material | finished_good | work_in_progress | service',
+  })
   @IsString()
   @MaxLength(50)
   itemType: string;
@@ -52,7 +50,8 @@ export class CreateItemDto {
 
   @ApiPropertyOptional({
     example: 'ITEM-0001',
-    description: 'Internal barcode — auto-generated from item code if omitted. Used for mobile count scanning.',
+    description:
+      'Internal barcode — auto-generated from item code if omitted. Used for mobile count scanning.',
   })
   @IsOptional()
   @IsString()
@@ -61,7 +60,8 @@ export class CreateItemDto {
 
   @ApiPropertyOptional({
     example: '7501031311309',
-    description: 'External barcode — EAN-13, UPC, or supplier barcode. Accepted as alternative scan input.',
+    description:
+      'External barcode — EAN-13, UPC, or supplier barcode. Accepted as alternative scan input.',
   })
   @IsOptional()
   @IsString()
@@ -70,7 +70,10 @@ export class CreateItemDto {
 
   // ── UOM — legacy (kept for backward compatibility) ──────────────────────────
 
-  @ApiProperty({ example: 'PCS', description: 'Base unit of measure (legacy field — use consumptionUomId for new items)' })
+  @ApiProperty({
+    example: 'PCS',
+    description: 'Base unit of measure (legacy field — use consumptionUomId for new items)',
+  })
   @IsString()
   @MaxLength(20)
   baseUom: string;
@@ -82,13 +85,19 @@ export class CreateItemDto {
   @IsUUID()
   purchaseUomId?: string;
 
-  @ApiPropertyOptional({ example: 3.78541, description: 'How many consumptionUom per 1 purchaseUom. Auto-calculated from catalog when possible.' })
+  @ApiPropertyOptional({
+    example: 3.78541,
+    description:
+      'How many consumptionUom per 1 purchaseUom. Auto-calculated from catalog when possible.',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   purchaseToConsumptionFactor?: number;
 
-  @ApiPropertyOptional({ description: 'Storage UOM ID — unit used for stock counting in warehouse' })
+  @ApiPropertyOptional({
+    description: 'Storage UOM ID — unit used for stock counting in warehouse',
+  })
   @IsOptional()
   @IsUUID()
   storageUomId?: string;
@@ -99,7 +108,9 @@ export class CreateItemDto {
   @Min(0)
   storageToConsumptionFactor?: number;
 
-  @ApiPropertyOptional({ description: 'Consumption UOM ID — unit used in BOM and production orders' })
+  @ApiPropertyOptional({
+    description: 'Consumption UOM ID — unit used in BOM and production orders',
+  })
   @IsOptional()
   @IsUUID()
   consumptionUomId?: string;
@@ -144,7 +155,7 @@ export class CreateItemDto {
   @MaxLength(50)
   valuationMethod?: string;
 
-  @ApiPropertyOptional({ example: 10.50 })
+  @ApiPropertyOptional({ example: 10.5 })
   @IsOptional()
   @IsNumber()
   @Min(0)

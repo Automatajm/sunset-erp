@@ -1,11 +1,9 @@
 // ============================================================================
 // FILE: backend/src/modules/stock-reconciliation/stock-count-assignment.service.ts
 // ============================================================================
-import {
-  Injectable, NotFoundException, BadRequestException,
-} from '@nestjs/common';
-import { PrismaService }        from '../../database/prisma.service';
-import { CreateAssignmentDto }  from './dto/create-assignment.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateAssignmentDto } from './dto/create-assignment.dto';
 
 @Injectable()
 export class StockCountAssignmentService {
@@ -25,7 +23,12 @@ export class StockCountAssignmentService {
     // Verify session exists and is in_progress
     const session = await this.prisma.stockCountSession.findFirst({
       where: { id: sessionId, tenantId, deletedAt: null },
-      include: { lines: { where: { deletedAt: null }, include: { item: { select: { id: true, categoryId: true } } } } },
+      include: {
+        lines: {
+          where: { deletedAt: null },
+          include: { item: { select: { id: true, categoryId: true } } },
+        },
+      },
     });
     if (!session) throw new NotFoundException('Session not found');
     if (session.status !== 'in_progress') {
@@ -37,26 +40,25 @@ export class StockCountAssignmentService {
       where: { sessionId, tenantId },
       select: { assignedLineIds: true },
     });
-    const alreadyAssigned = new Set(existingAssignments.flatMap(a => a.assignedLineIds));
+    const alreadyAssigned = new Set(existingAssignments.flatMap((a) => a.assignedLineIds));
 
     // Resolve location filters → collect matching level/bin IDs
     let locationLevelIds: Set<string> | null = null;
-    let locationBinIds:   Set<string> | null = null;
+    let locationBinIds: Set<string> | null = null;
 
-    const hasLocationFilter = (
-      (dto.zoneIds?.length  ?? 0) > 0 ||
+    const hasLocationFilter =
+      (dto.zoneIds?.length ?? 0) > 0 ||
       (dto.aisleIds?.length ?? 0) > 0 ||
       (dto.levelIds?.length ?? 0) > 0 ||
-      (dto.binIds?.length   ?? 0) > 0
-    );
+      (dto.binIds?.length ?? 0) > 0;
 
     if (hasLocationFilter) {
       locationLevelIds = new Set<string>();
-      locationBinIds   = new Set<string>();
+      locationBinIds = new Set<string>();
 
       // Explicit level/bin IDs
-      dto.levelIds?.forEach(id => locationLevelIds!.add(id));
-      dto.binIds?.forEach(id   => locationBinIds!.add(id));
+      dto.levelIds?.forEach((id) => locationLevelIds!.add(id));
+      dto.binIds?.forEach((id) => locationBinIds!.add(id));
 
       // Resolve zone → aisles → racks → levels → bins
       if (dto.zoneIds?.length) {
@@ -64,21 +66,21 @@ export class StockCountAssignmentService {
           where: { zoneId: { in: dto.zoneIds }, tenantId, deletedAt: null },
           select: { id: true },
         });
-        const aisleIds = aisles.map(a => a.id);
+        const aisleIds = aisles.map((a) => a.id);
         if (aisleIds.length) {
           const racks = await this.prisma.warehouseRack.findMany({
             where: { aisleId: { in: aisleIds }, tenantId, deletedAt: null },
             select: { id: true },
           });
-          const rackIds = racks.map(r => r.id);
+          const rackIds = racks.map((r) => r.id);
           if (rackIds.length) {
             const levels = await this.prisma.warehouseLevel.findMany({
               where: { rackId: { in: rackIds }, tenantId, deletedAt: null },
               select: { id: true, bins: { where: { deletedAt: null }, select: { id: true } } },
             });
-            levels.forEach(l => {
+            levels.forEach((l) => {
               locationLevelIds!.add(l.id);
-              l.bins.forEach(b => locationBinIds!.add(b.id));
+              l.bins.forEach((b) => locationBinIds!.add(b.id));
             });
           }
         }
@@ -90,15 +92,15 @@ export class StockCountAssignmentService {
           where: { aisleId: { in: dto.aisleIds }, tenantId, deletedAt: null },
           select: { id: true },
         });
-        const rackIds = racks.map(r => r.id);
+        const rackIds = racks.map((r) => r.id);
         if (rackIds.length) {
           const levels = await this.prisma.warehouseLevel.findMany({
             where: { rackId: { in: rackIds }, tenantId, deletedAt: null },
             select: { id: true, bins: { where: { deletedAt: null }, select: { id: true } } },
           });
-          levels.forEach(l => {
+          levels.forEach((l) => {
             locationLevelIds!.add(l.id);
-            l.bins.forEach(b => locationBinIds!.add(b.id));
+            l.bins.forEach((b) => locationBinIds!.add(b.id));
           });
         }
       }
@@ -109,28 +111,27 @@ export class StockCountAssignmentService {
           where: { id: { in: dto.levelIds }, tenantId, deletedAt: null },
           select: { id: true, bins: { where: { deletedAt: null }, select: { id: true } } },
         });
-        levels.forEach(l => l.bins.forEach(b => locationBinIds!.add(b.id)));
+        levels.forEach((l) => l.bins.forEach((b) => locationBinIds!.add(b.id)));
       }
     }
 
     // Resolve category filters → item IDs
     let categoryItemIds: Set<string> | null = null;
-    const hasCategoryFilter = (
-      (dto.categoryIds?.length      ?? 0) > 0 ||
-      (dto.macroCategoryIds?.length ?? 0) > 0
-    );
+    const hasCategoryFilter =
+      (dto.categoryIds?.length ?? 0) > 0 || (dto.macroCategoryIds?.length ?? 0) > 0;
 
     if (hasCategoryFilter) {
       categoryItemIds = new Set<string>();
       const categoryWhere: any = { tenantId, deletedAt: null };
-      if (dto.categoryIds?.length)      categoryWhere.id              = { in: dto.categoryIds };
-      if (dto.macroCategoryIds?.length) categoryWhere.macroCategoryId = { in: dto.macroCategoryIds };
+      if (dto.categoryIds?.length) categoryWhere.id = { in: dto.categoryIds };
+      if (dto.macroCategoryIds?.length)
+        categoryWhere.macroCategoryId = { in: dto.macroCategoryIds };
 
       const items = await this.prisma.item.findMany({
         where: { tenantId, deletedAt: null, category: categoryWhere },
         select: { id: true },
       });
-      items.forEach(i => categoryItemIds!.add(i.id));
+      items.forEach((i) => categoryItemIds!.add(i.id));
     }
 
     // Explicit item IDs filter
@@ -146,7 +147,7 @@ export class StockCountAssignmentService {
       // Location filter — line must have levelId or binId in resolved sets
       if (locationLevelIds !== null || locationBinIds !== null) {
         const levelMatch = line.levelId && locationLevelIds?.has(line.levelId);
-        const binMatch   = line.binId   && locationBinIds?.has(line.binId);
+        const binMatch = line.binId && locationBinIds?.has(line.binId);
         if (!levelMatch && !binMatch) continue;
       }
 
@@ -172,24 +173,24 @@ export class StockCountAssignmentService {
       data: {
         tenantId,
         sessionId,
-        userId:          dto.userId,
-        zoneIds:         dto.zoneIds         ?? [],
-        aisleIds:        dto.aisleIds        ?? [],
-        levelIds:        dto.levelIds        ?? [],
-        binIds:          dto.binIds          ?? [],
-        categoryIds:     dto.categoryIds     ?? [],
+        userId: dto.userId,
+        zoneIds: dto.zoneIds ?? [],
+        aisleIds: dto.aisleIds ?? [],
+        levelIds: dto.levelIds ?? [],
+        binIds: dto.binIds ?? [],
+        categoryIds: dto.categoryIds ?? [],
         macroCategoryIds: dto.macroCategoryIds ?? [],
-        itemIds:         dto.itemIds         ?? [],
+        itemIds: dto.itemIds ?? [],
         assignedLineIds: resolvedLineIds,
-        notes:           dto.notes,
-        createdBy:       userId,
+        notes: dto.notes,
+        createdBy: userId,
       },
     });
 
     // Update StockCountLine.assignedToUserId for each resolved line
     await this.prisma.stockCountLine.updateMany({
       where: { id: { in: resolvedLineIds } },
-      data:  { assignedToUserId: dto.userId },
+      data: { assignedToUserId: dto.userId },
     });
 
     return {
@@ -208,16 +209,20 @@ export class StockCountAssignmentService {
     });
 
     // Enrich with user info
-    const userIds = [...new Set(assignments.map(a => a.userId))];
-    const users   = await this.prisma.userTenant.findMany({
+    const userIds = [...new Set(assignments.map((a) => a.userId))];
+    const users = await this.prisma.userTenant.findMany({
       where: { tenantId, userId: { in: userIds }, isActive: true },
-      include: { user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } } },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
+        },
+      },
     });
-    const userMap = new Map(users.map(u => [u.userId, u.user]));
+    const userMap = new Map(users.map((u) => [u.userId, u.user]));
 
-    return assignments.map(a => ({
+    return assignments.map((a) => ({
       ...a,
-      user:          userMap.get(a.userId) ?? null,
+      user: userMap.get(a.userId) ?? null,
       assignedCount: a.assignedLineIds.length,
     }));
   }
@@ -233,7 +238,7 @@ export class StockCountAssignmentService {
     // Un-assign lines
     await this.prisma.stockCountLine.updateMany({
       where: { id: { in: assignment.assignedLineIds } },
-      data:  { assignedToUserId: null },
+      data: { assignedToUserId: null },
     });
 
     await this.prisma.stockCountAssignment.delete({ where: { id: assignmentId } });
@@ -257,11 +262,11 @@ export class StockCountAssignmentService {
     });
     if (!session) throw new NotFoundException('Session not found');
 
-    const unassigned = session.lines.filter(l => !l.assignedToUserId);
+    const unassigned = session.lines.filter((l) => !l.assignedToUserId);
     return {
-      totalLines:      session.lines.length,
+      totalLines: session.lines.length,
       unassignedLines: unassigned.length,
-      message:         'Use POST to create the assignment',
+      message: 'Use POST to create the assignment',
     };
   }
 }

@@ -11,13 +11,7 @@
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { WorkCentersService } from './work-centers.service';
 import { CreateWorkCenterDto } from './dto/create-work-center.dto';
 import { UpdateWorkCenterDto } from './dto/update-work-center.dto';
@@ -39,11 +33,7 @@ export class WorkCentersController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Work center code already exists' })
   async create(@Request() req, @Body() createWorkCenterDto: CreateWorkCenterDto) {
-    return this.workCentersService.create(
-      req.user.tenantId,
-      req.user.id,
-      createWorkCenterDto,
-    );
+    return this.workCentersService.create(req.user.tenantId, req.user.id, createWorkCenterDto);
   }
 
   @Get()
@@ -79,12 +69,7 @@ export class WorkCentersController {
     @Param('id') id: string,
     @Body() updateWorkCenterDto: UpdateWorkCenterDto,
   ) {
-    return this.workCentersService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateWorkCenterDto,
-    );
+    return this.workCentersService.update(req.user.tenantId, req.user.id, id, updateWorkCenterDto);
   }
 
   @Delete(':id')

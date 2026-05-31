@@ -1,7 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString, IsOptional, IsNumber, IsDateString, Min,
-} from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, Min } from 'class-validator';
 
 export class UpdateApInvoiceDto {
   @ApiPropertyOptional({ example: '2026-04-20' })
@@ -25,7 +23,7 @@ export class ApplyApPaymentDto {
   @IsDateString()
   paymentDate: string;
 
-  @ApiProperty({ example: 1500.00 })
+  @ApiProperty({ example: 1500.0 })
   @IsNumber()
   @Min(0.01)
   amount: number;

@@ -1,15 +1,23 @@
 // FILE: backend/src/modules/tenants/tenants.controller.ts
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { TenantsService }    from './tenants.service';
-import { CreateTenantDto }   from './dto/create-tenant.dto';
-import { UpdateTenantDto }   from './dto/update-tenant.dto';
-import { AddTenantUserDto }  from './dto/add-tenant-user.dto';
-import { JwtAuthGuard }      from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard }  from '../../common/guards/permissions.guard';
+import { TenantsService } from './tenants.service';
+import { CreateTenantDto } from './dto/create-tenant.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { AddTenantUserDto } from './dto/add-tenant-user.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Tenants')
@@ -22,18 +30,24 @@ export class TenantsController {
   @Get()
   @RequirePermissions('ADMIN:SETTINGS')
   @ApiOperation({ summary: 'List all tenants with user count' })
-  findAll() { return this.svc.findAll(); }
+  findAll() {
+    return this.svc.findAll();
+  }
 
   @Post()
   @RequirePermissions('ADMIN:SETTINGS')
   @ApiOperation({ summary: 'Create a new tenant' })
-  create(@Body() dto: CreateTenantDto) { return this.svc.create(dto); }
+  create(@Body() dto: CreateTenantDto) {
+    return this.svc.create(dto);
+  }
 
   @Get(':id')
   @RequirePermissions('ADMIN:SETTINGS')
   @ApiParam({ name: 'id', description: 'Tenant UUID' })
   @ApiOperation({ summary: 'Get tenant detail with users and roles' })
-  findOne(@Param('id') id: string) { return this.svc.findOne(id); }
+  findOne(@Param('id') id: string) {
+    return this.svc.findOne(id);
+  }
 
   @Patch(':id')
   @RequirePermissions('ADMIN:SETTINGS')
@@ -55,7 +69,7 @@ export class TenantsController {
   @Delete(':id/users/:userId')
   @RequirePermissions('ADMIN:SETTINGS')
   @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'id',     description: 'Tenant UUID' })
+  @ApiParam({ name: 'id', description: 'Tenant UUID' })
   @ApiParam({ name: 'userId', description: 'User UUID' })
   @ApiOperation({ summary: 'Remove user from tenant (deactivates, removes roles)' })
   removeUser(@Param('id') id: string, @Param('userId') userId: string) {
@@ -65,7 +79,7 @@ export class TenantsController {
   @Patch(':id/users/:userId/set-default')
   @RequirePermissions('ADMIN:SETTINGS')
   @HttpCode(HttpStatus.OK)
-  @ApiParam({ name: 'id',     description: 'Tenant UUID' })
+  @ApiParam({ name: 'id', description: 'Tenant UUID' })
   @ApiParam({ name: 'userId', description: 'User UUID' })
   @ApiOperation({ summary: 'Set or unset this tenant as default for the user' })
   setDefault(

@@ -11,13 +11,7 @@
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
@@ -39,11 +33,7 @@ export class SuppliersController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Supplier code already exists' })
   async create(@Request() req, @Body() createSupplierDto: CreateSupplierDto) {
-    return this.suppliersService.create(
-      req.user.tenantId,
-      req.user.id,
-      createSupplierDto,
-    );
+    return this.suppliersService.create(req.user.tenantId, req.user.id, createSupplierDto);
   }
 
   @Get()
@@ -79,12 +69,7 @@ export class SuppliersController {
     @Param('id') id: string,
     @Body() updateSupplierDto: UpdateSupplierDto,
   ) {
-    return this.suppliersService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateSupplierDto,
-    );
+    return this.suppliersService.update(req.user.tenantId, req.user.id, id, updateSupplierDto);
   }
 
   @Delete(':id')

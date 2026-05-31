@@ -41,11 +41,7 @@ export class ChartOfAccountsController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Account code already exists' })
   async create(@Request() req, @Body() createAccountDto: CreateAccountDto) {
-    return this.chartOfAccountsService.create(
-      req.user.tenantId,
-      req.user.id,
-      createAccountDto,
-    );
+    return this.chartOfAccountsService.create(req.user.tenantId, req.user.id, createAccountDto);
   }
 
   @Get()
@@ -102,12 +98,7 @@ export class ChartOfAccountsController {
     @Param('id') id: string,
     @Body() updateAccountDto: UpdateAccountDto,
   ) {
-    return this.chartOfAccountsService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateAccountDto,
-    );
+    return this.chartOfAccountsService.update(req.user.tenantId, req.user.id, id, updateAccountDto);
   }
 
   @Delete(':id')

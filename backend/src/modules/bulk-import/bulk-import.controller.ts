@@ -1,8 +1,20 @@
 import {
-  Controller, Post, Body, Param, UseGuards, Request, HttpCode, HttpStatus,
+  Controller,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiBody,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { BulkImportService } from './bulk-import.service';
 import { BulkImportDto, BULK_IMPORT_ENTITIES } from './dto/bulk-import.dto';
@@ -45,19 +57,10 @@ Set **dryRun: true** to validate without inserting. Duplicates (same code/accoun
   })
   @ApiResponse({ status: 200, description: 'Import result with counts and errors' })
   @ApiResponse({ status: 400, description: 'Invalid entity or missing required fields' })
-  async bulkImport(
-    @Request() req,
-    @Param('entity') entity: string,
-    @Body() dto: BulkImportDto,
-  ) {
+  async bulkImport(@Request() req, @Param('entity') entity: string, @Body() dto: BulkImportDto) {
     if (!BULK_IMPORT_ENTITIES.includes(entity as any)) {
       throw new Error(`Invalid entity: ${entity}. Valid: ${BULK_IMPORT_ENTITIES.join(', ')}`);
     }
-    return this.bulkImportService.importEntity(
-      req.user.tenantId,
-      req.user.id,
-      entity as any,
-      dto,
-    );
+    return this.bulkImportService.importEntity(req.user.tenantId, req.user.id, entity as any, dto);
   }
 }

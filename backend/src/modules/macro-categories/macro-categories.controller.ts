@@ -1,5 +1,17 @@
 // --- macro-categories/macro-categories.controller.ts ---
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { MacroCategoriesService } from './macro-categories.service';
 import { CreateMacroCategoryDto } from './dto/create-macro-category.dto';
@@ -7,14 +19,14 @@ import { UpdateMacroCategoryDto } from './dto/update-macro-category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
- 
+
 @ApiTags('Macro Categories')
 @Controller('macro-categories')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class MacroCategoriesController {
   constructor(private readonly macroCategoriesService: MacroCategoriesService) {}
- 
+
   @Post()
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a new macro category' })
@@ -23,7 +35,7 @@ export class MacroCategoriesController {
   async create(@Request() req, @Body() dto: CreateMacroCategoryDto) {
     return this.macroCategoriesService.create(req.user.tenantId, req.user.id, dto);
   }
- 
+
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all macro categories' })
@@ -31,7 +43,7 @@ export class MacroCategoriesController {
   async findAll(@Request() req) {
     return this.macroCategoriesService.findAll(req.user.tenantId);
   }
- 
+
   @Get(':id')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get macro category with its child categories' })
@@ -41,7 +53,7 @@ export class MacroCategoriesController {
   async findOne(@Request() req, @Param('id') id: string) {
     return this.macroCategoriesService.findOne(req.user.tenantId, id);
   }
- 
+
   @Patch(':id')
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update macro category' })
@@ -52,7 +64,7 @@ export class MacroCategoriesController {
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateMacroCategoryDto) {
     return this.macroCategoriesService.update(req.user.tenantId, req.user.id, id, dto);
   }
- 
+
   @Delete(':id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)

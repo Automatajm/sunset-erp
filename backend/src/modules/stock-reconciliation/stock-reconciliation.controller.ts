@@ -2,16 +2,24 @@
 // FILE: backend/src/modules/stock-reconciliation/stock-reconciliation.controller.ts
 // ============================================================================
 import {
-  Controller, Get, Post, Patch, Param, Body, Request, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Request,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { StockReconciliationService } from './stock-reconciliation.service';
-import { CreateSessionDto }           from './dto/create-session.dto';
-import { UpdateCountLineDto }         from './dto/update-count-line.dto';
-import { ApproveSessionDto }          from './dto/approve-session.dto';
-import { JwtAuthGuard }               from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard }           from '../../common/guards/permissions.guard';
-import { RequirePermissions }         from '../../common/decorators/permissions.decorator';
+import { CreateSessionDto } from './dto/create-session.dto';
+import { UpdateCountLineDto } from './dto/update-count-line.dto';
+import { ApproveSessionDto } from './dto/approve-session.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Stock Reconciliation')
 @Controller('stock-reconciliation')
@@ -24,11 +32,11 @@ export class StockReconciliationController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List all cycle count sessions' })
   @ApiQuery({ name: 'warehouseId', required: false })
-  @ApiQuery({ name: 'status',      required: false })
+  @ApiQuery({ name: 'status', required: false })
   findAll(
     @Request() req,
     @Query('warehouseId') warehouseId?: string,
-    @Query('status')      status?:      string,
+    @Query('status') status?: string,
   ) {
     return this.service.findAll(req.user.tenantId, { warehouseId, status });
   }
@@ -70,7 +78,9 @@ export class StockReconciliationController {
 
   @Patch(':id/approve')
   @RequirePermissions('INVENTORY:APPROVE')
-  @ApiOperation({ summary: 'Approve session — pending_approval → approved (INVENTORY:APPROVE required)' })
+  @ApiOperation({
+    summary: 'Approve session — pending_approval → approved (INVENTORY:APPROVE required)',
+  })
   approve(@Request() req, @Param('id') id: string, @Body() dto: ApproveSessionDto) {
     return this.service.approve(req.user.tenantId, req.user.id, id, dto);
   }

@@ -23,12 +23,12 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ItemsService }         from './items.service';
-import { CreateItemDto }        from './dto/create-item.dto';
-import { UpdateItemDto }        from './dto/update-item.dto';
-import { JwtAuthGuard }         from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard }     from '../../common/guards/permissions.guard';
-import { RequirePermissions }   from '../../common/decorators/permissions.decorator';
+import { ItemsService } from './items.service';
+import { CreateItemDto } from './dto/create-item.dto';
+import { UpdateItemDto } from './dto/update-item.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Items')
 @Controller('items')
@@ -71,9 +71,19 @@ export class ItemsController {
 
   @Get('barcode/:scan')
   @RequirePermissions('INVENTORY:VIEW')
-  @ApiOperation({ summary: 'Find item by barcode scan — resolves internal barcode, external barcode, item code, or supplier item code' })
-  @ApiParam({ name: 'scan', description: 'Scanned value: internal barcode, external barcode, item code, or supplier item code' })
-  @ApiResponse({ status: 200, description: 'Item found with matchedBy field indicating which field resolved the scan' })
+  @ApiOperation({
+    summary:
+      'Find item by barcode scan — resolves internal barcode, external barcode, item code, or supplier item code',
+  })
+  @ApiParam({
+    name: 'scan',
+    description:
+      'Scanned value: internal barcode, external barcode, item code, or supplier item code',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Item found with matchedBy field indicating which field resolved the scan',
+  })
   @ApiResponse({ status: 404, description: 'No item matched the scanned value' })
   async findByBarcode(@Request() req, @Param('scan') scan: string) {
     return this.itemsService.findByBarcode(req.user.tenantId, scan);
@@ -96,11 +106,7 @@ export class ItemsController {
   @ApiResponse({ status: 200, description: 'Item updated successfully' })
   @ApiResponse({ status: 404, description: 'Item not found' })
   @ApiResponse({ status: 409, description: 'Item code already exists' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updateItemDto: UpdateItemDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() updateItemDto: UpdateItemDto) {
     return this.itemsService.update(req.user.tenantId, req.user.id, id, updateItemDto);
   }
 

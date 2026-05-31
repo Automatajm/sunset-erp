@@ -41,11 +41,7 @@ export class JournalEntriesController {
   @ApiResponse({ status: 400, description: 'Journal entry not balanced or validation error' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   async create(@Request() req, @Body() createJournalEntryDto: CreateJournalEntryDto) {
-    return this.journalEntriesService.create(
-      req.user.tenantId,
-      req.user.id,
-      createJournalEntryDto,
-    );
+    return this.journalEntriesService.create(req.user.tenantId, req.user.id, createJournalEntryDto);
   }
 
   @Get()

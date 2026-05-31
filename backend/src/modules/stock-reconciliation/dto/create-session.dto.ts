@@ -2,7 +2,7 @@
 // FILE: backend/src/modules/stock-reconciliation/dto/create-session.dto.ts
 // ============================================================================
 import { IsString, IsOptional, IsArray, IsUUID, IsDateString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional }                    from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSessionDto {
   @ApiProperty({ description: 'Warehouse to count', example: 'uuid' })

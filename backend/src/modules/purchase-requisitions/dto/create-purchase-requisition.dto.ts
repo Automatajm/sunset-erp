@@ -1,6 +1,13 @@
 import {
-  IsString, IsOptional, IsDateString, IsArray,
-  ValidateNested, IsEnum, MaxLength, IsNumber, Min,
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  MaxLength,
+  IsNumber,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -32,7 +39,10 @@ export class CreatePurchaseRequisitionDto {
   @IsString()
   justification?: string;
 
-  @ApiPropertyOptional({ enum: ['manual', 'mrp', 'production_plan', 'general_need'], default: 'manual' })
+  @ApiPropertyOptional({
+    enum: ['manual', 'mrp', 'production_plan', 'general_need'],
+    default: 'manual',
+  })
   @IsOptional()
   @IsEnum(['manual', 'mrp', 'production_plan', 'general_need'])
   source?: string;

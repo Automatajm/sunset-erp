@@ -9,9 +9,9 @@ import { StockTransactionsModule } from '../stock-transactions/stock-transaction
 import { AutomationModule } from '../automation/automation.module';
 
 @Module({
-  imports:     [PrismaModule, StockTransactionsModule, AutomationModule],
+  imports: [PrismaModule, StockTransactionsModule, AutomationModule],
   controllers: [ApInvoicesController],
-  providers:   [ApInvoicesService],
-  exports:     [ApInvoicesService],
+  providers: [ApInvoicesService],
+  exports: [ApInvoicesService],
 })
 export class ApInvoicesModule {}

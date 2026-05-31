@@ -4,9 +4,9 @@ import { ProductionPlansController } from './production-plans.controller';
 import { PrismaModule } from '../../database/prisma.module';
 
 @Module({
-  imports:     [PrismaModule],
+  imports: [PrismaModule],
   controllers: [ProductionPlansController],
-  providers:   [ProductionPlansService],
-  exports:     [ProductionPlansService],
+  providers: [ProductionPlansService],
+  exports: [ProductionPlansService],
 })
 export class ProductionPlansModule {}

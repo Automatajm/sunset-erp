@@ -25,7 +25,8 @@ export class PurchaseOrdersService {
 
     let subtotal = 0;
     const linesWithTotals = createPurchaseOrderDto.lines.map((line, index) => {
-      const discountAmount = (line.unitPrice * line.orderedQuantity * (line.discountPercent || 0)) / 100;
+      const discountAmount =
+        (line.unitPrice * line.orderedQuantity * (line.discountPercent || 0)) / 100;
       const lineTotal = line.unitPrice * line.orderedQuantity - discountAmount;
       subtotal += lineTotal;
       return {
@@ -51,7 +52,9 @@ export class PurchaseOrdersService {
         poNumber,
         supplierId: createPurchaseOrderDto.supplierId,
         poDate: new Date(),
-        expectedDate: createPurchaseOrderDto.expectedDate ? new Date(createPurchaseOrderDto.expectedDate) : null,
+        expectedDate: createPurchaseOrderDto.expectedDate
+          ? new Date(createPurchaseOrderDto.expectedDate)
+          : null,
         deliveryAddress: createPurchaseOrderDto.deliveryAddress,
         paymentTerms: createPurchaseOrderDto.paymentTerms,
         currency: createPurchaseOrderDto.currency || 'USD',
@@ -65,7 +68,7 @@ export class PurchaseOrdersService {
         createdBy: userId,
         updatedBy: userId,
         lines: {
-          create: linesWithTotals.map(line => ({ tenantId, ...line })),
+          create: linesWithTotals.map((line) => ({ tenantId, ...line })),
         },
       },
       include: {
@@ -112,7 +115,12 @@ export class PurchaseOrdersService {
     return purchaseOrder;
   }
 
-  async update(tenantId: string, userId: string, id: string, updatePurchaseOrderDto: UpdatePurchaseOrderDto) {
+  async update(
+    tenantId: string,
+    userId: string,
+    id: string,
+    updatePurchaseOrderDto: UpdatePurchaseOrderDto,
+  ) {
     const po = await this.findOne(tenantId, id);
     if (po.status !== 'draft') {
       throw new BadRequestException('Can only update purchase orders in draft status');
@@ -133,10 +141,10 @@ export class PurchaseOrdersService {
 
     // State machine validation
     const validTransitions: Record<string, string[]> = {
-      draft:              ['confirmed', 'cancelled'],
-      confirmed:          ['cancelled'],
+      draft: ['confirmed', 'cancelled'],
+      confirmed: ['cancelled'],
       partially_received: ['received', 'closed'],
-      received:           ['closed'],
+      received: ['closed'],
     };
 
     const allowed = validTransitions[po.status] ?? [];
@@ -161,7 +169,9 @@ export class PurchaseOrdersService {
     const po = await this.findOne(tenantId, id);
 
     if (!['confirmed', 'partially_received'].includes(po.status)) {
-      throw new BadRequestException('Can only receive confirmed or partially received purchase orders');
+      throw new BadRequestException(
+        'Can only receive confirmed or partially received purchase orders',
+      );
     }
 
     // Verify warehouse
@@ -174,7 +184,7 @@ export class PurchaseOrdersService {
     for (const recv of dto.lines) {
       if (recv.receivedQuantity <= 0) continue;
 
-      const line = (po.lines as any[]).find(l => l.id === recv.lineId);
+      const line = (po.lines as any[]).find((l) => l.id === recv.lineId);
       if (!line) throw new NotFoundException(`PO Line ${recv.lineId} not found`);
 
       const remaining = Number(line.orderedQuantity) - Number(line.receivedQuantity);
@@ -259,12 +269,10 @@ export class PurchaseOrdersService {
       where: { purchaseOrderId: id, deletedAt: null },
     });
 
-    const allClosed  = updatedLines.every(l => l.status === 'closed');
-    const anyReceived = updatedLines.some(l => Number(l.receivedQuantity) > 0);
+    const allClosed = updatedLines.every((l) => l.status === 'closed');
+    const anyReceived = updatedLines.some((l) => Number(l.receivedQuantity) > 0);
 
-    const newStatus = allClosed    ? 'received'
-      : anyReceived ? 'partially_received'
-      : po.status;
+    const newStatus = allClosed ? 'received' : anyReceived ? 'partially_received' : po.status;
 
     await this.prisma.purchaseOrder.update({
       where: { id },

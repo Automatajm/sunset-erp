@@ -18,7 +18,7 @@ export class ApplyPaymentDto {
   @IsDateString()
   paymentDate: string;
 
-  @ApiProperty({ example: 1500.00, description: 'Payment amount — can be partial' })
+  @ApiProperty({ example: 1500.0, description: 'Payment amount — can be partial' })
   @IsNumber()
   @Min(0.01)
   amount: number;

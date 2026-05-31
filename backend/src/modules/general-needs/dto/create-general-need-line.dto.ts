@@ -1,6 +1,11 @@
 import {
-  IsString, IsOptional, IsUUID, IsNumber, IsDateString,
-  Min, MaxLength,
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  IsDateString,
+  Min,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -30,12 +35,14 @@ export class CreateGeneralNeedLineDto {
   @IsDateString()
   requiredDate: string;
 
-  @ApiPropertyOptional({ description: 'Suggested supplier ID (auto from SupplierItem.isPreferred)' })
+  @ApiPropertyOptional({
+    description: 'Suggested supplier ID (auto from SupplierItem.isPreferred)',
+  })
   @IsOptional()
   @IsUUID()
   suggestedSupplierId?: string;
 
-  @ApiPropertyOptional({ example: 12.50, description: 'Estimated unit cost' })
+  @ApiPropertyOptional({ example: 12.5, description: 'Estimated unit cost' })
   @IsOptional()
   @IsNumber()
   @Min(0)

@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException, BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreatePurchaseRequisitionDto } from './dto/create-purchase-requisition.dto';
 import { UpdatePurchaseRequisitionDto } from './dto/update-purchase-requisition.dto';
@@ -12,14 +10,14 @@ export class PurchaseRequisitionsService {
   // ── Auto-generate PR number ────────────────────────────────────────────────
 
   private async generatePrNumber(tenantId: string): Promise<string> {
-    const year   = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const prefix = `PR-${year}`;
-    const last   = await this.prisma.purchaseRequisition.findFirst({
-      where:   { tenantId, prNumber: { startsWith: prefix } },
+    const last = await this.prisma.purchaseRequisition.findFirst({
+      where: { tenantId, prNumber: { startsWith: prefix } },
       orderBy: { prNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
-    const parts   = last.prNumber.split('-');
+    const parts = last.prNumber.split('-');
     const lastNum = parseInt(parts[parts.length - 1], 10);
     const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
     return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
@@ -50,34 +48,34 @@ export class PurchaseRequisitionsService {
       data: {
         tenantId,
         prNumber,
-        title:           dto.title,
-        requestedBy:     userId,
-        departmentId:    dto.departmentId,
-        priority:        dto.priority ?? 'normal',
-        requiredDate:    new Date(dto.requiredDate),
-        justification:   dto.justification,
-        source:          dto.source ?? 'manual',
+        title: dto.title,
+        requestedBy: userId,
+        departmentId: dto.departmentId,
+        priority: dto.priority ?? 'normal',
+        requiredDate: new Date(dto.requiredDate),
+        justification: dto.justification,
+        source: dto.source ?? 'manual',
         estimatedAmount: dto.estimatedAmount,
-        status:          'draft',
-        notes:           dto.notes,
-        createdBy:       userId,
-        updatedBy:       userId,
+        status: 'draft',
+        notes: dto.notes,
+        createdBy: userId,
+        updatedBy: userId,
         lines: {
           create: dto.lines.map((line, index) => ({
             tenantId,
-            lineNumber:         index + 1,
-            itemId:             line.itemId,
-            itemStatus:         line.itemId ? 'catalog' : (line.itemStatus ?? 'pending_item'),
+            lineNumber: index + 1,
+            itemId: line.itemId,
+            itemStatus: line.itemId ? 'catalog' : (line.itemStatus ?? 'pending_item'),
             genericDescription: line.genericDescription,
-            genericSpec:        line.genericSpec,
-            quantity:           line.quantity,
-            uom:                line.uom,
-            unitEstimate:       line.unitEstimate,
-            requiredDate:       new Date(line.requiredDate),
-            warehouseId:        line.warehouseId,
-            notes:              line.notes,
-            createdBy:          userId,
-            updatedBy:          userId,
+            genericSpec: line.genericSpec,
+            quantity: line.quantity,
+            uom: line.uom,
+            unitEstimate: line.unitEstimate,
+            requiredDate: new Date(line.requiredDate),
+            warehouseId: line.warehouseId,
+            notes: line.notes,
+            createdBy: userId,
+            updatedBy: userId,
           })),
         },
       },
@@ -89,7 +87,7 @@ export class PurchaseRequisitionsService {
 
   async findAll(tenantId: string, status?: string, priority?: string) {
     const where: any = { tenantId, deletedAt: null };
-    if (status)   where.status   = status;
+    if (status) where.status = status;
     if (priority) where.priority = priority;
 
     return this.prisma.purchaseRequisition.findMany({
@@ -133,15 +131,21 @@ export class PurchaseRequisitionsService {
 
   // ── Status transitions ─────────────────────────────────────────────────────
 
-  async updateStatus(tenantId: string, userId: string, id: string, status: string, reason?: string) {
+  async updateStatus(
+    tenantId: string,
+    userId: string,
+    id: string,
+    status: string,
+    reason?: string,
+  ) {
     const pr = await this.findOne(tenantId, id);
 
     const validTransitions: Record<string, string[]> = {
-      draft:       ['submitted', 'cancelled'],
-      submitted:   ['approved', 'rejected', 'cancelled'],
-      approved:    ['in_progress', 'cancelled'],
+      draft: ['submitted', 'cancelled'],
+      submitted: ['approved', 'rejected', 'cancelled'],
+      approved: ['in_progress', 'cancelled'],
       in_progress: ['completed', 'cancelled'],
-      rejected:    ['draft'],        // allow re-submission after revision
+      rejected: ['draft'], // allow re-submission after revision
     };
 
     const allowed = validTransitions[pr.status] ?? [];
@@ -159,8 +163,8 @@ export class PurchaseRequisitionsService {
     }
     if (status === 'rejected') {
       if (!reason) throw new BadRequestException('Rejection reason is required');
-      data.rejectedBy      = userId;
-      data.rejectedAt      = new Date();
+      data.rejectedBy = userId;
+      data.rejectedAt = new Date();
       data.rejectionReason = reason;
     }
 
@@ -192,7 +196,7 @@ export class PurchaseRequisitionsService {
 
     const lines = await this.prisma.purchaseRequisitionLine.findMany({
       where: {
-        id:       { in: lineIds },
+        id: { in: lineIds },
         prId,
         tenantId,
         deletedAt: null,
@@ -213,10 +217,10 @@ export class PurchaseRequisitionsService {
     }
 
     // Generate RFQ number
-    const year      = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const rfqPrefix = `RFQ-${year}`;
-    const lastRfq   = await this.prisma.rfq.findFirst({
-      where:   { tenantId, rfqNumber: { startsWith: rfqPrefix } },
+    const lastRfq = await this.prisma.rfq.findFirst({
+      where: { tenantId, rfqNumber: { startsWith: rfqPrefix } },
       orderBy: { rfqNumber: 'desc' },
     });
     const rfqNext = lastRfq
@@ -228,18 +232,18 @@ export class PurchaseRequisitionsService {
       data: {
         tenantId,
         rfqNumber,
-        title:            rfqTitle,
+        title: rfqTitle,
         currency,
         responseDeadline: responseDeadline ? new Date(responseDeadline) : null,
         prId,
-        status:           'draft',
-        createdBy:        userId,
-        updatedBy:        userId,
+        status: 'draft',
+        createdBy: userId,
+        updatedBy: userId,
         rfqSuppliers: {
-          create: supplierIds.map(supplierId => ({
+          create: supplierIds.map((supplierId) => ({
             tenantId,
             supplierId,
-            status:    'invited',
+            status: 'invited',
             createdBy: userId,
             updatedBy: userId,
           })),
@@ -247,16 +251,16 @@ export class PurchaseRequisitionsService {
         lines: {
           create: lines.map((l, idx) => ({
             tenantId,
-            lineNumber:        idx + 1,
-            itemId:            l.itemId,
+            lineNumber: idx + 1,
+            itemId: l.itemId,
             genericDescription: l.genericDescription,
-            quantity:          Number(l.quantity),
-            uom:               l.uom,
-            requiredDate:      l.requiredDate,
-            prLineId:          l.id,
-            status:            'open',
-            createdBy:         userId,
-            updatedBy:         userId,
+            quantity: Number(l.quantity),
+            uom: l.uom,
+            requiredDate: l.requiredDate,
+            prLineId: l.id,
+            status: 'open',
+            createdBy: userId,
+            updatedBy: userId,
           })),
         },
       },
@@ -266,7 +270,7 @@ export class PurchaseRequisitionsService {
     // Update PR status to in_progress
     await this.prisma.purchaseRequisition.update({
       where: { id: prId },
-      data:  { status: 'in_progress', updatedBy: userId },
+      data: { status: 'in_progress', updatedBy: userId },
     });
 
     return {
@@ -285,7 +289,7 @@ export class PurchaseRequisitionsService {
 
     await this.prisma.purchaseRequisition.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
 
     return { message: 'Purchase Requisition deleted successfully', id };
@@ -296,9 +300,9 @@ export class PurchaseRequisitionsService {
   private prInclude() {
     return {
       lines: {
-        where:   { deletedAt: null },
+        where: { deletedAt: null },
         include: {
-          item:      { select: { id: true, code: true, name: true, baseUom: true } },
+          item: { select: { id: true, code: true, name: true, baseUom: true } },
           warehouse: { select: { id: true, code: true, name: true } },
         },
         orderBy: { lineNumber: 'asc' as const },

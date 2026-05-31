@@ -12,7 +12,10 @@ export class CreateGoodsReceiptDto {
   @IsUUID()
   poId?: string;
 
-  @ApiPropertyOptional({ example: 'uuid', description: 'Supplier UUID (required for manual GRNs without PO)' })
+  @ApiPropertyOptional({
+    example: 'uuid',
+    description: 'Supplier UUID (required for manual GRNs without PO)',
+  })
   @IsOptional()
   @IsUUID()
   supplierId?: string;
@@ -37,7 +40,10 @@ export class CreateGoodsReceiptDto {
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional({ example: 'INV-2026-00123', description: 'Supplier invoice number for manual receipts' })
+  @ApiPropertyOptional({
+    example: 'INV-2026-00123',
+    description: 'Supplier invoice number for manual receipts',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)

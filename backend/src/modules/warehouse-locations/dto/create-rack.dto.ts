@@ -9,7 +9,10 @@ export class CreateRackDto {
   @IsUUID()
   aisleId: string;
 
-  @ApiProperty({ example: '01', description: 'Rack code. fullCode auto-generated: ZONE-AISLE-RACK' })
+  @ApiProperty({
+    example: '01',
+    description: 'Rack code. fullCode auto-generated: ZONE-AISLE-RACK',
+  })
   @IsString()
   @MaxLength(10)
   code: string;

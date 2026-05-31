@@ -1,4 +1,12 @@
-﻿import { IsUUID, IsNumber, IsOptional, IsDateString, Min, MaxLength, IsString } from 'class-validator';
+﻿import {
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsDateString,
+  Min,
+  MaxLength,
+  IsString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProductionOrderDto {

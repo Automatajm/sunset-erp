@@ -41,11 +41,7 @@ export class SalesOrdersController {
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Customer or item not found' })
   async create(@Request() req, @Body() createSalesOrderDto: CreateSalesOrderDto) {
-    return this.salesOrdersService.create(
-      req.user.tenantId,
-      req.user.id,
-      createSalesOrderDto,
-    );
+    return this.salesOrdersService.create(req.user.tenantId, req.user.id, createSalesOrderDto);
   }
 
   @Get()
@@ -82,12 +78,7 @@ export class SalesOrdersController {
     @Param('id') id: string,
     @Body() updateSalesOrderDto: UpdateSalesOrderDto,
   ) {
-    return this.salesOrdersService.update(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      updateSalesOrderDto,
-    );
+    return this.salesOrdersService.update(req.user.tenantId, req.user.id, id, updateSalesOrderDto);
   }
 
   @Patch(':id/status/:status')
@@ -98,17 +89,8 @@ export class SalesOrdersController {
   @ApiResponse({ status: 200, description: 'Status updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Sales order not found' })
-  async updateStatus(
-    @Request() req,
-    @Param('id') id: string,
-    @Param('status') status: string,
-  ) {
-    return this.salesOrdersService.updateStatus(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      status,
-    );
+  async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
+    return this.salesOrdersService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
 
   @Delete(':id')

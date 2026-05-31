@@ -25,7 +25,10 @@ export class ProductionOrdersService {
   async create(tenantId: string, userId: string, dto: CreateProductionOrderDto) {
     const bom = await this.prisma.bom.findFirst({
       where: { id: dto.bomId, tenantId, deletedAt: null },
-      include: { parentItem: true, components: { include: { consumptionGroup: true, consumptionUom: true } } },
+      include: {
+        parentItem: true,
+        components: { include: { consumptionGroup: true, consumptionUom: true } },
+      },
     });
     if (!bom) throw new NotFoundException('BOM not found');
 
@@ -62,9 +65,10 @@ export class ProductionOrdersService {
     const where: any = { tenantId, deletedAt: null };
     if (status) where.status = status;
     const orders = await this.prisma.productionOrder.findMany({
-      where, orderBy: { createdAt: 'desc' },
+      where,
+      orderBy: { createdAt: 'desc' },
     });
-    return orders.map(o => this.formatMo(o));
+    return orders.map((o) => this.formatMo(o));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -77,7 +81,10 @@ export class ProductionOrdersService {
     if (order.bomId) {
       bom = await this.prisma.bom.findFirst({
         where: { id: order.bomId },
-        include: { parentItem: true, components: { include: { consumptionGroup: true, consumptionUom: true } } },
+        include: {
+          parentItem: true,
+          components: { include: { consumptionGroup: true, consumptionUom: true } },
+        },
       });
     }
     return this.formatMo(order, bom);
@@ -89,9 +96,10 @@ export class ProductionOrdersService {
       throw new BadRequestException('Can only update production orders in draft status');
     }
     const data: any = { updatedBy: userId };
-    if (dto.quantityOrdered !== undefined) data.quantityToProduce = new Decimal(dto.quantityOrdered);
+    if (dto.quantityOrdered !== undefined)
+      data.quantityToProduce = new Decimal(dto.quantityOrdered);
     if (dto.plannedStartDate) data.plannedStartDate = new Date(dto.plannedStartDate);
-    if (dto.plannedEndDate)   data.plannedEndDate   = new Date(dto.plannedEndDate);
+    if (dto.plannedEndDate) data.plannedEndDate = new Date(dto.plannedEndDate);
     if (dto.notes !== undefined) data.notes = dto.notes;
 
     const updated = await this.prisma.productionOrder.update({ where: { id }, data });
@@ -104,8 +112,9 @@ export class ProductionOrdersService {
       where: { id },
       data: {
         status,
-        actualStartDate: status === 'in_progress' && !order.actualStartDate ? new Date() : order.actualStartDate,
-        actualEndDate:   status === 'completed' ? new Date() : order.actualEndDate,
+        actualStartDate:
+          status === 'in_progress' && !order.actualStartDate ? new Date() : order.actualStartDate,
+        actualEndDate: status === 'completed' ? new Date() : order.actualEndDate,
         updatedBy: userId,
       },
     });
@@ -139,16 +148,18 @@ export class ProductionOrdersService {
     const laborCost = dto.laborRate && dto.hoursActual ? dto.laborRate * dto.hoursActual : null;
     const actual = await this.prisma.moLaborActual.create({
       data: {
-        tenantId, moId,
-        workDate:     dto.workDate ? new Date(dto.workDate) : null,
-        employeeId:   dto.employeeId ?? null,
+        tenantId,
+        moId,
+        workDate: dto.workDate ? new Date(dto.workDate) : null,
+        employeeId: dto.employeeId ?? null,
         employeeName: dto.employeeName ?? null,
         hoursPlanned: dto.hoursPlanned ? new Decimal(dto.hoursPlanned) : null,
-        hoursActual:  new Decimal(dto.hoursActual),
-        laborRate:    dto.laborRate ? new Decimal(dto.laborRate) : null,
-        laborCost:    laborCost ? new Decimal(laborCost) : null,
-        notes:        dto.notes ?? null,
-        createdBy: userId, updatedBy: userId,
+        hoursActual: new Decimal(dto.hoursActual),
+        laborRate: dto.laborRate ? new Decimal(dto.laborRate) : null,
+        laborCost: laborCost ? new Decimal(laborCost) : null,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
     return { message: 'Labor actual recorded', laborActual: this.formatLaborActual(actual) };
@@ -161,16 +172,16 @@ export class ProductionOrdersService {
       orderBy: { workDate: 'asc' },
     });
     const totalPlanned = actuals.reduce((s, a) => s + Number(a.hoursPlanned ?? 0), 0);
-    const totalActual  = actuals.reduce((s, a) => s + Number(a.hoursActual), 0);
-    const totalCost    = actuals.reduce((s, a) => s + Number(a.laborCost ?? 0), 0);
+    const totalActual = actuals.reduce((s, a) => s + Number(a.hoursActual), 0);
+    const totalCost = actuals.reduce((s, a) => s + Number(a.laborCost ?? 0), 0);
     return {
-      actuals: actuals.map(a => this.formatLaborActual(a)),
+      actuals: actuals.map((a) => this.formatLaborActual(a)),
       summary: {
         totalPlannedHours: totalPlanned,
-        totalActualHours:  totalActual,
-        varianceHours:     totalActual - totalPlanned,
-        totalLaborCost:    totalCost,
-        efficiency:        totalPlanned > 0 ? (totalPlanned / totalActual) * 100 : null,
+        totalActualHours: totalActual,
+        varianceHours: totalActual - totalPlanned,
+        totalLaborCost: totalCost,
+        efficiency: totalPlanned > 0 ? (totalPlanned / totalActual) * 100 : null,
       },
     };
   }
@@ -179,32 +190,44 @@ export class ProductionOrdersService {
   // MATERIAL ACTUALS
   // ─────────────────────────────────────────────
 
-  async addMaterialActual(tenantId: string, userId: string, moId: string, dto: CreateMaterialActualDto) {
+  async addMaterialActual(
+    tenantId: string,
+    userId: string,
+    moId: string,
+    dto: CreateMaterialActualDto,
+  ) {
     const mo = await this.findOne(tenantId, moId);
     if (['draft', 'cancelled'].includes(mo.status)) {
       throw new BadRequestException(`Cannot post materials to MO in status "${mo.status}"`);
     }
-    const item = await this.prisma.item.findFirst({ where: { id: dto.itemId, tenantId, deletedAt: null } });
+    const item = await this.prisma.item.findFirst({
+      where: { id: dto.itemId, tenantId, deletedAt: null },
+    });
     if (!item) throw new NotFoundException(`Item ${dto.itemId} not found`);
 
-    const unitCost     = dto.unitCost ?? 0;
-    const qtyVariance  = dto.qtyActual - dto.qtyPlanned;
+    const unitCost = dto.unitCost ?? 0;
+    const qtyVariance = dto.qtyActual - dto.qtyPlanned;
     const varianceCost = qtyVariance * unitCost;
 
     const actual = await this.prisma.moMaterialActual.create({
       data: {
-        tenantId, moId,
-        itemId:       dto.itemId,
-        qtyPlanned:   new Decimal(dto.qtyPlanned),
-        qtyActual:    new Decimal(dto.qtyActual),
-        unitCost:     new Decimal(unitCost),
+        tenantId,
+        moId,
+        itemId: dto.itemId,
+        qtyPlanned: new Decimal(dto.qtyPlanned),
+        qtyActual: new Decimal(dto.qtyActual),
+        unitCost: new Decimal(unitCost),
         varianceCost: new Decimal(varianceCost),
-        notes:        dto.notes ?? null,
-        createdBy: userId, updatedBy: userId,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
       include: { item: { select: { id: true, code: true, name: true } } },
     });
-    return { message: 'Material actual recorded', materialActual: this.formatMaterialActual(actual) };
+    return {
+      message: 'Material actual recorded',
+      materialActual: this.formatMaterialActual(actual),
+    };
   }
 
   async getMaterialActuals(tenantId: string, moId: string) {
@@ -216,12 +239,12 @@ export class ProductionOrdersService {
     });
     const totalVarianceCost = actuals.reduce((s, a) => s + Number(a.varianceCost), 0);
     return {
-      actuals: actuals.map(a => this.formatMaterialActual(a)),
+      actuals: actuals.map((a) => this.formatMaterialActual(a)),
       summary: {
-        totalMaterials:   actuals.length,
+        totalMaterials: actuals.length,
         totalVarianceCost,
-        overConsumed:     actuals.filter(a => Number(a.qtyActual) > Number(a.qtyPlanned)).length,
-        underConsumed:    actuals.filter(a => Number(a.qtyActual) < Number(a.qtyPlanned)).length,
+        overConsumed: actuals.filter((a) => Number(a.qtyActual) > Number(a.qtyPlanned)).length,
+        underConsumed: actuals.filter((a) => Number(a.qtyActual) < Number(a.qtyPlanned)).length,
       },
     };
   }
@@ -238,7 +261,7 @@ export class ProductionOrdersService {
 
     const qtyToProduce = Number(mo.quantityToProduce);
     const qtyDelivered = dto.quantityDelivered;
-    const unitCost     = dto.unitCost ?? 0;
+    const unitCost = dto.unitCost ?? 0;
     const totalFgValue = qtyDelivered * unitCost;
 
     // 1. Update quantityProduced
@@ -246,7 +269,7 @@ export class ProductionOrdersService {
       where: { id: moId },
       data: {
         quantityProduced: new Decimal(qtyDelivered),
-        status:       'completed',
+        status: 'completed',
         actualEndDate: new Date(),
         updatedBy: userId,
       },
@@ -267,28 +290,30 @@ export class ProductionOrdersService {
       const varianceCost = Math.abs(qtyVariance) * unitCost;
       const variance = await this.prisma.productionVariance.create({
         data: {
-          tenantId, moId,
+          tenantId,
+          moId,
           varianceType,
           description: `${varianceType === 'merma' ? 'Production loss' : 'Surplus production'} — ${mo.poNumber}`,
-          quantity:  new Decimal(Math.abs(qtyVariance)),
-          unitCost:  unitCost > 0 ? new Decimal(unitCost) : null,
+          quantity: new Decimal(Math.abs(qtyVariance)),
+          unitCost: unitCost > 0 ? new Decimal(unitCost) : null,
           totalCost: varianceCost > 0 ? new Decimal(varianceCost) : null,
-          status:    'open',
-          notes:     dto.notes ?? null,
-          createdBy: userId, updatedBy: userId,
+          status: 'open',
+          notes: dto.notes ?? null,
+          createdBy: userId,
+          updatedBy: userId,
         },
       });
       variances.push(variance);
     }
 
     return {
-      message:           `FG delivery confirmed for ${mo.poNumber}`,
+      message: `FG delivery confirmed for ${mo.poNumber}`,
       quantityDelivered: qtyDelivered,
-      quantityPlanned:   qtyToProduce,
-      variance:          qtyDelivered - qtyToProduce,
+      quantityPlanned: qtyToProduce,
+      variance: qtyDelivered - qtyToProduce,
       totalFgValue,
-      journalEntry:      je,
-      variancesCreated:  variances.length,
+      journalEntry: je,
+      variancesCreated: variances.length,
       variances,
     };
   }
@@ -303,40 +328,50 @@ export class ProductionOrdersService {
       where: { moId, tenantId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
-    const totalMerma   = variances.filter(v => v.varianceType === 'merma').reduce((s, v) => s + Number(v.totalCost ?? 0), 0);
-    const totalSurplus = variances.filter(v => v.varianceType === 'surplus').reduce((s, v) => s + Number(v.totalCost ?? 0), 0);
+    const totalMerma = variances
+      .filter((v) => v.varianceType === 'merma')
+      .reduce((s, v) => s + Number(v.totalCost ?? 0), 0);
+    const totalSurplus = variances
+      .filter((v) => v.varianceType === 'surplus')
+      .reduce((s, v) => s + Number(v.totalCost ?? 0), 0);
     return {
-      variances: variances.map(v => this.formatVariance(v)),
+      variances: variances.map((v) => this.formatVariance(v)),
       summary: {
-        total:            variances.length,
-        open:             variances.filter(v => v.status === 'open').length,
-        jePosted:         variances.filter(v => v.status === 'je_posted').length,
-        totalMermaCost:   totalMerma,
+        total: variances.length,
+        open: variances.filter((v) => v.status === 'open').length,
+        jePosted: variances.filter((v) => v.status === 'je_posted').length,
+        totalMermaCost: totalMerma,
         totalSurplusCost: totalSurplus,
-        netVarianceCost:  totalMerma - totalSurplus,
+        netVarianceCost: totalMerma - totalSurplus,
       },
     };
   }
 
   async getAllVariances(tenantId: string, filters: { status?: string; varianceType?: string }) {
     const where: any = { tenantId, deletedAt: null };
-    if (filters.status)       where.status = filters.status;
+    if (filters.status) where.status = filters.status;
     if (filters.varianceType) where.varianceType = filters.varianceType;
     const variances = await this.prisma.productionVariance.findMany({
       where,
       include: { productionOrder: { select: { id: true, poNumber: true, status: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    return variances.map(v => this.formatVariance(v));
+    return variances.map((v) => this.formatVariance(v));
   }
 
-  async postVarianceJe(tenantId: string, userId: string, varianceId: string, dto: PostVarianceJeDto) {
+  async postVarianceJe(
+    tenantId: string,
+    userId: string,
+    varianceId: string,
+    dto: PostVarianceJeDto,
+  ) {
     const variance = await this.prisma.productionVariance.findFirst({
       where: { id: varianceId, tenantId, deletedAt: null },
       include: { productionOrder: true },
     });
     if (!variance) throw new NotFoundException(`Variance ${varianceId} not found`);
-    if (variance.status !== 'open') throw new BadRequestException('Variance JE already posted or closed');
+    if (variance.status !== 'open')
+      throw new BadRequestException('Variance JE already posted or closed');
     if (!variance.totalCost || Number(variance.totalCost) === 0) {
       throw new BadRequestException('Cannot post JE for variance with no cost');
     }
@@ -350,9 +385,9 @@ export class ProductionOrdersService {
     });
 
     return {
-      message:      `Variance JE posted for ${variance.varianceType} — ${variance.productionOrder.poNumber}`,
+      message: `Variance JE posted for ${variance.varianceType} — ${variance.productionOrder.poNumber}`,
       journalEntry: je,
-      variance:     this.formatVariance({ ...variance, status: 'je_posted', jeId: je.id }),
+      variance: this.formatVariance({ ...variance, status: 'je_posted', jeId: je.id }),
     };
   }
 
@@ -361,34 +396,53 @@ export class ProductionOrdersService {
   // ─────────────────────────────────────────────
 
   private async createFgDeliveryJe(
-    tenantId: string, userId: string, mo: any,
-    qtyDelivered: number, totalFgValue: number,
+    tenantId: string,
+    userId: string,
+    mo: any,
+    qtyDelivered: number,
+    totalFgValue: number,
   ) {
-    const fgAccount  = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.05', deletedAt: null } });
-    const wipAccount = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.04', deletedAt: null } });
+    const fgAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '1.1.05', deletedAt: null },
+    });
+    const wipAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '1.1.04', deletedAt: null },
+    });
     if (!fgAccount || !wipAccount) return null;
 
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date());
 
     const result = await this.automation.handleAutoJe({
       tenantId,
       userId,
-      module:     'fg_delivery',
-      eventType:  'fg_delivery',
+      module: 'fg_delivery',
+      eventType: 'fg_delivery',
       sourceType: 'production_order',
-      sourceId:   mo.id,
-      sourceRef:  mo.poNumber,
+      sourceId: mo.id,
+      sourceRef: mo.poNumber,
       jeData: {
         entryNumber,
-        entryDate:    new Date(),
+        entryDate: new Date(),
         fiscalPeriod,
-        journalType:  'fg_delivery',
-        reference:    mo.poNumber,
-        description:  `FG Delivery — ${mo.poNumber} — ${qtyDelivered} units`,
+        journalType: 'fg_delivery',
+        reference: mo.poNumber,
+        description: `FG Delivery — ${mo.poNumber} — ${qtyDelivered} units`,
         lines: [
-          { lineNumber: 1, accountId: fgAccount.id,  description: `FG Inventory — ${mo.poNumber}`, debitAmount: totalFgValue, creditAmount: 0 },
-          { lineNumber: 2, accountId: wipAccount.id, description: `WIP cleared — ${mo.poNumber}`,  debitAmount: 0,            creditAmount: totalFgValue },
+          {
+            lineNumber: 1,
+            accountId: fgAccount.id,
+            description: `FG Inventory — ${mo.poNumber}`,
+            debitAmount: totalFgValue,
+            creditAmount: 0,
+          },
+          {
+            lineNumber: 2,
+            accountId: wipAccount.id,
+            description: `WIP cleared — ${mo.poNumber}`,
+            debitAmount: 0,
+            creditAmount: totalFgValue,
+          },
         ],
       },
     });
@@ -397,19 +451,30 @@ export class ProductionOrdersService {
   }
 
   private async createVarianceJe(
-    tenantId: string, userId: string, variance: any, dto: PostVarianceJeDto,
+    tenantId: string,
+    userId: string,
+    variance: any,
+    dto: PostVarianceJeDto,
   ) {
     const isMerma = variance.varianceType === 'merma';
 
-    const defaultDebitAcct  = isMerma
-      ? await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '6.2.07', deletedAt: null } })
-      : await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.05', deletedAt: null } });
+    const defaultDebitAcct = isMerma
+      ? await this.prisma.account.findFirst({
+          where: { tenantId, accountNumber: '6.2.07', deletedAt: null },
+        })
+      : await this.prisma.account.findFirst({
+          where: { tenantId, accountNumber: '1.1.05', deletedAt: null },
+        });
     const defaultCreditAcct = isMerma
-      ? await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.05', deletedAt: null } })
-      : await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '4.1.01', deletedAt: null } });
+      ? await this.prisma.account.findFirst({
+          where: { tenantId, accountNumber: '1.1.05', deletedAt: null },
+        })
+      : await this.prisma.account.findFirst({
+          where: { tenantId, accountNumber: '4.1.01', deletedAt: null },
+        });
 
-    const debitAcct  = dto.debitAccountId
-      ? await this.prisma.account.findFirst({ where: { id: dto.debitAccountId,  tenantId } })
+    const debitAcct = dto.debitAccountId
+      ? await this.prisma.account.findFirst({ where: { id: dto.debitAccountId, tenantId } })
       : defaultDebitAcct;
     const creditAcct = dto.creditAccountId
       ? await this.prisma.account.findFirst({ where: { id: dto.creditAccountId, tenantId } })
@@ -419,28 +484,40 @@ export class ProductionOrdersService {
       throw new BadRequestException('Required GL accounts not found for variance JE');
     }
 
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date());
-    const amount       = Number(variance.totalCost);
+    const amount = Number(variance.totalCost);
 
     const result = await this.automation.handleAutoJe({
       tenantId,
       userId,
-      module:     'production_variance',
-      eventType:  'production_variance',
+      module: 'production_variance',
+      eventType: 'production_variance',
       sourceType: 'production_variance',
-      sourceId:   variance.id,
-      sourceRef:  variance.productionOrder.poNumber,
+      sourceId: variance.id,
+      sourceRef: variance.productionOrder.poNumber,
       jeData: {
         entryNumber,
-        entryDate:    new Date(),
+        entryDate: new Date(),
         fiscalPeriod,
-        journalType:  'production_variance',
-        reference:    variance.productionOrder.poNumber,
-        description:  `${variance.varianceType.toUpperCase()} variance — ${variance.productionOrder.poNumber}${dto.notes ? ' — ' + dto.notes : ''}`,
+        journalType: 'production_variance',
+        reference: variance.productionOrder.poNumber,
+        description: `${variance.varianceType.toUpperCase()} variance — ${variance.productionOrder.poNumber}${dto.notes ? ' — ' + dto.notes : ''}`,
         lines: [
-          { lineNumber: 1, accountId: debitAcct.id,  description: `${variance.varianceType} — ${variance.description ?? ''}`,              debitAmount: amount, creditAmount: 0 },
-          { lineNumber: 2, accountId: creditAcct.id, description: `${variance.varianceType} offset — ${variance.productionOrder.poNumber}`, debitAmount: 0,      creditAmount: amount },
+          {
+            lineNumber: 1,
+            accountId: debitAcct.id,
+            description: `${variance.varianceType} — ${variance.description ?? ''}`,
+            debitAmount: amount,
+            creditAmount: 0,
+          },
+          {
+            lineNumber: 2,
+            accountId: creditAcct.id,
+            description: `${variance.varianceType} offset — ${variance.productionOrder.poNumber}`,
+            debitAmount: 0,
+            creditAmount: amount,
+          },
         ],
       },
     });
@@ -456,15 +533,17 @@ export class ProductionOrdersService {
     return {
       ...order,
       quantityToProduce: Number(order.quantityToProduce),
-      quantityProduced:  Number(order.quantityProduced),
-      bom: bom ? {
-        ...bom,
-        components: bom.components?.map((c: any) => ({
-          ...c,
-          quantityPer:  Number(c.quantityPer),
-          scrapPercent: Number(c.scrapPercent),
-        })),
-      } : undefined,
+      quantityProduced: Number(order.quantityProduced),
+      bom: bom
+        ? {
+            ...bom,
+            components: bom.components?.map((c: any) => ({
+              ...c,
+              quantityPer: Number(c.quantityPer),
+              scrapPercent: Number(c.scrapPercent),
+            })),
+          }
+        : undefined,
     };
   }
 
@@ -472,18 +551,18 @@ export class ProductionOrdersService {
     return {
       ...a,
       hoursPlanned: a.hoursPlanned ? Number(a.hoursPlanned) : null,
-      hoursActual:  Number(a.hoursActual),
-      laborRate:    a.laborRate    ? Number(a.laborRate)    : null,
-      laborCost:    a.laborCost    ? Number(a.laborCost)    : null,
+      hoursActual: Number(a.hoursActual),
+      laborRate: a.laborRate ? Number(a.laborRate) : null,
+      laborCost: a.laborCost ? Number(a.laborCost) : null,
     };
   }
 
   private formatMaterialActual(a: any) {
     return {
       ...a,
-      qtyPlanned:   Number(a.qtyPlanned),
-      qtyActual:    Number(a.qtyActual),
-      unitCost:     Number(a.unitCost),
+      qtyPlanned: Number(a.qtyPlanned),
+      qtyActual: Number(a.qtyActual),
+      unitCost: Number(a.unitCost),
       varianceCost: Number(a.varianceCost),
     };
   }
@@ -491,8 +570,8 @@ export class ProductionOrdersService {
   private formatVariance(v: any) {
     return {
       ...v,
-      quantity:  v.quantity  ? Number(v.quantity)  : null,
-      unitCost:  v.unitCost  ? Number(v.unitCost)  : null,
+      quantity: v.quantity ? Number(v.quantity) : null,
+      unitCost: v.unitCost ? Number(v.unitCost) : null,
       totalCost: v.totalCost ? Number(v.totalCost) : null,
     };
   }
@@ -512,9 +591,9 @@ export class ProductionOrdersService {
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
-    const now    = new Date();
+    const now = new Date();
     const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const last   = await this.prisma.journalEntry.findFirst({
+    const last = await this.prisma.journalEntry.findFirst({
       where: { tenantId, entryNumber: { startsWith: prefix } },
       orderBy: { entryNumber: 'desc' },
     });

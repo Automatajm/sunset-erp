@@ -8,16 +8,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { CreateZoneDto }  from './dto/create-zone.dto';
-import { UpdateZoneDto }  from './dto/update-zone.dto';
+import { CreateZoneDto } from './dto/create-zone.dto';
+import { UpdateZoneDto } from './dto/update-zone.dto';
 import { CreateAisleDto } from './dto/create-aisle.dto';
 import { UpdateAisleDto } from './dto/update-aisle.dto';
-import { CreateRackDto }  from './dto/create-rack.dto';
-import { UpdateRackDto }  from './dto/update-rack.dto';
+import { CreateRackDto } from './dto/create-rack.dto';
+import { UpdateRackDto } from './dto/update-rack.dto';
 import { CreateLevelDto } from './dto/create-level.dto';
 import { UpdateLevelDto } from './dto/update-level.dto';
-import { CreateBinDto }   from './dto/create-bin.dto';
-import { UpdateBinDto }   from './dto/update-bin.dto';
+import { CreateBinDto } from './dto/create-bin.dto';
+import { UpdateBinDto } from './dto/update-bin.dto';
 
 @Injectable()
 export class WarehouseLocationsService {
@@ -40,20 +40,20 @@ export class WarehouseLocationsService {
       data: {
         tenantId,
         warehouseId: dto.warehouseId,
-        code:        dto.code.toUpperCase(),
-        name:        dto.name,
-        zoneType:    dto.zoneType ?? 'storage',
+        code: dto.code.toUpperCase(),
+        name: dto.name,
+        zoneType: dto.zoneType ?? 'storage',
         description: dto.description ?? null,
-        isActive:    dto.isActive ?? true,
-        createdBy:   userId,
-        updatedBy:   userId,
+        isActive: dto.isActive ?? true,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
   }
 
   async findZones(tenantId: string, warehouseId: string) {
     return this.prisma.warehouseZone.findMany({
-      where:   { warehouseId, tenantId, deletedAt: null },
+      where: { warehouseId, tenantId, deletedAt: null },
       include: { _count: { select: { aisles: true } } },
       orderBy: { code: 'asc' },
     });
@@ -67,7 +67,7 @@ export class WarehouseLocationsService {
 
     return this.prisma.warehouseZone.update({
       where: { id },
-      data:  { ...dto, updatedBy: userId },
+      data: { ...dto, updatedBy: userId },
     });
   }
 
@@ -79,7 +79,7 @@ export class WarehouseLocationsService {
 
     await this.prisma.warehouseZone.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Zone deleted successfully', id };
   }
@@ -95,16 +95,17 @@ export class WarehouseLocationsService {
     const existing = await this.prisma.warehouseAisle.findFirst({
       where: { zoneId: dto.zoneId, code: dto.code, deletedAt: null },
     });
-    if (existing) throw new ConflictException(`Aisle ${dto.code} already exists in zone ${zone.code}`);
+    if (existing)
+      throw new ConflictException(`Aisle ${dto.code} already exists in zone ${zone.code}`);
 
     return this.prisma.warehouseAisle.create({
       data: {
         tenantId,
-        zoneId:    dto.zoneId,
-        code:      dto.code,
-        name:      dto.name ?? null,
-        fullCode:  `${zone.code}-${dto.code}`,
-        isActive:  dto.isActive ?? true,
+        zoneId: dto.zoneId,
+        code: dto.code,
+        name: dto.name ?? null,
+        fullCode: `${zone.code}-${dto.code}`,
+        isActive: dto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -113,7 +114,7 @@ export class WarehouseLocationsService {
 
   async findAisles(tenantId: string, zoneId: string) {
     return this.prisma.warehouseAisle.findMany({
-      where:   { zoneId, tenantId, deletedAt: null },
+      where: { zoneId, tenantId, deletedAt: null },
       include: { _count: { select: { racks: true } } },
       orderBy: { code: 'asc' },
     });
@@ -121,7 +122,7 @@ export class WarehouseLocationsService {
 
   async updateAisle(tenantId: string, userId: string, id: string, dto: UpdateAisleDto) {
     const aisle = await this.prisma.warehouseAisle.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: { zone: true },
     });
     if (!aisle) throw new NotFoundException('Aisle not found');
@@ -130,7 +131,7 @@ export class WarehouseLocationsService {
 
     return this.prisma.warehouseAisle.update({
       where: { id },
-      data:  { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
+      data: { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
     });
   }
 
@@ -142,7 +143,7 @@ export class WarehouseLocationsService {
 
     await this.prisma.warehouseAisle.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Aisle deleted successfully', id };
   }
@@ -158,16 +159,17 @@ export class WarehouseLocationsService {
     const existing = await this.prisma.warehouseRack.findFirst({
       where: { aisleId: dto.aisleId, code: dto.code, deletedAt: null },
     });
-    if (existing) throw new ConflictException(`Rack ${dto.code} already exists in aisle ${aisle.fullCode}`);
+    if (existing)
+      throw new ConflictException(`Rack ${dto.code} already exists in aisle ${aisle.fullCode}`);
 
     return this.prisma.warehouseRack.create({
       data: {
         tenantId,
-        aisleId:   dto.aisleId,
-        code:      dto.code,
-        name:      dto.name ?? null,
-        fullCode:  `${aisle.fullCode}-${dto.code}`,
-        isActive:  dto.isActive ?? true,
+        aisleId: dto.aisleId,
+        code: dto.code,
+        name: dto.name ?? null,
+        fullCode: `${aisle.fullCode}-${dto.code}`,
+        isActive: dto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -176,7 +178,7 @@ export class WarehouseLocationsService {
 
   async findRacks(tenantId: string, aisleId: string) {
     return this.prisma.warehouseRack.findMany({
-      where:   { aisleId, tenantId, deletedAt: null },
+      where: { aisleId, tenantId, deletedAt: null },
       include: { _count: { select: { levels: true } } },
       orderBy: { code: 'asc' },
     });
@@ -184,7 +186,7 @@ export class WarehouseLocationsService {
 
   async updateRack(tenantId: string, userId: string, id: string, dto: UpdateRackDto) {
     const rack = await this.prisma.warehouseRack.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: { aisle: true },
     });
     if (!rack) throw new NotFoundException('Rack not found');
@@ -193,7 +195,7 @@ export class WarehouseLocationsService {
 
     return this.prisma.warehouseRack.update({
       where: { id },
-      data:  { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
+      data: { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
     });
   }
 
@@ -205,7 +207,7 @@ export class WarehouseLocationsService {
 
     await this.prisma.warehouseRack.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Rack deleted successfully', id };
   }
@@ -221,28 +223,29 @@ export class WarehouseLocationsService {
     const existing = await this.prisma.warehouseLevel.findFirst({
       where: { rackId: dto.rackId, code: dto.code, deletedAt: null },
     });
-    if (existing) throw new ConflictException(`Level ${dto.code} already exists in rack ${rack.fullCode}`);
+    if (existing)
+      throw new ConflictException(`Level ${dto.code} already exists in rack ${rack.fullCode}`);
 
     return this.prisma.warehouseLevel.create({
       data: {
         tenantId,
-        rackId:       dto.rackId,
-        code:         dto.code,
-        name:         dto.name ?? null,
-        fullCode:     `${rack.fullCode}-${dto.code}`,
-        isActive:     dto.isActive ?? true,
-        maxWeightKg:  dto.maxWeightKg  ?? null,
+        rackId: dto.rackId,
+        code: dto.code,
+        name: dto.name ?? null,
+        fullCode: `${rack.fullCode}-${dto.code}`,
+        isActive: dto.isActive ?? true,
+        maxWeightKg: dto.maxWeightKg ?? null,
         maxVolumeLtr: dto.maxVolumeLtr ?? null,
-        maxPallets:   dto.maxPallets   ?? null,
-        createdBy:    userId,
-        updatedBy:    userId,
+        maxPallets: dto.maxPallets ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
   }
 
   async findLevels(tenantId: string, rackId: string) {
     return this.prisma.warehouseLevel.findMany({
-      where:   { rackId, tenantId, deletedAt: null },
+      where: { rackId, tenantId, deletedAt: null },
       include: { _count: { select: { bins: true, stock: true } } },
       orderBy: { code: 'asc' },
     });
@@ -250,7 +253,7 @@ export class WarehouseLocationsService {
 
   async updateLevel(tenantId: string, userId: string, id: string, dto: UpdateLevelDto) {
     const level = await this.prisma.warehouseLevel.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: { rack: true },
     });
     if (!level) throw new NotFoundException('Level not found');
@@ -259,7 +262,7 @@ export class WarehouseLocationsService {
 
     return this.prisma.warehouseLevel.update({
       where: { id },
-      data:  { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
+      data: { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
     });
   }
 
@@ -278,7 +281,7 @@ export class WarehouseLocationsService {
 
     await this.prisma.warehouseLevel.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Level deleted successfully', id };
   }
@@ -294,31 +297,32 @@ export class WarehouseLocationsService {
     const existing = await this.prisma.warehouseBin.findFirst({
       where: { levelId: dto.levelId, code: dto.code, deletedAt: null },
     });
-    if (existing) throw new ConflictException(`Bin ${dto.code} already exists in level ${level.fullCode}`);
+    if (existing)
+      throw new ConflictException(`Bin ${dto.code} already exists in level ${level.fullCode}`);
 
     return this.prisma.warehouseBin.create({
       data: {
         tenantId,
-        levelId:         dto.levelId,
-        code:            dto.code,
-        name:            dto.name            ?? null,
-        fullCode:        `${level.fullCode}-${dto.code}`,
-        binType:         dto.binType         ?? 'standard',
-        maxWeightKg:     dto.maxWeightKg     ?? null,
-        maxVolumeLtr:    dto.maxVolumeLtr    ?? null,
-        maxPallets:      dto.maxPallets      ?? null,
+        levelId: dto.levelId,
+        code: dto.code,
+        name: dto.name ?? null,
+        fullCode: `${level.fullCode}-${dto.code}`,
+        binType: dto.binType ?? 'standard',
+        maxWeightKg: dto.maxWeightKg ?? null,
+        maxVolumeLtr: dto.maxVolumeLtr ?? null,
+        maxPallets: dto.maxPallets ?? null,
         allowMixedItems: dto.allowMixedItems ?? true,
-        isActive:        dto.isActive        ?? true,
-        notes:           dto.notes           ?? null,
-        createdBy:       userId,
-        updatedBy:       userId,
+        isActive: dto.isActive ?? true,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
   }
 
   async findBins(tenantId: string, levelId: string) {
     return this.prisma.warehouseBin.findMany({
-      where:   { levelId, tenantId, deletedAt: null },
+      where: { levelId, tenantId, deletedAt: null },
       include: { _count: { select: { stock: true } } },
       orderBy: { code: 'asc' },
     });
@@ -326,7 +330,7 @@ export class WarehouseLocationsService {
 
   async updateBin(tenantId: string, userId: string, id: string, dto: UpdateBinDto) {
     const bin = await this.prisma.warehouseBin.findFirst({
-      where:   { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null },
       include: { level: true },
     });
     if (!bin) throw new NotFoundException('Bin not found');
@@ -335,7 +339,7 @@ export class WarehouseLocationsService {
 
     return this.prisma.warehouseBin.update({
       where: { id },
-      data:  { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
+      data: { ...dto, ...(fullCode ? { fullCode } : {}), updatedBy: userId },
     });
   }
 
@@ -354,7 +358,7 @@ export class WarehouseLocationsService {
 
     await this.prisma.warehouseBin.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Bin deleted successfully', id };
   }

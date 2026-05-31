@@ -16,10 +16,10 @@ export class ConsumptionGroupsService {
   // ── Auto-code CG-YYYY-NNNN ──────────────────────────────────────────────
 
   private async generateCode(tenantId: string): Promise<string> {
-    const year   = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const prefix = `CG-${year}`;
-    const last   = await this.prisma.consumptionGroup.findFirst({
-      where:   { tenantId, code: { startsWith: prefix } },
+    const last = await this.prisma.consumptionGroup.findFirst({
+      where: { tenantId, code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
@@ -35,12 +35,12 @@ export class ConsumptionGroupsService {
       data: {
         tenantId,
         code,
-        name:             dto.name,
-        description:      dto.description,
+        name: dto.name,
+        description: dto.description,
         consumptionUomId: dto.consumptionUomId,
-        isActive:         dto.isActive ?? true,
-        createdBy:        userId,
-        updatedBy:        userId,
+        isActive: dto.isActive ?? true,
+        createdBy: userId,
+        updatedBy: userId,
       },
       include: INCLUDE,
     });
@@ -50,7 +50,7 @@ export class ConsumptionGroupsService {
 
   async findAll(tenantId: string) {
     return this.prisma.consumptionGroup.findMany({
-      where:   { tenantId, deletedAt: null },
+      where: { tenantId, deletedAt: null },
       include: INCLUDE,
       orderBy: { code: 'asc' },
     });
@@ -64,11 +64,14 @@ export class ConsumptionGroupsService {
       include: {
         consumptionUom: true,
         items: {
-          where:  { deletedAt: null },
+          where: { deletedAt: null },
           select: {
-            id: true, code: true, name: true, baseUom: true,
+            id: true,
+            code: true,
+            name: true,
+            baseUom: true,
             purchaseToConsumptionFactor: true,
-            storageToConsumptionFactor:  true,
+            storageToConsumptionFactor: true,
             stock: { select: { onHandQuantity: true } },
           },
         },
@@ -87,8 +90,8 @@ export class ConsumptionGroupsService {
   async update(tenantId: string, userId: string, id: string, dto: UpdateConsumptionGroupDto) {
     await this.findOne(tenantId, id);
     return this.prisma.consumptionGroup.update({
-      where:   { id },
-      data:    { ...dto, updatedBy: userId },
+      where: { id },
+      data: { ...dto, updatedBy: userId },
       include: INCLUDE,
     });
   }
@@ -99,7 +102,7 @@ export class ConsumptionGroupsService {
     await this.findOne(tenantId, id);
     await this.prisma.consumptionGroup.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Consumption group deleted successfully', id };
   }

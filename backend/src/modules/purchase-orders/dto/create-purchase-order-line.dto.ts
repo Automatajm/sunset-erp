@@ -21,7 +21,7 @@ export class CreatePurchaseOrderLineDto {
   @MaxLength(20)
   uom: string;
 
-  @ApiProperty({ example: 10.50, description: 'Unit price' })
+  @ApiProperty({ example: 10.5, description: 'Unit price' })
   @IsNumber()
   @Min(0)
   unitPrice: number;

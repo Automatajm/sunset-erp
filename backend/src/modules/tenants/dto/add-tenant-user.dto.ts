@@ -8,6 +8,7 @@ export class AddTenantUserDto {
   userId: string;
 
   @ApiPropertyOptional({ default: false })
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isDefault?: boolean;
 }

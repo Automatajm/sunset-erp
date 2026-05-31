@@ -1,4 +1,3 @@
-
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE: backend/src/modules/warehouse-locations/dto/update-aisle.dto.ts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,4 +21,4 @@ export class UpdateAisleDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-} 
+}

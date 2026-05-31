@@ -18,7 +18,9 @@ export class WorkCentersService {
     });
 
     if (existing) {
-      throw new ConflictException(`Work center with code ${createWorkCenterDto.code} already exists`);
+      throw new ConflictException(
+        `Work center with code ${createWorkCenterDto.code} already exists`,
+      );
     }
 
     const workCenter = await this.prisma.workCenter.create({
@@ -56,7 +58,7 @@ export class WorkCentersService {
       },
     });
 
-    return workCenters.map(wc => this.formatWorkCenterResponse(wc));
+    return workCenters.map((wc) => this.formatWorkCenterResponse(wc));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -75,7 +77,12 @@ export class WorkCentersService {
     return this.formatWorkCenterResponse(workCenter);
   }
 
-  async update(tenantId: string, userId: string, id: string, updateWorkCenterDto: UpdateWorkCenterDto) {
+  async update(
+    tenantId: string,
+    userId: string,
+    id: string,
+    updateWorkCenterDto: UpdateWorkCenterDto,
+  ) {
     await this.findOne(tenantId, id);
 
     if (updateWorkCenterDto.code) {
@@ -89,21 +96,24 @@ export class WorkCentersService {
       });
 
       if (existing) {
-        throw new ConflictException(`Work center with code ${updateWorkCenterDto.code} already exists`);
+        throw new ConflictException(
+          `Work center with code ${updateWorkCenterDto.code} already exists`,
+        );
       }
     }
 
     const updateData: any = { updatedBy: userId };
 
-    if (updateWorkCenterDto.code)           updateData.code           = updateWorkCenterDto.code;
-    if (updateWorkCenterDto.name)           updateData.name           = updateWorkCenterDto.name;
-    if (updateWorkCenterDto.workCenterType) updateData.workCenterType = updateWorkCenterDto.workCenterType;
+    if (updateWorkCenterDto.code) updateData.code = updateWorkCenterDto.code;
+    if (updateWorkCenterDto.name) updateData.name = updateWorkCenterDto.name;
+    if (updateWorkCenterDto.workCenterType)
+      updateData.workCenterType = updateWorkCenterDto.workCenterType;
     if (updateWorkCenterDto.capacityPerHour !== undefined)
-      updateData.capacityPerHour   = new Decimal(updateWorkCenterDto.capacityPerHour);
+      updateData.capacityPerHour = new Decimal(updateWorkCenterDto.capacityPerHour);
     if (updateWorkCenterDto.efficiencyPercent !== undefined)
       updateData.efficiencyPercent = new Decimal(updateWorkCenterDto.efficiencyPercent);
     if (updateWorkCenterDto.costPerHour !== undefined)
-      updateData.costPerHour       = new Decimal(updateWorkCenterDto.costPerHour);
+      updateData.costPerHour = new Decimal(updateWorkCenterDto.costPerHour);
     if (updateWorkCenterDto.isActive !== undefined)
       updateData.isActive = updateWorkCenterDto.isActive;
 
@@ -132,9 +142,11 @@ export class WorkCentersService {
   private formatWorkCenterResponse(workCenter: any) {
     return {
       ...workCenter,
-      capacityPerHour:   workCenter.capacityPerHour   ? workCenter.capacityPerHour.toNumber()   : null,
-      efficiencyPercent: workCenter.efficiencyPercent ? workCenter.efficiencyPercent.toNumber() : 100,
-      costPerHour:       workCenter.costPerHour       ? workCenter.costPerHour.toNumber()       : null,
+      capacityPerHour: workCenter.capacityPerHour ? workCenter.capacityPerHour.toNumber() : null,
+      efficiencyPercent: workCenter.efficiencyPercent
+        ? workCenter.efficiencyPercent.toNumber()
+        : 100,
+      costPerHour: workCenter.costPerHour ? workCenter.costPerHour.toNumber() : null,
     };
   }
 }

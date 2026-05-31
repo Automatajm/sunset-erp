@@ -2,9 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
 
 export enum AutomationMode {
-  FULL_AUTO       = 'full_auto',
+  FULL_AUTO = 'full_auto',
   REVIEW_REQUIRED = 'review_required',
-  MANUAL          = 'manual',
+  MANUAL = 'manual',
 }
 
 export class UpdateAutomationConfigDto {

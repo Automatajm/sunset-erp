@@ -1,14 +1,31 @@
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiParam, ApiQuery, ApiResponse,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { ProductionPlansService } from './production-plans.service';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
-import { UpdateProductionPlanDto, UpdateProductionPlanLineDto } from './dto/update-production-plan.dto';
+import {
+  UpdateProductionPlanDto,
+  UpdateProductionPlanLineDto,
+} from './dto/update-production-plan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -31,11 +48,11 @@ export class ProductionPlansController {
   @RequirePermissions('MFG:VIEW')
   @ApiOperation({ summary: 'List all Production Plans' })
   @ApiQuery({ name: 'horizon', required: false, enum: ['weekly', 'monthly', 'quarterly'] })
-  @ApiQuery({ name: 'status',  required: false })
+  @ApiQuery({ name: 'status', required: false })
   async findAll(
     @Request() req,
     @Query('horizon') horizon?: string,
-    @Query('status')  status?: string,
+    @Query('status') status?: string,
   ) {
     return this.service.findAll(req.user.tenantId, horizon, status);
   }
@@ -60,11 +77,7 @@ export class ProductionPlansController {
   @RequirePermissions('MFG:EDIT')
   @ApiOperation({ summary: 'Update Production Plan header (draft or confirmed only)' })
   @ApiParam({ name: 'id' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: UpdateProductionPlanDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductionPlanDto) {
     return this.service.update(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -75,7 +88,7 @@ export class ProductionPlansController {
   @ApiParam({ name: 'lineId' })
   async updateLine(
     @Request() req,
-    @Param('id')     id: string,
+    @Param('id') id: string,
     @Param('lineId') lineId: string,
     @Body() dto: UpdateProductionPlanLineDto,
   ) {
@@ -84,14 +97,12 @@ export class ProductionPlansController {
 
   @Patch(':id/status/:status')
   @RequirePermissions('MFG:APPROVE')
-  @ApiOperation({ summary: 'Transition plan status: draft → confirmed → in_progress → completed | cancelled' })
+  @ApiOperation({
+    summary: 'Transition plan status: draft → confirmed → in_progress → completed | cancelled',
+  })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'status' })
-  async updateStatus(
-    @Request() req,
-    @Param('id')     id: string,
-    @Param('status') status: string,
-  ) {
+  async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.service.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
 
@@ -100,11 +111,7 @@ export class ProductionPlansController {
   @ApiOperation({ summary: 'Auto-generate MOs from confirmed plan lines (Opción A)' })
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 201, description: 'MOs created and plan lines updated to mo_created' })
-  async generateMos(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() body: { lineIds?: string[] },
-  ) {
+  async generateMos(@Request() req, @Param('id') id: string, @Body() body: { lineIds?: string[] }) {
     return this.service.generateMos(req.user.tenantId, req.user.id, id, body.lineIds);
   }
 
@@ -115,7 +122,7 @@ export class ProductionPlansController {
   @ApiParam({ name: 'lineId' })
   async linkMo(
     @Request() req,
-    @Param('id')     id: string,
+    @Param('id') id: string,
     @Param('lineId') lineId: string,
     @Body() body: { moId: string },
   ) {

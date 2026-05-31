@@ -1,10 +1,24 @@
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { GeneralNeedsService } from './general-needs.service';
 import { MrpService } from './mrp.service';
@@ -37,7 +51,11 @@ export class GeneralNeedsController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all General Needs' })
-  @ApiQuery({ name: 'status', required: false, description: 'draft | in_progress | completed | cancelled' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'draft | in_progress | completed | cancelled',
+  })
   async findAll(@Request() req, @Query('status') status?: string) {
     return this.generalNeedsService.findAll(req.user.tenantId, status);
   }
@@ -54,11 +72,7 @@ export class GeneralNeedsController {
   @RequirePermissions('PROCUREMENT:EDIT')
   @ApiOperation({ summary: 'Update General Need header (draft or in_progress only)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: UpdateGeneralNeedDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateGeneralNeedDto) {
     return this.generalNeedsService.update(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -67,11 +81,7 @@ export class GeneralNeedsController {
   @ApiOperation({ summary: 'Transition General Need status' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
   @ApiParam({ name: 'status', description: 'in_progress | completed | cancelled' })
-  async updateStatus(
-    @Request() req,
-    @Param('id') id: string,
-    @Param('status') status: string,
-  ) {
+  async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.generalNeedsService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
 
@@ -113,17 +123,8 @@ export class GeneralNeedsController {
   @RequirePermissions('PROCUREMENT:CREATE')
   @ApiOperation({ summary: 'Explode BOM from selected MOs into GN lines (legacy)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
-  async explodeFromMos(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() body: { moIds: string[] },
-  ) {
-    return this.generalNeedsService.explodeFromMos(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      body.moIds,
-    );
+  async explodeFromMos(@Request() req, @Param('id') id: string, @Body() body: { moIds: string[] }) {
+    return this.generalNeedsService.explodeFromMos(req.user.tenantId, req.user.id, id, body.moIds);
   }
 
   // ── MRP Engine ─────────────────────────────────────────────────────────────
@@ -150,17 +151,8 @@ Requirements:
   })
   @ApiParam({ name: 'id', description: 'GeneralNeed UUID' })
   @ApiResponse({ status: 201, description: 'MRP explosion complete — GN lines created' })
-  async runMrp(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: RunMrpDto,
-  ) {
-    return this.mrpService.runMrp(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      dto.moIds,
-    );
+  async runMrp(@Request() req, @Param('id') id: string, @Body() dto: RunMrpDto) {
+    return this.mrpService.runMrp(req.user.tenantId, req.user.id, id, dto.moIds);
   }
 
   @Delete(':id')

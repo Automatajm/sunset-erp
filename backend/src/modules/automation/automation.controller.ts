@@ -1,13 +1,18 @@
+import { Controller, Get, Patch, Param, Body, UseGuards, Request, Query } from '@nestjs/common';
 import {
-  Controller, Get, Patch, Param, Body,
-  UseGuards, Request, Query,
-} from '@nestjs/common';
-import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AutomationService } from './automation.service';
-import { UpdateAutomationConfigDto, ReviewQueueItemDto, RejectQueueItemDto } from './dto/automation.dto';
+import {
+  UpdateAutomationConfigDto,
+  ReviewQueueItemDto,
+  RejectQueueItemDto,
+} from './dto/automation.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -25,7 +30,8 @@ export class AutomationController {
   @RequirePermissions('ACCOUNTING:VIEW')
   @ApiOperation({
     summary: 'Get automation config for all modules',
-    description: 'Returns mode (full_auto | review_required | manual) for each module. Creates defaults if missing.',
+    description:
+      'Returns mode (full_auto | review_required | manual) for each module. Creates defaults if missing.',
   })
   @ApiResponse({ status: 200, description: 'Config for all automation modules' })
   async getConfigs(@Request() req) {
@@ -36,9 +42,14 @@ export class AutomationController {
   @RequirePermissions('ACCOUNTING:POST')
   @ApiOperation({
     summary: 'Update automation mode for a module',
-    description: 'full_auto = post immediately | review_required = draft + queue | manual = no auto-JE',
+    description:
+      'full_auto = post immediately | review_required = draft + queue | manual = no auto-JE',
   })
-  @ApiParam({ name: 'module', description: 'ar_invoice | ar_payment | ar_reversal | fg_delivery | production_variance | po_receipt | mo_issue' })
+  @ApiParam({
+    name: 'module',
+    description:
+      'ar_invoice | ar_payment | ar_reversal | fg_delivery | production_variance | po_receipt | mo_issue',
+  })
   @ApiResponse({ status: 200, description: 'Config updated' })
   async updateConfig(
     @Request() req,
@@ -54,10 +65,15 @@ export class AutomationController {
   @RequirePermissions('ACCOUNTING:VIEW')
   @ApiOperation({
     summary: 'Get JE review queue',
-    description: 'Lists auto-generated JEs awaiting finance review. Filter by status or event type.',
+    description:
+      'Lists auto-generated JEs awaiting finance review. Filter by status or event type.',
   })
-  @ApiQuery({ name: 'status',    required: false, description: 'pending | approved | rejected' })
-  @ApiQuery({ name: 'eventType', required: false, description: 'ar_invoice | ar_payment | fg_delivery | production_variance' })
+  @ApiQuery({ name: 'status', required: false, description: 'pending | approved | rejected' })
+  @ApiQuery({
+    name: 'eventType',
+    required: false,
+    description: 'ar_invoice | ar_payment | fg_delivery | production_variance',
+  })
   @ApiResponse({ status: 200, description: 'Queue items with full JE detail' })
   async getQueue(
     @Request() req,
@@ -84,11 +100,7 @@ export class AutomationController {
   @ApiParam({ name: 'id', description: 'Queue item UUID' })
   @ApiResponse({ status: 200, description: 'JE posted, queue item approved' })
   @ApiResponse({ status: 400, description: 'Item already reviewed' })
-  async approve(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: ReviewQueueItemDto,
-  ) {
+  async approve(@Request() req, @Param('id') id: string, @Body() dto: ReviewQueueItemDto) {
     return this.automationService.approveQueueItem(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -101,11 +113,7 @@ export class AutomationController {
   @ApiParam({ name: 'id', description: 'Queue item UUID' })
   @ApiResponse({ status: 200, description: 'JE deleted, queue item rejected' })
   @ApiResponse({ status: 400, description: 'Item already reviewed' })
-  async reject(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: RejectQueueItemDto,
-  ) {
+  async reject(@Request() req, @Param('id') id: string, @Body() dto: RejectQueueItemDto) {
     return this.automationService.rejectQueueItem(req.user.tenantId, req.user.id, id, dto);
   }
 }

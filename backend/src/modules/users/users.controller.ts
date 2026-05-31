@@ -2,18 +2,26 @@
 // FILE: backend/src/modules/users/users.controller.ts
 // ============================================================================
 import {
-  Controller, Get, Post, Patch, Param, Body,
-  UseGuards, Request, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { UsersService }        from './users.service';
-import { CreateUserDto }       from './dto/create-user.dto';
-import { UpdateUserDto }       from './dto/update-user.dto';
-import { AssignRolesDto }      from './dto/assign-roles.dto';
-import { ResetPasswordDto }    from './dto/reset-password.dto';
-import { JwtAuthGuard }        from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard }    from '../../common/guards/permissions.guard';
-import { RequirePermissions }  from '../../common/decorators/permissions.decorator';
+import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { AssignRolesDto } from './dto/assign-roles.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Users')
 @Controller('users')

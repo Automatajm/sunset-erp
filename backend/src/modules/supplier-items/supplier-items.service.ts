@@ -1,22 +1,36 @@
 // ============================================================================
 // FILE: backend/src/modules/supplier-items/supplier-items.service.ts
 // ============================================================================
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
 import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
 
 const INCLUDE = {
-  supplier:    { select: { id: true, code: true, name: true } },
-  item:        { select: { id: true, code: true, name: true, consumptionUomId: true, baseUom: true, purchaseUomId: true } },
+  supplier: { select: { id: true, code: true, name: true } },
+  item: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      consumptionUomId: true,
+      baseUom: true,
+      purchaseUomId: true,
+    },
+  },
   purchaseUom: { select: { id: true, code: true, name: true, type: true, system: true } },
 };
 
 @Injectable()
 export class SupplierItemsService {
   constructor(
-    private prisma:     PrismaService,
+    private prisma: PrismaService,
     private uomService: UomService,
   ) {}
 
@@ -31,7 +45,12 @@ export class SupplierItemsService {
   ): Promise<void> {
     const item = await this.prisma.item.findFirst({
       where: { id: itemId, tenantId },
-      select: { code: true, name: true, purchaseUomId: true, purchaseUom: { select: { code: true, name: true } } },
+      select: {
+        code: true,
+        name: true,
+        purchaseUomId: true,
+        purchaseUom: { select: { code: true, name: true } },
+      },
     });
     if (!item) throw new NotFoundException(`Item ${itemId} not found`);
 
@@ -39,7 +58,7 @@ export class SupplierItemsService {
     if (!item.purchaseUomId) {
       throw new BadRequestException(
         `Item ${item.code} does not have a Purchase UOM configured. ` +
-        `Set the item's Purchase UOM before assigning suppliers.`
+          `Set the item's Purchase UOM before assigning suppliers.`,
       );
     }
 
@@ -51,8 +70,8 @@ export class SupplierItemsService {
       });
       throw new BadRequestException(
         `Purchase UOM mismatch. Item ${item.code} uses ${item.purchaseUom?.code ?? item.purchaseUomId} ` +
-        `but supplier is configured with ${supplierUom?.code ?? purchaseUomId}. ` +
-        `If this supplier sells the product in a different unit, create a separate item for that presentation.`
+          `but supplier is configured with ${supplierUom?.code ?? purchaseUomId}. ` +
+          `If this supplier sells the product in a different unit, create a separate item for that presentation.`,
       );
     }
   }
@@ -74,19 +93,19 @@ export class SupplierItemsService {
         const reactivated = await this.prisma.supplierItem.update({
           where: { id: existing.id },
           data: {
-            deletedAt:        null,
-            deletedBy:        null,
-            isActive:         true,
+            deletedAt: null,
+            deletedBy: null,
+            isActive: true,
             supplierItemCode: dto.supplierItemCode ?? existing.supplierItemCode,
             supplierItemName: dto.supplierItemName ?? existing.supplierItemName,
-            purchaseUomId:    dto.purchaseUomId,
-            packSize:         dto.packSize ?? existing.packSize,
-            lastPrice:        dto.lastPrice ?? existing.lastPrice,
-            leadTimeDays:     dto.leadTimeDays ?? existing.leadTimeDays,
-            moq:              dto.moq ?? existing.moq,
-            isPreferred:      dto.isPreferred ?? existing.isPreferred,
-            notes:            dto.notes ?? existing.notes,
-            updatedBy:        userId,
+            purchaseUomId: dto.purchaseUomId,
+            packSize: dto.packSize ?? existing.packSize,
+            lastPrice: dto.lastPrice ?? existing.lastPrice,
+            leadTimeDays: dto.leadTimeDays ?? existing.leadTimeDays,
+            moq: dto.moq ?? existing.moq,
+            isPreferred: dto.isPreferred ?? existing.isPreferred,
+            notes: dto.notes ?? existing.notes,
+            updatedBy: userId,
           },
           include: INCLUDE,
         });
@@ -103,28 +122,28 @@ export class SupplierItemsService {
     if (dto.isPreferred) {
       await this.prisma.supplierItem.updateMany({
         where: { tenantId, itemId: dto.itemId, isPreferred: true, deletedAt: null },
-        data:  { isPreferred: false },
+        data: { isPreferred: false },
       });
     }
 
     const si = await this.prisma.supplierItem.create({
       data: {
         tenantId,
-        supplierId:       dto.supplierId,
-        itemId:           dto.itemId,
+        supplierId: dto.supplierId,
+        itemId: dto.itemId,
         supplierItemCode: dto.supplierItemCode,
         supplierItemName: dto.supplierItemName,
-        purchaseUomId:    dto.purchaseUomId,
-        packSize:         dto.packSize ?? 1,
+        purchaseUomId: dto.purchaseUomId,
+        packSize: dto.packSize ?? 1,
         conversionFactor,
-        lastPrice:        dto.lastPrice,
-        leadTimeDays:     dto.leadTimeDays ?? 0,
-        moq:              dto.moq ?? 1,
-        isPreferred:      dto.isPreferred ?? false,
-        isActive:         dto.isActive ?? true,
-        notes:            dto.notes,
-        createdBy:        userId,
-        updatedBy:        userId,
+        lastPrice: dto.lastPrice,
+        leadTimeDays: dto.leadTimeDays ?? 0,
+        moq: dto.moq ?? 1,
+        isPreferred: dto.isPreferred ?? false,
+        isActive: dto.isActive ?? true,
+        notes: dto.notes,
+        createdBy: userId,
+        updatedBy: userId,
       },
       include: INCLUDE,
     });
@@ -132,7 +151,7 @@ export class SupplierItemsService {
     if (dto.isPreferred) {
       await this.prisma.item.update({
         where: { id: dto.itemId },
-        data:  { defaultSupplierId: dto.supplierId },
+        data: { defaultSupplierId: dto.supplierId },
       });
     }
 
@@ -141,10 +160,13 @@ export class SupplierItemsService {
 
   // ── Find All ───────────────────────────────────────────────────────────────
 
-  async findAll(tenantId: string, filters?: { itemId?: string; supplierId?: string; isPreferred?: boolean }) {
+  async findAll(
+    tenantId: string,
+    filters?: { itemId?: string; supplierId?: string; isPreferred?: boolean },
+  ) {
     const where: any = { tenantId, deletedAt: null };
-    if (filters?.itemId)                    where.itemId      = filters.itemId;
-    if (filters?.supplierId)                where.supplierId  = filters.supplierId;
+    if (filters?.itemId) where.itemId = filters.itemId;
+    if (filters?.supplierId) where.supplierId = filters.supplierId;
     if (filters?.isPreferred !== undefined) where.isPreferred = filters.isPreferred;
 
     const rows = await this.prisma.supplierItem.findMany({
@@ -152,7 +174,7 @@ export class SupplierItemsService {
       include: INCLUDE,
       orderBy: [{ isPreferred: 'desc' }, { supplier: { name: 'asc' } }],
     });
-    return rows.map(r => this.enrich(r));
+    return rows.map((r) => this.enrich(r));
   }
 
   async findByItem(tenantId: string, itemId: string) {
@@ -184,18 +206,24 @@ export class SupplierItemsService {
 
     if (dto.isPreferred) {
       await this.prisma.supplierItem.updateMany({
-        where: { tenantId, itemId: (si as any).itemId, isPreferred: true, id: { not: id }, deletedAt: null },
-        data:  { isPreferred: false },
+        where: {
+          tenantId,
+          itemId: (si as any).itemId,
+          isPreferred: true,
+          id: { not: id },
+          deletedAt: null,
+        },
+        data: { isPreferred: false },
       });
       await this.prisma.item.update({
         where: { id: (si as any).itemId },
-        data:  { defaultSupplierId: (si as any).supplierId },
+        data: { defaultSupplierId: (si as any).supplierId },
       });
     }
 
     const updated = await this.prisma.supplierItem.update({
-      where:   { id },
-      data:    { ...dto, updatedBy: userId },
+      where: { id },
+      data: { ...dto, updatedBy: userId },
       include: INCLUDE,
     });
     return this.enrich(updated);
@@ -207,7 +235,7 @@ export class SupplierItemsService {
     await this.findOne(tenantId, id);
     await this.prisma.supplierItem.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Supplier item deleted successfully', id };
   }

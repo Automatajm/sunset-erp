@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException, BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
 import { UpdateRfqDto } from './dto/update-rfq.dto';
@@ -14,28 +12,28 @@ export class RfqsService {
   // ── Auto-generate RFQ number ───────────────────────────────────────────────
 
   private async generateRfqNumber(tenantId: string): Promise<string> {
-    const year   = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const prefix = `RFQ-${year}`;
-    const last   = await this.prisma.rfq.findFirst({
-      where:   { tenantId, rfqNumber: { startsWith: prefix } },
+    const last = await this.prisma.rfq.findFirst({
+      where: { tenantId, rfqNumber: { startsWith: prefix } },
       orderBy: { rfqNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
-    const parts   = last.rfqNumber.split('-');
+    const parts = last.rfqNumber.split('-');
     const lastNum = parseInt(parts[parts.length - 1], 10);
     const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
     return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
   }
 
   private async generatePoNumber(tenantId: string): Promise<string> {
-    const year   = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const prefix = `PO-${year}`;
-    const last   = await this.prisma.purchaseOrder.findFirst({
-      where:   { tenantId, poNumber: { startsWith: prefix } },
+    const last = await this.prisma.purchaseOrder.findFirst({
+      where: { tenantId, poNumber: { startsWith: prefix } },
       orderBy: { poNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
-    const parts   = last.poNumber.split('-');
+    const parts = last.poNumber.split('-');
     const lastNum = parseInt(parts[parts.length - 1], 10);
     const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
     return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
@@ -68,21 +66,21 @@ export class RfqsService {
       data: {
         tenantId,
         rfqNumber,
-        title:            dto.title,
-        currency:         dto.currency ?? 'USD',
+        title: dto.title,
+        currency: dto.currency ?? 'USD',
         responseDeadline: dto.responseDeadline ? new Date(dto.responseDeadline) : null,
-        prId:             dto.prId,
-        gnId:             dto.gnId,
-        status:           'draft',
-        notes:            dto.notes,
-        createdBy:        userId,
-        updatedBy:        userId,
+        prId: dto.prId,
+        gnId: dto.gnId,
+        status: 'draft',
+        notes: dto.notes,
+        createdBy: userId,
+        updatedBy: userId,
         // Create supplier invitations
         rfqSuppliers: {
-          create: dto.supplierIds.map(supplierId => ({
+          create: dto.supplierIds.map((supplierId) => ({
             tenantId,
             supplierId,
-            status:    'invited',
+            status: 'invited',
             createdBy: userId,
             updatedBy: userId,
           })),
@@ -91,18 +89,18 @@ export class RfqsService {
         lines: {
           create: dto.lines.map((line, index) => ({
             tenantId,
-            lineNumber:        index + 1,
-            itemId:            line.itemId,
+            lineNumber: index + 1,
+            itemId: line.itemId,
             genericDescription: line.genericDescription,
-            quantity:          line.quantity,
-            uom:               line.uom,
-            requiredDate:      new Date(line.requiredDate),
-            prLineId:          line.prLineId,
-            gnLineId:          line.gnLineId,
-            status:            'open',
-            notes:             line.notes,
-            createdBy:         userId,
-            updatedBy:         userId,
+            quantity: line.quantity,
+            uom: line.uom,
+            requiredDate: new Date(line.requiredDate),
+            prLineId: line.prLineId,
+            gnLineId: line.gnLineId,
+            status: 'open',
+            notes: line.notes,
+            createdBy: userId,
+            updatedBy: userId,
           })),
         },
       },
@@ -122,7 +120,8 @@ export class RfqsService {
         _count: { select: { lines: true, rfqSuppliers: true } },
         rfqSuppliers: {
           select: {
-            id: true, status: true,
+            id: true,
+            status: true,
             supplier: { select: { id: true, code: true, name: true } },
           },
         },
@@ -178,16 +177,19 @@ export class RfqsService {
     // Mark all invited suppliers as sent
     await this.prisma.rfqSupplier.updateMany({
       where: { rfqId: id, status: 'invited' },
-      data:  { status: 'sent', sentAt: new Date(), updatedBy: userId },
+      data: { status: 'sent', sentAt: new Date(), updatedBy: userId },
     });
 
     const updated = await this.prisma.rfq.update({
       where: { id },
-      data:  { status: 'sent', updatedBy: userId },
+      data: { status: 'sent', updatedBy: userId },
       include: this.rfqInclude(),
     });
 
-    return { message: `RFQ ${rfq.rfqNumber} sent to ${(rfq as any).rfqSuppliers.length} suppliers`, rfq: updated };
+    return {
+      message: `RFQ ${rfq.rfqNumber} sent to ${(rfq as any).rfqSuppliers.length} suppliers`,
+      rfq: updated,
+    };
   }
 
   // ── Submit supplier response ───────────────────────────────────────────────
@@ -213,39 +215,39 @@ export class RfqsService {
 
     // Upsert response lines (allow re-submission)
     const responseLines = await Promise.all(
-      dto.lines.map(line =>
+      dto.lines.map((line) =>
         this.prisma.rfqResponseLine.upsert({
           where: {
             rfqSupplierId_rfqLineId: {
               rfqSupplierId: dto.rfqSupplierId,
-              rfqLineId:     line.rfqLineId,
+              rfqLineId: line.rfqLineId,
             },
           },
           create: {
             tenantId,
             rfqSupplierId: dto.rfqSupplierId,
-            rfqLineId:     line.rfqLineId,
-            offeredQty:    line.offeredQty,
-            uom:           line.uom,
-            unitPrice:     line.unitPrice,
-            leadTimeDays:  line.leadTimeDays,
-            validUntil:    line.validUntil ? new Date(line.validUntil) : null,
-            packSize:      line.packSize,
-            moq:           line.moq,
-            notes:         line.notes,
-            createdBy:     userId,
-            updatedBy:     userId,
+            rfqLineId: line.rfqLineId,
+            offeredQty: line.offeredQty,
+            uom: line.uom,
+            unitPrice: line.unitPrice,
+            leadTimeDays: line.leadTimeDays,
+            validUntil: line.validUntil ? new Date(line.validUntil) : null,
+            packSize: line.packSize,
+            moq: line.moq,
+            notes: line.notes,
+            createdBy: userId,
+            updatedBy: userId,
           },
           update: {
-            offeredQty:   line.offeredQty,
-            uom:          line.uom,
-            unitPrice:    line.unitPrice,
+            offeredQty: line.offeredQty,
+            uom: line.uom,
+            unitPrice: line.unitPrice,
             leadTimeDays: line.leadTimeDays,
-            validUntil:   line.validUntil ? new Date(line.validUntil) : null,
-            packSize:     line.packSize,
-            moq:          line.moq,
-            notes:        line.notes,
-            updatedBy:    userId,
+            validUntil: line.validUntil ? new Date(line.validUntil) : null,
+            packSize: line.packSize,
+            moq: line.moq,
+            notes: line.notes,
+            updatedBy: userId,
           },
         }),
       ),
@@ -253,13 +255,14 @@ export class RfqsService {
 
     // Calculate total offered amount
     const totalOfferedAmount = responseLines.reduce(
-      (sum, rl) => sum + Number(rl.unitPrice) * Number(rl.offeredQty), 0,
+      (sum, rl) => sum + Number(rl.unitPrice) * Number(rl.offeredQty),
+      0,
     );
 
     // Mark supplier as responded
     await this.prisma.rfqSupplier.update({
       where: { id: dto.rfqSupplierId },
-      data:  { status: 'responded', respondedAt: new Date(), totalOfferedAmount, updatedBy: userId },
+      data: { status: 'responded', respondedAt: new Date(), totalOfferedAmount, updatedBy: userId },
     });
 
     // Check if all suppliers responded → update RFQ status
@@ -270,7 +273,7 @@ export class RfqsService {
     await this.prisma.rfq.update({
       where: { id: rfqId },
       data: {
-        status:    pendingSuppliers === 0 ? 'fully_responded' : 'partial_response',
+        status: pendingSuppliers === 0 ? 'fully_responded' : 'partial_response',
         updatedBy: userId,
       },
     });
@@ -331,42 +334,42 @@ export class RfqsService {
           include: { rfqLine: true },
         });
 
-        const qty       = a.awardedQty ?? Number(responseLine!.offeredQty);
+        const qty = a.awardedQty ?? Number(responseLine!.offeredQty);
         const lineTotal = qty * Number(responseLine!.unitPrice);
         subtotal += lineTotal;
 
         poLines.push({
           tenantId,
-          lineNumber:      i + 1,
-          itemId:          responseLine!.rfqLine.itemId!,
+          lineNumber: i + 1,
+          itemId: responseLine!.rfqLine.itemId!,
           orderedQuantity: qty,
           receivedQuantity: 0,
-          uom:             responseLine!.uom,
-          unitPrice:       responseLine!.unitPrice,
+          uom: responseLine!.uom,
+          unitPrice: responseLine!.unitPrice,
           discountPercent: 0,
           lineTotal,
-          expectedDate:    responseLine!.rfqLine.requiredDate,
-          status:          'open',
-          createdBy:       userId,
-          updatedBy:       userId,
+          expectedDate: responseLine!.rfqLine.requiredDate,
+          status: 'open',
+          createdBy: userId,
+          updatedBy: userId,
         });
 
         // Mark response line as awarded
         await this.prisma.rfqResponseLine.update({
           where: { id: a.rfqResponseLineId },
-          data:  { isAwarded: true, awardedQty: qty, updatedBy: userId },
+          data: { isAwarded: true, awardedQty: qty, updatedBy: userId },
         });
 
         // Update RFQ line with award info
         await this.prisma.rfqLine.update({
           where: { id: a.rfqLineId },
           data: {
-            status:               'awarded',
-            awardedSupplierId:    supplierId,
+            status: 'awarded',
+            awardedSupplierId: supplierId,
             awardedResponseLineId: a.rfqResponseLineId,
-            awardedUnitPrice:     responseLine!.unitPrice,
-            awardedQty:           qty,
-            updatedBy:            userId,
+            awardedUnitPrice: responseLine!.unitPrice,
+            awardedQty: qty,
+            updatedBy: userId,
           },
         });
       }
@@ -378,23 +381,23 @@ export class RfqsService {
           poNumber,
           supplierId,
           rfqId,
-          poDate:       new Date(),
-          currency:     rfq.currency,
+          poDate: new Date(),
+          currency: rfq.currency,
           exchangeRate: 1,
           subtotal,
           discountAmount: 0,
-          taxAmount:    0,
-          total:        subtotal,
+          taxAmount: 0,
+          total: subtotal,
           paymentTerms: supplier!.paymentTerms,
-          status:       'draft',
-          notes:        `Generated from RFQ ${rfq.rfqNumber}`,
-          createdBy:    userId,
-          updatedBy:    userId,
-          lines:        { create: poLines },
+          status: 'draft',
+          notes: `Generated from RFQ ${rfq.rfqNumber}`,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: { create: poLines },
         },
         include: {
           supplier: { select: { id: true, code: true, name: true } },
-          lines:    { include: { item: { select: { id: true, code: true, name: true } } } },
+          lines: { include: { item: { select: { id: true, code: true, name: true } } } },
         },
       });
 
@@ -402,7 +405,7 @@ export class RfqsService {
       for (let i = 0; i < awards.length; i++) {
         await this.prisma.rfqLine.update({
           where: { id: awards[i].rfqLineId },
-          data:  { poLineId: po.lines[i].id, updatedBy: userId },
+          data: { poLineId: po.lines[i].id, updatedBy: userId },
         });
       }
 
@@ -413,7 +416,7 @@ export class RfqsService {
       if (rfqSupplier) {
         await this.prisma.rfqSupplier.update({
           where: { id: rfqSupplier.id },
-          data:  { status: 'awarded', updatedBy: userId },
+          data: { status: 'awarded', updatedBy: userId },
         });
       }
 
@@ -423,12 +426,16 @@ export class RfqsService {
     // Update RFQ status to awarded
     await this.prisma.rfq.update({
       where: { id: rfqId },
-      data:  { status: 'awarded', awardedAt: new Date(), awardedBy: userId, updatedBy: userId },
+      data: { status: 'awarded', awardedAt: new Date(), awardedBy: userId, updatedBy: userId },
     });
 
     return {
-      message:        `RFQ ${rfq.rfqNumber} awarded — ${createdPos.length} PO(s) created`,
-      purchaseOrders: createdPos.map(po => ({ id: po.id, poNumber: po.poNumber, supplierId: po.supplierId })),
+      message: `RFQ ${rfq.rfqNumber} awarded — ${createdPos.length} PO(s) created`,
+      purchaseOrders: createdPos.map((po) => ({
+        id: po.id,
+        poNumber: po.poNumber,
+        supplierId: po.supplierId,
+      })),
     };
   }
 
@@ -437,12 +444,14 @@ export class RfqsService {
   async cancel(tenantId: string, userId: string, id: string) {
     const rfq = await this.findOne(tenantId, id);
     if (rfq.status === 'awarded') {
-      throw new BadRequestException('Cannot cancel an awarded RFQ — cancel the generated POs instead');
+      throw new BadRequestException(
+        'Cannot cancel an awarded RFQ — cancel the generated POs instead',
+      );
     }
 
     const updated = await this.prisma.rfq.update({
       where: { id },
-      data:  { status: 'cancelled', updatedBy: userId },
+      data: { status: 'cancelled', updatedBy: userId },
     });
 
     return { message: `RFQ ${rfq.rfqNumber} cancelled`, rfq: updated };
@@ -458,7 +467,7 @@ export class RfqsService {
 
     await this.prisma.rfq.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
 
     return { message: 'RFQ deleted successfully', id };
@@ -470,45 +479,43 @@ export class RfqsService {
   async getComparison(tenantId: string, id: string) {
     const rfq = await this.findOne(tenantId, id);
 
-    const lines    = (rfq as any).lines;
+    const lines = (rfq as any).lines;
     const suppliers = (rfq as any).rfqSuppliers;
 
     const matrix = lines.map((line: any) => ({
-      lineId:      line.id,
-      lineNumber:  line.lineNumber,
-      itemId:      line.itemId,
-      itemName:    line.item?.name ?? line.genericDescription,
-      quantity:    line.quantity,
-      uom:         line.uom,
+      lineId: line.id,
+      lineNumber: line.lineNumber,
+      itemId: line.itemId,
+      itemName: line.item?.name ?? line.genericDescription,
+      quantity: line.quantity,
+      uom: line.uom,
       requiredDate: line.requiredDate,
-      status:      line.status,
+      status: line.status,
       offers: suppliers.map((rs: any) => {
-        const responseLine = line.responseLines?.find(
-          (rl: any) => rl.rfqSupplierId === rs.id,
-        );
+        const responseLine = line.responseLines?.find((rl: any) => rl.rfqSupplierId === rs.id);
         return {
-          supplierId:   rs.supplier.id,
+          supplierId: rs.supplier.id,
           supplierName: rs.supplier.name,
           supplierCode: rs.supplier.code,
           rfqSupplierId: rs.id,
           supplierStatus: rs.status,
           responseLineId: responseLine?.id ?? null,
-          offeredQty:   responseLine?.offeredQty ?? null,
-          unitPrice:    responseLine?.unitPrice ?? null,
+          offeredQty: responseLine?.offeredQty ?? null,
+          unitPrice: responseLine?.unitPrice ?? null,
           leadTimeDays: responseLine?.leadTimeDays ?? null,
-          validUntil:   responseLine?.validUntil ?? null,
-          moq:          responseLine?.moq ?? null,
-          isAwarded:    responseLine?.isAwarded ?? false,
-          notes:        responseLine?.notes ?? null,
+          validUntil: responseLine?.validUntil ?? null,
+          moq: responseLine?.moq ?? null,
+          isAwarded: responseLine?.isAwarded ?? false,
+          notes: responseLine?.notes ?? null,
         };
       }),
     }));
 
     return {
-      rfqId:     rfq.id,
+      rfqId: rfq.id,
       rfqNumber: rfq.rfqNumber,
-      status:    rfq.status,
-      currency:  rfq.currency,
+      status: rfq.status,
+      currency: rfq.currency,
       matrix,
     };
   }
@@ -518,16 +525,20 @@ export class RfqsService {
   private rfqInclude() {
     return {
       purchaseRequisition: { select: { id: true, prNumber: true } },
-      generalNeed:         { select: { id: true, gnNumber: true } },
+      generalNeed: { select: { id: true, gnNumber: true } },
       lines: {
-        where:   { deletedAt: null },
+        where: { deletedAt: null },
         include: {
-          item:             { select: { id: true, code: true, name: true } },
-          awardedSupplier:  { select: { id: true, code: true, name: true } },
+          item: { select: { id: true, code: true, name: true } },
+          awardedSupplier: { select: { id: true, code: true, name: true } },
           responseLines: {
             include: {
               rfqSupplier: {
-                select: { id: true, supplierId: true, supplier: { select: { id: true, code: true, name: true } } },
+                select: {
+                  id: true,
+                  supplierId: true,
+                  supplier: { select: { id: true, code: true, name: true } },
+                },
               },
             },
           },
@@ -536,8 +547,18 @@ export class RfqsService {
       },
       rfqSuppliers: {
         include: {
-          supplier:     { select: { id: true, code: true, name: true, contactName: true, contactEmail: true } },
-          responseLines: { select: { id: true, rfqLineId: true, unitPrice: true, offeredQty: true, isAwarded: true } },
+          supplier: {
+            select: { id: true, code: true, name: true, contactName: true, contactEmail: true },
+          },
+          responseLines: {
+            select: {
+              id: true,
+              rfqLineId: true,
+              unitPrice: true,
+              offeredQty: true,
+              isAwarded: true,
+            },
+          },
         },
       },
     };

@@ -10,7 +10,10 @@ export class CreateBinDto {
   @IsUUID()
   levelId: string;
 
-  @ApiProperty({ example: '01', description: 'Bin code. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL-BIN' })
+  @ApiProperty({
+    example: '01',
+    description: 'Bin code. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL-BIN',
+  })
   @IsString()
   @MaxLength(10)
   code: string;

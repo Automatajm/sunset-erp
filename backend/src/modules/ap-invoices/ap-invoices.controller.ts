@@ -2,12 +2,27 @@
 // FILE: backend/src/modules/ap-invoices/ap-invoices.controller.ts
 // ============================================================================
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery, ApiBody,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { ApInvoicesService } from './ap-invoices.service';
 import { CreateApInvoiceDto } from './dto/create-ap-invoice.dto';
@@ -49,16 +64,20 @@ export class ApInvoicesController {
   @Get()
   @RequirePermissions('AP:VIEW')
   @ApiOperation({ summary: 'List AP invoices with filters' })
-  @ApiQuery({ name: 'status',     required: false, description: 'draft | posted | partial | paid | void' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'draft | posted | partial | paid | void',
+  })
   @ApiQuery({ name: 'supplierId', required: false, description: 'Filter by supplier UUID' })
-  @ApiQuery({ name: 'from',       required: false, description: 'Invoice date from YYYY-MM-DD' })
-  @ApiQuery({ name: 'to',         required: false, description: 'Invoice date to YYYY-MM-DD' })
+  @ApiQuery({ name: 'from', required: false, description: 'Invoice date from YYYY-MM-DD' })
+  @ApiQuery({ name: 'to', required: false, description: 'Invoice date to YYYY-MM-DD' })
   async findAll(
     @Request() req,
-    @Query('status')     status?: string,
+    @Query('status') status?: string,
     @Query('supplierId') supplierId?: string,
-    @Query('from')       from?: string,
-    @Query('to')         to?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
     return this.apInvoicesService.findAll(req.user.tenantId, { status, supplierId, from, to });
   }
@@ -111,10 +130,15 @@ export class ApInvoicesController {
   // ── PATCH /ap-invoices/:id/post ───────────────────────────────────────────
   @Patch(':id/post')
   @RequirePermissions('AP:APPROVE')
-  @ApiOperation({ summary: 'Post AP invoice → JE: Inventory DR / AP CR. Validates 3-way match if GRN linked.' })
+  @ApiOperation({
+    summary: 'Post AP invoice → JE: Inventory DR / AP CR. Validates 3-way match if GRN linked.',
+  })
   @ApiParam({ name: 'id', description: 'AP Invoice UUID' })
   @ApiResponse({ status: 200, description: 'Posted, JE generated' })
-  @ApiResponse({ status: 400, description: 'Not in draft, 3-way match failed, or fiscal period closed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Not in draft, 3-way match failed, or fiscal period closed',
+  })
   async post(@Request() req, @Param('id') id: string) {
     return this.apInvoicesService.post(req.user.tenantId, req.user.id, id);
   }
@@ -146,7 +170,13 @@ export class ApInvoicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Link a GRN to this AP Invoice — auto-matches lines by poLineId' })
   @ApiParam({ name: 'id', description: 'AP Invoice UUID' })
-  @ApiBody({ schema: { type: 'object', properties: { grnId: { type: 'string', format: 'uuid' } }, required: ['grnId'] } })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { grnId: { type: 'string', format: 'uuid' } },
+      required: ['grnId'],
+    },
+  })
   @ApiResponse({ status: 200, description: 'GRN linked, matched line count returned' })
   async linkGrn(@Request() req, @Param('id') id: string, @Body('grnId') grnId: string) {
     return this.apInvoicesService.linkGrn(req.user.tenantId, req.user.id, id, grnId);

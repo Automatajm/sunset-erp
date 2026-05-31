@@ -1,6 +1,12 @@
 import {
-  IsUUID, IsNumber, IsString, IsOptional,
-  IsDateString, Min, MaxLength, IsArray,
+  IsUUID,
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsDateString,
+  Min,
+  MaxLength,
+  IsArray,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -21,7 +27,7 @@ export class RfqResponseLineDto {
   @MaxLength(20)
   uom: string;
 
-  @ApiProperty({ example: 12.50, description: 'Unit price offered' })
+  @ApiProperty({ example: 12.5, description: 'Unit price offered' })
   @IsNumber()
   @Min(0)
   unitPrice: number;

@@ -8,9 +8,9 @@ import { PrismaModule } from '../../database/prisma.module';
 import { UomModule } from '../uom/uom.module';
 
 @Module({
-  imports:     [PrismaModule, UomModule],
+  imports: [PrismaModule, UomModule],
   controllers: [GoodsReceiptsController],
-  providers:   [GoodsReceiptsService],
-  exports:     [GoodsReceiptsService],
+  providers: [GoodsReceiptsService],
+  exports: [GoodsReceiptsService],
 })
 export class GoodsReceiptsModule {}

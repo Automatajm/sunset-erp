@@ -2,7 +2,7 @@
 // FILE: backend/src/modules/stock-reconciliation/dto/create-assignment.dto.ts
 // ============================================================================
 import { IsUUID, IsOptional, IsArray, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional }      from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAssignmentDto {
   @ApiProperty({ description: 'User ID to assign lines to' })

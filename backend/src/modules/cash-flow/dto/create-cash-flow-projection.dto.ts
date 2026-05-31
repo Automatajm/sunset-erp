@@ -24,7 +24,10 @@ export class CreateCashFlowProjectionDto {
   @IsNotEmpty()
   endDate: string;
 
-  @ApiProperty({ example: 'realistic', description: 'Scenario: optimistic, realistic, pessimistic' })
+  @ApiProperty({
+    example: 'realistic',
+    description: 'Scenario: optimistic, realistic, pessimistic',
+  })
   @IsString()
   @IsOptional()
   @MaxLength(50)

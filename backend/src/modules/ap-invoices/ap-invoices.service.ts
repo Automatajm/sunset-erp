@@ -1,11 +1,7 @@
 // ============================================================================
 // FILE: backend/src/modules/ap-invoices/ap-invoices.service.ts
 // ============================================================================
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateApInvoiceDto } from './dto/create-ap-invoice.dto';
 import { UpdateApInvoiceDto, ApplyApPaymentDto } from './dto/update-ap-invoice.dto';
@@ -60,30 +56,29 @@ export class ApInvoicesService {
       }
 
       const discountAmt = (line.unitPrice * line.quantity * (line.discountPercent || 0)) / 100;
-      const lineTotal   = line.unitPrice * line.quantity - discountAmt;
-      const priceVariance = originalPoPrice !== null
-        ? (line.unitPrice - originalPoPrice) * line.quantity
-        : null;
+      const lineTotal = line.unitPrice * line.quantity - discountAmt;
+      const priceVariance =
+        originalPoPrice !== null ? (line.unitPrice - originalPoPrice) * line.quantity : null;
 
       subtotal += lineTotal;
 
       linesData.push({
         tenantId,
-        lineNumber:         i + 1,
-        poLineId:           line.poLineId ?? null,
-        itemId:             line.itemId ?? null,
-        description:        line.description ?? null,
-        quantity:           line.quantity,
-        uom:                line.uom ?? null,
-        unitPrice:          line.unitPrice,
+        lineNumber: i + 1,
+        poLineId: line.poLineId ?? null,
+        itemId: line.itemId ?? null,
+        description: line.description ?? null,
+        quantity: line.quantity,
+        uom: line.uom ?? null,
+        unitPrice: line.unitPrice,
         originalPoPrice,
-        discountPercent:    line.discountPercent ?? 0,
+        discountPercent: line.discountPercent ?? 0,
         lineTotal,
         priceVariance,
         inventoryAccountId: line.inventoryAccountId ?? null,
-        expenseAccountId:   line.expenseAccountId ?? null,
-        createdBy:          userId,
-        updatedBy:          userId,
+        expenseAccountId: line.expenseAccountId ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       });
     }
 
@@ -92,21 +87,21 @@ export class ApInvoicesService {
     return this.prisma.apInvoice.create({
       data: {
         tenantId,
-        supplierId:   dto.supplierId,
-        poId:         dto.poId ?? null,
+        supplierId: dto.supplierId,
+        poId: dto.poId ?? null,
         invoiceNumber,
-        supplierRef:  dto.supplierRef ?? null,
-        invoiceDate:  new Date(dto.invoiceDate),
-        dueDate:      new Date(dto.dueDate),
-        status:       'draft',
+        supplierRef: dto.supplierRef ?? null,
+        invoiceDate: new Date(dto.invoiceDate),
+        dueDate: new Date(dto.dueDate),
+        status: 'draft',
         subtotal,
-        taxAmount:    0,
-        totalAmount:  subtotal,
-        paidAmount:   0,
-        currency:     dto.currency ?? 'USD',
-        notes:        dto.notes ?? null,
-        createdBy:    userId,
-        updatedBy:    userId,
+        taxAmount: 0,
+        totalAmount: subtotal,
+        paidAmount: 0,
+        currency: dto.currency ?? 'USD',
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
         lines: { create: linesData },
       },
       include: this.defaultInclude(),
@@ -139,29 +134,29 @@ export class ApInvoicesService {
     }
 
     const invoiceDate = new Date();
-    const dueDate     = new Date();
+    const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
 
     const linesData = po.lines.map((line, i) => {
-      const lineTotal       = Number(line.lineTotal);
+      const lineTotal = Number(line.lineTotal);
       const originalPoPrice = Number(line.unitPrice);
       return {
         tenantId,
-        lineNumber:         i + 1,
-        poLineId:           line.id,
-        itemId:             line.itemId,
-        description:        line.description ?? line.item?.name ?? null,
-        quantity:           Number(line.orderedQuantity),
-        uom:                line.uom,
-        unitPrice:          originalPoPrice,
+        lineNumber: i + 1,
+        poLineId: line.id,
+        itemId: line.itemId,
+        description: line.description ?? line.item?.name ?? null,
+        quantity: Number(line.orderedQuantity),
+        uom: line.uom,
+        unitPrice: originalPoPrice,
         originalPoPrice,
-        discountPercent:    Number(line.discountPercent),
+        discountPercent: Number(line.discountPercent),
         lineTotal,
-        priceVariance:      0,
+        priceVariance: 0,
         inventoryAccountId: null,
-        expenseAccountId:   null,
-        createdBy:          userId,
-        updatedBy:          userId,
+        expenseAccountId: null,
+        createdBy: userId,
+        updatedBy: userId,
       };
     });
 
@@ -170,21 +165,21 @@ export class ApInvoicesService {
     return this.prisma.apInvoice.create({
       data: {
         tenantId,
-        supplierId:   po.supplierId,
-        poId:         po.id,
+        supplierId: po.supplierId,
+        poId: po.id,
         invoiceNumber,
-        supplierRef:  null,
+        supplierRef: null,
         invoiceDate,
         dueDate,
-        status:       'draft',
-        subtotal:     Number(po.subtotal),
-        taxAmount:    Number(po.taxAmount),
-        totalAmount:  Number(po.total),
-        paidAmount:   0,
-        currency:     po.currency ?? 'USD',
-        notes:        `Auto-generated from Purchase Order ${po.poNumber}`,
-        createdBy:    userId,
-        updatedBy:    userId,
+        status: 'draft',
+        subtotal: Number(po.subtotal),
+        taxAmount: Number(po.taxAmount),
+        totalAmount: Number(po.total),
+        paidAmount: 0,
+        currency: po.currency ?? 'USD',
+        notes: `Auto-generated from Purchase Order ${po.poNumber}`,
+        createdBy: userId,
+        updatedBy: userId,
         lines: { create: linesData },
       },
       include: this.defaultInclude(),
@@ -199,20 +194,20 @@ export class ApInvoicesService {
     filters: { status?: string; supplierId?: string; from?: string; to?: string },
   ) {
     const where: any = { tenantId, deletedAt: null };
-    if (filters.status)     where.status     = filters.status;
+    if (filters.status) where.status = filters.status;
     if (filters.supplierId) where.supplierId = filters.supplierId;
     if (filters.from || filters.to) {
       where.invoiceDate = {};
       if (filters.from) where.invoiceDate.gte = new Date(filters.from);
-      if (filters.to)   where.invoiceDate.lte = new Date(filters.to);
+      if (filters.to) where.invoiceDate.lte = new Date(filters.to);
     }
     return this.prisma.apInvoice.findMany({
       where,
       include: {
-        supplier:      { select: { id: true, code: true, name: true } },
+        supplier: { select: { id: true, code: true, name: true } },
         purchaseOrder: { select: { id: true, poNumber: true } },
-        goodsReceipt:  { select: { id: true, grnNumber: true, status: true } },
-        _count:        { select: { lines: true, payments: true } },
+        goodsReceipt: { select: { id: true, grnNumber: true, status: true } },
+        _count: { select: { lines: true, payments: true } },
       },
       orderBy: { invoiceDate: 'desc' },
     });
@@ -241,9 +236,9 @@ export class ApInvoicesService {
     return this.prisma.apInvoice.update({
       where: { id },
       data: {
-        ...(dto.dueDate     && { dueDate:     new Date(dto.dueDate) }),
+        ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
         ...(dto.supplierRef !== undefined && { supplierRef: dto.supplierRef }),
-        ...(dto.notes       !== undefined && { notes:       dto.notes }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
         updatedBy: userId,
       },
       include: this.defaultInclude(),
@@ -268,13 +263,13 @@ export class ApInvoicesService {
 
     try {
       await this.stockService.receiveFromApInvoice(tenantId, userId, {
-        id:            invoice.id,
+        id: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
-        lines:         invoice.lines.map((l: any) => ({
-          itemId:      l.itemId,
-          quantity:    Number(l.quantity),
-          uom:         l.uom,
-          unitPrice:   Number(l.unitPrice),
+        lines: invoice.lines.map((l: any) => ({
+          itemId: l.itemId,
+          quantity: Number(l.quantity),
+          uom: l.uom,
+          unitPrice: Number(l.unitPrice),
           description: l.description,
         })),
       });
@@ -289,8 +284,8 @@ export class ApInvoicesService {
     });
 
     return {
-      message:      `AP Invoice ${invoice.invoiceNumber} posted`,
-      invoice:      updated,
+      message: `AP Invoice ${invoice.invoiceNumber} posted`,
+      invoice: updated,
       journalEntry: je,
     };
   }
@@ -301,7 +296,8 @@ export class ApInvoicesService {
   async void(tenantId: string, userId: string, id: string) {
     const invoice = await this.findOne(tenantId, id);
     if (invoice.status === 'void') throw new BadRequestException('Invoice already voided');
-    if (invoice.status === 'paid') throw new BadRequestException('Cannot void a fully paid AP invoice');
+    if (invoice.status === 'paid')
+      throw new BadRequestException('Cannot void a fully paid AP invoice');
 
     if (invoice.jeId) await this.createReversalJe(tenantId, userId, invoice);
 
@@ -334,26 +330,26 @@ export class ApInvoicesService {
     }
 
     const paymentNumber = await this.generatePaymentNumber(tenantId, new Date(dto.paymentDate));
-    const je            = await this.createPaymentJe(tenantId, userId, invoice, dto);
+    const je = await this.createPaymentJe(tenantId, userId, invoice, dto);
 
     const payment = await this.prisma.apPayment.create({
       data: {
         tenantId,
         invoiceId,
         paymentNumber,
-        paymentDate:   new Date(dto.paymentDate),
-        amount:        dto.amount,
+        paymentDate: new Date(dto.paymentDate),
+        amount: dto.amount,
         paymentMethod: dto.paymentMethod ?? null,
-        reference:     dto.reference     ?? null,
-        jeId:          je?.id            ?? null,
-        notes:         dto.notes         ?? null,
-        createdBy:     userId,
-        updatedBy:     userId,
+        reference: dto.reference ?? null,
+        jeId: je?.id ?? null,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
       },
     });
 
     const newPaidAmount = Number(invoice.paidAmount) + dto.amount;
-    const newStatus     = newPaidAmount >= Number(invoice.totalAmount) - 0.001 ? 'paid' : 'partial';
+    const newStatus = newPaidAmount >= Number(invoice.totalAmount) - 0.001 ? 'paid' : 'partial';
 
     await this.prisma.apInvoice.update({
       where: { id: invoiceId },
@@ -361,11 +357,11 @@ export class ApInvoicesService {
     });
 
     return {
-      message:      `Payment of $${dto.amount} applied to AP Invoice ${invoice.invoiceNumber}`,
+      message: `Payment of $${dto.amount} applied to AP Invoice ${invoice.invoiceNumber}`,
       payment,
       journalEntry: je,
       newStatus,
-      remaining:    Math.max(0, Number(invoice.totalAmount) - newPaidAmount),
+      remaining: Math.max(0, Number(invoice.totalAmount) - newPaidAmount),
     };
   }
 
@@ -373,16 +369,16 @@ export class ApInvoicesService {
   // AP AGING
   // ============================================================================
   async getAging(tenantId: string) {
-    const today    = new Date();
+    const today = new Date();
     const invoices = await this.prisma.apInvoice.findMany({
       where: { tenantId, deletedAt: null, status: { in: ['posted', 'partial'] } },
       include: { supplier: { select: { id: true, code: true, name: true } } },
     });
 
     const buckets = {
-      current:    [] as any[],
-      days30:     [] as any[],
-      days60:     [] as any[],
+      current: [] as any[],
+      days30: [] as any[],
+      days60: [] as any[],
       days90plus: [] as any[],
     };
 
@@ -393,39 +389,44 @@ export class ApInvoicesService {
         (today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24),
       );
       const row = {
-        invoiceId:     inv.id,
+        invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber,
-        supplierRef:   inv.supplierRef,
-        supplier:      inv.supplier,
-        invoiceDate:   inv.invoiceDate,
-        dueDate:       inv.dueDate,
-        totalAmount:   Number(inv.totalAmount),
-        paidAmount:    Number(inv.paidAmount),
+        supplierRef: inv.supplierRef,
+        supplier: inv.supplier,
+        invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
+        totalAmount: Number(inv.totalAmount),
+        paidAmount: Number(inv.paidAmount),
         outstanding,
         daysPastDue,
       };
-      if (daysPastDue <= 0)       buckets.current.push(row);
+      if (daysPastDue <= 0) buckets.current.push(row);
       else if (daysPastDue <= 30) buckets.days30.push(row);
       else if (daysPastDue <= 60) buckets.days60.push(row);
-      else                        buckets.days90plus.push(row);
+      else buckets.days90plus.push(row);
     }
 
     const sum = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstanding, 0);
     return {
       asOf: today,
       summary: {
-        current:    { count: buckets.current.length,    amount: sum(buckets.current) },
-        days1to30:  { count: buckets.days30.length,     amount: sum(buckets.days30) },
-        days31to60: { count: buckets.days60.length,     amount: sum(buckets.days60) },
+        current: { count: buckets.current.length, amount: sum(buckets.current) },
+        days1to30: { count: buckets.days30.length, amount: sum(buckets.days30) },
+        days31to60: { count: buckets.days60.length, amount: sum(buckets.days60) },
         days90plus: { count: buckets.days90plus.length, amount: sum(buckets.days90plus) },
         total: {
-          count:  invoices.length,
-          amount: sum([...buckets.current, ...buckets.days30, ...buckets.days60, ...buckets.days90plus]),
+          count: invoices.length,
+          amount: sum([
+            ...buckets.current,
+            ...buckets.days30,
+            ...buckets.days60,
+            ...buckets.days90plus,
+          ]),
         },
       },
       detail: {
-        current:    buckets.current,
-        days1to30:  buckets.days30,
+        current: buckets.current,
+        days1to30: buckets.days30,
         days31to60: buckets.days60,
         days90plus: buckets.days90plus,
       },
@@ -442,14 +443,17 @@ export class ApInvoicesService {
     });
 
     const today = new Date();
-    let totalInvoiced = 0, totalPaid = 0, totalPending = 0, totalOverdue = 0;
+    let totalInvoiced = 0,
+      totalPaid = 0,
+      totalPending = 0,
+      totalOverdue = 0;
 
     for (const inv of invoices) {
-      const total       = Number(inv.totalAmount);
-      const paid        = Number(inv.paidAmount);
+      const total = Number(inv.totalAmount);
+      const paid = Number(inv.paidAmount);
       const outstanding = total - paid;
       totalInvoiced += total;
-      totalPaid     += paid;
+      totalPaid += paid;
       if (outstanding > 0) {
         totalPending += outstanding;
         if (new Date(inv.dueDate) < today) totalOverdue += outstanding;
@@ -510,7 +514,7 @@ export class ApInvoicesService {
           this.prisma.apInvoiceLine.update({
             where: { id: invoiceLine.id },
             data: { grnLineId: matchingGrnLine.id, updatedBy: userId },
-          })
+          }),
         );
       }
     }
@@ -525,9 +529,9 @@ export class ApInvoicesService {
     ]);
 
     return {
-      message:      `GRN ${grn.grnNumber} linked to invoice ${invoice.invoiceNumber}`,
+      message: `GRN ${grn.grnNumber} linked to invoice ${invoice.invoiceNumber}`,
       matchedLines: lineUpdates.length,
-      invoice:      updated,
+      invoice: updated,
     };
   }
 
@@ -561,16 +565,20 @@ export class ApInvoicesService {
     const invoice = await this.prisma.apInvoice.findFirst({
       where: { id: invoiceId, tenantId, deletedAt: null },
       include: {
-        supplier:      { select: { code: true, name: true } },
+        supplier: { select: { code: true, name: true } },
         purchaseOrder: { select: { poNumber: true, status: true } },
-        goodsReceipt:  { select: { grnNumber: true, status: true, receivedDate: true, condition: true } },
+        goodsReceipt: {
+          select: { grnNumber: true, status: true, receivedDate: true, condition: true },
+        },
         lines: {
-          where:   { deletedAt: null },
+          where: { deletedAt: null },
           orderBy: { lineNumber: 'asc' },
           include: {
-            item:              { select: { code: true, name: true } },
-            purchaseOrderLine: { select: { orderedQuantity: true, receivedQuantity: true, unitPrice: true } },
-            goodsReceiptLine:  { select: { receivedQuantity: true, unitCost: true } },
+            item: { select: { code: true, name: true } },
+            purchaseOrderLine: {
+              select: { orderedQuantity: true, receivedQuantity: true, unitPrice: true },
+            },
+            goodsReceiptLine: { select: { receivedQuantity: true, unitCost: true } },
           },
         },
       },
@@ -582,26 +590,25 @@ export class ApInvoicesService {
     let allLinesMatch = true;
 
     for (const line of invoice.lines) {
-      const invoiceQty   = Number(line.quantity);
+      const invoiceQty = Number(line.quantity);
       const invoicePrice = Number(line.unitPrice);
-      const poQty        = line.purchaseOrderLine ? Number(line.purchaseOrderLine.orderedQuantity) : null;
-      const poPrice      = line.purchaseOrderLine ? Number(line.purchaseOrderLine.unitPrice)       : null;
-      const grnQty       = line.goodsReceiptLine  ? Number(line.goodsReceiptLine.receivedQuantity) : null;
+      const poQty = line.purchaseOrderLine ? Number(line.purchaseOrderLine.orderedQuantity) : null;
+      const poPrice = line.purchaseOrderLine ? Number(line.purchaseOrderLine.unitPrice) : null;
+      const grnQty = line.goodsReceiptLine ? Number(line.goodsReceiptLine.receivedQuantity) : null;
 
-      const poQtyOk  = poQty  === null ? null : invoiceQty <= poQty  + 0.001;
+      const poQtyOk = poQty === null ? null : invoiceQty <= poQty + 0.001;
       const grnQtyOk = grnQty === null ? null : invoiceQty <= grnQty + 0.001;
-      const priceDiffPct = poPrice && poPrice > 0
-        ? Math.abs((invoicePrice - poPrice) / poPrice) * 100
-        : null;
+      const priceDiffPct =
+        poPrice && poPrice > 0 ? Math.abs((invoicePrice - poPrice) / poPrice) * 100 : null;
       const priceOk = priceDiffPct === null ? null : priceDiffPct <= PRICE_TOLERANCE_PCT;
 
-      const lineMatches = (poQtyOk !== false) && (grnQtyOk !== false) && (priceOk !== false);
+      const lineMatches = poQtyOk !== false && grnQtyOk !== false && priceOk !== false;
       if (!lineMatches) allLinesMatch = false;
 
       lineResults.push({
-        lineNumber:   line.lineNumber,
-        itemCode:     (line.item as any)?.code ?? null,
-        itemName:     (line.item as any)?.name ?? null,
+        lineNumber: line.lineNumber,
+        itemCode: (line.item as any)?.code ?? null,
+        itemName: (line.item as any)?.name ?? null,
         invoiceQty,
         invoicePrice,
         poQty,
@@ -613,41 +620,54 @@ export class ApInvoicesService {
         priceDiffPct: priceDiffPct ? Number(priceDiffPct.toFixed(2)) : null,
         lineMatches,
         issues: [
-          !poQtyOk  && poQtyOk  !== null ? `Invoice qty (${invoiceQty}) exceeds PO qty (${poQty})`         : null,
-          !grnQtyOk && grnQtyOk !== null ? `Invoice qty (${invoiceQty}) exceeds GRN received (${grnQty})`  : null,
-          !priceOk  && priceOk  !== null ? `Price variance ${priceDiffPct?.toFixed(1)}% exceeds ${PRICE_TOLERANCE_PCT}% tolerance` : null,
+          !poQtyOk && poQtyOk !== null
+            ? `Invoice qty (${invoiceQty}) exceeds PO qty (${poQty})`
+            : null,
+          !grnQtyOk && grnQtyOk !== null
+            ? `Invoice qty (${invoiceQty}) exceeds GRN received (${grnQty})`
+            : null,
+          !priceOk && priceOk !== null
+            ? `Price variance ${priceDiffPct?.toFixed(1)}% exceeds ${PRICE_TOLERANCE_PCT}% tolerance`
+            : null,
         ].filter(Boolean),
       });
     }
 
     const hasGrn = !!(invoice as any).grnId;
-    const hasPo  = !!(invoice as any).poId;
+    const hasPo = !!(invoice as any).poId;
 
     const matchStatus =
-      !hasPo && !hasGrn              ? 'no_match'           :
-      hasPo  && !hasGrn              ? 'two_way'            :
-      hasPo  && hasGrn && allLinesMatch ? 'three_way_matched' :
-      hasPo  && hasGrn               ? 'three_way_failed'   :
-      'two_way';
+      !hasPo && !hasGrn
+        ? 'no_match'
+        : hasPo && !hasGrn
+          ? 'two_way'
+          : hasPo && hasGrn && allLinesMatch
+            ? 'three_way_matched'
+            : hasPo && hasGrn
+              ? 'three_way_failed'
+              : 'two_way';
 
     return {
       invoiceId,
-      invoiceNumber:  invoice.invoiceNumber,
-      invoiceStatus:  invoice.status,
-      supplier:       invoice.supplier,
-      purchaseOrder:  invoice.purchaseOrder,
-      goodsReceipt:   (invoice as any).goodsReceipt,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceStatus: invoice.status,
+      supplier: invoice.supplier,
+      purchaseOrder: invoice.purchaseOrder,
+      goodsReceipt: (invoice as any).goodsReceipt,
       matchStatus,
       allLinesMatch,
       priceTolerance: `${PRICE_TOLERANCE_PCT}%`,
-      lines:          lineResults,
+      lines: lineResults,
       summary: {
-        total:   lineResults.length,
-        matched: lineResults.filter(l => l.lineMatches).length,
-        failed:  lineResults.filter(l => !l.lineMatches).length,
+        total: lineResults.length,
+        matched: lineResults.filter((l) => l.lineMatches).length,
+        failed: lineResults.filter((l) => !l.lineMatches).length,
       },
-      canPost: invoice.status === 'draft' &&
-        (matchStatus === 'three_way_matched' || matchStatus === 'two_way' || matchStatus === 'no_match'),
+      canPost:
+        invoice.status === 'draft' &&
+        (matchStatus === 'three_way_matched' ||
+          matchStatus === 'two_way' ||
+          matchStatus === 'no_match'),
     };
   }
 
@@ -690,9 +710,9 @@ export class ApInvoicesService {
       throw new BadRequestException('Account 2.1.01 (Accounts Payable) required for AP JE');
     }
 
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(invoice.invoiceDate));
-    const totalAmount  = Number(invoice.totalAmount);
+    const totalAmount = Number(invoice.totalAmount);
 
     await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
@@ -708,15 +728,16 @@ export class ApInvoicesService {
         const defaultAcct = await this.prisma.account.findFirst({
           where: { tenantId, accountNumber: '1.1.04', deletedAt: null },
         });
-        if (!defaultAcct) throw new BadRequestException('Account 1.1.04 (Raw Material Inventory) not found');
+        if (!defaultAcct)
+          throw new BadRequestException('Account 1.1.04 (Raw Material Inventory) not found');
         drAccountId = defaultAcct.id;
       }
 
       debitLines.push({
-        lineNumber:   lineNum++,
-        accountId:    drAccountId,
-        description:  `AP Receipt — ${line.description ?? line.item?.name ?? 'line ' + line.lineNumber}`,
-        debitAmount:  lineTotal,
+        lineNumber: lineNum++,
+        accountId: drAccountId,
+        description: `AP Receipt — ${line.description ?? line.item?.name ?? 'line ' + line.lineNumber}`,
+        debitAmount: lineTotal,
         creditAmount: 0,
       });
 
@@ -727,10 +748,10 @@ export class ApInvoicesService {
         if (varianceAcct) {
           const variance = Number(line.priceVariance);
           debitLines.push({
-            lineNumber:   lineNum++,
-            accountId:    varianceAcct.id,
-            description:  `Price variance — ${line.description ?? 'line ' + line.lineNumber}`,
-            debitAmount:  variance > 0 ? variance : 0,
+            lineNumber: lineNum++,
+            accountId: varianceAcct.id,
+            description: `Price variance — ${line.description ?? 'line ' + line.lineNumber}`,
+            debitAmount: variance > 0 ? variance : 0,
             creditAmount: variance < 0 ? Math.abs(variance) : 0,
           });
         }
@@ -740,25 +761,29 @@ export class ApInvoicesService {
     const lines = [
       ...debitLines,
       {
-        lineNumber:   lineNum,
-        accountId:    apAccount.id,
-        description:  `AP — Invoice ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
-        debitAmount:  0,
+        lineNumber: lineNum,
+        accountId: apAccount.id,
+        description: `AP — Invoice ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
+        debitAmount: 0,
         creditAmount: totalAmount,
       },
     ];
 
     const result = await this.automation.handleAutoJe({
-      tenantId, userId,
-      module: 'ap_invoice', eventType: 'ap_invoice',
-      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
+      tenantId,
+      userId,
+      module: 'ap_invoice',
+      eventType: 'ap_invoice',
+      sourceType: 'ap_invoice',
+      sourceId: invoice.id,
+      sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
-        entryDate:    new Date(invoice.invoiceDate),
+        entryDate: new Date(invoice.invoiceDate),
         fiscalPeriod,
-        journalType:  'ap_invoice',
-        reference:    invoice.invoiceNumber,
-        description:  `AP Invoice — ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
+        journalType: 'ap_invoice',
+        reference: invoice.invoiceNumber,
+        description: `AP Invoice — ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
         lines,
       },
     });
@@ -766,31 +791,58 @@ export class ApInvoicesService {
     return result.je;
   }
 
-  private async createPaymentJe(tenantId: string, userId: string, invoice: any, dto: ApplyApPaymentDto) {
-    const apAccount   = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '2.1.01', deletedAt: null } });
-    const cashAccount = await this.prisma.account.findFirst({ where: { tenantId, accountNumber: '1.1.02', deletedAt: null } });
+  private async createPaymentJe(
+    tenantId: string,
+    userId: string,
+    invoice: any,
+    dto: ApplyApPaymentDto,
+  ) {
+    const apAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '2.1.01', deletedAt: null },
+    });
+    const cashAccount = await this.prisma.account.findFirst({
+      where: { tenantId, accountNumber: '1.1.02', deletedAt: null },
+    });
     if (!apAccount || !cashAccount) {
-      throw new BadRequestException('Accounts 2.1.01 (AP) and 1.1.02 (Cash) required for payment JE');
+      throw new BadRequestException(
+        'Accounts 2.1.01 (AP) and 1.1.02 (Cash) required for payment JE',
+      );
     }
 
-    const entryNumber  = await this.generateJeNumber(tenantId);
+    const entryNumber = await this.generateJeNumber(tenantId);
     const fiscalPeriod = this.toFiscalPeriod(new Date(dto.paymentDate));
     await this.assertPeriodOpen(tenantId, fiscalPeriod);
 
     const result = await this.automation.handleAutoJe({
-      tenantId, userId,
-      module: 'ap_payment', eventType: 'ap_payment',
-      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
+      tenantId,
+      userId,
+      module: 'ap_payment',
+      eventType: 'ap_payment',
+      sourceType: 'ap_invoice',
+      sourceId: invoice.id,
+      sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
-        entryDate:    new Date(dto.paymentDate),
+        entryDate: new Date(dto.paymentDate),
         fiscalPeriod,
-        journalType:  'ap_payment',
-        reference:    dto.reference ?? invoice.invoiceNumber,
-        description:  `AP Payment — Invoice ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
+        journalType: 'ap_payment',
+        reference: dto.reference ?? invoice.invoiceNumber,
+        description: `AP Payment — Invoice ${invoice.invoiceNumber} — ${invoice.supplier?.name ?? ''}`,
         lines: [
-          { lineNumber: 1, accountId: apAccount.id,   description: `AP cleared — Inv ${invoice.invoiceNumber}`, debitAmount: dto.amount,    creditAmount: 0 },
-          { lineNumber: 2, accountId: cashAccount.id, description: `Cash paid — Inv ${invoice.invoiceNumber}`,  debitAmount: 0,             creditAmount: dto.amount },
+          {
+            lineNumber: 1,
+            accountId: apAccount.id,
+            description: `AP cleared — Inv ${invoice.invoiceNumber}`,
+            debitAmount: dto.amount,
+            creditAmount: 0,
+          },
+          {
+            lineNumber: 2,
+            accountId: cashAccount.id,
+            description: `Cash paid — Inv ${invoice.invoiceNumber}`,
+            debitAmount: 0,
+            creditAmount: dto.amount,
+          },
         ],
       },
     });
@@ -805,27 +857,31 @@ export class ApInvoicesService {
     });
     if (!original) return;
 
-    const entryNumber   = await this.generateJeNumber(tenantId);
-    const fiscalPeriod  = this.toFiscalPeriod(new Date());
+    const entryNumber = await this.generateJeNumber(tenantId);
+    const fiscalPeriod = this.toFiscalPeriod(new Date());
     const reversedLines = original.lines.map((line, i) => ({
-      lineNumber:   i + 1,
-      accountId:    line.accountId,
-      description:  `REVERSAL — ${line.description}`,
-      debitAmount:  Number(line.creditAmount),
+      lineNumber: i + 1,
+      accountId: line.accountId,
+      description: `REVERSAL — ${line.description}`,
+      debitAmount: Number(line.creditAmount),
       creditAmount: Number(line.debitAmount),
     }));
 
     const result = await this.automation.handleAutoJe({
-      tenantId, userId,
-      module: 'ap_reversal', eventType: 'ap_reversal',
-      sourceType: 'ap_invoice', sourceId: invoice.id, sourceRef: invoice.invoiceNumber,
+      tenantId,
+      userId,
+      module: 'ap_reversal',
+      eventType: 'ap_reversal',
+      sourceType: 'ap_invoice',
+      sourceId: invoice.id,
+      sourceRef: invoice.invoiceNumber,
       jeData: {
         entryNumber,
-        entryDate:    new Date(),
+        entryDate: new Date(),
         fiscalPeriod,
-        journalType:  'ap_reversal',
-        reference:    invoice.invoiceNumber,
-        description:  `VOID reversal — AP Invoice ${invoice.invoiceNumber}`,
+        journalType: 'ap_reversal',
+        reference: invoice.invoiceNumber,
+        description: `VOID reversal — AP Invoice ${invoice.invoiceNumber}`,
         lines: reversedLines,
       },
     });
@@ -839,13 +895,13 @@ export class ApInvoicesService {
 
   private defaultInclude() {
     return {
-      supplier:      { select: { id: true, code: true, name: true, email: true } },
+      supplier: { select: { id: true, code: true, name: true, email: true } },
       purchaseOrder: { select: { id: true, poNumber: true } },
-      goodsReceipt:  { select: { id: true, grnNumber: true, status: true, receivedDate: true } },
+      goodsReceipt: { select: { id: true, grnNumber: true, status: true, receivedDate: true } },
       lines: {
         include: {
-          item:              { select: { id: true, code: true, name: true } },
-          goodsReceiptLine:  { select: { id: true, receivedQuantity: true, unitCost: true } },
+          item: { select: { id: true, code: true, name: true } },
+          goodsReceiptLine: { select: { id: true, receivedQuantity: true, unitCost: true } },
         },
         orderBy: { lineNumber: 'asc' as const },
       },
@@ -855,8 +911,9 @@ export class ApInvoicesService {
 
   private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APINV-${(date ?? new Date()).getFullYear()}`;
-    const last   = await this.prisma.apInvoice.findFirst({
-      where: { tenantId, invoiceNumber: { startsWith: prefix } }, orderBy: { invoiceNumber: 'desc' },
+    const last = await this.prisma.apInvoice.findFirst({
+      where: { tenantId, invoiceNumber: { startsWith: prefix } },
+      orderBy: { invoiceNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.invoiceNumber.split('-');
@@ -865,8 +922,9 @@ export class ApInvoicesService {
 
   private async generatePaymentNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APPAY-${(date ?? new Date()).getFullYear()}`;
-    const last   = await this.prisma.apPayment.findFirst({
-      where: { tenantId, paymentNumber: { startsWith: prefix } }, orderBy: { paymentNumber: 'desc' },
+    const last = await this.prisma.apPayment.findFirst({
+      where: { tenantId, paymentNumber: { startsWith: prefix } },
+      orderBy: { paymentNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.paymentNumber.split('-');
@@ -874,10 +932,11 @@ export class ApInvoicesService {
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
-    const now    = new Date();
+    const now = new Date();
     const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const last   = await this.prisma.journalEntry.findFirst({
-      where: { tenantId, entryNumber: { startsWith: prefix } }, orderBy: { entryNumber: 'desc' },
+    const last = await this.prisma.journalEntry.findFirst({
+      where: { tenantId, entryNumber: { startsWith: prefix } },
+      orderBy: { entryNumber: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
     const parts = last.entryNumber.split('-');

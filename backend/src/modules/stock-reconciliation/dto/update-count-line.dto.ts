@@ -2,7 +2,7 @@
 // FILE: backend/src/modules/stock-reconciliation/dto/update-count-line.dto.ts
 // ============================================================================
 import { IsUUID, IsNumber, Min, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional }            from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCountLineDto {
   @ApiProperty({ description: 'ID of the count line to update' })
@@ -10,7 +10,8 @@ export class UpdateCountLineDto {
   lineId: string;
 
   @ApiPropertyOptional({
-    description: 'Counted qty in storageUom. System auto-converts to purchaseUom. Mutually exclusive with countedPurchaseQty.',
+    description:
+      'Counted qty in storageUom. System auto-converts to purchaseUom. Mutually exclusive with countedPurchaseQty.',
     example: 10.5,
   })
   @IsOptional()
@@ -19,7 +20,8 @@ export class UpdateCountLineDto {
   countedStorageQty?: number;
 
   @ApiPropertyOptional({
-    description: 'Counted qty in purchaseUom. System auto-converts to storageUom. Mutually exclusive with countedStorageQty.',
+    description:
+      'Counted qty in purchaseUom. System auto-converts to storageUom. Mutually exclusive with countedStorageQty.',
     example: 2.5,
   })
   @IsOptional()

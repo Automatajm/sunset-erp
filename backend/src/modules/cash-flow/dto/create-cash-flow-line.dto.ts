@@ -1,5 +1,12 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsDateString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateCashFlowLineDto {
   @ApiProperty({ example: '2026-01-15', description: 'Line date' })

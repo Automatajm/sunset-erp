@@ -13,14 +13,14 @@ export class SuppliersService {
   // ── Auto-generate supplier code ────────────────────────────────────────────
 
   private async generateCode(tenantId: string): Promise<string> {
-    const year   = new Date().getFullYear();
+    const year = new Date().getFullYear();
     const prefix = `SUP-${year}`;
-    const last   = await this.prisma.supplier.findFirst({
-      where:   { tenantId, code: { startsWith: prefix } },
+    const last = await this.prisma.supplier.findFirst({
+      where: { tenantId, code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
     });
     if (!last) return `${prefix}-0001`;
-    const parts   = last.code.split('-');
+    const parts = last.code.split('-');
     const lastNum = parseInt(parts[parts.length - 1], 10);
     const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
     return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
@@ -30,7 +30,7 @@ export class SuppliersService {
 
   async create(tenantId: string, userId: string, dto: CreateSupplierDto) {
     // Auto-generate code if not provided
-    const code = dto.code?.trim() || await this.generateCode(tenantId);
+    const code = dto.code?.trim() || (await this.generateCode(tenantId));
 
     const existing = await this.prisma.supplier.findFirst({
       where: { tenantId, code, deletedAt: null },
@@ -41,33 +41,33 @@ export class SuppliersService {
       data: {
         tenantId,
         code,
-        name:      dto.name,
+        name: dto.name,
         legalName: dto.legalName,
-        taxId:     dto.taxId,
-        taxType:   dto.taxType,
-        phone:     dto.phone,
-        email:     dto.email,
-        website:   dto.website,
-        contactName:  dto.contactName,
+        taxId: dto.taxId,
+        taxType: dto.taxType,
+        phone: dto.phone,
+        email: dto.email,
+        website: dto.website,
+        contactName: dto.contactName,
         contactPhone: dto.contactPhone,
         contactEmail: dto.contactEmail,
         address: dto.address,
-        city:    dto.city,
+        city: dto.city,
         country: dto.country,
-        paymentTerms:         dto.paymentTerms,
-        currency:             dto.currency,
-        incoterms:            dto.incoterms,
-        creditLimit:          dto.creditLimit,
-        minimumOrderAmount:   dto.minimumOrderAmount,
+        paymentTerms: dto.paymentTerms,
+        currency: dto.currency,
+        incoterms: dto.incoterms,
+        creditLimit: dto.creditLimit,
+        minimumOrderAmount: dto.minimumOrderAmount,
         minimumOrderCurrency: dto.minimumOrderCurrency,
-        deliveryLeadDays:     dto.deliveryLeadDays,
-        category:      dto.category,
-        isPreferred:   dto.isPreferred ?? false,
+        deliveryLeadDays: dto.deliveryLeadDays,
+        category: dto.category,
+        isPreferred: dto.isPreferred ?? false,
         qualityRating: dto.qualityRating,
-        bankName:    dto.bankName,
+        bankName: dto.bankName,
         bankAccount: dto.bankAccount,
         bankRouting: dto.bankRouting,
-        notes:    dto.notes,
+        notes: dto.notes,
         isActive: true,
         createdBy: userId,
         updatedBy: userId,
@@ -79,7 +79,7 @@ export class SuppliersService {
 
   async findAll(tenantId: string) {
     return this.prisma.supplier.findMany({
-      where:   { tenantId, deletedAt: null },
+      where: { tenantId, deletedAt: null },
       orderBy: { code: 'asc' },
     });
   }
@@ -108,7 +108,7 @@ export class SuppliersService {
 
     return this.prisma.supplier.update({
       where: { id },
-      data:  { ...dto, updatedBy: userId },
+      data: { ...dto, updatedBy: userId },
     });
   }
 
@@ -118,7 +118,7 @@ export class SuppliersService {
     await this.findOne(tenantId, id);
     const supplier = await this.prisma.supplier.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Supplier deleted successfully', id: supplier.id };
   }

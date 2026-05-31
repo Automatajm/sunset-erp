@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString, IsOptional, IsNumber, IsDateString, Min, IsArray, ValidateNested,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  Min,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -31,7 +37,7 @@ export class CreateLaborActualDto {
   @Min(0.01)
   hoursActual: number;
 
-  @ApiPropertyOptional({ example: 15.00, description: 'Labor cost per hour' })
+  @ApiPropertyOptional({ example: 15.0, description: 'Labor cost per hour' })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -58,7 +64,7 @@ export class CreateMaterialActualDto {
   @Min(0)
   qtyActual: number;
 
-  @ApiPropertyOptional({ example: 2.50, description: 'Unit cost for variance calculation' })
+  @ApiPropertyOptional({ example: 2.5, description: 'Unit cost for variance calculation' })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -81,7 +87,10 @@ export class DeliverFgDto {
   @IsString()
   warehouseId?: string;
 
-  @ApiPropertyOptional({ example: 25.00, description: 'Unit cost of finished good (for JE valuation)' })
+  @ApiPropertyOptional({
+    example: 25.0,
+    description: 'Unit cost of finished good (for JE valuation)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -94,12 +103,18 @@ export class DeliverFgDto {
 }
 
 export class PostVarianceJeDto {
-  @ApiPropertyOptional({ example: 'uuid-expense-account', description: 'Override debit account (merma expense)' })
+  @ApiPropertyOptional({
+    example: 'uuid-expense-account',
+    description: 'Override debit account (merma expense)',
+  })
   @IsOptional()
   @IsString()
   debitAccountId?: string;
 
-  @ApiPropertyOptional({ example: 'uuid-fg-account', description: 'Override credit account (FG inventory)' })
+  @ApiPropertyOptional({
+    example: 'uuid-fg-account',
+    description: 'Override credit account (FG inventory)',
+  })
   @IsOptional()
   @IsString()
   creditAccountId?: string;

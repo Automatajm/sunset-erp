@@ -1,10 +1,24 @@
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { RfqsService } from './rfqs.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
@@ -33,7 +47,11 @@ export class RfqsController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all RFQs' })
-  @ApiQuery({ name: 'status', required: false, description: 'draft | sent | partial_response | fully_responded | awarded | cancelled' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'draft | sent | partial_response | fully_responded | awarded | cancelled',
+  })
   async findAll(@Request() req, @Query('status') status?: string) {
     return this.rfqsService.findAll(req.user.tenantId, status);
   }
@@ -58,11 +76,7 @@ export class RfqsController {
   @RequirePermissions('PROCUREMENT:EDIT')
   @ApiOperation({ summary: 'Update RFQ header (draft or sent only)' })
   @ApiParam({ name: 'id', description: 'RFQ UUID' })
-  async update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: UpdateRfqDto,
-  ) {
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateRfqDto) {
     return this.rfqsService.update(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -80,11 +94,7 @@ export class RfqsController {
   @ApiOperation({ summary: 'Submit supplier response lines for this RFQ' })
   @ApiParam({ name: 'id', description: 'RFQ UUID' })
   @ApiResponse({ status: 200, description: 'Response recorded' })
-  async submitResponse(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: SubmitRfqResponseDto,
-  ) {
+  async submitResponse(@Request() req, @Param('id') id: string, @Body() dto: SubmitRfqResponseDto) {
     return this.rfqsService.submitResponse(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -93,11 +103,7 @@ export class RfqsController {
   @ApiOperation({ summary: 'Award RFQ lines and auto-generate Purchase Orders per supplier' })
   @ApiParam({ name: 'id', description: 'RFQ UUID' })
   @ApiResponse({ status: 200, description: 'Lines awarded, POs generated' })
-  async award(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() dto: AwardRfqDto,
-  ) {
+  async award(@Request() req, @Param('id') id: string, @Body() dto: AwardRfqDto) {
     return this.rfqsService.award(req.user.tenantId, req.user.id, id, dto);
   }
 

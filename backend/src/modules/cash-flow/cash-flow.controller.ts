@@ -41,15 +41,8 @@ export class CashFlowController {
   @ApiResponse({ status: 201, description: 'Projection created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 409, description: 'Projection code already exists' })
-  async create(
-    @Request() req,
-    @Body() createCashFlowProjectionDto: CreateCashFlowProjectionDto,
-  ) {
-    return this.cashFlowService.create(
-      req.user.tenantId,
-      req.user.id,
-      createCashFlowProjectionDto,
-    );
+  async create(@Request() req, @Body() createCashFlowProjectionDto: CreateCashFlowProjectionDto) {
+    return this.cashFlowService.create(req.user.tenantId, req.user.id, createCashFlowProjectionDto);
   }
 
   @Get()
@@ -166,12 +159,7 @@ export class CashFlowController {
     @Param('id') id: string,
     @Param('lineId') lineId: string,
   ) {
-    return this.cashFlowService.removeCashFlowLine(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      lineId,
-    );
+    return this.cashFlowService.removeCashFlowLine(req.user.tenantId, req.user.id, id, lineId);
   }
 
   // ============================================================================
@@ -195,7 +183,8 @@ export class CashFlowController {
   async generateFromData(
     @Request() req,
     @Param('id') id: string,
-    @Body() options: {
+    @Body()
+    options: {
       startDate?: string;
       endDate?: string;
       includeAR?: boolean;
@@ -203,11 +192,6 @@ export class CashFlowController {
       includeBudget?: boolean;
     } = {},
   ) {
-    return this.cashFlowService.generateFromData(
-      req.user.tenantId,
-      req.user.id,
-      id,
-      options,
-    );
+    return this.cashFlowService.generateFromData(req.user.tenantId, req.user.id, id, options);
   }
 }

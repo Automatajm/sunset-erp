@@ -7,9 +7,9 @@ import { UomController } from './uom.controller';
 import { PrismaModule } from '../../database/prisma.module';
 
 @Module({
-  imports:     [PrismaModule],
+  imports: [PrismaModule],
   controllers: [UomController],
-  providers:   [UomService],
-  exports:     [UomService],  // exported so GoodsReceiptsModule can inject it
+  providers: [UomService],
+  exports: [UomService], // exported so GoodsReceiptsModule can inject it
 })
 export class UomModule {}

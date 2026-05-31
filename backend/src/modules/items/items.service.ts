@@ -11,24 +11,34 @@ import { UpdateItemDto } from './dto/update-item.dto';
 const ITEM_INCLUDE = {
   category: {
     select: {
-      id: true, code: true, name: true,
+      id: true,
+      code: true,
+      name: true,
       macroCategory: { select: { id: true, code: true, name: true } },
     },
   },
-  purchaseUom:    { select: { id: true, code: true, name: true, type: true, system: true } },
-  storageUom:     { select: { id: true, code: true, name: true, type: true, system: true } },
+  purchaseUom: { select: { id: true, code: true, name: true, type: true, system: true } },
+  storageUom: { select: { id: true, code: true, name: true, type: true, system: true } },
   consumptionUom: { select: { id: true, code: true, name: true, type: true, system: true } },
   consumptionGroup: { select: { id: true, code: true, name: true } },
   supplierItems: {
     where: { deletedAt: null, isActive: true },
     orderBy: [{ isPreferred: 'desc' as const }, { supplier: { name: 'asc' as const } }],
     select: {
-      id: true, supplierId: true, purchaseUomId: true,
-      supplierItemCode: true, supplierItemName: true,
-      packSize: true, conversionFactor: true,
-      lastPrice: true, leadTimeDays: true, moq: true,
-      isPreferred: true, isActive: true, notes: true,
-      supplier:    { select: { id: true, code: true, name: true } },
+      id: true,
+      supplierId: true,
+      purchaseUomId: true,
+      supplierItemCode: true,
+      supplierItemName: true,
+      packSize: true,
+      conversionFactor: true,
+      lastPrice: true,
+      leadTimeDays: true,
+      moq: true,
+      isPreferred: true,
+      isActive: true,
+      notes: true,
+      supplier: { select: { id: true, code: true, name: true } },
       purchaseUom: { select: { id: true, code: true, name: true, type: true, system: true } },
     },
   },
@@ -36,16 +46,20 @@ const ITEM_INCLUDE = {
 
 // Numeric fields that must be coerced to Number before hitting Prisma
 const NUMERIC_FIELDS = [
-  'standardCost', 'leadTimeDays', 'safetyStock',
-  'reorderPoint', 'reorderQuantity',
-  'purchaseToConsumptionFactor', 'storageToConsumptionFactor',
+  'standardCost',
+  'leadTimeDays',
+  'safetyStock',
+  'reorderPoint',
+  'reorderQuantity',
+  'purchaseToConsumptionFactor',
+  'storageToConsumptionFactor',
 ];
 
 @Injectable()
 export class ItemsService {
   constructor(
-    private prisma:      PrismaService,
-    private uomService:  UomService,
+    private prisma: PrismaService,
+    private uomService: UomService,
   ) {}
 
   // ── Auto-code generator ────────────────────────────────────────────────────
@@ -66,7 +80,7 @@ export class ItemsService {
   // ── Auto-calculate UOM conversion factors from catalog ─────────────────────
   private async resolveConversionFactor(
     fromUomId: string | undefined,
-    toUomId:   string | undefined,
+    toUomId: string | undefined,
     manualFactor: number,
   ): Promise<number> {
     if (!fromUomId || !toUomId || fromUomId === toUomId) return 1;
@@ -74,7 +88,9 @@ export class ItemsService {
     try {
       const autoFactor = await this.uomService.getConversionFactor(fromUomId, toUomId);
       if (autoFactor && autoFactor !== 1) return autoFactor;
-    } catch { /* keep manual */ }
+    } catch {
+      /* keep manual */
+    }
     return manualFactor;
   }
 
@@ -109,37 +125,37 @@ export class ItemsService {
       data: {
         tenantId,
         code,
-        name:               dto.name,
-        description:        dto.description,
-        itemType:           dto.itemType,
-        baseUom:            dto.baseUom,
-        categoryId:         dto.categoryId,
+        name: dto.name,
+        description: dto.description,
+        itemType: dto.itemType,
+        baseUom: dto.baseUom,
+        categoryId: dto.categoryId,
         consumptionGroupId: dto.consumptionGroupId,
         // Sprint 14F — Barcodes
         barcodeInternal,
-        barcodeExternal:    dto.barcodeExternal?.trim() || null,
+        barcodeExternal: dto.barcodeExternal?.trim() || null,
         // UOM triple
-        purchaseUomId:               dto.purchaseUomId,
+        purchaseUomId: dto.purchaseUomId,
         purchaseToConsumptionFactor: purchaseFactor,
-        storageUomId:                dto.storageUomId,
-        storageToConsumptionFactor:  storageFactor,
-        consumptionUomId:            dto.consumptionUomId,
+        storageUomId: dto.storageUomId,
+        storageToConsumptionFactor: storageFactor,
+        consumptionUomId: dto.consumptionUomId,
         // Flags
-        isStockable:      dto.isStockable      ?? true,
-        isPurchasable:    dto.isPurchasable    ?? true,
-        isSaleable:       dto.isSaleable       ?? true,
+        isStockable: dto.isStockable ?? true,
+        isPurchasable: dto.isPurchasable ?? true,
+        isSaleable: dto.isSaleable ?? true,
         isManufacturable: dto.isManufacturable ?? false,
-        isLotTracked:     dto.isLotTracked     ?? false,
-        isSerialTracked:  dto.isSerialTracked  ?? false,
+        isLotTracked: dto.isLotTracked ?? false,
+        isSerialTracked: dto.isSerialTracked ?? false,
         // Valuation
         valuationMethod: dto.valuationMethod || 'average',
-        standardCost:    dto.standardCost,
+        standardCost: dto.standardCost,
         // Planning
-        leadTimeDays:    dto.leadTimeDays    ?? 0,
-        safetyStock:     dto.safetyStock     ?? 0,
-        reorderPoint:    dto.reorderPoint    ?? 0,
+        leadTimeDays: dto.leadTimeDays ?? 0,
+        safetyStock: dto.safetyStock ?? 0,
+        reorderPoint: dto.reorderPoint ?? 0,
         reorderQuantity: dto.reorderQuantity ?? 0,
-        isActive:  true,
+        isActive: true,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -209,7 +225,11 @@ export class ItemsService {
       include: { item: { include: ITEM_INCLUDE } },
     });
     if (supplierItem?.item) {
-      return { item: supplierItem.item, matchedBy: 'supplierItemCode', supplierId: supplierItem.supplierId };
+      return {
+        item: supplierItem.item,
+        matchedBy: 'supplierItemCode',
+        supplierId: supplierItem.supplierId,
+      };
     }
 
     throw new NotFoundException(`No item found for barcode/code "${q}"`);
@@ -224,16 +244,21 @@ export class ItemsService {
         tenantId,
         deletedAt: null,
         OR: [
-          { code:            { in: codes, mode: 'insensitive' } },
+          { code: { in: codes, mode: 'insensitive' } },
           { barcodeInternal: { in: codes } },
           { barcodeExternal: { in: codes } },
         ],
       },
       select: {
-        id: true, code: true, name: true, itemType: true, baseUom: true,
-        barcodeInternal: true, barcodeExternal: true,
+        id: true,
+        code: true,
+        name: true,
+        itemType: true,
+        baseUom: true,
+        barcodeInternal: true,
+        barcodeExternal: true,
         purchaseUom: { select: { code: true } },
-        storageUom:  { select: { code: true } },
+        storageUom: { select: { code: true } },
       },
     });
     return items;
@@ -253,8 +278,8 @@ export class ItemsService {
 
     // Resolve effective UOM IDs
     const a = current as any;
-    const effectivePurchaseUom    = dto.purchaseUomId    ?? a.purchaseUomId;
-    const effectiveStorageUom     = dto.storageUomId     ?? a.storageUomId;
+    const effectivePurchaseUom = dto.purchaseUomId ?? a.purchaseUomId;
+    const effectiveStorageUom = dto.storageUomId ?? a.storageUomId;
     const effectiveConsumptionUom = dto.consumptionUomId ?? a.consumptionUomId;
 
     // Build clean data
@@ -267,18 +292,21 @@ export class ItemsService {
     // If code changed and barcodeInternal was auto-generated from code, update it too
     if (dto.code && !dto.barcodeInternal) {
       const currentBarcode = (current as any).barcodeInternal;
-      const currentCode    = (current as any).code;
+      const currentCode = (current as any).code;
       if (currentBarcode === currentCode) {
         data.barcodeInternal = dto.code.trim().toUpperCase();
       }
     }
 
     // Auto-calculate factors when UOM fields are being changed
-    const isPurchaseUomChanging = dto.purchaseUomId !== undefined || dto.consumptionUomId !== undefined;
-    const isStorageUomChanging  = dto.storageUomId  !== undefined || dto.consumptionUomId !== undefined;
+    const isPurchaseUomChanging =
+      dto.purchaseUomId !== undefined || dto.consumptionUomId !== undefined;
+    const isStorageUomChanging =
+      dto.storageUomId !== undefined || dto.consumptionUomId !== undefined;
 
     if (isPurchaseUomChanging && effectiveConsumptionUom) {
-      const manualPurchaseFactor = data.purchaseToConsumptionFactor ?? Number(a.purchaseToConsumptionFactor ?? 1);
+      const manualPurchaseFactor =
+        data.purchaseToConsumptionFactor ?? Number(a.purchaseToConsumptionFactor ?? 1);
       const autoPurchaseFactor = await this.resolveConversionFactor(
         effectivePurchaseUom,
         effectiveConsumptionUom,
@@ -288,7 +316,8 @@ export class ItemsService {
     }
 
     if (isStorageUomChanging && effectiveConsumptionUom) {
-      const manualStorageFactor = data.storageToConsumptionFactor ?? Number(a.storageToConsumptionFactor ?? 1);
+      const manualStorageFactor =
+        data.storageToConsumptionFactor ?? Number(a.storageToConsumptionFactor ?? 1);
       const autoStorageFactor = await this.resolveConversionFactor(
         effectiveStorageUom,
         effectiveConsumptionUom,
@@ -310,7 +339,7 @@ export class ItemsService {
     await this.findOne(tenantId, id);
     const item = await this.prisma.item.update({
       where: { id },
-      data:  { deletedAt: new Date(), deletedBy: userId },
+      data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Item deleted successfully', id: item.id };
   }
@@ -320,21 +349,42 @@ export class ItemsService {
   async getStatistics(tenantId: string) {
     const total = await this.prisma.item.count({ where: { tenantId, deletedAt: null } });
     const byType = await this.prisma.item.groupBy({
-      by: ['itemType'], where: { tenantId, deletedAt: null }, _count: true,
+      by: ['itemType'],
+      where: { tenantId, deletedAt: null },
+      _count: true,
     });
-    const stockable     = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isStockable: true } });
-    const purchasable   = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isPurchasable: true } });
-    const saleable      = await this.prisma.item.count({ where: { tenantId, deletedAt: null, isSaleable: true } });
-    const withCategory  = await this.prisma.item.count({ where: { tenantId, deletedAt: null, categoryId: { not: null } } });
-    const withUomTriple = await this.prisma.item.count({ where: { tenantId, deletedAt: null, consumptionUomId: { not: null } } });
-    const withBarcode   = await this.prisma.item.count({ where: { tenantId, deletedAt: null, barcodeInternal: { not: null } } });
-    const withExternalBarcode = await this.prisma.item.count({ where: { tenantId, deletedAt: null, barcodeExternal: { not: null } } });
+    const stockable = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, isStockable: true },
+    });
+    const purchasable = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, isPurchasable: true },
+    });
+    const saleable = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, isSaleable: true },
+    });
+    const withCategory = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, categoryId: { not: null } },
+    });
+    const withUomTriple = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, consumptionUomId: { not: null } },
+    });
+    const withBarcode = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, barcodeInternal: { not: null } },
+    });
+    const withExternalBarcode = await this.prisma.item.count({
+      where: { tenantId, deletedAt: null, barcodeExternal: { not: null } },
+    });
 
     return {
       total,
-      byType: byType.map(i => ({ type: i.itemType, count: i._count })),
-      stockable, purchasable, saleable, withCategory, withUomTriple,
-      withBarcode, withExternalBarcode,
+      byType: byType.map((i) => ({ type: i.itemType, count: i._count })),
+      stockable,
+      purchasable,
+      saleable,
+      withCategory,
+      withUomTriple,
+      withBarcode,
+      withExternalBarcode,
     };
   }
 }

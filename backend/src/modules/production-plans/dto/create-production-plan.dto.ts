@@ -1,6 +1,14 @@
 import {
-  IsString, IsOptional, IsEnum, IsDateString,
-  IsArray, ValidateNested, IsUUID, IsNumber, Min, MaxLength,
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsUUID,
+  IsNumber,
+  Min,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -10,7 +18,9 @@ export class CreateProductionPlanLineDto {
   @IsUUID()
   itemId: string;
 
-  @ApiPropertyOptional({ description: 'BOM UUID — resolved automatically if item has one active BOM' })
+  @ApiPropertyOptional({
+    description: 'BOM UUID — resolved automatically if item has one active BOM',
+  })
   @IsOptional()
   @IsUUID()
   bomId?: string;

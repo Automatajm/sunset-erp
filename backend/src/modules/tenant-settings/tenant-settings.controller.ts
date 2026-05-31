@@ -27,7 +27,8 @@ export class TenantSettingsController {
   @Get('system-uoms')
   @ApiOperation({
     summary: 'Get configured system UOMs',
-    description: 'Returns the flat list of system UOMs configured for this tenant. Used by ConsumptionGroup and Item modals to restrict UOM selection to system units only.',
+    description:
+      'Returns the flat list of system UOMs configured for this tenant. Used by ConsumptionGroup and Item modals to restrict UOM selection to system units only.',
   })
   async getSystemUoms(@Request() req) {
     return this.service.getSystemUoms(req.user.tenantId);

@@ -42,8 +42,9 @@ export class SalesOrdersService {
     // Calculate totals
     let subtotal = 0;
     const linesWithTotals = createSalesOrderDto.lines.map((line, index) => {
-      const discountAmount = (line.unitPrice * line.orderedQuantity * (line.discountPercent || 0)) / 100;
-      const lineTotal = (line.unitPrice * line.orderedQuantity) - discountAmount;
+      const discountAmount =
+        (line.unitPrice * line.orderedQuantity * (line.discountPercent || 0)) / 100;
+      const lineTotal = line.unitPrice * line.orderedQuantity - discountAmount;
       subtotal += lineTotal;
 
       return {
@@ -74,8 +75,12 @@ export class SalesOrdersService {
         customerId: createSalesOrderDto.customerId,
         orderDate: new Date(),
         customerPo: createSalesOrderDto.customerPo,
-        requestedDate: createSalesOrderDto.requestedDate ? new Date(createSalesOrderDto.requestedDate) : null,
-        promisedDate: createSalesOrderDto.promisedDate ? new Date(createSalesOrderDto.promisedDate) : null,
+        requestedDate: createSalesOrderDto.requestedDate
+          ? new Date(createSalesOrderDto.requestedDate)
+          : null,
+        promisedDate: createSalesOrderDto.promisedDate
+          ? new Date(createSalesOrderDto.promisedDate)
+          : null,
         paymentTerms: createSalesOrderDto.paymentTerms,
         currency: createSalesOrderDto.currency || 'USD',
         exchangeRate: 1,
@@ -88,7 +93,7 @@ export class SalesOrdersService {
         createdBy: userId,
         updatedBy: userId,
         lines: {
-          create: linesWithTotals.map(line => ({
+          create: linesWithTotals.map((line) => ({
             tenantId,
             ...line,
           })),
@@ -195,7 +200,12 @@ export class SalesOrdersService {
     return salesOrder;
   }
 
-  async update(tenantId: string, userId: string, id: string, updateSalesOrderDto: UpdateSalesOrderDto) {
+  async update(
+    tenantId: string,
+    userId: string,
+    id: string,
+    updateSalesOrderDto: UpdateSalesOrderDto,
+  ) {
     const so = await this.findOne(tenantId, id);
 
     if (so.status !== 'draft') {

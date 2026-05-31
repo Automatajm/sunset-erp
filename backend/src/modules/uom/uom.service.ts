@@ -9,17 +9,20 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 export interface AllQties {
   // Financial unit of record (ADR-019) — source of WAC + JE amounts
-  purchaseQty: number; purchaseUom: string;
+  purchaseQty: number;
+  purchaseUom: string;
   // Warehouse operational unit (auxiliary — display only)
-  storageQty:  number; storageUom:  string;
+  storageQty: number;
+  storageUom: string;
   // Production operational unit (auxiliary — display only)
-  consumptionQty: number; consumptionUom: string;
+  consumptionQty: number;
+  consumptionUom: string;
 }
 
 export interface WacResult {
-  newUnitCost:   number;  // new WAC per purchaseUom unit
+  newUnitCost: number; // new WAC per purchaseUom unit
   newPurchaseQty: number; // updated total purchaseQty in stock
-  totalValue:    number;  // newPurchaseQty × newUnitCost
+  totalValue: number; // newPurchaseQty × newUnitCost
 }
 
 @Injectable()
@@ -30,7 +33,7 @@ export class UomService {
 
   async findAllUnits(filters?: { type?: string; system?: string }) {
     const where: any = { isActive: true };
-    if (filters?.type)   where.type   = filters.type;
+    if (filters?.type) where.type = filters.type;
     if (filters?.system) where.system = filters.system;
     return this.prisma.uomUnit.findMany({
       where,
@@ -52,10 +55,10 @@ export class UomService {
 
   async findAllConversions() {
     return this.prisma.uomConversion.findMany({
-      where:   { isActive: true },
+      where: { isActive: true },
       include: {
         fromUom: { select: { code: true, name: true, type: true, system: true } },
-        toUom:   { select: { code: true, name: true, type: true, system: true } },
+        toUom: { select: { code: true, name: true, type: true, system: true } },
       },
       orderBy: [{ fromUom: { type: 'asc' } }, { fromUom: { code: 'asc' } }],
     });
@@ -63,17 +66,34 @@ export class UomService {
 
   async convert(fromCode: string, toCode: string, quantity: number) {
     if (fromCode === toCode) {
-      return { fromUom: fromCode, toUom: toCode, inputQty: quantity, outputQty: quantity, factor: 1, isAutomatic: true };
+      return {
+        fromUom: fromCode,
+        toUom: toCode,
+        inputQty: quantity,
+        outputQty: quantity,
+        factor: 1,
+        isAutomatic: true,
+      };
     }
     const from = await this.findUnitByCode(fromCode);
-    const to   = await this.findUnitByCode(toCode);
+    const to = await this.findUnitByCode(toCode);
     const conversion = await this.prisma.uomConversion.findUnique({
       where: { fromUomId_toUomId: { fromUomId: from.id, toUomId: to.id } },
     });
-    if (!conversion) throw new NotFoundException(`No conversion found from ${fromCode} to ${toCode}. Manual factor required.`);
-    const factor    = Number(conversion.factor);
+    if (!conversion)
+      throw new NotFoundException(
+        `No conversion found from ${fromCode} to ${toCode}. Manual factor required.`,
+      );
+    const factor = Number(conversion.factor);
     const outputQty = Math.round(quantity * factor * 1_000_000) / 1_000_000;
-    return { fromUom: fromCode, toUom: toCode, inputQty: quantity, outputQty, factor, isAutomatic: true };
+    return {
+      fromUom: fromCode,
+      toUom: toCode,
+      inputQty: quantity,
+      outputQty,
+      factor,
+      isAutomatic: true,
+    };
   }
 
   // Used internally by SupplierItemsService to auto-calculate conversion factors
@@ -101,17 +121,17 @@ export class UomService {
    * consumptionUom = production operational unit (auxiliary)
    */
   async calcAllQties(
-    purchaseQty:    number,
-    itemId:         string,
-    tenantId:       string,
+    purchaseQty: number,
+    itemId: string,
+    tenantId: string,
     supplierItemId?: string,
   ): Promise<AllQties> {
     // Load item with UOM config
     const item = await this.prisma.item.findFirst({
-      where:   { id: itemId, tenantId, deletedAt: null },
+      where: { id: itemId, tenantId, deletedAt: null },
       include: {
-        purchaseUom:    { select: { id: true, code: true } },
-        storageUom:     { select: { id: true, code: true } },
+        purchaseUom: { select: { id: true, code: true } },
+        storageUom: { select: { id: true, code: true } },
         consumptionUom: { select: { id: true, code: true } },
       },
     });
@@ -156,10 +176,7 @@ export class UomService {
     let purchaseToStorageFactor = 1;
 
     if (item.purchaseUomId && item.storageUomId && item.purchaseUomId !== item.storageUomId) {
-      const catalogFactor = await this.getConversionFactor(
-        item.purchaseUomId,
-        item.storageUomId,
-      );
+      const catalogFactor = await this.getConversionFactor(item.purchaseUomId, item.storageUomId);
       if (catalogFactor !== null) {
         purchaseToStorageFactor = catalogFactor;
       } else {
@@ -177,9 +194,9 @@ export class UomService {
 
     return {
       purchaseQty,
-      purchaseUom:    purchaseUomCode,
-      storageQty:     round6(purchaseQty * purchaseToStorageFactor),
-      storageUom:     storageUomCode,
+      purchaseUom: purchaseUomCode,
+      storageQty: round6(purchaseQty * purchaseToStorageFactor),
+      storageUom: storageUomCode,
       consumptionQty: round6(purchaseQty * purchaseToConsumptionFactor),
       consumptionUom: consumptionUomCode,
     };
@@ -195,17 +212,17 @@ export class UomService {
    */
   calcNewWAC(
     existingPurchaseQty: number,
-    existingUnitCost:    number,
+    existingUnitCost: number,
     incomingPurchaseQty: number,
-    incomingUnitCost:    number,
+    incomingUnitCost: number,
   ): WacResult {
-    const totalQty   = existingPurchaseQty + incomingPurchaseQty;
+    const totalQty = existingPurchaseQty + incomingPurchaseQty;
     if (totalQty === 0) return { newUnitCost: 0, newPurchaseQty: 0, totalValue: 0 };
 
     const existingValue = existingPurchaseQty * existingUnitCost;
     const incomingValue = incomingPurchaseQty * incomingUnitCost;
-    const newUnitCost   = Math.round(((existingValue + incomingValue) / totalQty) * 10_000) / 10_000;
-    const totalValue    = Math.round(totalQty * newUnitCost * 100) / 100;
+    const newUnitCost = Math.round(((existingValue + incomingValue) / totalQty) * 10_000) / 10_000;
+    const totalValue = Math.round(totalQty * newUnitCost * 100) / 100;
 
     return { newUnitCost, newPurchaseQty: totalQty, totalValue };
   }
@@ -218,12 +235,12 @@ export class UomService {
    * unitCost = WAC per purchaseUom unit (stored in Stock.unitCost)
    */
   calcFinancialValue(
-    qty:      number,
-    uomType:  'purchase' | 'storage' | 'consumption',
+    qty: number,
+    uomType: 'purchase' | 'storage' | 'consumption',
     item: {
-      unitCost:                    number;
+      unitCost: number;
       purchaseToConsumptionFactor: number;
-      storageToConsumptionFactor:  number;
+      storageToConsumptionFactor: number;
     },
   ): number {
     const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -234,16 +251,16 @@ export class UomService {
       case 'storage': {
         // storage → consumption → purchase
         const consumptionQty = qty * item.storageToConsumptionFactor;
-        const purchaseQty    = item.purchaseToConsumptionFactor !== 0
-          ? consumptionQty / item.purchaseToConsumptionFactor
-          : consumptionQty;
+        const purchaseQty =
+          item.purchaseToConsumptionFactor !== 0
+            ? consumptionQty / item.purchaseToConsumptionFactor
+            : consumptionQty;
         return round2(purchaseQty * item.unitCost);
       }
       case 'consumption': {
         // consumption → purchase
-        const purchaseQty = item.purchaseToConsumptionFactor !== 0
-          ? qty / item.purchaseToConsumptionFactor
-          : qty;
+        const purchaseQty =
+          item.purchaseToConsumptionFactor !== 0 ? qty / item.purchaseToConsumptionFactor : qty;
         return round2(purchaseQty * item.unitCost);
       }
     }

@@ -1,5 +1,17 @@
 // --- consumption-groups/consumption-groups.controller.ts ---
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ConsumptionGroupsService } from './consumption-groups.service';
 import { CreateConsumptionGroupDto } from './dto/create-consumption-group.dto';
@@ -7,14 +19,14 @@ import { UpdateConsumptionGroupDto } from './dto/update-consumption-group.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
- 
+
 @ApiTags('Consumption Groups')
 @Controller('consumption-groups')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class ConsumptionGroupsController {
   constructor(private readonly consumptionGroupsService: ConsumptionGroupsService) {}
- 
+
   @Post()
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create consumption group' })
@@ -23,7 +35,7 @@ export class ConsumptionGroupsController {
   async create(@Request() req, @Body() dto: CreateConsumptionGroupDto) {
     return this.consumptionGroupsService.create(req.user.tenantId, req.user.id, dto);
   }
- 
+
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all consumption groups' })
@@ -31,7 +43,7 @@ export class ConsumptionGroupsController {
   async findAll(@Request() req) {
     return this.consumptionGroupsService.findAll(req.user.tenantId);
   }
- 
+
   @Get(':id')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get consumption group with items and total ATP in consumption UOM' })
@@ -41,7 +53,7 @@ export class ConsumptionGroupsController {
   async findOne(@Request() req, @Param('id') id: string) {
     return this.consumptionGroupsService.findOne(req.user.tenantId, id);
   }
- 
+
   @Patch(':id')
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update consumption group' })
@@ -51,7 +63,7 @@ export class ConsumptionGroupsController {
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateConsumptionGroupDto) {
     return this.consumptionGroupsService.update(req.user.tenantId, req.user.id, id, dto);
   }
- 
+
   @Delete(':id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)

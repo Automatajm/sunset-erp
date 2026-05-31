@@ -2,24 +2,30 @@
 // FILE: backend/src/modules/warehouse-locations/warehouse-locations.controller.ts
 // ─────────────────────────────────────────────────────────────────────────────
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { WarehouseLocationsService } from './warehouse-locations.service';
-import { CreateZoneDto }  from './dto/create-zone.dto';
-import { UpdateZoneDto }  from './dto/update-zone.dto';
+import { CreateZoneDto } from './dto/create-zone.dto';
+import { UpdateZoneDto } from './dto/update-zone.dto';
 import { CreateAisleDto } from './dto/create-aisle.dto';
 import { UpdateAisleDto } from './dto/update-aisle.dto';
-import { CreateRackDto }  from './dto/create-rack.dto';
-import { UpdateRackDto }  from './dto/update-rack.dto';
+import { CreateRackDto } from './dto/create-rack.dto';
+import { UpdateRackDto } from './dto/update-rack.dto';
 import { CreateLevelDto } from './dto/create-level.dto';
 import { UpdateLevelDto } from './dto/update-level.dto';
-import { CreateBinDto }   from './dto/create-bin.dto';
-import { UpdateBinDto }   from './dto/update-bin.dto';
+import { CreateBinDto } from './dto/create-bin.dto';
+import { UpdateBinDto } from './dto/update-bin.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -161,7 +167,9 @@ export class WarehouseLocationsController {
 
   @Post('levels')
   @RequirePermissions('INVENTORY:CREATE')
-  @ApiOperation({ summary: 'Create a level in a rack. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL' })
+  @ApiOperation({
+    summary: 'Create a level in a rack. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL',
+  })
   @ApiResponse({ status: 201, description: 'Level created successfully' })
   @ApiResponse({ status: 404, description: 'Rack not found' })
   @ApiResponse({ status: 409, description: 'Level code already exists in this rack' })
@@ -204,7 +212,9 @@ export class WarehouseLocationsController {
 
   @Post('bins')
   @RequirePermissions('INVENTORY:CREATE')
-  @ApiOperation({ summary: 'Create a bin in a level. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL-BIN' })
+  @ApiOperation({
+    summary: 'Create a bin in a level. fullCode auto-generated: ZONE-AISLE-RACK-LEVEL-BIN',
+  })
   @ApiResponse({ status: 201, description: 'Bin created successfully' })
   @ApiResponse({ status: 404, description: 'Level not found' })
   @ApiResponse({ status: 409, description: 'Bin code already exists in this level' })

@@ -12,16 +12,16 @@ export class JournalEntriesService {
     // Validate double-entry: debits must equal credits
     const totalDebits = createJournalEntryDto.lines.reduce(
       (sum, line) => sum + line.debitAmount,
-      0
+      0,
     );
     const totalCredits = createJournalEntryDto.lines.reduce(
       (sum, line) => sum + line.creditAmount,
-      0
+      0,
     );
 
     if (Math.abs(totalDebits - totalCredits) > 0.01) {
       throw new BadRequestException(
-        `Journal entry is not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}`
+        `Journal entry is not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}`,
       );
     }
 
@@ -51,13 +51,13 @@ export class JournalEntriesService {
 
       if (!account.allowManualPosting) {
         throw new BadRequestException(
-          `Account ${account.accountNumber} - ${account.name} does not allow manual posting (it's a header account)`
+          `Account ${account.accountNumber} - ${account.name} does not allow manual posting (it's a header account)`,
         );
       }
 
       if (!account.isActive) {
         throw new BadRequestException(
-          `Account ${account.accountNumber} - ${account.name} is inactive`
+          `Account ${account.accountNumber} - ${account.name} is inactive`,
         );
       }
     }
@@ -152,7 +152,7 @@ export class JournalEntriesService {
       },
     });
 
-    return entries.map(entry => this.formatJournalEntryResponse(entry));
+    return entries.map((entry) => this.formatJournalEntryResponse(entry));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -188,7 +188,12 @@ export class JournalEntriesService {
     return this.formatJournalEntryResponse(entry);
   }
 
-  async update(tenantId: string, userId: string, id: string, updateJournalEntryDto: UpdateJournalEntryDto) {
+  async update(
+    tenantId: string,
+    userId: string,
+    id: string,
+    updateJournalEntryDto: UpdateJournalEntryDto,
+  ) {
     const existingEntry = await this.findOne(tenantId, id);
 
     if (existingEntry.status !== 'draft') {
@@ -206,9 +211,9 @@ export class JournalEntriesService {
       updateData.fiscalPeriod = `${entryDate.getFullYear()}-${(entryDate.getMonth() + 1).toString().padStart(2, '0')}`;
     }
 
-    if (updateJournalEntryDto.description !== undefined) 
+    if (updateJournalEntryDto.description !== undefined)
       updateData.description = updateJournalEntryDto.description;
-    if (updateJournalEntryDto.reference !== undefined) 
+    if (updateJournalEntryDto.reference !== undefined)
       updateData.reference = updateJournalEntryDto.reference;
 
     const updatedEntry = await this.prisma.journalEntry.update({
@@ -343,7 +348,7 @@ export class JournalEntriesService {
   private formatJournalEntryResponse(entry: any) {
     return {
       ...entry,
-      lines: entry.lines?.map(line => ({
+      lines: entry.lines?.map((line) => ({
         ...line,
         debitAmount: line.debitAmount.toNumber(),
         creditAmount: line.creditAmount.toNumber(),
@@ -352,5 +357,3 @@ export class JournalEntriesService {
     };
   }
 }
-
-

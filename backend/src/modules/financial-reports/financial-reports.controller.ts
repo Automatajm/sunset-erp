@@ -1,17 +1,5 @@
-﻿import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiQuery,
-} from '@nestjs/swagger';
+﻿import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { FinancialReportsService } from './financial-reports.service';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

@@ -1,10 +1,24 @@
 import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ArInvoicesService } from './ar-invoices.service';
 import { CreateArInvoiceDto } from './dto/create-ar-invoice.dto';
@@ -43,10 +57,14 @@ export class ArInvoicesController {
   @Get()
   @RequirePermissions('AR:VIEW')
   @ApiOperation({ summary: 'List AR invoices with filters' })
-  @ApiQuery({ name: 'status',     required: false, description: 'draft | sent | partial | paid | overdue | void' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'draft | sent | partial | paid | overdue | void',
+  })
   @ApiQuery({ name: 'customerId', required: false, description: 'Filter by customer UUID' })
-  @ApiQuery({ name: 'from',       required: false, description: 'Invoice date from YYYY-MM-DD' })
-  @ApiQuery({ name: 'to',         required: false, description: 'Invoice date to YYYY-MM-DD' })
+  @ApiQuery({ name: 'from', required: false, description: 'Invoice date from YYYY-MM-DD' })
+  @ApiQuery({ name: 'to', required: false, description: 'Invoice date to YYYY-MM-DD' })
   @ApiResponse({ status: 200, description: 'Invoice list' })
   async findAll(
     @Request() req,

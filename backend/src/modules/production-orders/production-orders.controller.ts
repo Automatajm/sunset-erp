@@ -1,10 +1,24 @@
 ﻿import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ProductionOrdersService } from './production-orders.service';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
@@ -39,7 +53,11 @@ export class ProductionOrdersController {
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List production orders' })
-  @ApiQuery({ name: 'status', required: false, description: 'draft | released | in_progress | completed | cancelled' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'draft | released | in_progress | completed | cancelled',
+  })
   async findAll(@Request() req, @Query('status') status?: string) {
     return this.productionOrdersService.findAll(req.user.tenantId, status);
   }
@@ -47,22 +65,30 @@ export class ProductionOrdersController {
   @Get('variances')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List all production variances across all MOs' })
-  @ApiQuery({ name: 'status',       required: false, description: 'open | je_posted | closed' })
-  @ApiQuery({ name: 'varianceType', required: false, description: 'merma | surplus | labor | material' })
+  @ApiQuery({ name: 'status', required: false, description: 'open | je_posted | closed' })
+  @ApiQuery({
+    name: 'varianceType',
+    required: false,
+    description: 'merma | surplus | labor | material',
+  })
   @ApiResponse({ status: 200, description: 'Variance list' })
   async getAllVariances(
     @Request() req,
     @Query('status') status?: string,
     @Query('varianceType') varianceType?: string,
   ) {
-    return this.productionOrdersService.getAllVariances(req.user.tenantId, { status, varianceType });
+    return this.productionOrdersService.getAllVariances(req.user.tenantId, {
+      status,
+      varianceType,
+    });
   }
 
   @Patch('variances/:varianceId/post-je')
   @RequirePermissions('ACCOUNTING:POST')
   @ApiOperation({
     summary: 'Post variance adjustment JE',
-    description: 'Merma: DR Production Losses / CR FG Inventory. Surplus: DR FG Inventory / CR Production Gains.',
+    description:
+      'Merma: DR Production Losses / CR FG Inventory. Surplus: DR FG Inventory / CR Production Gains.',
   })
   @ApiParam({ name: 'varianceId', description: 'Variance UUID' })
   @ApiResponse({ status: 200, description: 'JE posted, variance status → je_posted' })
@@ -72,7 +98,12 @@ export class ProductionOrdersController {
     @Param('varianceId') varianceId: string,
     @Body() dto: PostVarianceJeDto,
   ) {
-    return this.productionOrdersService.postVarianceJe(req.user.tenantId, req.user.id, varianceId, dto);
+    return this.productionOrdersService.postVarianceJe(
+      req.user.tenantId,
+      req.user.id,
+      varianceId,
+      dto,
+    );
   }
 
   @Get(':id')
@@ -130,13 +161,18 @@ export class ProductionOrdersController {
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({
     summary: 'Record material consumption actuals',
-    description: 'Posts actual material quantities used vs BOM planned quantities. Calculates variance cost.',
+    description:
+      'Posts actual material quantities used vs BOM planned quantities. Calculates variance cost.',
   })
   @ApiParam({ name: 'id', description: 'MO UUID' })
   @ApiResponse({ status: 201, description: 'Material actual recorded' })
   @ApiResponse({ status: 400, description: 'MO in invalid status' })
   @HttpCode(HttpStatus.CREATED)
-  async addMaterialActual(@Request() req, @Param('id') id: string, @Body() dto: CreateMaterialActualDto) {
+  async addMaterialActual(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: CreateMaterialActualDto,
+  ) {
     return this.productionOrdersService.addMaterialActual(req.user.tenantId, req.user.id, id, dto);
   }
 
@@ -157,11 +193,19 @@ export class ProductionOrdersController {
     description: `Confirms FG delivery quantity, updates quantityProduced, posts auto-JE (DR FG Inventory / CR WIP if unitCost provided), and auto-creates variance records (merma/surplus) if quantity differs from planned.`,
   })
   @ApiParam({ name: 'id', description: 'MO UUID' })
-  @ApiResponse({ status: 201, description: 'FG delivered, JE posted, variances created if applicable' })
+  @ApiResponse({
+    status: 201,
+    description: 'FG delivered, JE posted, variances created if applicable',
+  })
   @ApiResponse({ status: 400, description: 'MO in invalid status' })
   @HttpCode(HttpStatus.CREATED)
   async deliverFg(@Request() req, @Param('id') id: string, @Body() dto: DeliverFgDto) {
-    return this.productionOrdersService.deliverFinishedGoods(req.user.tenantId, req.user.id, id, dto);
+    return this.productionOrdersService.deliverFinishedGoods(
+      req.user.tenantId,
+      req.user.id,
+      id,
+      dto,
+    );
   }
 
   // ── SPRINT 6 — VARIANCES ──────────────────────

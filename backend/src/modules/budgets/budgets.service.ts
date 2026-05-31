@@ -53,7 +53,7 @@ export class BudgetsService {
   async findAll(tenantId: string, fiscalYear?: string, status?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (fiscalYear) where.fiscalYear = fiscalYear;
-    if (status)     where.status     = status;
+    if (status) where.status = status;
 
     return this.prisma.budget.findMany({
       where,
@@ -86,9 +86,15 @@ export class BudgetsService {
 
     if (updateBudgetDto.budgetCode && updateBudgetDto.budgetCode !== budget.budgetCode) {
       const existing = await this.prisma.budget.findFirst({
-        where: { tenantId, budgetCode: updateBudgetDto.budgetCode, id: { not: id }, deletedAt: null },
+        where: {
+          tenantId,
+          budgetCode: updateBudgetDto.budgetCode,
+          id: { not: id },
+          deletedAt: null,
+        },
       });
-      if (existing) throw new ConflictException(`Budget code ${updateBudgetDto.budgetCode} already exists`);
+      if (existing)
+        throw new ConflictException(`Budget code ${updateBudgetDto.budgetCode} already exists`);
     }
 
     return this.prisma.budget.update({
@@ -101,7 +107,10 @@ export class BudgetsService {
   async remove(tenantId: string, userId: string, id: string) {
     const budget = await this.findOne(tenantId, id);
     if (budget.status !== 'draft') throw new BadRequestException('Can only delete draft budgets');
-    await this.prisma.budget.update({ where: { id }, data: { deletedAt: new Date(), deletedBy: userId } });
+    await this.prisma.budget.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId },
+    });
     return { message: `Budget ${budget.budgetCode} deleted successfully` };
   }
 
@@ -109,36 +118,63 @@ export class BudgetsService {
   // BUDGET LINES
   // ============================================================================
 
-  async addBudgetLine(tenantId: string, userId: string, budgetId: string, dto: CreateBudgetLineDto) {
+  async addBudgetLine(
+    tenantId: string,
+    userId: string,
+    budgetId: string,
+    dto: CreateBudgetLineDto,
+  ) {
     const budget = await this.findOne(tenantId, budgetId);
-    if (budget.status === 'approved') throw new BadRequestException('Cannot add lines to approved budgets');
+    if (budget.status === 'approved')
+      throw new BadRequestException('Cannot add lines to approved budgets');
 
-    const account = await this.prisma.account.findFirst({ where: { id: dto.accountId, tenantId, deletedAt: null } });
+    const account = await this.prisma.account.findFirst({
+      where: { id: dto.accountId, tenantId, deletedAt: null },
+    });
     if (!account) throw new NotFoundException('Account not found');
 
     const existing = await this.prisma.budgetLine.findFirst({
-      where: { budgetId, accountId: dto.accountId, fiscalPeriod: dto.fiscalPeriod, deletedAt: null },
+      where: {
+        budgetId,
+        accountId: dto.accountId,
+        fiscalPeriod: dto.fiscalPeriod,
+        deletedAt: null,
+      },
     });
-    if (existing) throw new ConflictException(`Budget line for account ${account.accountNumber} in period ${dto.fiscalPeriod} already exists`);
+    if (existing)
+      throw new ConflictException(
+        `Budget line for account ${account.accountNumber} in period ${dto.fiscalPeriod} already exists`,
+      );
 
     return this.prisma.budgetLine.create({
       data: {
-        tenantId, budgetId,
+        tenantId,
+        budgetId,
         accountId: dto.accountId,
         fiscalPeriod: dto.fiscalPeriod,
         budgetAmount: new Decimal(dto.budgetAmount),
         notes: dto.notes,
-        createdBy: userId, updatedBy: userId,
+        createdBy: userId,
+        updatedBy: userId,
       },
       include: { account: { select: { accountNumber: true, name: true, accountType: true } } },
     });
   }
 
-  async updateBudgetLine(tenantId: string, userId: string, budgetId: string, lineId: string, updateData: Partial<CreateBudgetLineDto>) {
+  async updateBudgetLine(
+    tenantId: string,
+    userId: string,
+    budgetId: string,
+    lineId: string,
+    updateData: Partial<CreateBudgetLineDto>,
+  ) {
     const budget = await this.findOne(tenantId, budgetId);
-    if (budget.status === 'approved') throw new BadRequestException('Cannot edit lines in approved budgets');
+    if (budget.status === 'approved')
+      throw new BadRequestException('Cannot edit lines in approved budgets');
 
-    const line = await this.prisma.budgetLine.findFirst({ where: { id: lineId, budgetId, tenantId, deletedAt: null } });
+    const line = await this.prisma.budgetLine.findFirst({
+      where: { id: lineId, budgetId, tenantId, deletedAt: null },
+    });
     if (!line) throw new NotFoundException('Budget line not found');
 
     return this.prisma.budgetLine.update({
@@ -154,12 +190,18 @@ export class BudgetsService {
 
   async removeBudgetLine(tenantId: string, userId: string, budgetId: string, lineId: string) {
     const budget = await this.findOne(tenantId, budgetId);
-    if (budget.status === 'approved') throw new BadRequestException('Cannot delete lines from approved budgets');
+    if (budget.status === 'approved')
+      throw new BadRequestException('Cannot delete lines from approved budgets');
 
-    const line = await this.prisma.budgetLine.findFirst({ where: { id: lineId, budgetId, tenantId, deletedAt: null } });
+    const line = await this.prisma.budgetLine.findFirst({
+      where: { id: lineId, budgetId, tenantId, deletedAt: null },
+    });
     if (!line) throw new NotFoundException('Budget line not found');
 
-    await this.prisma.budgetLine.update({ where: { id: lineId }, data: { deletedAt: new Date(), deletedBy: userId } });
+    await this.prisma.budgetLine.update({
+      where: { id: lineId },
+      data: { deletedAt: new Date(), deletedBy: userId },
+    });
     return { message: 'Budget line deleted successfully' };
   }
 
@@ -170,7 +212,8 @@ export class BudgetsService {
   async approveBudget(tenantId: string, userId: string, id: string) {
     const budget = await this.findOne(tenantId, id);
     if (budget.status === 'approved') throw new BadRequestException('Budget is already approved');
-    if (budget.budgetLines.length === 0) throw new BadRequestException('Cannot approve budget with no lines');
+    if (budget.budgetLines.length === 0)
+      throw new BadRequestException('Cannot approve budget with no lines');
 
     const approved = await this.prisma.budget.update({
       where: { id },
@@ -184,54 +227,77 @@ export class BudgetsService {
   // BUDGET VS ACTUAL REPORT
   // ============================================================================
 
-  async getBudgetVsActual(tenantId: string, budgetId: string, startPeriod?: string, endPeriod?: string) {
+  async getBudgetVsActual(
+    tenantId: string,
+    budgetId: string,
+    startPeriod?: string,
+    endPeriod?: string,
+  ) {
     const budget = await this.findOne(tenantId, budgetId);
     const periodFilter: any = {};
     if (startPeriod && endPeriod) periodFilter.fiscalPeriod = { gte: startPeriod, lte: endPeriod };
 
     const budgetLines = await this.prisma.budgetLine.findMany({
       where: { budgetId, tenantId, deletedAt: null, ...periodFilter },
-      include: { account: { select: { id: true, accountNumber: true, name: true, accountType: true } } },
+      include: {
+        account: { select: { id: true, accountNumber: true, name: true, accountType: true } },
+      },
       orderBy: [{ fiscalPeriod: 'asc' }, { account: { accountNumber: 'asc' } }],
     });
 
-    const results = await Promise.all(budgetLines.map(async (line) => {
-      const actuals = await this.prisma.journalEntryLine.aggregate({
-        where: {
-          tenantId, accountId: line.accountId,
-          journalEntry: { fiscalPeriod: line.fiscalPeriod, status: 'posted', deletedAt: null },
-          deletedAt: null,
-        },
-        _sum: { debitAmount: true, creditAmount: true },
-      });
-      const debit  = actuals._sum.debitAmount  || new Decimal(0);
-      const credit = actuals._sum.creditAmount || new Decimal(0);
-      const actualAmount   = debit.minus(credit);
-      const variance       = actualAmount.minus(line.budgetAmount);
-      const variancePercent = line.budgetAmount.equals(0) ? new Decimal(0) : variance.dividedBy(line.budgetAmount).times(100);
+    const results = await Promise.all(
+      budgetLines.map(async (line) => {
+        const actuals = await this.prisma.journalEntryLine.aggregate({
+          where: {
+            tenantId,
+            accountId: line.accountId,
+            journalEntry: { fiscalPeriod: line.fiscalPeriod, status: 'posted', deletedAt: null },
+            deletedAt: null,
+          },
+          _sum: { debitAmount: true, creditAmount: true },
+        });
+        const debit = actuals._sum.debitAmount || new Decimal(0);
+        const credit = actuals._sum.creditAmount || new Decimal(0);
+        const actualAmount = debit.minus(credit);
+        const variance = actualAmount.minus(line.budgetAmount);
+        const variancePercent = line.budgetAmount.equals(0)
+          ? new Decimal(0)
+          : variance.dividedBy(line.budgetAmount).times(100);
 
-      return {
-        accountNumber:   line.account.accountNumber,
-        accountName:     line.account.name,
-        accountType:     line.account.accountType,
-        fiscalPeriod:    line.fiscalPeriod,
-        budgetAmount:    line.budgetAmount.toNumber(),
-        actualAmount:    actualAmount.toNumber(),
-        variance:        variance.toNumber(),
-        variancePercent: variancePercent.toNumber(),
-      };
-    }));
+        return {
+          accountNumber: line.account.accountNumber,
+          accountName: line.account.name,
+          accountType: line.account.accountType,
+          fiscalPeriod: line.fiscalPeriod,
+          budgetAmount: line.budgetAmount.toNumber(),
+          actualAmount: actualAmount.toNumber(),
+          variance: variance.toNumber(),
+          variancePercent: variancePercent.toNumber(),
+        };
+      }),
+    );
 
-    return { budgetCode: budget.budgetCode, budgetName: budget.budgetName, fiscalYear: budget.fiscalYear, lines: results };
+    return {
+      budgetCode: budget.budgetCode,
+      budgetName: budget.budgetName,
+      fiscalYear: budget.fiscalYear,
+      lines: results,
+    };
   }
 
   // ============================================================================
   // SPRINT 8 — GENERATE BUDGET FROM SALES ORDERS (MRP)
   // ============================================================================
 
-  async generateFromSalesOrders(tenantId: string, userId: string, budgetId: string, dto: GenerateBudgetFromSoDto) {
+  async generateFromSalesOrders(
+    tenantId: string,
+    userId: string,
+    budgetId: string,
+    dto: GenerateBudgetFromSoDto,
+  ) {
     const budget = await this.findOne(tenantId, budgetId);
-    if (budget.status === 'approved') throw new BadRequestException('Cannot generate lines for approved budgets');
+    if (budget.status === 'approved')
+      throw new BadRequestException('Cannot generate lines for approved budgets');
 
     const resolveAccount = async (accountNumber: string) => {
       const acct = await this.prisma.account.findFirst({
@@ -242,8 +308,8 @@ export class BudgetsService {
     };
 
     const defaultMaterialAcct = await resolveAccount(dto.defaultMaterialAccount ?? '5.1.02');
-    const defaultLaborAcct    = await resolveAccount(dto.defaultLaborAccount    ?? '5.1.03');
-    const defaultRevenueAcct  = await resolveAccount(dto.defaultRevenueAccount  ?? '4.1.01');
+    const defaultLaborAcct = await resolveAccount(dto.defaultLaborAccount ?? '5.1.03');
+    const defaultRevenueAcct = await resolveAccount(dto.defaultRevenueAccount ?? '4.1.01');
 
     const salesOrders = await this.prisma.salesOrder.findMany({
       where: { tenantId, deletedAt: null, status: { in: dto.soStatuses } },
@@ -258,7 +324,9 @@ export class BudgetsService {
                   include: {
                     components: {
                       where: { deletedAt: null },
-                      include: { consumptionGroup: { select: { id: true, code: true, name: true } } },
+                      include: {
+                        consumptionGroup: { select: { id: true, code: true, name: true } },
+                      },
                     },
                     routings: {
                       where: { isActive: true, deletedAt: null },
@@ -278,11 +346,16 @@ export class BudgetsService {
     if (salesOrders.length === 0) {
       return {
         message: `No Sales Orders found with status: ${dto.soStatuses.join(', ')}`,
-        linesGenerated: 0, linesSkipped: 0, detail: [],
+        linesGenerated: 0,
+        linesSkipped: 0,
+        detail: [],
       };
     }
 
-    const accumulator = new Map<string, { accountId: string; fiscalPeriod: string; amount: number; label: string }>();
+    const accumulator = new Map<
+      string,
+      { accountId: string; fiscalPeriod: string; amount: number; label: string }
+    >();
 
     const addAmount = (accountId: string, fiscalPeriod: string, amount: number, label: string) => {
       const key = `${accountId}|${fiscalPeriod}`;
@@ -306,43 +379,83 @@ export class BudgetsService {
         const promisedDate = line.deliveryDate
           ? new Date(line.deliveryDate)
           : so.promisedDate
-          ? new Date(so.promisedDate)
-          : new Date(so.orderDate);
+            ? new Date(so.promisedDate)
+            : new Date(so.orderDate);
 
-        const leadTimeDays        = line.item?.leadTimeDays ?? 0;
+        const leadTimeDays = line.item?.leadTimeDays ?? 0;
         const productionStartDate = new Date(promisedDate);
         productionStartDate.setDate(productionStartDate.getDate() - leadTimeDays);
 
         const revenuePeriod = toFiscalPeriod(promisedDate);
-        const costPeriod    = toFiscalPeriod(productionStartDate);
+        const costPeriod = toFiscalPeriod(productionStartDate);
 
         // Revenue
         const revenueAmount = Number(line.lineTotal);
         if (revenueAmount > 0) {
           addAmount(defaultRevenueAcct.id, revenuePeriod, revenueAmount, 'Revenue');
-          detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'revenue', period: revenuePeriod, amount: revenueAmount });
+          detail.push({
+            so: so.soNumber,
+            line: line.lineNumber,
+            item: line.item?.code,
+            type: 'revenue',
+            period: revenuePeriod,
+            amount: revenueAmount,
+          });
         }
 
         const bom = line.item?.boms?.[0];
         if (bom) {
           // Materials
           for (const comp of bom.components) {
-            const totalQty    = Number(comp.quantityPer) * qty * (1 + Number(comp.scrapPercent) / 100);
-            const unitCost    = 0;
-            const matAmount   = totalQty * unitCost;
+            const totalQty = Number(comp.quantityPer) * qty * (1 + Number(comp.scrapPercent) / 100);
+            const unitCost = 0;
+            const matAmount = totalQty * unitCost;
             if (matAmount <= 0) continue;
-            addAmount(defaultMaterialAcct.id, costPeriod, matAmount, `Material: ${(comp as any).consumptionGroup?.code ?? 'unknown'}`);
-            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'material', component: (comp as any).consumptionGroup?.code ?? 'unknown', period: costPeriod, qty: totalQty, unitCost, amount: matAmount });
+            addAmount(
+              defaultMaterialAcct.id,
+              costPeriod,
+              matAmount,
+              `Material: ${(comp as any).consumptionGroup?.code ?? 'unknown'}`,
+            );
+            detail.push({
+              so: so.soNumber,
+              line: line.lineNumber,
+              item: line.item?.code,
+              type: 'material',
+              component: (comp as any).consumptionGroup?.code ?? 'unknown',
+              period: costPeriod,
+              qty: totalQty,
+              unitCost,
+              amount: matAmount,
+            });
           }
 
           // Labor
           for (const step of bom.routings) {
-            const totalHours  = Number(step.setupTime) + Number(step.runTimePerUnit) * qty;
-            const costPerHour = step.workCenter.costPerHour ? Number(step.workCenter.costPerHour) : 0;
+            const totalHours = Number(step.setupTime) + Number(step.runTimePerUnit) * qty;
+            const costPerHour = step.workCenter.costPerHour
+              ? Number(step.workCenter.costPerHour)
+              : 0;
             const laborAmount = totalHours * costPerHour;
             if (laborAmount <= 0) continue;
-            addAmount(defaultLaborAcct.id, costPeriod, laborAmount, `Labor: ${step.workCenter.code} step ${step.stepNumber}`);
-            detail.push({ so: so.soNumber, line: line.lineNumber, item: line.item?.code, type: 'labor', workCenter: step.workCenter.code, step: step.stepNumber, period: costPeriod, hours: totalHours, costPerHour, amount: laborAmount });
+            addAmount(
+              defaultLaborAcct.id,
+              costPeriod,
+              laborAmount,
+              `Labor: ${step.workCenter.code} step ${step.stepNumber}`,
+            );
+            detail.push({
+              so: so.soNumber,
+              line: line.lineNumber,
+              item: line.item?.code,
+              type: 'labor',
+              workCenter: step.workCenter.code,
+              step: step.stepNumber,
+              period: costPeriod,
+              hours: totalHours,
+              costPerHour,
+              amount: laborAmount,
+            });
           }
         }
       }
@@ -350,18 +463,26 @@ export class BudgetsService {
 
     if (accumulator.size === 0) {
       return {
-        message: 'No budget amounts calculated — check that items have BOMs with components/routing and standardCost is set',
-        linesGenerated: 0, linesSkipped: 0, detail,
+        message:
+          'No budget amounts calculated — check that items have BOMs with components/routing and standardCost is set',
+        linesGenerated: 0,
+        linesSkipped: 0,
+        detail,
       };
     }
 
     let linesGenerated = 0;
-    let linesSkipped   = 0;
+    let linesSkipped = 0;
     const upsertedLines: any[] = [];
 
     for (const [, entry] of accumulator) {
       const existing = await this.prisma.budgetLine.findFirst({
-        where: { budgetId, accountId: entry.accountId, fiscalPeriod: entry.fiscalPeriod, deletedAt: null },
+        where: {
+          budgetId,
+          accountId: entry.accountId,
+          fiscalPeriod: entry.fiscalPeriod,
+          deletedAt: null,
+        },
       });
 
       if (existing) {
@@ -378,12 +499,14 @@ export class BudgetsService {
       } else {
         await this.prisma.budgetLine.create({
           data: {
-            tenantId, budgetId,
-            accountId:    entry.accountId,
+            tenantId,
+            budgetId,
+            accountId: entry.accountId,
             fiscalPeriod: entry.fiscalPeriod,
             budgetAmount: new Decimal(entry.amount),
-            notes:        `Auto-generated from Sales Orders — ${entry.label}`,
-            createdBy: userId, updatedBy: userId,
+            notes: `Auto-generated from Sales Orders — ${entry.label}`,
+            createdBy: userId,
+            updatedBy: userId,
           },
         });
         linesGenerated++;
@@ -394,14 +517,14 @@ export class BudgetsService {
     const updatedBudget = await this.findOne(tenantId, budgetId);
 
     return {
-      message:              `Budget generation complete — ${linesGenerated} lines generated, ${linesSkipped} skipped`,
+      message: `Budget generation complete — ${linesGenerated} lines generated, ${linesSkipped} skipped`,
       linesGenerated,
       linesSkipped,
       salesOrdersProcessed: salesOrders.length,
-      soLineItems:          detail.length,
+      soLineItems: detail.length,
       upsertedLines,
       detail,
-      budget:               updatedBudget,
+      budget: updatedBudget,
     };
   }
 }

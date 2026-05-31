@@ -1,10 +1,24 @@
 ﻿import {
-  Controller, Get, Post, Body, Patch, Param,
-  Delete, UseGuards, Request, HttpCode, HttpStatus, Query,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiBearerAuth,
-  ApiResponse, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { BomService } from './bom.service';
 import { CreateBomDto } from './dto/create-bom.dto';
@@ -58,7 +72,11 @@ export class BomController {
     @Param('id') id: string,
     @Param('quantity') quantity: string,
   ) {
-    return this.bomService.calculateMaterialRequirements(req.user.tenantId, id, parseFloat(quantity));
+    return this.bomService.calculateMaterialRequirements(
+      req.user.tenantId,
+      id,
+      parseFloat(quantity),
+    );
   }
 
   @Patch(':id')
@@ -136,7 +154,8 @@ export class BomController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({
     summary: 'Calculate labor estimate for a production quantity',
-    description: 'Uses routing steps + work center cost rates to estimate total hours and cost. Used by Budget Auto-generation (Sprint 8) and MO labor suggestions.',
+    description:
+      'Uses routing steps + work center cost rates to estimate total hours and cost. Used by Budget Auto-generation (Sprint 8) and MO labor suggestions.',
   })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'quantity', description: 'Production quantity' })
@@ -155,7 +174,8 @@ export class BomController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({
     summary: 'Get material suggestions for a production quantity',
-    description: 'Returns BOM components × quantity with scrap included. Used to pre-fill MO material actuals.',
+    description:
+      'Returns BOM components × quantity with scrap included. Used to pre-fill MO material actuals.',
   })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'quantity', description: 'Production quantity' })

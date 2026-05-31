@@ -28,7 +28,7 @@ export class AppController {
     try {
       // Very simple test - just try to connect
       await this.prisma.$executeRaw`SELECT 1`;
-      
+
       return {
         status: 'connected',
         message: 'Database connection successful',
