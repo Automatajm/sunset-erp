@@ -1,6 +1,6 @@
 # spec-002 — Suppliers (Procurement Master Data)
 
-Status: **Implemented** — all acceptance criteria met (ready to ship)  
+Status: **Complete**  
 Owner: Procurement  
 Sprint: TBD  
 Module(s): `suppliers`  
@@ -230,3 +230,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/suppliers
 | Date | Action | Result |
 |---|---|---|
 | 2026-05-31 | Spec generated from code by `spec-generator` (`/new-spec suppliers`) | 5 endpoints; 18 [x] / 6 [ ] acceptance criteria; tests scaffolded |
+| 2026-05-31 | Shipped to origin (`b8080a2`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%); unit 9/9, e2e 11/11 |
