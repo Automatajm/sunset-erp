@@ -229,7 +229,7 @@ export class WarehousesService {
     });
 
     const zoneCount = await this.prisma.warehouseZone.count({
-      where: { warehouseId, deletedAt: null },
+      where: { tenantId, warehouseId, deletedAt: null },
     });
     const aisleCount = await this.prisma.warehouseAisle.count({
       where: { tenantId, deletedAt: null, zone: { warehouseId } },
@@ -303,18 +303,21 @@ export class WarehousesService {
       if (existing) throw new ConflictException(`Warehouse with code ${codeUpper} already exists`);
       dto.code = codeUpper;
     }
-    return this.prisma.warehouse.update({
-      where: { id },
+    // Tenant-scoped write: the write itself enforces tenancy, not just the preceding findOne.
+    await this.prisma.warehouse.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
     });
+    return this.findOne(tenantId, id);
   }
 
   // ── Remove ────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
     await this.findOne(tenantId, id);
-    await this.prisma.warehouse.update({
-      where: { id },
+    // Tenant-scoped soft delete: the write itself enforces tenancy.
+    await this.prisma.warehouse.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Warehouse deleted successfully', id };

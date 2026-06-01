@@ -2,7 +2,9 @@
 // FILE: backend/src/modules/warehouses/dto/create-warehouse.dto.ts
 // ============================================================================
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsIn, MaxLength } from 'class-validator';
+
+const WAREHOUSE_TYPES = ['regular', 'consignment', 'transit'];
 
 export class CreateWarehouseDto {
   @ApiPropertyOptional({
@@ -21,11 +23,13 @@ export class CreateWarehouseDto {
 
   @ApiPropertyOptional({
     example: 'regular',
+    enum: WAREHOUSE_TYPES,
     description: 'regular | consignment | transit',
     default: 'regular',
   })
   @IsOptional()
   @IsString()
+  @IsIn(WAREHOUSE_TYPES)
   warehouseType?: string;
 
   @ApiPropertyOptional({ example: 'Zona Industrial Los Minas' })
