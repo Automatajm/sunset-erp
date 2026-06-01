@@ -1,6 +1,6 @@
 # spec-004 — Warehouses (Inventory Locations Master Data)
 
-Status: **Implemented** — all acceptance criteria met (ready to ship)  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: TBD  
 Module(s): `warehouses`  
@@ -311,3 +311,4 @@ cd backend && pnpm build && npx eslint src/modules/warehouses
 |---|---|---|
 | 2026-05-31 | Spec generated from code by `spec-generator` (`/new-spec warehouses`) | 7 endpoints; opportunity-finder score 25; gaps: tenant-scoped update/remove writes, `getStats` zone-count `tenantId`, `@IsIn` on `warehouseType`, `@ApiResponse` on all handlers, cross-tenant e2e |
 | 2026-05-31 | Implemented all gaps (tenant-scoped `updateMany` writes, zone-count `tenantId`, `@IsIn` on `warehouseType`, `@ApiResponse` ×7) + unit/e2e tests | All acceptance criteria met; ready to ship |
+| 2026-05-31 | Shipped to origin (cb9f71a); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%); unit 20/20 + e2e 13/13 |
