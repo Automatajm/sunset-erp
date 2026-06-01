@@ -34,3 +34,6 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/*_migration.sql
+
+# Claude Code — local agent memory (machine-specific absolute paths); keep tooling tracked
+.claude/projects/
