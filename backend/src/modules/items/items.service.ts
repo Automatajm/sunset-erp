@@ -65,6 +65,10 @@ export class ItemsService {
   // ── Auto-code generator ────────────────────────────────────────────────────
   private async generateItemCode(tenantId: string): Promise<string> {
     const PREFIX = 'ITEM-';
+    // NOTE: intentionally NOT scoped to `deletedAt: null`. The `@@unique([tenantId, code])`
+    // constraint spans soft-deleted rows, so a soft-deleted item still occupies its code.
+    // Considering all codes (including soft-deleted) guarantees we never regenerate a code that
+    // would collide on the unique constraint.
     const items = await this.prisma.item.findMany({
       where: { tenantId, code: { startsWith: PREFIX } },
       select: { code: true },
@@ -168,11 +172,14 @@ export class ItemsService {
   async findAll(tenantId: string, itemType?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (itemType) where.itemType = itemType;
-    return this.prisma.item.findMany({
+    // Item has no sensitive (banking/PII) columns, so the list returns the full row;
+    // the envelope just adds `count` to match the list-response convention.
+    const items = await this.prisma.item.findMany({
       where,
       orderBy: { code: 'asc' },
       include: ITEM_INCLUDE,
     });
+    return { items, count: items.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -326,19 +333,21 @@ export class ItemsService {
       data.storageToConsumptionFactor = autoStorageFactor;
     }
 
-    return this.prisma.item.update({
-      where: { id },
+    // Tenant-scoped write: the write itself enforces tenancy, not just the preceding findOne.
+    await this.prisma.item.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data,
-      include: ITEM_INCLUDE,
     });
+    return this.findOne(tenantId, id);
   }
 
   // ── Delete ─────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    const item = await this.prisma.item.update({
-      where: { id },
+    const item = await this.findOne(tenantId, id);
+    // Tenant-scoped soft delete: the write itself enforces tenancy.
+    await this.prisma.item.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Item deleted successfully', id: item.id };

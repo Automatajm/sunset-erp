@@ -1,8 +1,20 @@
 ﻿// ============================================================================
 // FILE: backend/src/modules/items/dto/create-item.dto.ts
 // ============================================================================
-import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsUUID,
+  IsIn,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+const ITEM_TYPES = ['raw_material', 'finished_good', 'work_in_progress', 'service'];
+const VALUATION_METHODS = ['average', 'fifo', 'standard'];
 
 export class CreateItemDto {
   // ── Identity ────────────────────────────────────────────────────────────────
@@ -28,9 +40,11 @@ export class CreateItemDto {
 
   @ApiProperty({
     example: 'raw_material',
+    enum: ITEM_TYPES,
     description: 'raw_material | finished_good | work_in_progress | service',
   })
   @IsString()
+  @IsIn(ITEM_TYPES)
   @MaxLength(50)
   itemType: string;
 
@@ -149,9 +163,14 @@ export class CreateItemDto {
 
   // ── Valuation ───────────────────────────────────────────────────────────────
 
-  @ApiPropertyOptional({ example: 'average', description: 'average | fifo | standard' })
+  @ApiPropertyOptional({
+    example: 'average',
+    enum: VALUATION_METHODS,
+    description: 'average | fifo | standard',
+  })
   @IsOptional()
   @IsString()
+  @IsIn(VALUATION_METHODS)
   @MaxLength(50)
   valuationMethod?: string;
 
