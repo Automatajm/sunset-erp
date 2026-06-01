@@ -1,6 +1,6 @@
 # spec-001 — Foundation & Auth/RBAC Layer
 
-Status: **Active**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: Foundation  
 Module(s): `auth`, `database`, `common`, `prisma/seeds`  
@@ -370,3 +370,4 @@ pnpm build && pnpm lint
 | 2026-05-31 | Extracted `CacheService` (leaf, `CommonModule`); wired invalidation into `assignRoles` + `setPermissions` | Boot ✅ (no DI cycle), build ✅, lint (changed files) ✅ |
 | 2026-05-31 | Invalidation verified live | `assignRoles` clears user key (1→0); `setPermissions` fan-out clears holder (1→0); state restored |
 | 2026-05-31 | Fail-open verified with Redis stopped | login, profile (42 perms from DB), guarded routes (200), and 409/401 error paths all work; auth unaffected |
+| 2026-05-31 | Shipped to `origin/main` (`751b69c`, `8b474f7`, `05f58ae`); spec marked **Complete** and moved to `specs/completed/` | All acceptance criteria met and verified live |
