@@ -39,7 +39,10 @@ export class SuppliersController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all suppliers' })
-  @ApiResponse({ status: 200, description: 'List of suppliers' })
+  @ApiResponse({
+    status: 200,
+    description: 'Envelope { suppliers, count }; banking fields omitted from the summary',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   async findAll(@Request() req) {
     return this.suppliersService.findAll(req.user.tenantId);

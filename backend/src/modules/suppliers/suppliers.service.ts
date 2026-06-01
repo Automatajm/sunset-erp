@@ -15,6 +15,10 @@ export class SuppliersService {
   private async generateCode(tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `SUP-${year}`;
+    // NOTE: intentionally NOT scoped to `deletedAt: null`. The `@@unique([tenantId, code])`
+    // constraint spans soft-deleted rows, so a soft-deleted supplier still occupies its code.
+    // Considering all codes (including soft-deleted) guarantees we never regenerate a code that
+    // would collide on the unique constraint.
     const last = await this.prisma.supplier.findFirst({
       where: { tenantId, code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
@@ -78,10 +82,15 @@ export class SuppliersService {
   // ── Find All ───────────────────────────────────────────────────────────────
 
   async findAll(tenantId: string) {
-    return this.prisma.supplier.findMany({
+    // List is a summary projection: sensitive banking fields are stripped here.
+    // The detail endpoint (findOne) returns the full row.
+    const rows = await this.prisma.supplier.findMany({
       where: { tenantId, deletedAt: null },
       orderBy: { code: 'asc' },
     });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional drop of sensitive fields
+    const suppliers = rows.map(({ bankAccount, bankRouting, ...rest }) => rest);
+    return { suppliers, count: suppliers.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -106,18 +115,21 @@ export class SuppliersService {
       if (duplicate) throw new ConflictException(`Supplier with code ${dto.code} already exists`);
     }
 
-    return this.prisma.supplier.update({
-      where: { id },
+    // Tenant-scoped write: the write itself enforces tenancy, not just the preceding findOne.
+    await this.prisma.supplier.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
     });
+    return this.findOne(tenantId, id);
   }
 
   // ── Remove ─────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    const supplier = await this.prisma.supplier.update({
-      where: { id },
+    const supplier = await this.findOne(tenantId, id);
+    // Tenant-scoped soft delete: the write itself enforces tenancy.
+    await this.prisma.supplier.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Supplier deleted successfully', id: supplier.id };

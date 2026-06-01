@@ -58,13 +58,13 @@ export class CreateSupplierDto {
 
   @ApiPropertyOptional({ example: 'contact@acme.com' })
   @IsOptional()
-  @IsString()
+  @IsEmail()
   @MaxLength(255)
   email?: string;
 
   @ApiPropertyOptional({ example: 'https://acme.com' })
   @IsOptional()
-  @IsString()
+  @IsUrl()
   @MaxLength(255)
   website?: string;
 
@@ -83,7 +83,7 @@ export class CreateSupplierDto {
 
   @ApiPropertyOptional({ example: 'jperez@acme.com' })
   @IsOptional()
-  @IsString()
+  @IsEmail()
   @MaxLength(255)
   contactEmail?: string;
 
