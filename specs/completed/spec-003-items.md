@@ -1,6 +1,6 @@
 # spec-003 — Items (Inventory Master Data)
 
-Status: **Implemented** — all acceptance criteria met (ready to ship)  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: TBD  
 Module(s): `items`  
@@ -296,3 +296,4 @@ cd backend && pnpm build && npx eslint src/modules/items
 | Date | Action | Result |
 |---|---|---|
 | 2026-05-31 | Spec generated from code by `spec-generator` (`/new-spec items`) | 7 endpoints; opportunity-finder score 21; gaps: tenant-scoped writes, `generateItemCode` decision, `@IsIn` on `itemType`/`valuationMethod`, `{ items, count }` envelope, cross-tenant e2e |
+| 2026-05-31 | Shipped to origin (24be2e7); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%); unit 17/17 + e2e 15/15 |
