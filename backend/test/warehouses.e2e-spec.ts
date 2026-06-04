@@ -16,11 +16,21 @@ describe('Warehouses (e2e)', () => {
   let token: string; // tenant A — DEMO
   let tokenB: string; // tenant B — TENANT2
 
-  const login = (email: string) =>
-    request(app.getHttpServer())
+  // Handles both login shapes from spec-001: single tenant (token is already
+  // tenant-scoped) and multi-tenant (requiresTenantSelection -> select the default tenant).
+  const login = async (email: string) => {
+    const r = await request(app.getHttpServer())
       .post('/api/auth/login')
-      .send({ email, password: 'Admin123!' })
-      .then((r) => r.body.access_token);
+      .send({ email, password: 'Admin123!' });
+    if (!r.body.requiresTenantSelection) return r.body.access_token;
+    const tenant =
+      r.body.tenants.find((t: { isDefault: boolean }) => t.isDefault) ?? r.body.tenants[0];
+    const s = await request(app.getHttpServer())
+      .post('/api/auth/select-tenant')
+      .set('Authorization', `Bearer ${r.body.access_token}`)
+      .send({ tenantId: tenant.id });
+    return s.body.access_token;
+  };
 
   beforeAll(async () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
