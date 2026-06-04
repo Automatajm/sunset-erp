@@ -21,8 +21,12 @@ export class WarehousesService {
 
   private async generateCode(tenantId: string, warehouseType: string): Promise<string> {
     const prefix = `WH-${TYPE_PREFIX[warehouseType] ?? 'REG'}`;
+    // NOTE: intentionally NOT scoped to `deletedAt: null`. The `@@unique([tenantId, code])`
+    // constraint spans soft-deleted rows, so a soft-deleted warehouse still occupies its
+    // code — filtering them out regenerates occupied codes and creates fail with P2002
+    // (same convention as suppliers.service.ts generateCode).
     const last = await this.prisma.warehouse.findFirst({
-      where: { tenantId, code: { startsWith: prefix }, deletedAt: null },
+      where: { tenantId, code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
     });
     if (!last) return `${prefix}-001`;
