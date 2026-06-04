@@ -21,14 +21,14 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 7 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts` |
-| Pending | 31 |
+| Specced (Done) | 8 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups` |
+| Pending | 30 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
 must be back-filled to restore cascade integrity:
 
-- `items` (spec-003) depends on → `uom` ✅ (spec-005), `categories` ⬜, `consumption-groups` ⬜
+- `items` (spec-003) depends on → `uom` ✅ (spec-005), `categories` ⬜, `consumption-groups` ✅ (spec-008)
 - `suppliers` (spec-002) depends on → `items` ✅ (ok)
 - `warehouses` (spec-004) depends on → nothing (ok)
 
@@ -60,7 +60,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 ### Tier 1 — depend only on Tier 0
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
-| ⬜ | consumption-groups | ConsumptionGroup | uom |
+| ✅ spec-008 | consumption-groups | ConsumptionGroup | uom |
 | ⬜ | categories | Category | chart-of-accounts, macro-categories |
 | ⬜ | tenant-settings | TenantSettings | uom |
 | ⬜ | journal-entries | JournalEntry, JournalEntryLine | chart-of-accounts |
@@ -117,8 +117,8 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 1. ~~**uom**~~ ✅ spec-005 — Tier 0, prerequisite of items✅, consumption-groups, bom, stock-*, supplier-items, procurement. Highest leverage.
 2. ~~**macro-categories**~~ ✅ spec-006 — Tier 0, prerequisite of categories.
 3. ~~**chart-of-accounts**~~ ✅ spec-007 — Tier 0, prerequisite of journal-entries, budgets, cash-flow, categories, invoices.
-4. **consumption-groups** — Tier 1, prerequisite of items✅, bom, general-needs. ← **next**
-5. **categories** — Tier 1, prerequisite of items✅.
+4. ~~**consumption-groups**~~ ✅ spec-008 — Tier 1, prerequisite of items✅, bom, general-needs.
+5. **categories** — Tier 1, prerequisite of items✅. ← **next**
 6. **customers** — Tier 0, prerequisite of sales-orders, ar-invoices.
 7. **work-centers** — Tier 0, prerequisite of bom.
 8. **warehouse-locations** — Tier 1, prerequisite of stock-*.

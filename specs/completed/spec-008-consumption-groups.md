@@ -1,6 +1,6 @@
 # spec-008 — Consumption Groups (MRP Aggregation)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: 19  
 Module(s): `consumption-groups` (touches `uom` for the cross-module UOM lookup; no frontend consumers yet)  
@@ -53,13 +53,13 @@ the gaps above — with **no schema changes**.
       `CG-YYYY-NNNN` (per tenant, zero-padded, soft-deleted rows occupy their codes);
       `code` is never accepted from the client; defaults `isActive: true`; returns the
       entity with `consumptionUom` and `_count.items`.
-- [ ] `POST` (and `PATCH` when `consumptionUomId` is present) validates that
+- [x] `POST` (and `PATCH` when `consumptionUomId` is present) validates that
       `consumptionUomId` resolves to an existing UOM unit via the injected
       `UomService.findOneUnit` → `404` ("UOM unit … not found") instead of the current
       FK-violation `500`.
 - [x] `GET /api/consumption-groups` — lists the tenant's active groups ordered by `code`
       asc, each with `consumptionUom` and `_count.items`.
-- [ ] `GET /api/consumption-groups` returns the list envelope
+- [x] `GET /api/consumption-groups` returns the list envelope
       `{ consumptionGroups: [...], count: <n> }` (spec-001 convention; currently a bare
       array; no frontend consumers to update).
 - [x] `GET /api/consumption-groups/:id` — returns the group with its active member items
@@ -68,17 +68,17 @@ the gaps above — with **no schema changes**.
 - [x] `PATCH /api/consumption-groups/:id` — partial update; `404` when not found.
 - [x] `DELETE /api/consumption-groups/:id` — soft delete; `404` when not found; returns
       `{ message, id }`.
-- [ ] `DELETE` is blocked with `400` (message includes the live count) while active items
+- [x] `DELETE` is blocked with `400` (message includes the live count) while active items
       are still assigned to the group.
 
 ### Tenant scoping (CLAUDE.md invariant)
 - [x] All reads (`findAll`, `findOne`) scoped `where: { tenantId, deletedAt: null }` with
       `tenantId` from `req.user.tenantId`; `findOne`'s items include filtered
       `deletedAt: null`. (`generateCode` spans soft-deleted rows by documented design.)
-- [ ] `update()` write is tenant-scoped at the write itself:
+- [x] `update()` write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })`, then re-fetch via the
       scoped read to preserve the response shape (`consumption-groups.service.ts:92-93`).
-- [ ] `remove()` soft-delete write is tenant-scoped at the write itself
+- [x] `remove()` soft-delete write is tenant-scoped at the write itself
       (`consumption-groups.service.ts:103-104`).
 - [x] `create` writes `tenantId` from the JWT; never from request body or headers.
 
@@ -88,12 +88,12 @@ the gaps above — with **no schema changes**.
 - [x] `findOne` computes `totalConsumptionQty` =
       Σ over active items (Σ stock.onHandQuantity × purchaseToConsumptionFactor),
       rounded to 3 decimals.
-- [ ] Delete guard counts **active** member items via the group's own relation
+- [x] Delete guard counts **active** member items via the group's own relation
       (`_count` / relation include on `ConsumptionGroup` — no direct `prisma.item.*`
       query from this module) and throws `400` while > 0.
 
 ### Module interconnection
-- [ ] `ConsumptionGroupsModule` imports `UomModule` and injects `UomService`;
+- [x] `ConsumptionGroupsModule` imports `UomModule` and injects `UomService`;
       `create`/`update` call `UomService.findOneUnit(consumptionUomId)` for FK
       validation (UomUnit is a global catalog — no tenant scope, per the uom module's
       documented design). No direct `prisma.uomUnit.*` access from this module.
@@ -114,14 +114,14 @@ the gaps above — with **no schema changes**.
 
 ### Error handling
 - [x] `404 NotFoundException` — `findOne`/`update`/`remove` on missing or other-tenant id.
-- [ ] `404 NotFoundException` — `create`/`update` with a `consumptionUomId` that does not
+- [x] `404 NotFoundException` — `create`/`update` with a `consumptionUomId` that does not
       resolve (currently `500`).
-- [ ] `400 BadRequestException` — delete blocked while active items are assigned; message
+- [x] `400 BadRequestException` — delete blocked while active items are assigned; message
       includes the live count.
 
 ### Swagger
 - [x] Every handler has `@ApiOperation` + `@ApiResponse` and `@ApiParam` on `:id` routes.
-- [ ] POST's stale `409` response is removed (no duplicate path exists) and the new `404`
+- [x] POST's stale `409` response is removed (no duplicate path exists) and the new `404`
       (bad UOM) / `400` (delete guard) responses are documented.
 
 ---
@@ -307,3 +307,4 @@ cd backend && pnpm build && pnpm test consumption-groups
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 17) | Draft — 4 invariant gaps (2 unscoped writes, unvalidated UOM FK → 500, missing delete guard) + list-envelope + stale-Swagger gaps captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (673cd73); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 16/16, e2e 16/16 (full suite 101/101 serialized), build + lint green. Side fixes: warehouses generateCode P2002 (9621cb5), e2e serialization (007f973) |
