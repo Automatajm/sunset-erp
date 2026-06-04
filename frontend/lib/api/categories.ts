@@ -4,8 +4,9 @@ import { Category, CreateCategoryDto, UpdateCategoryDto } from './types';
  
 export const categoriesApi = {
   getAll: async (params?: { macroCategoryId?: string }): Promise<Category[]> => {
+    // List endpoint returns an envelope { categories, count } (spec-009)
     const res = await apiClient.get('/categories', { params });
-    return res.data;
+    return res.data.categories ?? [];
   },
   getById: async (id: string): Promise<Category> => {
     const res = await apiClient.get(`/categories/${id}`);

@@ -120,7 +120,8 @@ export default function AssignmentModal({ sessionId, warehouseId, onClose, onSav
         apiClient.get(`/stock-reconciliation/${sessionId}/assignments`),
       ]);
       setUsers(usersRes.data.users ?? []);
-      setCategories(catsRes.data ?? []);
+      // /categories returns an envelope { categories, count } (spec-009)
+      setCategories(catsRes.data.categories ?? []);
       // /macro-categories returns an envelope { macroCategories, count } (spec-006)
       setMacroCategories(macroCatsRes.data.macroCategories ?? []);
       setAssignments(assignRes.data ?? []);

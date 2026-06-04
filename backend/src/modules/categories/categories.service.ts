@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ChartOfAccountsService } from '../chart-of-accounts/chart-of-accounts.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
@@ -18,17 +19,39 @@ const INCLUDE = {
 
 @Injectable()
 export class CategoriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private chartOfAccountsService: ChartOfAccountsService,
+  ) {}
+
+  // GL accounts must resolve IN the tenant (Prisma FKs are not tenant-composite) —
+  // delegate to the owning module's scoped findOne, which throws the 404 (spec-009).
+  private async validateAccounts(
+    tenantId: string,
+    dto: { inventoryAccountId?: string; cogsAccountId?: string },
+  ) {
+    if (dto.inventoryAccountId)
+      await this.chartOfAccountsService.findOne(tenantId, dto.inventoryAccountId);
+    if (dto.cogsAccountId) await this.chartOfAccountsService.findOne(tenantId, dto.cogsAccountId);
+  }
+
+  // Scoped MacroCategory lookup — direct query is the documented exception
+  // (MacroCategoriesModule imports CategoriesModule since spec-006; the reverse
+  // import would cycle).
+  private async validateMacroCategory(tenantId: string, macroCategoryId: string) {
+    const mc = await this.prisma.macroCategory.findFirst({
+      where: { id: macroCategoryId, tenantId, deletedAt: null },
+    });
+    if (!mc) throw new NotFoundException(`MacroCategory ${macroCategoryId} not found`);
+  }
 
   async create(tenantId: string, userId: string, dto: CreateCategoryDto) {
     const existing = await this.prisma.category.findFirst({
       where: { tenantId, code: dto.code, deletedAt: null },
     });
     if (existing) throw new ConflictException(`Category code ${dto.code} already exists`);
-    const mc = await this.prisma.macroCategory.findFirst({
-      where: { id: dto.macroCategoryId, tenantId, deletedAt: null },
-    });
-    if (!mc) throw new NotFoundException(`MacroCategory ${dto.macroCategoryId} not found`);
+    await this.validateMacroCategory(tenantId, dto.macroCategoryId);
+    await this.validateAccounts(tenantId, dto);
     return this.prisma.category.create({
       data: {
         tenantId,
@@ -44,11 +67,12 @@ export class CategoriesService {
   async findAll(tenantId: string, macroCategoryId?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (macroCategoryId) where.macroCategoryId = macroCategoryId;
-    return this.prisma.category.findMany({
+    const categories = await this.prisma.category.findMany({
       where,
       include: INCLUDE,
       orderBy: [{ macroCategory: { code: 'asc' } }, { code: 'asc' }],
     });
+    return { categories, count: categories.length };
   }
 
   // Cross-module count for MacroCategoriesService.remove's delete guard (spec-006) —
@@ -81,22 +105,36 @@ export class CategoriesService {
       });
       if (conflict) throw new ConflictException(`Category code ${dto.code} already exists`);
     }
-    return this.prisma.category.update({
-      where: { id },
+    // Re-parenting and GL mapping must resolve in-tenant (spec-009).
+    if (dto.macroCategoryId !== undefined)
+      await this.validateMacroCategory(tenantId, dto.macroCategoryId);
+    await this.validateAccounts(tenantId, dto);
+    // Tenant scope enforced at the write itself (updateMany — Prisma update() only
+    // accepts unique wheres), then re-fetch to preserve the response shape.
+    await this.prisma.category.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
+    });
+    return this.prisma.category.findFirst({
+      where: { id, tenantId, deletedAt: null },
       include: INCLUDE,
     });
   }
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    const itemCount = await this.prisma.item.count({ where: { categoryId: id, deletedAt: null } });
-    if (itemCount > 0)
+    // Own-relation filtered count — tenant safety follows from the scoped parent row;
+    // no direct cross-module Item query (spec-009).
+    const cat = await this.prisma.category.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: { _count: { select: { items: { where: { deletedAt: null } } } } },
+    });
+    if (!cat) throw new NotFoundException(`Category ${id} not found`);
+    if (cat._count.items > 0)
       throw new BadRequestException(
-        `Cannot delete: ${itemCount} items still assigned to this category`,
+        `Cannot delete: ${cat._count.items} items still assigned to this category`,
       );
-    await this.prisma.category.update({
-      where: { id },
+    await this.prisma.category.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Category deleted successfully', id };

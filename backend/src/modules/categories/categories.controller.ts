@@ -69,7 +69,10 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Update category' })
   @ApiParam({ name: 'id', description: 'Category UUID' })
   @ApiResponse({ status: 200, description: 'Category updated successfully' })
-  @ApiResponse({ status: 404, description: 'Category not found' })
+  @ApiResponse({
+    status: 404,
+    description: 'Category, macro category, or GL account not found in tenant',
+  })
   @ApiResponse({ status: 409, description: 'Code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(req.user.tenantId, req.user.id, id, dto);
