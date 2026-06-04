@@ -51,6 +51,14 @@ export class CategoriesService {
     });
   }
 
+  // Cross-module count for MacroCategoriesService.remove's delete guard (spec-006) —
+  // keeps Category queries owned by this module.
+  async countByMacroCategory(tenantId: string, macroCategoryId: string): Promise<number> {
+    return this.prisma.category.count({
+      where: { tenantId, macroCategoryId, deletedAt: null },
+    });
+  }
+
   async findOne(tenantId: string, id: string) {
     const cat = await this.prisma.category.findFirst({
       where: { id, tenantId, deletedAt: null },

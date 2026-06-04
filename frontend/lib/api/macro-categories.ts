@@ -4,8 +4,9 @@ import { MacroCategory, CreateMacroCategoryDto, UpdateMacroCategoryDto } from '.
  
 export const macroCategoriesApi = {
   getAll: async (): Promise<MacroCategory[]> => {
+    // List endpoint returns an envelope { macroCategories, count } (spec-006)
     const res = await apiClient.get('/macro-categories');
-    return res.data;
+    return res.data.macroCategories ?? [];
   },
   getById: async (id: string): Promise<MacroCategory> => {
     const res = await apiClient.get(`/macro-categories/${id}`);

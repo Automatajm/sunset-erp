@@ -121,7 +121,8 @@ export default function AssignmentModal({ sessionId, warehouseId, onClose, onSav
       ]);
       setUsers(usersRes.data.users ?? []);
       setCategories(catsRes.data ?? []);
-      setMacroCategories(macroCatsRes.data ?? []);
+      // /macro-categories returns an envelope { macroCategories, count } (spec-006)
+      setMacroCategories(macroCatsRes.data.macroCategories ?? []);
       setAssignments(assignRes.data ?? []);
     } catch {
       setError('Failed to load data');
