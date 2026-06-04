@@ -1,9 +1,8 @@
 // ============================================================================
 // FILE: backend/src/modules/uom/uom.service.ts
 // ============================================================================
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Decimal } from '@prisma/client/runtime/library';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -30,8 +29,16 @@ export class UomService {
   constructor(private prisma: PrismaService) {}
 
   // ── Catalog queries ────────────────────────────────────────────────────────
+  //
+  // UomUnit / UomConversion are GLOBAL reference catalogs (cfg_uom_units /
+  // cfg_uom_conversions): no tenantId, no deletedAt. Units and conversion
+  // factors are universal physics shared across all tenants, so the missing
+  // tenantId/deletedAt scope below is INTENTIONAL — the one deliberate
+  // exception to the CLAUDE.md tenant-scoping invariant. Do not "fix" it.
+  // See specs spec-005-uom.md ("The tenant-scoping exception").
 
   async findAllUnits(filters?: { type?: string; system?: string }) {
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     const where: any = { isActive: true };
     if (filters?.type) where.type = filters.type;
     if (filters?.system) where.system = filters.system;
@@ -42,18 +49,21 @@ export class UomService {
   }
 
   async findOneUnit(id: string) {
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     const unit = await this.prisma.uomUnit.findUnique({ where: { id } });
     if (!unit) throw new NotFoundException(`UOM unit ${id} not found`);
     return unit;
   }
 
   async findUnitByCode(code: string) {
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     const unit = await this.prisma.uomUnit.findUnique({ where: { code } });
     if (!unit) throw new NotFoundException(`UOM unit with code ${code} not found`);
     return unit;
   }
 
   async findAllConversions() {
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     return this.prisma.uomConversion.findMany({
       where: { isActive: true },
       include: {
@@ -65,6 +75,9 @@ export class UomService {
   }
 
   async convert(fromCode: string, toCode: string, quantity: number) {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new BadRequestException(`qty must be a positive number, got ${quantity}`);
+    }
     if (fromCode === toCode) {
       return {
         fromUom: fromCode,
@@ -77,6 +90,7 @@ export class UomService {
     }
     const from = await this.findUnitByCode(fromCode);
     const to = await this.findUnitByCode(toCode);
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     const conversion = await this.prisma.uomConversion.findUnique({
       where: { fromUomId_toUomId: { fromUomId: from.id, toUomId: to.id } },
     });
@@ -99,6 +113,7 @@ export class UomService {
   // Used internally by SupplierItemsService to auto-calculate conversion factors
   async getConversionFactor(fromUomId: string, toUomId: string): Promise<number | null> {
     if (fromUomId === toUomId) return 1;
+    // Global catalog — intentionally no tenantId/deletedAt (see note above)
     const conversion = await this.prisma.uomConversion.findUnique({
       where: { fromUomId_toUomId: { fromUomId, toUomId } },
     });

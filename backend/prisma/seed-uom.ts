@@ -261,7 +261,14 @@ async function main() {
   console.log(`  ✓ ${convCount} UOM conversions seeded`);
 
   // ── Tenant Settings for demo tenant ───────────────────────────────────────
-  const DEMO_TENANT = '2f627a44-df80-4b0f-ba11-6fd44e62f243';
+  // Resolve by code — tenant IDs are environment-specific, never hardcoded
+  const demoTenant = await prisma.tenant.findFirst({ where: { code: 'DEMO' } });
+  if (!demoTenant) {
+    console.log('  ⚠ DEMO tenant not found — skipping tenant settings (run main seed first)');
+    console.log('\nSeed complete ✓ (catalog only)');
+    return;
+  }
+  const DEMO_TENANT = demoTenant.id;
   const ltrId = await get('LTR');
   const kgId  = await get('KG');
   const mId   = await get('M');
