@@ -1,6 +1,6 @@
 # spec-011 — Bill of Materials (Recipes + Routing)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Manufacturing  
 Sprint: 19  
 Module(s): `bom` (touches `items`, `consumption-groups`, `work-centers` for injected validations; `frontend/lib/api/bom.ts` + `frontend/app/settings/bulk-import/page.tsx` for the list envelope)  
@@ -66,24 +66,24 @@ schema changes**.
       sequentially; Decimal fields returned as numbers.
 - [x] `GET /api/bom` — lists the tenant's active BOMs ordered by `bomNumber`, with
       `parentItem` and `_count`; optional `?itemId=` filter.
-- [ ] `GET /api/bom` returns the list envelope `{ boms: [...], count }`; `extractList` in
+- [x] `GET /api/bom` returns the list envelope `{ boms: [...], count }`; `extractList` in
       `frontend/lib/api/bom.ts` and bulk-import's `handleExport` updated in the same
       change.
 - [x] `GET /api/bom/:id` — full BOM (components with consumption groups/UOMs ordered by
       `lineNumber`, active routings ordered by `stepNumber`); `404` in-tenant.
-- [ ] `GET /api/bom/:id` (and every consumer of `BOM_FULL_INCLUDE`) excludes
+- [x] `GET /api/bom/:id` (and every consumer of `BOM_FULL_INCLUDE`) excludes
       **soft-deleted components** (`where: { deletedAt: null }` on the components
       include, matching the routings include).
 - [x] `PATCH /api/bom/:id` — header update (`bomCode`→`bomNumber`, `version`,
       `isActive`, `itemId`→`parentItemId`); `404`; `409` on number collision (self
       excluded).
-- [ ] `PATCH /api/bom/:id` no longer maps the nonexistent `description` column (currently
+- [x] `PATCH /api/bom/:id` no longer maps the nonexistent `description` column (currently
       a guaranteed Prisma 500); the phantom `description` field is removed from
       `CreateBomDto`/`UpdateBomDto`.
-- [ ] `PATCH /api/bom/:id` validates `itemId` re-parenting in-tenant via the injected
+- [x] `PATCH /api/bom/:id` validates `itemId` re-parenting in-tenant via the injected
       `ItemsService` → `404` (closes the cross-tenant vector).
 - [x] `DELETE /api/bom/:id` — soft delete; `404`; `{ message, id }`.
-- [ ] `DELETE /api/bom/:id` is blocked with `400` (live count) while `ProductionPlanLine`
+- [x] `DELETE /api/bom/:id` is blocked with `400` (live count) while `ProductionPlanLine`
       rows reference the BOM (own-relation count).
 
 ### Endpoints — calculations
@@ -94,7 +94,7 @@ schema changes**.
       `qtyPlanned` (scrap included, ceil to 3 decimals).
 - [x] `GET /api/bom/:id/routing/labor-estimate/:quantity` — per-step setup/run hours and
       cost from work-center rates; empty-steps shape with `message`.
-- [ ] The three `:quantity` path params are validated (`ParseFloatPipe`) → `400` on
+- [x] The three `:quantity` path params are validated (`ParseFloatPipe`) → `400` on
       non-numeric input (currently NaN propagates into a 200).
 
 ### Endpoints — routing steps
@@ -109,23 +109,23 @@ schema changes**.
 - [x] All primary reads scoped `{ tenantId, deletedAt: null }` (`findAll`, `findOne`,
       BOM dup-checks, routing step lookups `:307`, `:349`, `getRoutingSteps :288`,
       labor-estimate steps `:367`).
-- [ ] `update()` and `remove()` writes tenant-scoped at the write via `updateMany` +
+- [x] `update()` and `remove()` writes tenant-scoped at the write via `updateMany` +
       re-fetch (`bom.service.ts:173-177`, `:186-189`).
-- [ ] `updateRoutingStep()` and `removeRoutingStep()` writes tenant-scoped at the write
+- [x] `updateRoutingStep()` and `removeRoutingStep()` writes tenant-scoped at the write
       (`:334-338`, `:353-356`).
-- [ ] The routing step-number dup-checks include `tenantId` (`:259-261`, `:319-321`).
-- [ ] The component auto-fill group lookup includes `deletedAt: null` (`:103-105`).
+- [x] The routing step-number dup-checks include `tenantId` (`:259-261`, `:319-321`).
+- [x] The component auto-fill group lookup includes `deletedAt: null` (`:103-105`).
 - [x] `create` writes `tenantId` from the JWT on `Bom`, components, and routing steps.
 
 ### Module interconnection
-- [ ] `BomModule` imports `ItemsModule`, `ConsumptionGroupsModule`, `WorkCentersModule`
+- [x] `BomModule` imports `ItemsModule`, `ConsumptionGroupsModule`, `WorkCentersModule`
       and injects their services for all foreign validations — no direct
       `prisma.item/consumptionGroup/workCenter` queries remain in this module (their
       scoped `findOne`s throw the 404s). `BomRouting`/`BomComponent` stay owned here.
 
 ### Business rules
 - [x] `bomNumber` auto-generation `BOM-YYYY-NNNN`; client-supplied `bomCode` wins.
-- [ ] `generateBomNumber` computes the **numeric** max (not lexicographic `orderBy`) with
+- [x] `generateBomNumber` computes the **numeric** max (not lexicographic `orderBy`) with
       a NaN guard, per the warehouses fix (`390a4e2`); it continues to span soft-deleted
       rows (`@@unique([tenantId, bomNumber, version])` spans them).
 - [x] Scrap math: `scrapQty = requiredQty × scrapPercent / 100`; suggestions ceil to 3
@@ -139,12 +139,12 @@ schema changes**.
       `consumptionGroupId` (`@IsUUID`), `quantity` (`@IsNumber @Min(0.001)`), `uom`
       (`@MaxLength(20)`), `consumptionUomId?` (`@IsUUID`); routing DTOs:
       `stepNumber` (`@Min(1)`), `workCenterId` (`@IsUUID`), times (`@Min(0)`).
-- [ ] `version` is a digit-string (`@Matches(/^\d+$/)`) so `parseInt` can never yield
+- [x] `version` is a digit-string (`@Matches(/^\d+$/)`) so `parseInt` can never yield
       NaN or silently truncate.
-- [ ] `scrapPercent` gains `@Max(100)`; `quantity` gains `@Max(999999999)` (Decimal(15,6))
+- [x] `scrapPercent` gains `@Max(100)`; `quantity` gains `@Max(999999999)` (Decimal(15,6))
       and `setupTime`/`runTimePerUnit` gain `@Max(99999999.99)`-class bounds matching
       their columns.
-- [ ] Phantom fields removed: `description` (Create/Update BOM — no column) and `notes`
+- [x] Phantom fields removed: `description` (Create/Update BOM — no column) and `notes`
       on `CreateBomComponentDto` (no column). `forbidNonWhitelisted` then rejects them
       with `400`.
 - [x] Global `ValidationPipe` (`whitelist, forbidNonWhitelisted, transform`).
@@ -157,12 +157,12 @@ schema changes**.
 ### Error handling
 - [x] `404` — parent item / consumption group / work center / BOM / step not found
       in-tenant; `409` — duplicate `bomNumber`, duplicate `stepNumber`.
-- [ ] `404` — `itemId` re-parent validation on PATCH (currently unchecked).
-- [ ] `400` — delete blocked by production-plan references; non-numeric `:quantity`.
+- [x] `404` — `itemId` re-parent validation on PATCH (currently unchecked).
+- [x] `400` — delete blocked by production-plan references; non-numeric `:quantity`.
 
 ### Swagger
 - [x] Every handler has `@ApiOperation` (+ `@ApiParam`/`@ApiQuery` where applicable).
-- [ ] Every handler has at least one `@ApiResponse` (8 of 12 currently have none) and the
+- [x] Every handler has at least one `@ApiResponse` (8 of 12 currently have none) and the
       new `400`/`404` codes are documented.
 
 ---
@@ -317,3 +317,4 @@ All routes prefixed `/api`, JWT-guarded. Abbreviated — shapes preserved from c
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 61 — highest recorded) | Draft — 4 unscoped writes, MRP contamination by soft-deleted components, cross-tenant re-parent, PATCH-description 500, phantom DTO fields, NaN path params, lexicographic codegen, missing delete guard, 8 handlers without @ApiResponse + list envelope — captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (0462c50); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 24/24, e2e 22/22 (full suite 158/158), build + lint green |

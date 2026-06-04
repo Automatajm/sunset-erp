@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 10 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers` |
-| Pending | 28 |
+| Specced (Done) | 11 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom` |
+| Pending | 27 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -77,7 +77,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
 | ✅ spec-002 | suppliers | Supplier, SupplierScore | items |
-| ⬜ | bom | Bom, BomComponent, BomRouting | consumption-groups, items, uom, work-centers |
+| ✅ spec-011 | bom | Bom, BomComponent, BomRouting | consumption-groups, items, uom, work-centers |
 | ⬜ | stock-transactions | StockMovement, StockLocationUpdate, Stock | items, uom, warehouse-locations, warehouses |
 | ⬜ | stock-reconciliation | StockCountSession, StockCountLine, StockCountAssignment | items, uom, warehouse-locations, warehouses |
 
@@ -119,8 +119,8 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 3. ~~**chart-of-accounts**~~ ✅ spec-007 — Tier 0, prerequisite of journal-entries, budgets, cash-flow, categories, invoices.
 4. ~~**consumption-groups**~~ ✅ spec-008 — Tier 1, prerequisite of items✅, bom, general-needs.
 5. ~~**categories**~~ ✅ spec-009 — Tier 1, prerequisite of items✅.
-6. **customers** — Tier 0, prerequisite of sales-orders, ar-invoices.
+6. **customers** — Tier 0, prerequisite of sales-orders, ar-invoices. ← **next**
 7. ~~**work-centers**~~ ✅ spec-010 — Tier 0, prerequisite of bom.
 8. **warehouse-locations** — Tier 1, prerequisite of stock-*.
 9. **journal-entries** — Tier 1, prerequisite of production-orders, invoices.
-10. **bom** — Tier 3, prerequisite of production cluster. ← **next** (all prerequisites ✅)
+10. ~~**bom**~~ ✅ spec-011 — Tier 3, prerequisite of production cluster.
