@@ -1,6 +1,6 @@
 # spec-007 — Chart of Accounts (Accounting Foundation)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Accounting  
 Sprint: 19  
 Module(s): `chart-of-accounts` (touches `frontend/lib/api/chart-of-accounts.ts` and `frontend/app/settings/bulk-import/page.tsx` for the list envelope)  
@@ -62,7 +62,7 @@ the seven gaps above — with **no schema changes**.
       `isSystem: false`.
 - [x] `GET /api/chart-of-accounts` — lists the tenant's active accounts ordered by
       `accountNumber` asc; optional `?accountType=` filter.
-- [ ] `GET /api/chart-of-accounts` returns the list envelope
+- [x] `GET /api/chart-of-accounts` returns the list envelope
       `{ accounts: [...], count: <n> }` (spec-001 convention; currently a bare array).
       In the same change: `extractList` in `frontend/lib/api/chart-of-accounts.ts`
       handles `res.data.accounts`, and the bulk-import export extraction
@@ -85,20 +85,20 @@ the seven gaps above — with **no schema changes**.
 - [x] All reads (`create` duplicate + parent checks, `findAll`, `findOne`, `getByCode`,
       `getAccountsByType`, `update` conflict check) scoped
       `where: { tenantId, deletedAt: null }` with `tenantId` from `req.user.tenantId`.
-- [ ] `update()` write is tenant-scoped at the write itself:
+- [x] `update()` write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })` per the spec-006
       convention, then re-fetch via the scoped `findOne` to preserve the response shape
       (`chart-of-accounts.service.ts:111`).
-- [ ] `remove()` soft-delete write is tenant-scoped at the write itself:
+- [x] `remove()` soft-delete write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })`
       (`chart-of-accounts.service.ts:117-118`).
 - [x] `create` writes `tenantId` from the JWT; never from request body or headers.
 
 ### Business rules
-- [ ] `remove()` is blocked with `400` (message includes the live count) while active
+- [x] `remove()` is blocked with `400` (message includes the live count) while active
       child accounts (`parentAccountId = :id`, `deletedAt: null`, same tenant) exist —
       no orphaned hierarchy (`chart-of-accounts.service.ts:114-122`).
-- [ ] `update()` on an `isSystem` account rejects changes to `accountNumber` and
+- [x] `update()` on an `isSystem` account rejects changes to `accountNumber` and
       `accountType` with `400 BadRequestException` (other fields — `name`,
       `accountCategory`, `currency`, `isActive`, `allowManualPosting` — stay editable).
 - [x] `remove()` rejects `isSystem` accounts with `400` ("Cannot delete system account").
@@ -110,10 +110,10 @@ the seven gaps above — with **no schema changes**.
       (`@IsString @MaxLength(255)`), `accountCategory?` (`@MaxLength(100)`), `currency?`
       (`@MaxLength(3)`), `isActive?` / `allowManualPosting?` (`@IsBoolean`) — all with
       Swagger annotations.
-- [ ] `accountType` is validated with
+- [x] `accountType` is validated with
       `@IsIn(['asset', 'liability', 'equity', 'revenue', 'expense'])` in **both**
       `CreateAccountDto` and `UpdateAccountDto` (currently free `@IsString`).
-- [ ] `parentAccountId` is validated with `@IsUUID()` in `CreateAccountDto`
+- [x] `parentAccountId` is validated with `@IsUUID()` in `CreateAccountDto`
       (currently `@IsString`).
 - [x] Global `ValidationPipe` (`whitelist, forbidNonWhitelisted, transform`) rejects
       unknown fields with `400`.
@@ -130,7 +130,7 @@ the seven gaps above — with **no schema changes**.
 - [x] `404 NotFoundException` — `findOne`/`getByCode`/`update`/`remove` on missing or
       other-tenant id; `create` with a non-resolving `parentAccountId`.
 - [x] `400 BadRequestException` — delete of `isSystem` account.
-- [ ] `400 BadRequestException` — delete with active children, and system-account
+- [x] `400 BadRequestException` — delete with active children, and system-account
       `accountNumber`/`accountType` edit (the two new guards under Business rules).
 
 ### Swagger
@@ -385,3 +385,4 @@ cd backend && pnpm build && pnpm test chart-of-accounts
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 22) | Draft — 6 invariant gaps (2 unscoped writes, 2 weak DTO validators, missing child-delete guard, unprotected system-account edits) + list-envelope gap captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (d0afac1); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 23/23, e2e 19/19 (full suite 85/85), build + lint green |
