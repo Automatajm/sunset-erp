@@ -1,6 +1,7 @@
 // --- consumption-groups/consumption-groups.service.ts ---
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { UomService } from '../uom/uom.service';
 import { CreateConsumptionGroupDto } from './dto/create-consumption-group.dto';
 import { UpdateConsumptionGroupDto } from './dto/update-consumption-group.dto';
 
@@ -11,7 +12,10 @@ const INCLUDE = {
 
 @Injectable()
 export class ConsumptionGroupsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uomService: UomService,
+  ) {}
 
   // ── Auto-code CG-YYYY-NNNN ──────────────────────────────────────────────
 
@@ -30,6 +34,9 @@ export class ConsumptionGroupsService {
   // ── Create ──────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateConsumptionGroupDto) {
+    // Validate the UOM FK via the owning module (404 instead of FK-violation 500),
+    // BEFORE generating the code so failed creates do not burn sequence numbers.
+    await this.uomService.findOneUnit(dto.consumptionUomId);
     const code = await this.generateCode(tenantId);
     return this.prisma.consumptionGroup.create({
       data: {
@@ -49,11 +56,12 @@ export class ConsumptionGroupsService {
   // ── Find All ────────────────────────────────────────────────────────────
 
   async findAll(tenantId: string) {
-    return this.prisma.consumptionGroup.findMany({
+    const consumptionGroups = await this.prisma.consumptionGroup.findMany({
       where: { tenantId, deletedAt: null },
       include: INCLUDE,
       orderBy: { code: 'asc' },
     });
+    return { consumptionGroups, count: consumptionGroups.length };
   }
 
   // ── Find One ────────────────────────────────────────────────────────────
@@ -89,9 +97,18 @@ export class ConsumptionGroupsService {
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateConsumptionGroupDto) {
     await this.findOne(tenantId, id);
-    return this.prisma.consumptionGroup.update({
-      where: { id },
+    if (dto.consumptionUomId !== undefined) {
+      // Same FK validation as create — 404 instead of FK-violation 500 (spec-008).
+      await this.uomService.findOneUnit(dto.consumptionUomId);
+    }
+    // Tenant scope enforced at the write itself (updateMany — Prisma update() only
+    // accepts unique wheres), then re-fetch to preserve the response shape.
+    await this.prisma.consumptionGroup.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
+    });
+    return this.prisma.consumptionGroup.findFirst({
+      where: { id, tenantId, deletedAt: null },
       include: INCLUDE,
     });
   }
@@ -99,9 +116,15 @@ export class ConsumptionGroupsService {
   // ── Remove ──────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    await this.prisma.consumptionGroup.update({
-      where: { id },
+    const cg = await this.findOne(tenantId, id);
+    // Referential guard: never orphan the MRP aggregation (spec-008). findOne already
+    // loads the group's ACTIVE items via its own relation — no items-module query needed.
+    if (cg.items.length > 0)
+      throw new BadRequestException(
+        `Cannot delete: ${cg.items.length} items still assigned to this consumption group`,
+      );
+    await this.prisma.consumptionGroup.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Consumption group deleted successfully', id };

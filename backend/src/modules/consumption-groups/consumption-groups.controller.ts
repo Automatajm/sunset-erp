@@ -31,7 +31,7 @@ export class ConsumptionGroupsController {
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create consumption group' })
   @ApiResponse({ status: 201, description: 'Consumption group created successfully' })
-  @ApiResponse({ status: 409, description: 'Code already exists' })
+  @ApiResponse({ status: 404, description: 'UOM unit not found' })
   async create(@Request() req, @Body() dto: CreateConsumptionGroupDto) {
     return this.consumptionGroupsService.create(req.user.tenantId, req.user.id, dto);
   }
@@ -59,7 +59,7 @@ export class ConsumptionGroupsController {
   @ApiOperation({ summary: 'Update consumption group' })
   @ApiParam({ name: 'id', description: 'ConsumptionGroup UUID' })
   @ApiResponse({ status: 200, description: 'Consumption group updated successfully' })
-  @ApiResponse({ status: 404, description: 'Consumption group not found' })
+  @ApiResponse({ status: 404, description: 'Consumption group or UOM unit not found' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateConsumptionGroupDto) {
     return this.consumptionGroupsService.update(req.user.tenantId, req.user.id, id, dto);
   }
@@ -70,6 +70,7 @@ export class ConsumptionGroupsController {
   @ApiOperation({ summary: 'Delete consumption group (soft delete)' })
   @ApiParam({ name: 'id', description: 'ConsumptionGroup UUID' })
   @ApiResponse({ status: 200, description: 'Consumption group deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — items still assigned' })
   @ApiResponse({ status: 404, description: 'Consumption group not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.consumptionGroupsService.remove(req.user.tenantId, req.user.id, id);

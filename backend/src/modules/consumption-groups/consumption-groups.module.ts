@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common';
 import { ConsumptionGroupsService } from './consumption-groups.service';
 import { ConsumptionGroupsController } from './consumption-groups.controller';
 import { PrismaModule } from '../../database/prisma.module';
+import { UomModule } from '../uom/uom.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, UomModule],
   controllers: [ConsumptionGroupsController],
   providers: [ConsumptionGroupsService],
   exports: [ConsumptionGroupsService],
