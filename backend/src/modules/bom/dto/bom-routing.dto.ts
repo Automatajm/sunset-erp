@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID, Min } from 'class-validator';
+﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID, Min, Max } from 'class-validator';
 
 export class CreateBomRoutingDto {
   @ApiProperty({ example: 1, description: 'Step sequence number' })
@@ -20,12 +20,14 @@ export class CreateBomRoutingDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(999999.99) // Decimal(8,2)
   setupTime?: number;
 
   @ApiPropertyOptional({ example: 0.004, description: 'Run time per unit in hours' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(9999.999999) // Decimal(10,6)
   runTimePerUnit?: number;
 
   @ApiPropertyOptional({ example: 'Requires food-grade gloves' })
@@ -55,12 +57,14 @@ export class UpdateBomRoutingDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(999999.99) // Decimal(8,2)
   setupTime?: number;
 
   @ApiPropertyOptional({ example: 0.004 })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(9999.999999) // Decimal(10,6)
   runTimePerUnit?: number;
 
   @ApiPropertyOptional()

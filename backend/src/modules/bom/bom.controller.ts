@@ -11,6 +11,7 @@
   HttpCode,
   HttpStatus,
   Query,
+  ParseFloatPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -41,6 +42,7 @@ export class BomController {
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a new BOM with components' })
   @ApiResponse({ status: 201, description: 'BOM created' })
+  @ApiResponse({ status: 404, description: 'Parent item or consumption group not found' })
   @ApiResponse({ status: 409, description: 'BOM code already exists' })
   async create(@Request() req, @Body() dto: CreateBomDto) {
     return this.bomService.create(req.user.tenantId, req.user.id, dto);
@@ -50,6 +52,7 @@ export class BomController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List all BOMs' })
   @ApiQuery({ name: 'itemId', required: false, description: 'Filter by parent item UUID' })
+  @ApiResponse({ status: 200, description: 'List of BOMs with counts' })
   async findAll(@Request() req, @Query('itemId') itemId?: string) {
     return this.bomService.findAll(req.user.tenantId, itemId);
   }
@@ -58,6 +61,8 @@ export class BomController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get BOM by ID — includes components and routing steps' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
+  @ApiResponse({ status: 200, description: 'Full BOM with active components and routings' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.bomService.findOne(req.user.tenantId, id);
   }
@@ -67,22 +72,24 @@ export class BomController {
   @ApiOperation({ summary: 'Calculate material requirements for a production quantity' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'quantity', description: 'Production quantity' })
+  @ApiResponse({ status: 200, description: 'Per-component requirements with scrap' })
+  @ApiResponse({ status: 400, description: 'Non-numeric quantity' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async calculateRequirements(
     @Request() req,
     @Param('id') id: string,
-    @Param('quantity') quantity: string,
+    @Param('quantity', ParseFloatPipe) quantity: number,
   ) {
-    return this.bomService.calculateMaterialRequirements(
-      req.user.tenantId,
-      id,
-      parseFloat(quantity),
-    );
+    return this.bomService.calculateMaterialRequirements(req.user.tenantId, id, quantity);
   }
 
   @Patch(':id')
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update BOM header' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
+  @ApiResponse({ status: 200, description: 'BOM updated' })
+  @ApiResponse({ status: 404, description: 'BOM or re-parent item not found in tenant' })
+  @ApiResponse({ status: 409, description: 'BOM code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateBomDto) {
     return this.bomService.update(req.user.tenantId, req.user.id, id, dto);
   }
@@ -92,6 +99,9 @@ export class BomController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete BOM (soft delete)' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
+  @ApiResponse({ status: 200, description: 'BOM deleted' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — production plan lines reference it' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.bomService.remove(req.user.tenantId, req.user.id, id);
   }
@@ -106,6 +116,7 @@ export class BomController {
   })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiResponse({ status: 201, description: 'Routing step added' })
+  @ApiResponse({ status: 404, description: 'BOM or work center not found' })
   @ApiResponse({ status: 409, description: 'Step number already exists' })
   @HttpCode(HttpStatus.CREATED)
   async addRoutingStep(@Request() req, @Param('id') id: string, @Body() dto: CreateBomRoutingDto) {
@@ -116,6 +127,8 @@ export class BomController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all routing steps for a BOM ordered by step number' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
+  @ApiResponse({ status: 200, description: 'Active routing steps' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async getRoutingSteps(@Request() req, @Param('id') id: string) {
     return this.bomService.getRoutingSteps(req.user.tenantId, id);
   }
@@ -125,6 +138,9 @@ export class BomController {
   @ApiOperation({ summary: 'Update a routing step' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'stepId', description: 'Routing step UUID' })
+  @ApiResponse({ status: 200, description: 'Routing step updated' })
+  @ApiResponse({ status: 404, description: 'BOM, step, or work center not found' })
+  @ApiResponse({ status: 409, description: 'Step number already exists' })
   async updateRoutingStep(
     @Request() req,
     @Param('id') id: string,
@@ -140,6 +156,8 @@ export class BomController {
   @ApiOperation({ summary: 'Delete a routing step (soft delete)' })
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'stepId', description: 'Routing step UUID' })
+  @ApiResponse({ status: 200, description: 'Routing step deleted' })
+  @ApiResponse({ status: 404, description: 'BOM or step not found' })
   async removeRoutingStep(
     @Request() req,
     @Param('id') id: string,
@@ -160,12 +178,14 @@ export class BomController {
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'quantity', description: 'Production quantity' })
   @ApiResponse({ status: 200, description: 'Labor estimate with step breakdown' })
+  @ApiResponse({ status: 400, description: 'Non-numeric quantity' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async getLaborEstimate(
     @Request() req,
     @Param('id') id: string,
-    @Param('quantity') quantity: string,
+    @Param('quantity', ParseFloatPipe) quantity: number,
   ) {
-    return this.bomService.getLaborEstimate(req.user.tenantId, id, parseFloat(quantity));
+    return this.bomService.getLaborEstimate(req.user.tenantId, id, quantity);
   }
 
   // ── MATERIAL SUGGESTIONS ──────────────────────
@@ -180,11 +200,13 @@ export class BomController {
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiParam({ name: 'quantity', description: 'Production quantity' })
   @ApiResponse({ status: 200, description: 'Material suggestions with quantities including scrap' })
+  @ApiResponse({ status: 400, description: 'Non-numeric quantity' })
+  @ApiResponse({ status: 404, description: 'BOM not found' })
   async getMaterialSuggestions(
     @Request() req,
     @Param('id') id: string,
-    @Param('quantity') quantity: string,
+    @Param('quantity', ParseFloatPipe) quantity: number,
   ) {
-    return this.bomService.getMaterialSuggestions(req.user.tenantId, id, parseFloat(quantity));
+    return this.bomService.getMaterialSuggestions(req.user.tenantId, id, quantity);
   }
 }

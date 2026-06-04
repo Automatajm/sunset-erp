@@ -5,6 +5,7 @@
   IsArray,
   ValidateNested,
   IsBoolean,
+  Matches,
   MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -22,15 +23,10 @@ export class CreateBomDto {
   @MaxLength(50)
   bomCode?: string;
 
-  @ApiPropertyOptional({ example: 'Standard Assembly', description: 'BOM description' })
+  @ApiPropertyOptional({ example: '1', description: 'BOM version (integer as string)' })
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  description?: string;
-
-  @ApiPropertyOptional({ example: '1.0', description: 'BOM version' })
-  @IsOptional()
-  @IsString()
+  @Matches(/^\d+$/, { message: 'version must be a positive integer string' })
   @MaxLength(20)
   version?: string;
 

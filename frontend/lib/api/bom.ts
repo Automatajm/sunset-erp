@@ -3,9 +3,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import apiClient from './client';
 
+// List endpoint returns an envelope { boms, count } (spec-011)
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  if (d?.boms && Array.isArray(d.boms)) return d.boms;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }

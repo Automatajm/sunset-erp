@@ -1,4 +1,4 @@
-import { IsUUID, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+﻿import { IsUUID, IsNumber, IsOptional, IsString, Min, Max, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBomComponentDto {
@@ -15,6 +15,7 @@ export class CreateBomComponentDto {
   })
   @IsNumber()
   @Min(0.001)
+  @Max(999999999) // Decimal(15,6) — DB overflow must be a 400, not a 500
   quantity: number;
 
   @ApiProperty({
@@ -37,10 +38,6 @@ export class CreateBomComponentDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(100)
   scrapPercent?: number;
-
-  @ApiPropertyOptional({ description: 'Component notes' })
-  @IsOptional()
-  @IsString()
-  notes?: string;
 }

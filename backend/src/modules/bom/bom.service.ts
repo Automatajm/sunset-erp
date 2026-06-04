@@ -5,6 +5,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ItemsService } from '../items/items.service';
+import { ConsumptionGroupsService } from '../consumption-groups/consumption-groups.service';
+import { WorkCentersService } from '../work-centers/work-centers.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { UpdateBomDto } from './dto/update-bom.dto';
 import { CreateBomRoutingDto, UpdateBomRoutingDto } from './dto/bom-routing.dto';
@@ -39,6 +42,8 @@ const ROUTING_INCLUDE = {
 const BOM_FULL_INCLUDE = {
   parentItem: { select: { id: true, code: true, name: true, baseUom: true } },
   components: {
+    // Soft-deleted components must never reach MRP calculations (spec-011).
+    where: { deletedAt: null },
     include: COMPONENT_INCLUDE,
     orderBy: { lineNumber: 'asc' as const },
   },
@@ -56,25 +61,28 @@ const BOM_LIST_INCLUDE = {
 
 @Injectable()
 export class BomService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private itemsService: ItemsService,
+    private consumptionGroupsService: ConsumptionGroupsService,
+    private workCentersService: WorkCentersService,
+  ) {}
 
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, createBomDto: CreateBomDto) {
-    // Validate parent item
-    const parentItem = await this.prisma.item.findFirst({
-      where: { id: createBomDto.itemId, tenantId, deletedAt: null },
-    });
-    if (!parentItem) throw new NotFoundException('Parent item not found');
+    // Foreign validations go through the owning modules' scoped services (spec-011) —
+    // each findOne throws its own 404.
+    await this.itemsService.findOne(tenantId, createBomDto.itemId);
 
-    // Validate all consumption groups exist
+    // Validate all consumption groups; keep them for the consumptionUomId auto-fill
+    // so no second lookup is needed.
+    const groups = new Map<string, { consumptionUomId: string | null }>();
     for (const comp of createBomDto.components) {
-      const cg = await this.prisma.consumptionGroup.findFirst({
-        where: { id: comp.consumptionGroupId, tenantId, deletedAt: null },
-        include: { consumptionUom: true },
-      });
-      if (!cg)
-        throw new NotFoundException(`Consumption group ${comp.consumptionGroupId} not found`);
+      if (!groups.has(comp.consumptionGroupId)) {
+        const cg = await this.consumptionGroupsService.findOne(tenantId, comp.consumptionGroupId);
+        groups.set(comp.consumptionGroupId, cg as any);
+      }
     }
 
     const bomNumber = createBomDto.bomCode || (await this.generateBomNumber(tenantId));
@@ -95,29 +103,21 @@ export class BomService {
         createdBy: userId,
         updatedBy: userId,
         components: {
-          create: await Promise.all(
-            createBomDto.components.map(async (comp, index) => {
-              // Auto-fill consumptionUomId from the group if not provided
-              let consumptionUomId = comp.consumptionUomId ?? null;
-              if (!consumptionUomId) {
-                const cg = await this.prisma.consumptionGroup.findFirst({
-                  where: { id: comp.consumptionGroupId, tenantId },
-                });
-                consumptionUomId = cg?.consumptionUomId ?? null;
-              }
-              return {
-                tenantId,
-                consumptionGroupId: comp.consumptionGroupId,
-                lineNumber: index + 1,
-                quantityPer: new Decimal(comp.quantity),
-                uom: comp.uom,
-                consumptionUomId,
-                scrapPercent: new Decimal(comp.scrapPercent || 0),
-                createdBy: userId,
-                updatedBy: userId,
-              };
-            }),
-          ),
+          create: createBomDto.components.map((comp, index) => ({
+            tenantId,
+            consumptionGroupId: comp.consumptionGroupId,
+            lineNumber: index + 1,
+            quantityPer: new Decimal(comp.quantity),
+            uom: comp.uom,
+            // Auto-fill from the already-validated group when not provided.
+            consumptionUomId:
+              comp.consumptionUomId ??
+              groups.get(comp.consumptionGroupId)?.consumptionUomId ??
+              null,
+            scrapPercent: new Decimal(comp.scrapPercent || 0),
+            createdBy: userId,
+            updatedBy: userId,
+          })),
         },
       },
       include: BOM_FULL_INCLUDE,
@@ -132,11 +132,12 @@ export class BomService {
     const where: any = { tenantId, deletedAt: null };
     if (itemId) where.parentItemId = itemId;
 
-    return this.prisma.bom.findMany({
+    const boms = await this.prisma.bom.findMany({
       where,
       include: BOM_LIST_INCLUDE,
       orderBy: { bomNumber: 'asc' },
     });
+    return { boms, count: boms.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -163,16 +164,22 @@ export class BomService {
         throw new ConflictException(`BOM with number ${updateBomDto.bomCode} already exists`);
     }
 
+    // Re-parenting must resolve in-tenant (cross-tenant FK vector, spec-011).
+    if (updateBomDto.itemId) await this.itemsService.findOne(tenantId, updateBomDto.itemId);
+
     const updateData: any = { updatedBy: userId };
     if (updateBomDto.bomCode) updateData.bomNumber = updateBomDto.bomCode;
-    if (updateBomDto.description !== undefined) updateData.description = updateBomDto.description;
     if (updateBomDto.version) updateData.version = parseInt(updateBomDto.version);
     if (updateBomDto.isActive !== undefined) updateData.isActive = updateBomDto.isActive;
     if (updateBomDto.itemId) updateData.parentItemId = updateBomDto.itemId;
 
-    const bom = await this.prisma.bom.update({
-      where: { id },
+    // Tenant scope enforced at the write itself, then re-fetch (spec-011).
+    await this.prisma.bom.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: updateData,
+    });
+    const bom = await this.prisma.bom.findFirst({
+      where: { id, tenantId, deletedAt: null },
       include: BOM_FULL_INCLUDE,
     });
 
@@ -182,9 +189,19 @@ export class BomService {
   // ── Remove ─────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    await this.prisma.bom.update({
-      where: { id },
+    // Own-relation count: a BOM referenced by production plan lines cannot be
+    // deleted (spec-011). ProductionPlanLine has no deletedAt — unfiltered count.
+    const bom = await this.prisma.bom.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: { _count: { select: { productionPlanLines: true } } },
+    });
+    if (!bom) throw new NotFoundException(`BOM with ID ${id} not found`);
+    if (bom._count.productionPlanLines > 0)
+      throw new BadRequestException(
+        `Cannot delete: ${bom._count.productionPlanLines} production plan lines still reference this BOM`,
+      );
+    await this.prisma.bom.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'BOM deleted successfully', id };
@@ -251,13 +268,11 @@ export class BomService {
   async addRoutingStep(tenantId: string, userId: string, bomId: string, dto: CreateBomRoutingDto) {
     await this.findOne(tenantId, bomId);
 
-    const wc = await this.prisma.workCenter.findFirst({
-      where: { id: dto.workCenterId, tenantId, deletedAt: null },
-    });
-    if (!wc) throw new NotFoundException(`Work center ${dto.workCenterId} not found`);
+    // Work center validation via the owning module's scoped service (404).
+    await this.workCentersService.findOne(tenantId, dto.workCenterId);
 
     const existing = await this.prisma.bomRouting.findFirst({
-      where: { bomId, stepNumber: dto.stepNumber, deletedAt: null },
+      where: { tenantId, bomId, stepNumber: dto.stepNumber, deletedAt: null },
     });
     if (existing) throw new ConflictException(`Step ${dto.stepNumber} already exists for this BOM`);
 
@@ -309,15 +324,18 @@ export class BomService {
     if (!step) throw new NotFoundException(`Routing step ${stepId} not found`);
 
     if (dto.workCenterId) {
-      const wc = await this.prisma.workCenter.findFirst({
-        where: { id: dto.workCenterId, tenantId, deletedAt: null },
-      });
-      if (!wc) throw new NotFoundException(`Work center ${dto.workCenterId} not found`);
+      await this.workCentersService.findOne(tenantId, dto.workCenterId);
     }
 
     if (dto.stepNumber && dto.stepNumber !== step.stepNumber) {
       const conflict = await this.prisma.bomRouting.findFirst({
-        where: { bomId, stepNumber: dto.stepNumber, id: { not: stepId }, deletedAt: null },
+        where: {
+          tenantId,
+          bomId,
+          stepNumber: dto.stepNumber,
+          id: { not: stepId },
+          deletedAt: null,
+        },
       });
       if (conflict) throw new ConflictException(`Step ${dto.stepNumber} already exists`);
     }
@@ -331,9 +349,13 @@ export class BomService {
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.notes !== undefined) data.notes = dto.notes;
 
-    const updated = await this.prisma.bomRouting.update({
-      where: { id: stepId },
+    // Tenant scope enforced at the write itself, then re-fetch (spec-011).
+    await this.prisma.bomRouting.updateMany({
+      where: { id: stepId, tenantId, deletedAt: null },
       data,
+    });
+    const updated = await this.prisma.bomRouting.findFirst({
+      where: { id: stepId, tenantId, deletedAt: null },
       include: ROUTING_INCLUDE,
     });
 
@@ -350,8 +372,8 @@ export class BomService {
     });
     if (!step) throw new NotFoundException(`Routing step ${stepId} not found`);
 
-    await this.prisma.bomRouting.update({
-      where: { id: stepId },
+    await this.prisma.bomRouting.updateMany({
+      where: { id: stepId, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
 
@@ -425,13 +447,17 @@ export class BomService {
 
   private async generateBomNumber(tenantId: string): Promise<string> {
     const prefix = `BOM-${new Date().getFullYear()}`;
-    const last = await this.prisma.bom.findFirst({
+    // Numeric max, not lexicographic ('...-99' ranks above '...-104' as a string),
+    // with a NaN guard; spans soft-deleted rows (the unique constraint does too).
+    const rows = await this.prisma.bom.findMany({
       where: { tenantId, bomNumber: { startsWith: prefix } },
-      orderBy: { bomNumber: 'desc' },
+      select: { bomNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const n = parseInt(last.bomNumber.split('-')[2]);
-    return `${prefix}-${(n + 1).toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.bomNumber.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   private formatBomResponse(bom: any) {
