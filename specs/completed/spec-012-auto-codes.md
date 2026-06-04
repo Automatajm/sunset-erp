@@ -1,6 +1,6 @@
 # spec-012 — Unified Auto-Generated Codes (Cross-Cutting Policy)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `macro-categories`, `categories`, `work-centers`, `customers`, `items`, `suppliers`, `warehouses`, `bom` (+ 7 frontend create forms). Exempt: `chart-of-accounts`. Exception: `bulk-import`.  
@@ -38,33 +38,33 @@ formats — the policy is about *who* assigns codes, not re-formatting existing 
 ## Acceptance criteria
 
 ### Policy (applies to every module in the matrix below)
-- [ ] `POST` auto-generates the code server-side; the create DTO has **no** code field, so
+- [x] `POST` auto-generates the code server-side; the create DTO has **no** code field, so
       a client-sent code is rejected `400` by `forbidNonWhitelisted`.
-- [ ] Codes are **immutable**: no code field in the update DTO; the service's code-rename
+- [x] Codes are **immutable**: no code field in the update DTO; the service's code-rename
       and code-conflict (409) paths are removed; Swagger no longer documents code-409s on
       these endpoints.
-- [ ] Generators follow the house convention: tenant-scoped, **numeric max** (never
+- [x] Generators follow the house convention: tenant-scoped, **numeric max** (never
       lexicographic `orderBy` — the warehouses lesson, `390a4e2`), NaN-guarded,
       **spanning soft-deleted rows** (`@@unique([tenantId, code])` spans them), zero-padded.
-- [ ] Existing rows keep their codes (no data migration; mnemonic codes like `PROTEIN` or
+- [x] Existing rows keep their codes (no data migration; mnemonic codes like `PROTEIN` or
       `WC-PREP-01` remain valid history).
 
 ### Module matrix
-- [ ] `macro-categories` — new generator `MC-YYYY-NNNN`; `code` removed from
+- [x] `macro-categories` — new generator `MC-YYYY-NNNN`; `code` removed from
       `CreateMacroCategoryDto` (Update inherits via `PartialType`); create dup-check and
       update conflict-check removed.
-- [ ] `categories` — new generator `CAT-YYYY-NNNN`; same treatment.
-- [ ] `work-centers` — new generator `WC-YYYY-NNNN`; same treatment (legacy `WC-PREP-01`
+- [x] `categories` — new generator `CAT-YYYY-NNNN`; same treatment.
+- [x] `work-centers` — new generator `WC-YYYY-NNNN`; same treatment (legacy `WC-PREP-01`
       style rows untouched; the numeric-max generator ignores non-matching suffixes).
-- [ ] `customers` — new generator `CL-YYYY-NNNN`; same treatment. *(Module is otherwise
+- [x] `customers` — new generator `CL-YYYY-NNNN`; same treatment. *(Module is otherwise
       unspecced; only the code policy lands here — full spec follows the cascade.)*
-- [ ] `items` — `code?` override removed from `CreateItemDto`; existing `ITEM-NNNN`
+- [x] `items` — `code?` override removed from `CreateItemDto`; existing `ITEM-NNNN`
       generator becomes the only path; `code` rename removed from update.
-- [ ] `suppliers` — `code?` override removed; `SUP-YYYY-NNNN` generator only path; rename
+- [x] `suppliers` — `code?` override removed; `SUP-YYYY-NNNN` generator only path; rename
       removed from update.
-- [ ] `warehouses` — `code?` override removed; `WH-{TYPE}-NNN` generator only path; rename
+- [x] `warehouses` — `code?` override removed; `WH-{TYPE}-NNN` generator only path; rename
       removed from update.
-- [ ] `bom` — `bomCode?` removed from `CreateBomDto` (and thus from `UpdateBomDto`);
+- [x] `bom` — `bomCode?` removed from `CreateBomDto` (and thus from `UpdateBomDto`);
       `BOM-YYYY-NNNN` generator only path; `bomNumber` rename + 409 removed from update.
 - [x] `consumption-groups` — already compliant (reference implementation).
 - [x] `chart-of-accounts` — exempt by ruling #1 (manual semantic numbering; unchanged).
@@ -72,17 +72,17 @@ formats — the policy is about *who* assigns codes, not re-formatting existing 
       unchanged).
 
 ### Frontend (create/edit forms stop sending codes)
-- [ ] The 7 forms that send `code` on create drop the input and the payload field:
+- [x] The 7 forms that send `code` on create drop the input and the payload field:
       `inventory/macro-categories`, `inventory/categories`, `manufacturing/work-centers`,
       `sales/customers`, `inventory/items`, `procurement/suppliers`,
       `inventory/warehouses` (and `bom` pages for `bomCode` if present). Edit modals show
       the code read-only and never send it on PATCH.
 
 ### Tests
-- [ ] Every affected suite (unit + e2e) updated: creates send no code; new asserts —
+- [x] Every affected suite (unit + e2e) updated: creates send no code; new asserts —
       generated code matches the module's pattern, sequence increments, client-sent code →
       `400`, PATCH with code → `400`; obsolete duplicate-code 409 tests removed.
-- [ ] Full e2e suite green.
+- [x] Full e2e suite green.
 
 ---
 
@@ -155,3 +155,4 @@ unchanged (the generated code comes back in the entity). Example (macro-categori
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Policy decided by owner (all codes auto + immutable; COA exempt; bulk-import exception; PREFIX-YYYY-NNNN) after cross-module audit | Draft — 8 backend modules + 7 frontend forms captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (9f58214); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — 8 backend modules + 7 frontend forms; unit 172/172, e2e 159/159, both builds green |
