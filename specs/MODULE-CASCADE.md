@@ -21,18 +21,19 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 4 — `auth`, `suppliers`, `items`, `warehouses` |
-| Pending | 34 |
+| Specced (Done) | 7 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts` |
+| Pending | 31 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
 must be back-filled to restore cascade integrity:
 
-- `items` (spec-003) depends on → `uom` ⬜, `categories` ⬜, `consumption-groups` ⬜
+- `items` (spec-003) depends on → `uom` ✅ (spec-005), `categories` ⬜, `consumption-groups` ⬜
 - `suppliers` (spec-002) depends on → `items` ✅ (ok)
 - `warehouses` (spec-004) depends on → nothing (ok)
 
-So **`uom`, `categories`, `consumption-groups`** are the highest-priority back-fills.
+So **`categories`, `consumption-groups`** are the remaining highest-priority back-fills
+(`uom` back-filled by spec-005; `categories` unblocked — `chart-of-accounts` ✅ spec-007).
 
 ---
 
@@ -45,9 +46,9 @@ So **`uom`, `categories`, `consumption-groups`** are the highest-priority back-f
 | ⬜ | tenants | Tenant, Subscription, SubscriptionPlan, Invoice, UsageRecord | none |
 | ⬜ | users | User, UserTenant | none |
 | ⬜ | roles | Role, RolePermission | none |
-| ⬜ | uom | UomUnit, UomConversion | none |
-| ⬜ | chart-of-accounts | Account | none |
-| ⬜ | macro-categories | MacroCategory | none |
+| ✅ spec-005 | uom | UomUnit, UomConversion | none |
+| ✅ spec-007 | chart-of-accounts | Account | none |
+| ✅ spec-006 | macro-categories | MacroCategory | none |
 | ⬜ | customers | Customer | none |
 | ⬜ | work-centers | WorkCenter | none |
 | ✅ spec-004 | warehouses | Warehouse | none |
@@ -113,10 +114,10 @@ So **`uom`, `categories`, `consumption-groups`** are the highest-priority back-f
 
 Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 
-1. **uom** — Tier 0, prerequisite of items✅, consumption-groups, bom, stock-*, supplier-items, procurement. Highest leverage.
-2. **macro-categories** — Tier 0, prerequisite of categories.
-3. **chart-of-accounts** — Tier 0, prerequisite of journal-entries, budgets, cash-flow, categories, invoices.
-4. **consumption-groups** — Tier 1, prerequisite of items✅, bom, general-needs.
+1. ~~**uom**~~ ✅ spec-005 — Tier 0, prerequisite of items✅, consumption-groups, bom, stock-*, supplier-items, procurement. Highest leverage.
+2. ~~**macro-categories**~~ ✅ spec-006 — Tier 0, prerequisite of categories.
+3. ~~**chart-of-accounts**~~ ✅ spec-007 — Tier 0, prerequisite of journal-entries, budgets, cash-flow, categories, invoices.
+4. **consumption-groups** — Tier 1, prerequisite of items✅, bom, general-needs. ← **next**
 5. **categories** — Tier 1, prerequisite of items✅.
 6. **customers** — Tier 0, prerequisite of sales-orders, ar-invoices.
 7. **work-centers** — Tier 0, prerequisite of bom.
