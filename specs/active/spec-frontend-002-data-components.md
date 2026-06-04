@@ -136,6 +136,24 @@ system, so every page composes the same well-behaved building blocks.
 - [ ] **Proof of reuse:** the one-off `AssignmentModal.tsx` (391 lines) is refactored onto
       `FormModal`, demonstrating net code reduction and identical behavior.
 
+### 5. Error states & developer feedback
+- [ ] When an API call fails (network error, 500, 401, 403, 404), the table/page area renders a
+      **professional error state** in place of the data — never a browser `alert()`. Three
+      variants:
+      - **unauthorized** (401/403) — redirect to login (401, existing apiClient behavior) or an
+        in-place "You don't have access to this data" state (403);
+      - **not-found** (404) — "not found" state with a back/retry affordance;
+      - **server-error** (5xx / network) — shows the error code, a timestamp, and the request ID
+        when available.
+- [ ] In development (`NODE_ENV=development`) every error state additionally renders a
+      **technical panel**: HTTP status, endpoint URL, a response-body snippet, and a
+      **copy-to-clipboard** button that copies the full normalized error. In production builds
+      this panel is **not rendered** (stripped by the env check, not merely hidden with CSS).
+- [ ] All API errors are caught **at the `apiClient` level** (axios interceptor in
+      `lib/api/client.ts`) and normalized to one consistent shape before reaching components:
+      `ErrorResponse { status, message, endpoint, timestamp }`. Components never parse raw
+      axios/fetch errors — they branch only on the normalized `status`.
+
 ### Cross-cutting
 - [ ] No new npm dependency: reuse installed `@radix-ui/react-dialog`, `@tanstack/react-table`
       (only if already used internally), and `xlsx`. (Verified present in `package.json`.)
@@ -232,6 +250,26 @@ interface DetailModalProps extends BaseModalProps {
 }
 ```
 
+### Error normalization (new — see criteria §5)
+```ts
+// lib/api/client.ts — response interceptor normalizes every failure to:
+interface ErrorResponse {
+  status: number;     // HTTP status; 0 for network/timeout errors
+  message: string;    // human-readable, from response body when present
+  endpoint: string;   // request URL (path + query)
+  timestamp: string;  // ISO-8601, client-side capture time
+  requestId?: string; // from response headers when the backend provides one
+  body?: unknown;     // response-body snippet — dev-panel use only
+}
+
+// components/ui/ErrorState.tsx — in-place error rendering
+interface ErrorStateProps {
+  error: ErrorResponse;
+  variant?: 'unauthorized' | 'not-found' | 'server-error'; // derived from status when omitted
+  onRetry?: () => void;
+}
+```
+
 ---
 
 ## Implementation notes
@@ -247,6 +285,10 @@ interface DetailModalProps extends BaseModalProps {
   (proof of reuse).
 - `components/examples/example-modal.tsx`, `components/examples/example-table.tsx` — update to
   demonstrate the new APIs.
+- `lib/api/client.ts` — response interceptor normalizing failures to `ErrorResponse` (§5); keep
+  the existing 401→login redirect.
+- `components/ui/ErrorState.tsx` *(new)* — unauthorized / not-found / server-error variants +
+  dev-only technical panel with copy-to-clipboard.
 
 ### Libraries (all already installed — verified in `package.json`)
 - `@radix-ui/react-dialog ^1.1.15` — modal base (focus trap, ESC, overlay, scroll-lock).
@@ -318,3 +360,4 @@ pnpm build && pnpm lint
 | Date | Status | Note |
 |------|--------|------|
 | 2026-06-04 | Active | Spec authored from live audit of `ERPTable` (732 L), `ERPFilterBar` (289 L), `ERPTreeTable` (413 L), `dialog.tsx`/`alert-dialog.tsx`. Build-vs-improve matrix recorded. Independent of spec-frontend-001. |
+| 2026-06-04 | Active | Added §5 "Error states & developer feedback": in-place error variants (401/403, 404, 5xx), dev-only technical panel with copy-to-clipboard, and apiClient-level `ErrorResponse` normalization. Contracts + files-involved updated accordingly. |
