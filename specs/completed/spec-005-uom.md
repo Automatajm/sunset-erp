@@ -1,6 +1,6 @@
 # spec-005 — UOM (Units of Measure & Conversion Engine)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: TBD  
 Module(s): `uom`  
@@ -271,3 +271,4 @@ pnpm test src/modules/uom/uom.service.spec.ts
 |------|--------|------|
 | 2026-06-04 | Draft | Spec generated from code by `spec-generator` (`/new-spec uom`). opportunity-finder score 16, 0 critical. Key finding: UOM is the deliberate global-catalog exception to tenant scoping — codified here, not "fixed". 18 `[x]` already-met / 11 `[ ]` to-do. |
 | 2026-06-04 | Implemented | All 11 gaps closed: `dto/` (ConvertQueryDto, UnitFilterDto), ParseUUIDPipe, @ApiResponse ×4, BadRequestException qty guard, intent comments on global-catalog queries. Unit 22/22, e2e 12/12, build + lint clean. Side fixes: removed unused `Decimal` import; `seed-uom.ts` now resolves DEMO tenant by code instead of a hardcoded UUID (was crashing with P2003). |
+| 2026-06-04 | Complete | Shipped to origin (e219d8d); marked Complete and moved to specs/completed/. All acceptance criteria met (100% — 30/30, spec-reviewer). |
