@@ -1,6 +1,6 @@
 # spec-010 — Work Centers (Manufacturing Capacity)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Manufacturing  
 Sprint: 19  
 Module(s): `work-centers` (touches `frontend/lib/api/work-centers.ts`, `frontend/app/manufacturing/work-centers/page.tsx`, `frontend/app/manufacturing/bom/page.tsx`, `frontend/app/manufacturing/boms/page.tsx`, `frontend/app/settings/bulk-import/page.tsx` for the list envelope)  
@@ -51,7 +51,7 @@ schema changes**.
       returned as numbers (`formatWorkCenterResponse`).
 - [x] `GET /api/work-centers` — lists the tenant's active work centers ordered by `code`
       asc, Decimal fields formatted as numbers.
-- [ ] `GET /api/work-centers` returns the list envelope `{ workCenters: [...], count }`.
+- [x] `GET /api/work-centers` returns the list envelope `{ workCenters: [...], count }`.
       Same change updates all five consumers: `extractList` in
       `frontend/lib/api/work-centers.ts` and in
       `frontend/app/manufacturing/work-centers/page.tsx` handle `data.workCenters`;
@@ -63,16 +63,16 @@ schema changes**.
       the new `code` collides with another active row (self excluded).
 - [x] `DELETE /api/work-centers/:id` — soft delete; `404` when not found; returns
       `{ message, id }`.
-- [ ] `DELETE` is blocked with `400` (message includes the live count) while active
+- [x] `DELETE` is blocked with `400` (message includes the live count) while active
       `BomRouting` rows reference the work center.
 
 ### Tenant scoping (CLAUDE.md invariant)
 - [x] All reads (`create` dup check, `findAll`, `findOne`, `update` conflict check)
       scoped `where: { tenantId, deletedAt: null }`.
-- [ ] `update()` write is tenant-scoped at the write itself:
+- [x] `update()` write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })`, then re-fetch +
       format to preserve the response shape (`work-centers.service.ts:120-123`).
-- [ ] `remove()` soft-delete write is tenant-scoped at the write itself
+- [x] `remove()` soft-delete write is tenant-scoped at the write itself
       (`work-centers.service.ts:131-137`).
 - [x] `create` writes `tenantId` from the JWT; never from request body or headers.
 
@@ -80,7 +80,7 @@ schema changes**.
 - [x] Decimal columns are returned as JS numbers (`capacityPerHour`, `costPerHour`
       nullable → `null`; `efficiencyPercent` defaults 100) via
       `formatWorkCenterResponse`.
-- [ ] Delete guard counts **active** referencing routings via the work center's own
+- [x] Delete guard counts **active** referencing routings via the work center's own
       relation (`_count: { select: { routings: { where: { deletedAt: null } } } }` on the
       scoped read — no direct `prisma.bomRouting.*` query) and throws `400` while > 0.
 
@@ -88,12 +88,12 @@ schema changes**.
 - [x] `CreateWorkCenterDto`: `code` (`@IsString @MaxLength(50)`), `name`
       (`@MaxLength(255)`), numerics `@IsNumber @Min(0)`, `isActive?` (`@IsBoolean`);
       `UpdateWorkCenterDto extends PartialType(...)`.
-- [ ] `workCenterType` validated with `@IsIn(['machine', 'labor', 'assembly', 'quality'])`
+- [x] `workCenterType` validated with `@IsIn(['machine', 'labor', 'assembly', 'quality'])`
       (currently free `@IsString @MaxLength(50)`).
-- [ ] Upper bounds matching column precision: `efficiencyPercent` `@Max(999.99)`,
+- [x] Upper bounds matching column precision: `efficiencyPercent` `@Max(999.99)`,
       `capacityPerHour` / `costPerHour` `@Max(99999999.99)` — DB overflow becomes a `400`
       instead of a `500`.
-- [ ] The phantom `notes` field is removed from `CreateWorkCenterDto` (no `notes` column
+- [x] The phantom `notes` field is removed from `CreateWorkCenterDto` (no `notes` column
       exists; the service silently drops it). After removal, a client-sent `notes` is
       rejected `400` by `forbidNonWhitelisted`.
 - [x] Global `ValidationPipe` (`whitelist, forbidNonWhitelisted, transform`).
@@ -106,12 +106,12 @@ schema changes**.
 ### Error handling
 - [x] `409 ConflictException` — duplicate `code` on create and update (self excluded).
 - [x] `404 NotFoundException` — `findOne`/`update`/`remove` on missing or other-tenant id.
-- [ ] `400 BadRequestException` — delete blocked while active routings reference the work
+- [x] `400 BadRequestException` — delete blocked while active routings reference the work
       center.
 
 ### Swagger
 - [x] Every handler has `@ApiOperation` + `@ApiResponse` (+ `@ApiParam` on `:id`).
-- [ ] DELETE documents the new `400` (routings still reference it).
+- [x] DELETE documents the new `400` (routings still reference it).
 
 ---
 
@@ -283,3 +283,4 @@ cd backend && pnpm build && pnpm test work-centers.service
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 19) | Draft — 5 invariant gaps (2 unscoped writes, missing routing delete guard, phantom notes field, free-string type + unbounded numerics) + list-envelope gap captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (fd54433); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 14/14, e2e 15/15 (full suite 136/136), build + lint green. Side fix: warehouses numeric-max codegen (390a4e2) |
