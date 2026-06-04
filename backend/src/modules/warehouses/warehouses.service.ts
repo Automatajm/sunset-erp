@@ -25,15 +25,17 @@ export class WarehousesService {
     // constraint spans soft-deleted rows, so a soft-deleted warehouse still occupies its
     // code — filtering them out regenerates occupied codes and creates fail with P2002
     // (same convention as suppliers.service.ts generateCode).
-    const last = await this.prisma.warehouse.findFirst({
+    // The max is NUMERIC, not lexicographic: orderBy code desc ranks 'WH-REG-99' above
+    // 'WH-REG-978', regenerating taken codes once suffix lengths diverge.
+    const rows = await this.prisma.warehouse.findMany({
       where: { tenantId, code: { startsWith: prefix } },
-      orderBy: { code: 'desc' },
+      select: { code: true },
     });
-    if (!last) return `${prefix}-001`;
-    const parts = last.code.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(3, '0')}`;
   }
 
   // ── Create ────────────────────────────────────────────────────────────────

@@ -76,7 +76,7 @@ describe('Warehouses (e2e)', () => {
       .send(validWarehouse())
       .expect(201)
       .expect((r) => {
-        expect(r.body.code).toMatch(/^WH-(REG|CON|TRN)-\d{3}$/);
+        expect(r.body.code).toMatch(/^WH-(REG|CON|TRN)-\d{3,}$/); // padStart(3) is a minimum — sequence can exceed 999
       }));
 
   it('GET /api/warehouses list entries carry enrichment keys', async () => {
@@ -129,7 +129,9 @@ describe('Warehouses (e2e)', () => {
 
   // ── Duplicate code → 409 ──────────────────────────────────────────────────
   it('POST /api/warehouses → 409 on a duplicate explicit code', async () => {
-    const code = `WH-REG-9${Math.floor(performance.now() % 100)}`;
+    // Unique across runs — performance.now() % 100 only had 100 possible values and
+    // collided with residue from prior runs (first POST already 409'd).
+    const code = `WHDUP-${Date.now()}`;
     await auth(request(server()).post('/api/warehouses'))
       .send({ ...validWarehouse(), code })
       .expect(201);

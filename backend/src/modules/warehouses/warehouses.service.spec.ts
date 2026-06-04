@@ -114,9 +114,8 @@ describe('WarehousesService', () => {
 
   // ── Create ──────────────────────────────────────────────────────────────────
   it('create auto-generates a WH-{TYPE}-{NNN} code when omitted', async () => {
-    prisma.warehouse.findFirst
-      .mockResolvedValueOnce(null) // generateCode: no prior code
-      .mockResolvedValueOnce(null); // duplicate check
+    prisma.warehouse.findMany.mockResolvedValue([]); // generateCode: no prior codes
+    prisma.warehouse.findFirst.mockResolvedValue(null); // duplicate check
     prisma.warehouse.create.mockImplementation(({ data }) => data);
     const res = await service.create(TENANT_A, USER, {
       name: 'New',
@@ -125,16 +124,20 @@ describe('WarehousesService', () => {
     expect(res.code).toBe('WH-REG-001');
   });
 
-  it('create increments the sequence from the last code', async () => {
-    prisma.warehouse.findFirst
-      .mockResolvedValueOnce({ code: 'WH-CON-004' }) // generateCode last
-      .mockResolvedValueOnce(null); // dup check
+  it('create increments the sequence from the NUMERIC max code (not lexicographic)', async () => {
+    // 'WH-CON-99' sorts above 'WH-CON-104' lexicographically — the numeric max must win.
+    prisma.warehouse.findMany.mockResolvedValue([
+      { code: 'WH-CON-99' },
+      { code: 'WH-CON-104' },
+      { code: 'WH-CON-004' },
+    ]);
+    prisma.warehouse.findFirst.mockResolvedValue(null); // dup check
     prisma.warehouse.create.mockImplementation(({ data }) => data);
     const res = await service.create(TENANT_A, USER, {
       name: 'New',
       warehouseType: 'consignment',
     } as any);
-    expect(res.code).toBe('WH-CON-005');
+    expect(res.code).toBe('WH-CON-105');
   });
 
   it('create throws ConflictException on a duplicate explicit code', async () => {
@@ -144,15 +147,16 @@ describe('WarehousesService', () => {
     ).rejects.toThrow(ConflictException);
   });
 
-  it('create scopes the generateCode read to tenantId + deletedAt: null', async () => {
-    prisma.warehouse.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+  it('create generateCode read is tenant-scoped and SPANS soft-deleted rows', async () => {
+    // @@unique([tenantId, code]) spans soft-deleted rows — codegen must consider them
+    // (suppliers convention); filtering deletedAt regenerated occupied codes (P2002).
+    prisma.warehouse.findMany.mockResolvedValue([]);
+    prisma.warehouse.findFirst.mockResolvedValue(null);
     prisma.warehouse.create.mockImplementation(({ data }) => data);
     await service.create(TENANT_A, USER, { name: 'New' } as any);
-    expect(prisma.warehouse.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ tenantId: TENANT_A, deletedAt: null }),
-      }),
-    );
+    const [arg] = prisma.warehouse.findMany.mock.calls[0];
+    expect(arg.where.tenantId).toBe(TENANT_A);
+    expect(arg.where).not.toHaveProperty('deletedAt');
   });
 
   // ── Update ──────────────────────────────────────────────────────────────────
