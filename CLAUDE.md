@@ -2,6 +2,96 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working in this repository.
 
+## Product philosophy
+
+# Axiom Systems
+
+> *We absorb complexity so our clients never have to.*
+
+---
+
+## Who We Are
+
+Axiom Systems is a software engineering studio founded on a single conviction: complexity belongs inside the machine, not in the hands of the user.
+
+We are engineers, industrial designers of software, and systems thinkers who have spent careers working inside the real friction of manufacturing floors, agricultural operations, financial control rooms, and enterprise infrastructure. We don't build software from the outside in. We build it from the process outward — understanding every gear, every trigger, every handoff before writing the first line of code.
+
+Our founder holds degrees in Systems Engineering, Computer Engineering, and Industrial Engineering, with roots in mechanical and electronic systems. That multi-layer perspective is not incidental. It is the foundation of how Axiom Systems approaches every problem: as a system of interconnected parts where the failure of user adoption is always an engineering failure, never a user failure.
+
+---
+
+## Mission
+
+To engineer software so precise and frictionless that adoption becomes the path of least resistance — absorbing every complexity internally so that our clients experience only clarity, speed, and control.
+
+---
+
+## Vision
+
+To become the leading software engineering studio for industrial and enterprise operations in Latin America — recognized not for the features we build, but for the friction we eliminate.
+
+---
+
+## Core Values
+
+### 1. Complexity is our problem, not the client's
+Every field, every click, every decision we push to the user is an engineering failure. We own the complexity. We automate the decision. We deliver the outcome.
+
+### 2. Precision over volume
+We do not build bloated systems. We build exact systems. Every component earns its place. Every abstraction is intentional. We think in tolerances, not approximations.
+
+### 3. Systems thinking first
+We never solve a symptom. We map the full system — inputs, processes, triggers, outputs, feedback loops — before proposing a solution. A patch that creates three new problems is not an engineering achievement.
+
+### 4. Adoption is the product
+A system no one uses is a system that doesn't exist. Adoption is not a sales problem. It is a design and engineering problem. We measure success by how naturally people use what we build.
+
+### 5. Honest engineering
+We tell clients what is true, not what is comfortable. We surface constraints early. We do not overpromise timelines or features. Precision applies to our words as much as our code.
+
+---
+
+## What We Build
+
+Axiom Systems designs and engineers **custom software for operations-intensive businesses** — manufacturing, agribusiness, logistics, and enterprise finance. Our work includes:
+
+- **ERP and operations platforms** tailored to specific industry workflows
+- **Business intelligence systems** that turn operational data into decisions
+- **Process automation** that eliminates manual handoffs and reduces human error
+- **Integration layers** that connect legacy systems with modern interfaces
+
+We specialize in situations where off-the-shelf software either doesn't fit, creates more friction than it removes, or requires the business to adapt to the tool rather than the other way around.
+
+---
+
+## Engineering Philosophy
+
+> *"The professional's job is to absorb complexity, not transfer it."*
+
+Most enterprise software fails at adoption because it was designed by engineers solving engineering problems, not operational problems. The result is interfaces that mirror database schemas, workflows that force users to understand system internals, and training requirements that signal a design failure.
+
+At Axiom Systems we invert this:
+
+- The system learns the process. The user does not learn the system.
+- Automation handles the derivable. Humans handle the judgment.
+- One action triggers the right chain. The user does not manage the chain.
+
+This philosophy is not a differentiator we invented. It is the discipline we enforce on every project, every sprint, every interface decision.
+
+---
+
+## The Axiom
+
+In logic and mathematics, an axiom is a statement so foundational it needs no proof — a self-evident truth from which everything else is derived.
+
+Our name is a commitment: that software should work so naturally it feels self-evident. That when a user interacts with what we build, the right path should feel like the only path. Not because we constrained them, but because we did the engineering work to make complexity invisible.
+
+---
+
+*Axiom Systems — Precision Engineering. Zero Friction.*
+
+---
+
 ## Overview
 
 Sunset ERP is a multi-tenant SaaS ERP platform. Monorepo with two apps:
