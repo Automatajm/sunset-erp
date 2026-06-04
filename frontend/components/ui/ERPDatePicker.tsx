@@ -300,7 +300,7 @@ export function ERPDatePicker({
         const s1 = isoWeekStart(pending.year, pending.week);
         const s2 = isoWeekStart(hoverWk.year, hoverWk.week);
         const sw = isoWeekStart(weekYear, week);
-        if (sw >= Math.min(s1.getTime(), s2.getTime()) && sw <= Math.max(s1.getTime(), s2.getTime())) return 'range';
+        if (sw.getTime() >= Math.min(s1.getTime(), s2.getTime()) && sw.getTime() <= Math.max(s1.getTime(), s2.getTime())) return 'range';
       }
     }
     return 'none';

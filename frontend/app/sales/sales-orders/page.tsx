@@ -546,7 +546,7 @@ export default function SalesOrdersPage() {
               return (
                 <div key={s} className="so-stat"
                   style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }}
-                  onClick={() => setStatusFilter(prev => prev === s ? '' : s)}
+                  onClick={() => setStatusFilter(prev => (prev === s ? '' : (s as SOStatus)))}
                 >
                   <span className="so-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
                   <span className="so-stat-value">{counts[s]}</span>

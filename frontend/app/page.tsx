@@ -453,7 +453,7 @@ function DashboardContent() {
           const mon = new Date(d);
           mon.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
           const wKey = mon.toISOString().substring(0, 10);
-          if (!weekMap[wKey]) weekMap[wKey] = { revenue: 0, expenses: 0, cos: 0 };
+          if (!weekMap[wKey]) weekMap[wKey] = { revenue: 0, expenses: 0, cos: 0, sga: 0, depr: 0, interest: 0 };
           if (e.accountNumber.startsWith('4'))   weekMap[wKey].revenue  += e.credit;
           if (e.accountNumber.startsWith('5'))   weekMap[wKey].cos      += e.debit;
           if (e.accountNumber.startsWith('6'))   weekMap[wKey].expenses += e.debit;
@@ -949,7 +949,7 @@ function DashboardContent() {
               const label = idx === 0 ? 'TY' : 'LY';
               const active = selYear === y && !ytd && selMonths.length === 0;
               return (
-                <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonths([]); setLastClicked(null); }} style={{
+                <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonths([]); setLastClicked(null); }} title={String(y)} style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                   fontFamily: "'IBM Plex Sans',sans-serif",
                   background: active ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
@@ -957,7 +957,7 @@ function DashboardContent() {
                   color: active ? '#fb923c' : 'rgba(255,255,255,0.45)',
                   fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
-                  title: String(y),
+
                 }}>{label}</button>
               );
             })}

@@ -445,7 +445,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
             <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', padding: '4px 0 2px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Components</span>
               <button type="button"
-                onClick={() => setComponents(cs => [...cs, { componentItemId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' }])}
+                onClick={() => setComponents(cs => [...cs, { consumptionGroupId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' }])}
                 style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                 + Add row
               </button>

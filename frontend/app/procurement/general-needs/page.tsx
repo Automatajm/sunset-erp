@@ -377,7 +377,7 @@ function CreateGNModal({ open, onClose, onSaved, items, suppliers }: {
         const it = items.find(x => x.id === v);
         if (it) upd.uom = it.baseUom;
         // Auto-suggest preferred supplier
-        const sup = suppliers.find(s => s.id === it?.defaultSupplierId ?? '');
+        const sup = suppliers.find(s => s.id === (it?.defaultSupplierId ?? ''));
         if (sup) upd.suggestedSupplierId = sup.id;
       }
       return upd;

@@ -18,8 +18,10 @@ const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
   { value: 'opening',    label: 'Opening' },
 ];
 
+// No `currency` — the backend line DTO doesn't accept it and the global
+// ValidationPipe (forbidNonWhitelisted) would 400 the whole entry.
 const EMPTY_LINE: CreateJournalEntryLineDto = {
-  accountId: '', debitAmount: 0, creditAmount: 0, description: '', currency: 'USD',
+  accountId: '', debitAmount: 0, creditAmount: 0, description: '',
 };
 
 function fmtDate(d: string) {
@@ -219,7 +221,8 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
 function CreateModal({ open, onClose, onSaved, accounts }: {
   open: boolean; onClose: () => void; onSaved: () => void; accounts: Account[];
 }) {
-  const [form, setForm] = useState<Omit<CreateJournalEntryDto, 'lines'>>({
+  // fiscalPeriod is UI-only (not part of CreateJournalEntryDto — backend derives it)
+  const [form, setForm] = useState<Omit<CreateJournalEntryDto, 'lines'> & { fiscalPeriod: string }>({
     entryDate: new Date().toISOString().split('T')[0],
     journalType: 'general' as JournalType,
     description: '', fiscalPeriod: '',

@@ -15,7 +15,7 @@ import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { categoriesApi } from '@/lib/api/categories';
 import { uomApi } from '@/lib/api/uom';
 import { supplierItemsApi } from '@/lib/api/supplier-items';
-import { suppliersApi } from '@/lib/api/suppliers';
+import { suppliersApi } from '@/lib/api/suppliers';
 import {
   Item, CreateItemDto, ItemType,
   MacroCategory, Category, UomUnit,
@@ -1000,7 +1000,7 @@ export default function ItemsPage() {
       `}</style>
 
       <div className="itm-page">
-        {stats && <StatsBar stats={stats} activeType={typeFilter} onTypeClick={setTypeFilter} />}
+        {stats && <StatsBar stats={stats} activeType={typeFilter ?? undefined} onTypeClick={setTypeFilter} />}
 
         <div className="itm-toolbar">
           <div style={{ flex: 1 }}>

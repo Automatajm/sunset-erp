@@ -159,7 +159,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={L}>Transaction Type *</label>
-                <select style={{ ...I, cursor: 'pointer' }} value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value }))}>
+                <select style={{ ...I, cursor: 'pointer' }} value={form.transactionType} onChange={e => setForm(f => ({ ...f, transactionType: e.target.value as CreateStockTransactionDto['transactionType'] }))}>
                   {TX_TYPES.map(t => <option key={t.value} value={t.value}>{t.sign} {t.label}</option>)}
                 </select>
               </div>

@@ -16,7 +16,7 @@ const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   accountType: z.string().min(1, "Please select an account type"),
   description: z.string().optional(),
-  active: z.boolean().default(false),
+  active: z.boolean(),
   effectiveDate: z.string().min(1, "Date is required"),
 });
 

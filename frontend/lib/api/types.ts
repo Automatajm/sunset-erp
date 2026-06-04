@@ -48,6 +48,16 @@ export interface Item {
   description?: string;
   itemType:    ItemType;
   baseUom:     string;
+  // Classification (included via ITEM_INCLUDE on every item response)
+  categoryId?:         string;
+  category?:           { id: string; code: string; name: string;
+                         macroCategoryId?: string;
+                         macroCategory?: { id: string; code: string; name: string } };
+  consumptionGroupId?: string;
+  consumptionGroup?:   { id: string; code: string; name: string };
+  barcodeInternal?:    string | null;
+  barcodeExternal?:    string | null;
+  defaultSupplierId?:  string | null;
   // Triple UOM (Sprint 14A — ADR-013)
   purchaseUomId?:               string;
   purchaseUom?:                 { id: string; code: string; name: string };
@@ -75,11 +85,21 @@ export interface Item {
 }
 
 export interface CreateItemDto {
-  code:             string;
+  code?:            string;   // auto-generated if omitted (ITEM-0001, …)
   name:             string;
   description?:     string;
   itemType:         ItemType;
-  baseUom:          string;
+  categoryId?:      string;
+  consumptionGroupId?: string;
+  barcodeInternal?: string;
+  barcodeExternal?: string;
+  baseUom:          string;   // legacy — use consumptionUomId for new items
+  // 3-UOM model (ADR-014)
+  purchaseUomId?:   string;
+  purchaseToConsumptionFactor?: number;
+  storageUomId?:    string;
+  storageToConsumptionFactor?:  number;
+  consumptionUomId?: string;
   isStockable?:     boolean;
   isPurchasable?:   boolean;
   isSaleable?:      boolean;
@@ -219,16 +239,18 @@ export interface Warehouse {
   name:          string;
   warehouseType: WarehouseType;
   address?:      string;
+  locationTrackingEnabled: boolean;
   isActive:      boolean;
   createdAt:     string;
   updatedAt:     string;
 }
 
 export interface CreateWarehouseDto {
-  code:          string;
+  code?:         string;   // auto-generated if omitted (WH-{TYPE}-{NNN})
   name:          string;
   warehouseType?: WarehouseType;
   address?:      string;
+  locationTrackingEnabled?: boolean;
   isActive?:     boolean;
 }
 
@@ -567,6 +589,8 @@ export type UpdateCustomerDto = Partial<CreateCustomerDto>;
 
 // ─── Sales — Sales Orders ─────────────────────────────────────────────────────
 
+export type SOStatus = 'draft' | 'confirmed' | 'shipped' | 'delivered' | 'closed';
+
 export interface SalesOrderLine {
   id:               string;
   lineNumber:       number;
@@ -824,6 +848,8 @@ export interface UpdateJournalEntryDto {
 // ─── Accounting — Fiscal Periods ─────────────────────────────────────────────
 
 export type FiscalPeriodStatus = 'open' | 'closed' | 'locked';
+// Alias — fiscal-periods page + API module import it under this name
+export type PeriodStatus = FiscalPeriodStatus;
 
 export interface FiscalPeriod {
   id:             string;

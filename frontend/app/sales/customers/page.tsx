@@ -77,7 +77,7 @@ function CustomerModal({
         phone:         initial.phone         ?? '',
         email:         initial.email         ?? '',
         website:       initial.website       ?? '',
-        creditLimit:   initial.creditLimit,
+        creditLimit:   initial.creditLimit != null ? Number(initial.creditLimit) : undefined,
         creditStatus:  initial.creditStatus  ?? 'good',
         paymentTerms:  initial.paymentTerms  ?? '',
         currency:      initial.currency      ?? 'USD',
@@ -501,7 +501,7 @@ export default function CustomersPage() {
                       <td><span className="cust-code">{c.code}</span></td>
                       <td><span className="cust-name">{c.name}</span></td>
                       <td><CreditBadge status={c.creditStatus} /></td>
-                      <td><span className="cust-muted">{fmtCurrency(c.creditLimit)}</span></td>
+                      <td><span className="cust-muted">{fmtCurrency(c.creditLimit != null ? Number(c.creditLimit) : undefined)}</span></td>
                       <td><span className="cust-muted">{fmt(c.paymentTerms)}</span></td>
                       <td><span className="cust-muted">{fmt(c.currency)}</span></td>
                       <td><span className="cust-muted">{fmt(c.email)}</span></td>

@@ -5,7 +5,7 @@ import { Label } from "./label"
 
 const Form = FormProvider
 
-type FormFieldContextValue
+type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 > = {
@@ -16,7 +16,7 @@ const FormFieldContext = React.createContext<FormFieldContextValue>(
   {} as FormFieldContextValue
 )
 
-const FormField = 
+const FormField = <
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >({
@@ -45,7 +45,7 @@ const useFormField = () => {
   }
 }
 
-const FormItem = React.forwardRef
+const FormItem = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
@@ -55,7 +55,7 @@ const FormItem = React.forwardRef
 })
 FormItem.displayName = "FormItem"
 
-const FormLabel = React.forwardRef
+const FormLabel = React.forwardRef<
   React.ElementRef<typeof Label>,
   React.ComponentPropsWithoutRef<typeof Label>
 >(({ className, ...props }, ref) => {
@@ -71,7 +71,7 @@ const FormLabel = React.forwardRef
 })
 FormLabel.displayName = "FormLabel"
 
-const FormControl = React.forwardRef
+const FormControl = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ ...props }, ref) => {
@@ -79,7 +79,7 @@ const FormControl = React.forwardRef
 })
 FormControl.displayName = "FormControl"
 
-const FormDescription = React.forwardRef
+const FormDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => {
@@ -93,7 +93,7 @@ const FormDescription = React.forwardRef
 })
 FormDescription.displayName = "FormDescription"
 
-const FormMessage = React.forwardRef
+const FormMessage = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {

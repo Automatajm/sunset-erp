@@ -638,7 +638,7 @@ export function ERPTable<T>({
       )}
 
       {/* ── Single table with sticky thead ── */}
-      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: maxHeight === '100%' ? undefined : maxHeight, minHeight: maxHeight === '100%' ? undefined : maxHeight, flex: 1, minHeight: 0 }}>
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: maxHeight === '100%' ? undefined : maxHeight, flex: 1, minHeight: 0 }}>
         <table style={{ ...S.table, tableLayout: 'auto' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>

@@ -59,7 +59,7 @@ export function useDashboardData() {
       }
 
       try {
-        entries = await journalEntriesApi.getAll({ limit: 10 });
+        entries = (await journalEntriesApi.getAll()).slice(0, 10);
       } catch (err) {
         console.warn('Journal entries not available');
       }
