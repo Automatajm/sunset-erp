@@ -76,6 +76,7 @@ export class CustomersController {
   @ApiOperation({ summary: 'Delete customer (soft delete)' })
   @ApiParam({ name: 'id', description: 'Customer UUID' })
   @ApiResponse({ status: 200, description: 'Customer deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — sales orders still reference it' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Customer not found' })
   async remove(@Request() req, @Param('id') id: string) {

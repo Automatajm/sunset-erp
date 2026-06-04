@@ -6,8 +6,9 @@ import { Customer, CreateCustomerDto, UpdateCustomerDto } from './types';
  
 export const customersApi = {
   getAll: async (): Promise<Customer[]> => {
+    // List endpoint returns an envelope { customers, count } (spec-013)
     const res = await apiClient.get('/customers');
-    return res.data;
+    return res.data.customers ?? [];
   },
   getById: async (id: string): Promise<Customer> => {
     const res = await apiClient.get(`/customers/${id}`);

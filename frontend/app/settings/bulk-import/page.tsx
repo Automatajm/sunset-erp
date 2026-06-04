@@ -422,7 +422,7 @@ export default function BulkImportPage() {
     setExportBusy(true); setParseError('');
     try {
       const res  = await apiClient.get(entityCfg.exportEndpoint);
-      const data: Record<string, any>[] = Array.isArray(res.data) ? res.data : (res.data?.users ?? res.data?.roles ?? res.data?.accounts ?? res.data?.workCenters ?? res.data?.boms ?? []);
+      const data: Record<string, any>[] = Array.isArray(res.data) ? res.data : (res.data?.users ?? res.data?.roles ?? res.data?.accounts ?? res.data?.workCenters ?? res.data?.boms ?? res.data?.customers ?? []);
       if (data.length === 0) { setParseError(`No ${entityCfg.label} records found.`); return; }
       const allFields = [...entityCfg.requiredFields, ...entityCfg.optionalFields];
       const rows = data.map(record => {

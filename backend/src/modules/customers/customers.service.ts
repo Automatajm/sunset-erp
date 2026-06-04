@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -39,7 +39,7 @@ export class CustomersService {
         paymentTerms: createCustomerDto.paymentTerms,
         currency: createCustomerDto.currency,
         notes: createCustomerDto.notes,
-        isActive: true,
+        isActive: createCustomerDto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -49,7 +49,7 @@ export class CustomersService {
   }
 
   async findAll(tenantId: string) {
-    return this.prisma.customer.findMany({
+    const customers = await this.prisma.customer.findMany({
       where: {
         tenantId,
         deletedAt: null,
@@ -58,6 +58,7 @@ export class CustomersService {
         code: 'asc',
       },
     });
+    return { customers, count: customers.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -79,21 +80,38 @@ export class CustomersService {
   async update(tenantId: string, userId: string, id: string, updateCustomerDto: UpdateCustomerDto) {
     await this.findOne(tenantId, id);
 
-    // Codes are immutable (spec-012) — the DTO no longer carries one.
-    return this.prisma.customer.update({
-      where: { id },
+    // Codes are immutable (spec-012). Tenant scope enforced at the write itself
+    // (updateMany — Prisma update() only accepts unique wheres), then re-fetch.
+    await this.prisma.customer.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...updateCustomerDto,
         updatedBy: userId,
       },
     });
+    return this.prisma.customer.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    });
   }
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
+    // Own-relation filtered count — a customer referenced by active sales orders
+    // cannot be deleted (spec-013); no sales-orders module query.
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: { _count: { select: { salesOrders: { where: { deletedAt: null } } } } },
+    });
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${id} not found`);
+    }
+    if (customer._count.salesOrders > 0) {
+      throw new BadRequestException(
+        `Cannot delete: ${customer._count.salesOrders} sales orders still reference this customer`,
+      );
+    }
 
-    await this.prisma.customer.update({
-      where: { id },
+    await this.prisma.customer.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,

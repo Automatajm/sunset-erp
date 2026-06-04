@@ -1,4 +1,14 @@
-﻿import { IsString, IsOptional, IsEmail, IsNumber, MaxLength, Min } from 'class-validator';
+﻿import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsNumber,
+  IsIn,
+  IsBoolean,
+  MaxLength,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCustomerDto {
@@ -40,12 +50,12 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(9999999999999.99) // Decimal(15,2) — DB overflow must be a 400, not a 500
   creditLimit?: number;
 
-  @ApiPropertyOptional({ example: 'good', description: 'Credit status: good, watch, hold' })
+  @ApiPropertyOptional({ example: 'good', enum: ['good', 'watch', 'hold'] })
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @IsIn(['good', 'watch', 'hold'])
   creditStatus?: string;
 
   @ApiPropertyOptional({ example: 'Net 30', description: 'Payment terms' })
@@ -64,4 +74,9 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ default: true, description: 'Is customer active' })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
