@@ -559,7 +559,7 @@ export default function BOMPage() {
     consumptionGroupsApi.getAll().then(setConsumptionGroups).catch(() => {});
     tenantSettingsApi.getSystemUoms().then(s => setSystemUoms(s.list ?? [])).catch(() => {});
     import('@/lib/api/client').then(({ default: apiClient }) => {
-      apiClient.get('/work-centers').then(r => setWorkCenters(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+      apiClient.get('/work-centers').then(r => setWorkCenters(Array.isArray(r.data) ? r.data : (r.data?.workCenters ?? []))).catch(() => {});
     });
   }, [fetchBoms]);
 

@@ -12,9 +12,11 @@ interface WorkCenter {
   isActive: boolean; createdAt: string;
 }
 
+// /work-centers returns an envelope { workCenters, count } (spec-010)
 function extractList(data: unknown): WorkCenter[] {
   if (Array.isArray(data)) return data as WorkCenter[];
   const d = data as Record<string, unknown>;
+  if (d?.workCenters && Array.isArray(d.workCenters)) return d.workCenters as WorkCenter[];
   if (d?.value && Array.isArray(d.value)) return d.value as WorkCenter[];
   return [];
 }

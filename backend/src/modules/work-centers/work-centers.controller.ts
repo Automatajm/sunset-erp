@@ -78,6 +78,7 @@ export class WorkCentersController {
   @ApiOperation({ summary: 'Delete work center (soft delete)' })
   @ApiParam({ name: 'id', description: 'Work center UUID' })
   @ApiResponse({ status: 200, description: 'Work center deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — BOM routings still reference it' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Work center not found' })
   async remove(@Request() req, @Param('id') id: string) {

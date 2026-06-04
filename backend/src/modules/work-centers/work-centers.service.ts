@@ -1,4 +1,9 @@
-﻿import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateWorkCenterDto } from './dto/create-work-center.dto';
 import { UpdateWorkCenterDto } from './dto/update-work-center.dto';
@@ -48,7 +53,7 @@ export class WorkCentersService {
   }
 
   async findAll(tenantId: string) {
-    const workCenters = await this.prisma.workCenter.findMany({
+    const rows = await this.prisma.workCenter.findMany({
       where: {
         tenantId,
         deletedAt: null,
@@ -58,7 +63,8 @@ export class WorkCentersService {
       },
     });
 
-    return workCenters.map((wc) => this.formatWorkCenterResponse(wc));
+    const workCenters = rows.map((wc) => this.formatWorkCenterResponse(wc));
+    return { workCenters, count: workCenters.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -117,19 +123,37 @@ export class WorkCentersService {
     if (updateWorkCenterDto.isActive !== undefined)
       updateData.isActive = updateWorkCenterDto.isActive;
 
-    const workCenter = await this.prisma.workCenter.update({
-      where: { id },
+    // Tenant scope enforced at the write itself (updateMany — Prisma update() only
+    // accepts unique wheres), then re-fetch to preserve the response shape.
+    await this.prisma.workCenter.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: updateData,
+    });
+    const workCenter = await this.prisma.workCenter.findFirst({
+      where: { id, tenantId, deletedAt: null },
     });
 
     return this.formatWorkCenterResponse(workCenter);
   }
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
+    // Own-relation filtered count — a work center referenced by active BOM routings
+    // cannot be deleted (spec-010); no direct bom-module query.
+    const wc = await this.prisma.workCenter.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: { _count: { select: { routings: { where: { deletedAt: null } } } } },
+    });
+    if (!wc) {
+      throw new NotFoundException(`Work center with ID ${id} not found`);
+    }
+    if (wc._count.routings > 0) {
+      throw new BadRequestException(
+        `Cannot delete: ${wc._count.routings} BOM routings still reference this work center`,
+      );
+    }
 
-    await this.prisma.workCenter.update({
-      where: { id },
+    await this.prisma.workCenter.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,

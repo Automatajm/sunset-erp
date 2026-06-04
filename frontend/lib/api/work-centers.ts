@@ -4,9 +4,11 @@
 import apiClient from './client';
 import { WorkCenterType } from './types';
 
+// List endpoint returns an envelope { workCenters, count } (spec-010)
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  if (d?.workCenters && Array.isArray(d.workCenters)) return d.workCenters;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }
