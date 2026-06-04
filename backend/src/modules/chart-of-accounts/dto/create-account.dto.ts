@@ -1,4 +1,4 @@
-﻿import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+﻿import { IsString, IsOptional, IsBoolean, IsIn, IsUUID, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAccountDto {
@@ -12,9 +12,8 @@ export class CreateAccountDto {
   @MaxLength(255)
   name: string;
 
-  @ApiProperty({ example: 'asset' })
-  @IsString()
-  @MaxLength(50)
+  @ApiProperty({ example: 'asset', enum: ['asset', 'liability', 'equity', 'revenue', 'expense'] })
+  @IsIn(['asset', 'liability', 'equity', 'revenue', 'expense'])
   accountType: string;
 
   @ApiPropertyOptional({ example: 'current_asset' })
@@ -25,7 +24,7 @@ export class CreateAccountDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
+  @IsUUID()
   parentAccountId?: string;
 
   @ApiPropertyOptional({ example: 'USD' })

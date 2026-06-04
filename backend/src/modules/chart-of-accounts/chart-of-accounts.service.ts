@@ -45,10 +45,11 @@ export class ChartOfAccountsService {
   }
 
   async findAll(tenantId: string, accountType?: string) {
-    return this.prisma.account.findMany({
+    const accounts = await this.prisma.account.findMany({
       where: { tenantId, deletedAt: null, ...(accountType ? { accountType } : {}) },
       orderBy: { accountNumber: 'asc' },
     });
+    return { accounts, count: accounts.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -93,7 +94,15 @@ export class ChartOfAccountsService {
   }
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateAccountDto) {
-    await this.findOne(tenantId, id);
+    const account = await this.findOne(tenantId, id);
+    // System accounts: accountNumber/accountType are immutable (spec-007) —
+    // automated postings depend on them. Same-value no-ops are allowed.
+    if (account.isSystem) {
+      if (dto.accountNumber !== undefined && dto.accountNumber !== account.accountNumber)
+        throw new BadRequestException('Cannot change accountNumber of a system account');
+      if (dto.accountType !== undefined && dto.accountType !== account.accountType)
+        throw new BadRequestException('Cannot change accountType of a system account');
+    }
     if (dto.accountNumber) {
       const dup = await this.prisma.account.findFirst({
         where: { tenantId, accountNumber: dto.accountNumber, id: { not: id }, deletedAt: null },
@@ -108,14 +117,30 @@ export class ChartOfAccountsService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.allowManualPosting !== undefined) data.allowManualPosting = dto.allowManualPosting;
-    return this.prisma.account.update({ where: { id }, data });
+    // Tenant scope enforced at the write itself (updateMany — Prisma update() only
+    // accepts unique wheres), then re-fetch to preserve the response shape (spec-007).
+    await this.prisma.account.updateMany({
+      where: { id, tenantId, deletedAt: null },
+      data,
+    });
+    return this.prisma.account.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    });
   }
 
   async remove(tenantId: string, userId: string, id: string) {
     const account = await this.findOne(tenantId, id);
     if (account.isSystem) throw new BadRequestException('Cannot delete system account');
-    await this.prisma.account.update({
-      where: { id },
+    // Referential guard: never orphan the hierarchy (spec-007).
+    const childCount = await this.prisma.account.count({
+      where: { parentAccountId: id, tenantId, deletedAt: null },
+    });
+    if (childCount > 0)
+      throw new BadRequestException(
+        `Cannot delete: ${childCount} child accounts still reference this account`,
+      );
+    await this.prisma.account.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Account deleted successfully', id };

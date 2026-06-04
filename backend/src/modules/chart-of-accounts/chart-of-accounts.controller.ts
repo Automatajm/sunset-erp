@@ -90,6 +90,10 @@ export class ChartOfAccountsController {
   @ApiOperation({ summary: 'Update account' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account updated successfully' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot change accountNumber/accountType of a system account',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Account not found' })
   @ApiResponse({ status: 409, description: 'Account code already exists' })
@@ -107,7 +111,10 @@ export class ChartOfAccountsController {
   @ApiOperation({ summary: 'Delete account (soft delete)' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Cannot delete system account' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot delete system account, or active child accounts still reference it',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Account not found' })
   async remove(@Request() req, @Param('id') id: string) {

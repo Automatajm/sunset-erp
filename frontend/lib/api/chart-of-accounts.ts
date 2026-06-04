@@ -4,9 +4,10 @@
 import apiClient from './client';
 import { Account, CreateAccountDto, UpdateAccountDto, AccountType } from './types';
  
-// Backend returns { value: Account[], Count: number } for list endpoints
+// List endpoint returns an envelope { accounts, count } (spec-007)
 function extractList(data: any): Account[] {
   if (Array.isArray(data)) return data;
+  if (data?.accounts && Array.isArray(data.accounts)) return data.accounts;
   if (data?.value && Array.isArray(data.value)) return data.value;
   return [];
 }
