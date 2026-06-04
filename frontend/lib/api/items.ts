@@ -14,8 +14,9 @@ export interface ItemStatistics {
  
 export const itemsApi = {
   getAll: async (params?: { itemType?: ItemType }): Promise<Item[]> => {
+    // List endpoint returns an envelope { items, count } (spec-003)
     const res = await apiClient.get('/items', { params });
-    return res.data;
+    return res.data.items ?? [];
   },
   getById: async (id: string): Promise<Item> => {
     const res = await apiClient.get(`/items/${id}`);

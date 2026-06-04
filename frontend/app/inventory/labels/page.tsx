@@ -253,7 +253,8 @@ export default function LabelPrintPage() {
   // ---- Load -----------------------------------------------------------------
 
   useEffect(() => {
-    apiClient.get('/items').then(r => setItems(r.data ?? [])).catch(() => {});
+    // /items returns an envelope { items, count } (spec-003)
+    apiClient.get('/items').then(r => setItems(r.data.items ?? [])).catch(() => {});
     apiClient.get('/warehouses').then(r => setWarehouses(r.data ?? [])).catch(() => {});
   }, []);
 

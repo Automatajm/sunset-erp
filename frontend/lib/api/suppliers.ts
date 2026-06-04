@@ -6,8 +6,9 @@ import { Supplier, CreateSupplierDto, UpdateSupplierDto } from './types';
  
 export const suppliersApi = {
   getAll: async (): Promise<Supplier[]> => {
+    // List endpoint returns an envelope { suppliers, count } (spec-002)
     const res = await apiClient.get('/suppliers');
-    return res.data;
+    return res.data.suppliers ?? [];
   },
   getById: async (id: string): Promise<Supplier> => {
     const res = await apiClient.get(`/suppliers/${id}`);
