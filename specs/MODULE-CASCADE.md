@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 11 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom` |
-| Pending | 27 |
+| Specced (Done) | 13 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers` |
+| Pending | 25 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -49,7 +49,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | ✅ spec-005 | uom | UomUnit, UomConversion | none |
 | ✅ spec-007 | chart-of-accounts | Account | none |
 | ✅ spec-006 | macro-categories | MacroCategory | none |
-| ⬜ | customers | Customer | none |
+| ✅ spec-013 | customers | Customer | none |
 | ✅ spec-010 | work-centers | WorkCenter | none |
 | ✅ spec-004 | warehouses | Warehouse | none |
 | ⬜ | automation | AutomationConfig, AutoJeQueue | none |
@@ -119,8 +119,8 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 3. ~~**chart-of-accounts**~~ ✅ spec-007 — Tier 0, prerequisite of journal-entries, budgets, cash-flow, categories, invoices.
 4. ~~**consumption-groups**~~ ✅ spec-008 — Tier 1, prerequisite of items✅, bom, general-needs.
 5. ~~**categories**~~ ✅ spec-009 — Tier 1, prerequisite of items✅.
-6. **customers** — Tier 0, prerequisite of sales-orders, ar-invoices. ← **next**
+6. ~~**customers**~~ ✅ spec-013 — Tier 0, prerequisite of sales-orders, ar-invoices.
 7. ~~**work-centers**~~ ✅ spec-010 — Tier 0, prerequisite of bom.
-8. **warehouse-locations** — Tier 1, prerequisite of stock-*.
+8. **warehouse-locations** — Tier 1, prerequisite of stock-*. ← **next**
 9. **journal-entries** — Tier 1, prerequisite of production-orders, invoices.
 10. ~~**bom**~~ ✅ spec-011 — Tier 3, prerequisite of production cluster.

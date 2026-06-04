@@ -1,6 +1,6 @@
 # spec-013 — Customers (Sales Master Data)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Sales  
 Sprint: 19  
 Module(s): `customers` (touches `frontend/lib/api/customers.ts` + `frontend/app/settings/bulk-import/page.tsx` for the list envelope)  
@@ -44,28 +44,28 @@ schema changes**.
       (spec-012: numeric max, spans soft-deleted, immutable; client-sent `code` → `400`);
       defaults `creditLimit: 0`, `creditStatus: 'good'`, `isActive: true`.
 - [x] `GET /api/customers` — lists the tenant's active customers ordered by `code` asc.
-- [ ] `GET /api/customers` returns the list envelope `{ customers: [...], count }`;
+- [x] `GET /api/customers` returns the list envelope `{ customers: [...], count }`;
       `customersApi.getAll` destructures `res.data.customers ?? []` and bulk-import's
       export extraction adds `res.data?.customers` in the same change.
 - [x] `GET /api/customers/:id` — returns the customer; `404` when not found in-tenant.
 - [x] `PATCH /api/customers/:id` — partial update; `404` when not found.
-- [ ] `PATCH` can deactivate/reactivate: `isActive` added to `CreateCustomerDto`
+- [x] `PATCH` can deactivate/reactivate: `isActive` added to `CreateCustomerDto`
       (`@IsOptional @IsBoolean`) and therefore to the `PartialType` update.
 - [x] `DELETE /api/customers/:id` — soft delete; `404`; returns `{ message, id }`.
-- [ ] `DELETE` is blocked with `400` (live count) while active sales orders reference the
+- [x] `DELETE` is blocked with `400` (live count) while active sales orders reference the
       customer (own-relation filtered `_count` — no sales-orders module dependency).
 
 ### Tenant scoping (CLAUDE.md invariant)
 - [x] All reads scoped `{ tenantId, deletedAt: null }` (`findAll`, `findOne`,
       `generateCode` spans soft-deleted by documented design).
-- [ ] `update()` write tenant-scoped at the write via `updateMany` + re-fetch.
-- [ ] `remove()` soft-delete write tenant-scoped at the write.
+- [x] `update()` write tenant-scoped at the write via `updateMany` + re-fetch.
+- [x] `remove()` soft-delete write tenant-scoped at the write.
 - [x] `create` writes `tenantId` from the JWT.
 
 ### DTO validation
 - [x] Base validators (`@IsEmail`, `@MaxLength`, `@Min(0)` on creditLimit, currency ≤ 3).
-- [ ] `creditStatus` validated with `@IsIn(['good', 'watch', 'hold'])`.
-- [ ] `creditLimit` gains `@Max(9999999999999.99)` (Decimal(15,2)) — overflow becomes
+- [x] `creditStatus` validated with `@IsIn(['good', 'watch', 'hold'])`.
+- [x] `creditLimit` gains `@Max(9999999999999.99)` (Decimal(15,2)) — overflow becomes
       `400`, not `500`.
 - [x] `UpdateCustomerDto extends PartialType(CreateCustomerDto)`; global `ValidationPipe`.
 
@@ -75,11 +75,11 @@ schema changes**.
 
 ### Error handling
 - [x] `404 NotFoundException` — `findOne`/`update`/`remove` on missing/other-tenant id.
-- [ ] `400 BadRequestException` — delete blocked while active sales orders exist.
+- [x] `400 BadRequestException` — delete blocked while active sales orders exist.
 
 ### Swagger
 - [x] Every handler has `@ApiOperation` + `@ApiResponse` (+ `@ApiParam` on `:id`).
-- [ ] DELETE documents the new `400` (sales orders still reference the customer).
+- [x] DELETE documents the new `400` (sales orders still reference the customer).
 
 ---
 
@@ -187,3 +187,4 @@ Key invariants:
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 19) | Draft — 2 unscoped writes, missing SO delete guard, creditStatus/creditLimit validation, isActive missing from DTOs + list envelope captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (647845c); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 12/12, e2e 16/16 (full suite 175/175), builds + lint green |
