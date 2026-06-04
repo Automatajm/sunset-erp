@@ -1,6 +1,6 @@
 # spec-006 — Macro Categories (Inventory Classification)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: 19  
 Module(s): `macro-categories` (touches `categories` for the cross-module count, `frontend/lib/api/macro-categories.ts` for the list envelope)  
@@ -52,7 +52,7 @@ the five gaps above — with **no schema changes**.
       `_count.categories`; defaults `isActive: true` when omitted.
 - [x] `GET /api/macro-categories` — lists the tenant's active macro categories ordered by
       `code` asc, each with `_count.categories`.
-- [ ] `GET /api/macro-categories` returns the list envelope
+- [x] `GET /api/macro-categories` returns the list envelope
       `{ macroCategories: [...], count: <n> }` (spec-001 convention; currently a bare
       array), and `frontend/lib/api/macro-categories.ts` `getAll` destructures
       `res.data.macroCategories ?? []` in the same change.
@@ -68,18 +68,18 @@ the five gaps above — with **no schema changes**.
 ### Tenant scoping (CLAUDE.md invariant — the core of this spec)
 - [x] All reads (`create` duplicate check, `findAll`, `findOne`, `update` conflict check)
       scoped `where: { tenantId, deletedAt: null }` with `tenantId` from `req.user.tenantId`.
-- [ ] `update()` write is tenant-scoped at the write itself:
+- [x] `update()` write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })` per the
       suppliers/items convention (`macro-categories.service.ts:65`).
-- [ ] `remove()` soft-delete write is tenant-scoped at the write itself:
+- [x] `remove()` soft-delete write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })`
       (`macro-categories.service.ts:81`).
-- [ ] The child-category count used by `remove()` is scoped with `tenantId`
+- [x] The child-category count used by `remove()` is scoped with `tenantId`
       (`macro-categories.service.ts:73`).
 - [x] `create` writes `tenantId` from the JWT; never from request body or headers.
 
 ### Module interconnection
-- [ ] `MacroCategoriesService` no longer queries the `Category` model with Prisma
+- [x] `MacroCategoriesService` no longer queries the `Category` model with Prisma
       directly. `MacroCategoriesModule` imports `CategoriesModule` and injects
       `CategoriesService`, which gains a public
       `countByMacroCategory(tenantId, macroCategoryId): Promise<number>` (tenant-scoped,
@@ -301,3 +301,4 @@ cd backend && pnpm build && pnpm test macro-categories
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 18) | Draft — 4 invariant gaps (3 tenant-scoping writes/count, 1 cross-module Prisma access) + list-envelope gap captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (8ce5912); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 17/17, e2e 15/15, build + lint green |
