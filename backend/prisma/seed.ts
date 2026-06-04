@@ -3,6 +3,7 @@ import { seedCurrencies } from './seeds/01-currencies.seed';
 import { seedLanguages } from './seeds/02-languages.seed';
 import { seedPermissions } from './seeds/03-permissions.seed';
 import { seedDemoTenant } from './seeds/04-demo-tenant.seed';
+import { seedDemoBurgerBorinquen } from './seeds/05-demo-burger-borinquen.seed';
 
 const prisma = new PrismaClient();
 
@@ -71,6 +72,20 @@ async function main() {
   // Step 3: Seed demo tenant with admin user
   console.log('\n🏢 Seeding demo tenant...');
   await seedDemoTenant(prisma);
+
+  // Step 4: Themed demo tenant (Burger Borinquen). Requires the UOM catalog
+  // (npx ts-node prisma/seed-uom.ts); skipped with a warning when missing so
+  // the base seed never breaks.
+  console.log('\n🍔 Seeding Burger Borinquen demo data...');
+  try {
+    await seedDemoBurgerBorinquen(prisma);
+  } catch (e: any) {
+    if (String(e?.message).includes('UOM catalog missing')) {
+      console.warn('   ⚠️  Skipped: ' + e.message);
+    } else {
+      throw e;
+    }
+  }
 
   console.log('\n✅ Database seeded successfully!');
   console.log('\n📋 Default credentials:');
