@@ -1,6 +1,6 @@
 # spec-009 — Categories (Inventory Classification, Level 2)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Inventory  
 Sprint: 19  
 Module(s): `categories` (touches `chart-of-accounts` for GL-account validation; `frontend/lib/api/categories.ts` + `frontend/app/inventory/stock-reconciliation/[id]/AssignmentModal.tsx` for the list envelope)  
@@ -59,7 +59,7 @@ schema changes**.
       `macroCategory`, GL account summaries, and `_count.items`.
 - [x] `GET /api/categories` — lists the tenant's active categories ordered by macro
       category code then code; optional `?macroCategoryId=` filter.
-- [ ] `GET /api/categories` returns the list envelope `{ categories: [...], count: <n> }`.
+- [x] `GET /api/categories` returns the list envelope `{ categories: [...], count: <n> }`.
       In the same change: `categoriesApi.getAll` destructures `res.data.categories ?? []`
       (`frontend/lib/api/categories.ts:8`) and `AssignmentModal` does the same
       (`frontend/app/inventory/stock-reconciliation/[id]/AssignmentModal.tsx:119`).
@@ -73,12 +73,12 @@ schema changes**.
 ### Tenant scoping (CLAUDE.md invariant)
 - [x] All reads (`create` dup + macro checks, `findAll`, `findOne`, `update` conflict
       check, `countByMacroCategory`) scoped `where: { tenantId, deletedAt: null }`.
-- [ ] `update()` write is tenant-scoped at the write itself:
+- [x] `update()` write is tenant-scoped at the write itself:
       `updateMany({ where: { id, tenantId, deletedAt: null } })`, then re-fetch with the
       standard include to preserve the response shape (`categories.service.ts:84-88`).
-- [ ] `remove()` soft-delete write is tenant-scoped at the write itself
+- [x] `remove()` soft-delete write is tenant-scoped at the write itself
       (`categories.service.ts:98-101`).
-- [ ] The delete guard's item count is tenant-safe: replace the direct
+- [x] The delete guard's item count is tenant-safe: replace the direct
       `prisma.item.count` (`categories.service.ts:93`, missing `tenantId`) with the
       category's **own filtered relation count**
       (`_count: { select: { items: { where: { deletedAt: null } } } }` on the scoped
@@ -87,11 +87,11 @@ schema changes**.
 - [x] `create` writes `tenantId` from the JWT; never from request body or headers.
 
 ### Referential integrity (cross-tenant vectors — the core of this spec)
-- [ ] `update()` validates `macroCategoryId` when provided: scoped lookup
+- [x] `update()` validates `macroCategoryId` when provided: scoped lookup
       (`{ id, tenantId, deletedAt: null }`) → `404` when it does not resolve in the
       tenant. Same documented-exception direct query as `create()` (module cycle with
       macro-categories).
-- [ ] `create()` and `update()` validate `inventoryAccountId` and `cogsAccountId` when
+- [x] `create()` and `update()` validate `inventoryAccountId` and `cogsAccountId` when
       provided via the injected `ChartOfAccountsService.findOne(tenantId, id)` → `404`
       when the account does not resolve **in the tenant** (closes both the FK-500 and the
       cross-tenant mapping).
@@ -99,10 +99,10 @@ schema changes**.
       (`categories.service.ts:28-31`).
 
 ### Module interconnection
-- [ ] `CategoriesModule` imports `ChartOfAccountsModule` and injects
+- [x] `CategoriesModule` imports `ChartOfAccountsModule` and injects
       `ChartOfAccountsService` for GL-account validation (`ChartOfAccountsModule` already
       exports the service; no cycle — chart-of-accounts imports no business module).
-- [ ] No direct `prisma.item.*` access remains in this module (the delete guard uses the
+- [x] No direct `prisma.item.*` access remains in this module (the delete guard uses the
       own-relation count).
 - [x] The scoped direct `MacroCategory` lookups are the documented exception (cycle with
       `MacroCategoriesModule`, accepted since spec-006).
@@ -124,7 +124,7 @@ schema changes**.
 - [x] `409 ConflictException` — duplicate `code` on create and update (self excluded).
 - [x] `404 NotFoundException` — `findOne`/`update`/`remove` on missing or other-tenant
       id; `create` with unresolvable `macroCategoryId`.
-- [ ] `404 NotFoundException` — `update` with unresolvable `macroCategoryId`;
+- [x] `404 NotFoundException` — `update` with unresolvable `macroCategoryId`;
       `create`/`update` with unresolvable or other-tenant GL account ids (currently 500
       or silent cross-tenant link).
 - [x] `400 BadRequestException` — delete blocked while active items exist; message
@@ -132,7 +132,7 @@ schema changes**.
 
 ### Swagger
 - [x] Every handler has `@ApiOperation` + `@ApiResponse` (+ `@ApiParam`/`@ApiQuery`).
-- [ ] PATCH documents the new `404` causes (macro category / GL account not found).
+- [x] PATCH documents the new `404` causes (macro category / GL account not found).
 
 ---
 
@@ -317,3 +317,4 @@ cd backend && pnpm build && pnpm test categories.service
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-04 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 28) | Draft — 5 invariant gaps (2 unscoped writes, untenanted item count, 2 cross-tenant FK vectors) + list-envelope gap captured as unchecked criteria |
+| 2026-06-04 | Shipped to origin (7f1acab); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) — unit 18/18, e2e 20/20 (full suite 121/121), build + lint green |
