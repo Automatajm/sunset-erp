@@ -55,7 +55,6 @@ describe('WorkCenters (e2e)', () => {
   const authB = (req: request.Test) => req.set('Authorization', `Bearer ${tokenB}`);
   const server = () => app.getHttpServer();
   const validWC = () => ({
-    code: 'E2EWC-' + Math.floor(performance.now()),
     name: 'E2E Work Center',
     workCenterType: 'machine',
     capacityPerHour: 120,
@@ -93,7 +92,13 @@ describe('WorkCenters (e2e)', () => {
     expect(res.body.efficiencyPercent).toBe(100); // default
     expect(res.body.isActive).toBe(true);
     expect(res.body.workCenterType).toBe('machine');
+    expect(res.body.code).toMatch(/^WC-\d{4}-\d{4}$/); // auto code (spec-012)
   });
+
+  it('POST /api/work-centers → 400 on a client-supplied code (spec-012: system-assigned)', () =>
+    auth(request(server()).post('/api/work-centers'))
+      .send({ ...validWC(), code: 'HACK' })
+      .expect(400));
 
   it('PATCH /api/work-centers/:id → 200 updates and formats numerics', async () => {
     const created = await auth(request(server()).post('/api/work-centers'))
@@ -128,14 +133,6 @@ describe('WorkCenters (e2e)', () => {
     auth(request(server()).post('/api/work-centers'))
       .send({ ...validWC(), notes: 'should be rejected' })
       .expect(400));
-
-  it('POST /api/work-centers → 409 on a duplicate code', async () => {
-    const body = validWC();
-    await auth(request(server()).post('/api/work-centers')).send(body).expect(201);
-    await auth(request(server()).post('/api/work-centers'))
-      .send({ ...body, name: 'Second' })
-      .expect(409);
-  });
 
   it('GET/PATCH/DELETE /api/work-centers/:id → 404 for an unknown id', async () => {
     await auth(request(server()).get(`/api/work-centers/${ZERO}`)).expect(404);

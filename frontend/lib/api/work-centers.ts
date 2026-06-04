@@ -22,7 +22,7 @@ export const workCentersApi = {
     const res = await apiClient.get(`/work-centers/${id}`);
     return res.data;
   },
-  create: async (data: { code: string; name: string; workCenterType?: WorkCenterType; capacityPerHour?: number; efficiencyPercent?: number; costPerHour?: number; isActive?: boolean }) => {
+  create: async (data: { name: string; workCenterType?: WorkCenterType; capacityPerHour?: number; efficiencyPercent?: number; costPerHour?: number; isActive?: boolean }) => {
     const res = await apiClient.post('/work-centers', data);
     return res.data;
   },

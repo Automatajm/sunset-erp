@@ -31,7 +31,6 @@ export class CustomersController {
   @ApiOperation({ summary: 'Create a new customer' })
   @ApiResponse({ status: 201, description: 'Customer created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 409, description: 'Customer code already exists' })
   async create(@Request() req, @Body() createCustomerDto: CreateCustomerDto) {
     return this.customersService.create(req.user.tenantId, req.user.id, createCustomerDto);
   }
@@ -63,7 +62,6 @@ export class CustomersController {
   @ApiResponse({ status: 200, description: 'Customer updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Customer not found' })
-  @ApiResponse({ status: 409, description: 'Customer code already exists' })
   async update(
     @Request() req,
     @Param('id') id: string,

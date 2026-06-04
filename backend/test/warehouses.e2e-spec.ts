@@ -127,18 +127,11 @@ describe('Warehouses (e2e)', () => {
       request(server()).delete('/api/warehouses/00000000-0000-0000-0000-000000000000'),
     ).expect(404));
 
-  // ── Duplicate code → 409 ──────────────────────────────────────────────────
-  it('POST /api/warehouses → 409 on a duplicate explicit code', async () => {
-    // Unique across runs — performance.now() % 100 only had 100 possible values and
-    // collided with residue from prior runs (first POST already 409'd).
-    const code = `WHDUP-${Date.now()}`;
-    await auth(request(server()).post('/api/warehouses'))
-      .send({ ...validWarehouse(), code })
-      .expect(201);
-    await auth(request(server()).post('/api/warehouses'))
-      .send({ ...validWarehouse(), code })
-      .expect(409);
-  });
+  // ── Codes are system-assigned (spec-012) ──────────────────────────────────
+  it('POST /api/warehouses → 400 on a client-supplied code', () =>
+    auth(request(server()).post('/api/warehouses'))
+      .send({ ...validWarehouse(), code: 'HACK-001' })
+      .expect(400));
 
   // ── Tenant isolation ──────────────────────────────────────────────────────
   // A: DEMO (token), B: TENANT2 (tokenB). A warehouse created under A must be

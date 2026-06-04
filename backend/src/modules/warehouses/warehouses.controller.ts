@@ -30,7 +30,6 @@ export class WarehousesController {
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a new warehouse' })
   @ApiResponse({ status: 201, description: 'Warehouse created successfully' })
-  @ApiResponse({ status: 409, description: 'Warehouse code already exists' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   async create(@Request() req, @Body() dto: CreateWarehouseDto) {
     return this.warehousesService.create(req.user.tenantId, req.user.id, dto);
@@ -80,7 +79,6 @@ export class WarehousesController {
   @ApiParam({ name: 'id', description: 'Warehouse UUID' })
   @ApiResponse({ status: 200, description: 'Warehouse updated successfully' })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
-  @ApiResponse({ status: 409, description: 'Warehouse code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateWarehouseDto) {
     return this.warehousesService.update(req.user.tenantId, req.user.id, id, dto);
   }

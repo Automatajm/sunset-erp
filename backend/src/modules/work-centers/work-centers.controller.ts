@@ -31,7 +31,6 @@ export class WorkCentersController {
   @ApiOperation({ summary: 'Create a new work center' })
   @ApiResponse({ status: 201, description: 'Work center created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 409, description: 'Work center code already exists' })
   async create(@Request() req, @Body() createWorkCenterDto: CreateWorkCenterDto) {
     return this.workCentersService.create(req.user.tenantId, req.user.id, createWorkCenterDto);
   }

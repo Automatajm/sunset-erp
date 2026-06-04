@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -7,23 +7,27 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 export class CustomersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tenantId: string, userId: string, createCustomerDto: CreateCustomerDto) {
-    const existing = await this.prisma.customer.findFirst({
-      where: {
-        tenantId,
-        code: createCustomerDto.code,
-        deletedAt: null,
-      },
+  // ── Auto-code CL-YYYY-NNNN (spec-012: codes are system-assigned, immutable) ──
+  private async generateCode(tenantId: string): Promise<string> {
+    const prefix = `CL-${new Date().getFullYear()}`;
+    // Numeric max (never lexicographic), NaN-guarded, spanning soft-deleted rows —
+    // @@unique([tenantId, code]) spans them (house convention).
+    const rows = await this.prisma.customer.findMany({
+      where: { tenantId, code: { startsWith: prefix } },
+      select: { code: true },
     });
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
+  }
 
-    if (existing) {
-      throw new ConflictException(`Customer with code ${createCustomerDto.code} already exists`);
-    }
-
+  async create(tenantId: string, userId: string, createCustomerDto: CreateCustomerDto) {
     const customer = await this.prisma.customer.create({
       data: {
         tenantId,
-        code: createCustomerDto.code,
+        code: await this.generateCode(tenantId),
         name: createCustomerDto.name,
         legalName: createCustomerDto.legalName,
         taxId: createCustomerDto.taxId,
@@ -75,21 +79,7 @@ export class CustomersService {
   async update(tenantId: string, userId: string, id: string, updateCustomerDto: UpdateCustomerDto) {
     await this.findOne(tenantId, id);
 
-    if (updateCustomerDto.code) {
-      const existing = await this.prisma.customer.findFirst({
-        where: {
-          tenantId,
-          code: updateCustomerDto.code,
-          id: { not: id },
-          deletedAt: null,
-        },
-      });
-
-      if (existing) {
-        throw new ConflictException(`Customer with code ${updateCustomerDto.code} already exists`);
-      }
-    }
-
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
     return this.prisma.customer.update({
       where: { id },
       data: {

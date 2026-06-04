@@ -1,9 +1,4 @@
-﻿import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateWorkCenterDto } from './dto/create-work-center.dto';
 import { UpdateWorkCenterDto } from './dto/update-work-center.dto';
@@ -13,25 +8,27 @@ import { Decimal } from '@prisma/client/runtime/library';
 export class WorkCentersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tenantId: string, userId: string, createWorkCenterDto: CreateWorkCenterDto) {
-    const existing = await this.prisma.workCenter.findFirst({
-      where: {
-        tenantId,
-        code: createWorkCenterDto.code,
-        deletedAt: null,
-      },
+  // ── Auto-code WC-YYYY-NNNN (spec-012: codes are system-assigned, immutable) ──
+  private async generateCode(tenantId: string): Promise<string> {
+    const prefix = `WC-${new Date().getFullYear()}`;
+    // Numeric max (never lexicographic), NaN-guarded, spanning soft-deleted rows —
+    // @@unique([tenantId, code]) spans them (house convention).
+    const rows = await this.prisma.workCenter.findMany({
+      where: { tenantId, code: { startsWith: prefix } },
+      select: { code: true },
     });
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
+  }
 
-    if (existing) {
-      throw new ConflictException(
-        `Work center with code ${createWorkCenterDto.code} already exists`,
-      );
-    }
-
+  async create(tenantId: string, userId: string, createWorkCenterDto: CreateWorkCenterDto) {
     const workCenter = await this.prisma.workCenter.create({
       data: {
         tenantId,
-        code: createWorkCenterDto.code,
+        code: await this.generateCode(tenantId),
         name: createWorkCenterDto.name,
         workCenterType: createWorkCenterDto.workCenterType || 'machine',
         capacityPerHour: createWorkCenterDto.capacityPerHour
@@ -91,26 +88,9 @@ export class WorkCentersService {
   ) {
     await this.findOne(tenantId, id);
 
-    if (updateWorkCenterDto.code) {
-      const existing = await this.prisma.workCenter.findFirst({
-        where: {
-          tenantId,
-          code: updateWorkCenterDto.code,
-          id: { not: id },
-          deletedAt: null,
-        },
-      });
-
-      if (existing) {
-        throw new ConflictException(
-          `Work center with code ${updateWorkCenterDto.code} already exists`,
-        );
-      }
-    }
-
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
     const updateData: any = { updatedBy: userId };
 
-    if (updateWorkCenterDto.code) updateData.code = updateWorkCenterDto.code;
     if (updateWorkCenterDto.name) updateData.name = updateWorkCenterDto.name;
     if (updateWorkCenterDto.workCenterType)
       updateData.workCenterType = updateWorkCenterDto.workCenterType;

@@ -125,16 +125,11 @@ describe('Items (e2e)', () => {
   it('DELETE /api/items/:id → 404 for an unknown id', () =>
     auth(request(server()).delete('/api/items/00000000-0000-0000-0000-000000000000')).expect(404));
 
-  // ── Duplicate code → 409 ──────────────────────────────────────────────────
-  it('POST /api/items → 409 on a duplicate explicit code', async () => {
-    const code = `ITEM-DUP-${Math.floor(performance.now())}`;
-    await auth(request(server()).post('/api/items'))
-      .send({ ...validItem(), code })
-      .expect(201);
-    await auth(request(server()).post('/api/items'))
-      .send({ ...validItem(), code })
-      .expect(409);
-  });
+  // ── Codes are system-assigned (spec-012) ──────────────────────────────────
+  it('POST /api/items → 400 on a client-supplied code', () =>
+    auth(request(server()).post('/api/items'))
+      .send({ ...validItem(), code: 'ITEM-HACK' })
+      .expect(400));
 
   // ── Tenant isolation ──────────────────────────────────────────────────────
   // A: DEMO (token), B: TENANT2 (tokenB). An item created under A must be

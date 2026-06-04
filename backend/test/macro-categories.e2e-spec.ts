@@ -52,7 +52,6 @@ describe('MacroCategories (e2e)', () => {
   const auth = (req: request.Test) => req.set('Authorization', `Bearer ${token}`);
   const authB = (req: request.Test) => req.set('Authorization', `Bearer ${tokenB}`);
   const server = () => app.getHttpServer();
-  const uniqueCode = (prefix: string) => `${prefix}-${Math.floor(performance.now())}`;
 
   // ── Auth gates ──────────────────────────────────────────────────────────
   it('GET /api/macro-categories → 401 without a token', () =>
@@ -79,19 +78,23 @@ describe('MacroCategories (e2e)', () => {
         expect(r.body).toHaveProperty('count');
       }));
 
-  it('POST /api/macro-categories → 201 with _count.categories: 0 and isActive default', async () => {
-    const code = uniqueCode('E2E');
+  it('POST /api/macro-categories → 201 with auto code MC-YYYY-NNNN (spec-012)', async () => {
     const res = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code, name: 'E2E Macro' })
+      .send({ name: 'E2E Macro' })
       .expect(201);
-    expect(res.body.code).toBe(code);
+    expect(res.body.code).toMatch(/^MC-\d{4}-\d{4}$/);
     expect(res.body.isActive).toBe(true);
     expect(res.body._count).toEqual({ categories: 0 });
   });
 
+  it('POST /api/macro-categories → 400 on a client-supplied code (spec-012: system-assigned)', () =>
+    auth(request(server()).post('/api/macro-categories'))
+      .send({ name: 'X', code: 'HACK' })
+      .expect(400));
+
   it('GET /api/macro-categories/:id → 200 with child categories array', async () => {
     const created = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code: uniqueCode('E2EGET'), name: 'E2E Detail' })
+      .send({ name: 'E2E Detail' })
       .expect(201);
     const res = await auth(
       request(server()).get(`/api/macro-categories/${created.body.id}`),
@@ -99,15 +102,17 @@ describe('MacroCategories (e2e)', () => {
     expect(Array.isArray(res.body.categories)).toBe(true);
   });
 
-  it('PATCH /api/macro-categories/:id → 200 updates name; keeping own code is not a conflict', async () => {
-    const code = uniqueCode('E2EPAT');
+  it('PATCH /api/macro-categories/:id → 200 updates name; PATCH with code → 400 (immutable)', async () => {
     const created = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code, name: 'Before' })
+      .send({ name: 'Before' })
       .expect(201);
     const res = await auth(request(server()).patch(`/api/macro-categories/${created.body.id}`))
-      .send({ code, name: 'After' }) // same code (self-excluded) + new name
+      .send({ name: 'After' })
       .expect(200);
     expect(res.body.name).toBe('After');
+    await auth(request(server()).patch(`/api/macro-categories/${created.body.id}`))
+      .send({ code: 'HACK' })
+      .expect(400);
   });
 
   // ── Validation / error paths ──────────────────────────────────────────────
@@ -116,7 +121,7 @@ describe('MacroCategories (e2e)', () => {
 
   it('POST /api/macro-categories → 400 on an unknown body field (forbidNonWhitelisted)', () =>
     auth(request(server()).post('/api/macro-categories'))
-      .send({ code: uniqueCode('E2EBAD'), name: 'X', bogus: true })
+      .send({ name: 'X', bogus: true })
       .expect(400));
 
   it('GET /api/macro-categories/:id → 404 for an unknown id', () =>
@@ -129,43 +134,25 @@ describe('MacroCategories (e2e)', () => {
       request(server()).delete('/api/macro-categories/00000000-0000-0000-0000-000000000000'),
     ).expect(404));
 
-  // ── Duplicate code → 409 ──────────────────────────────────────────────────
-  it('POST /api/macro-categories → 409 on a duplicate code', async () => {
-    const code = uniqueCode('E2EDUP');
-    await auth(request(server()).post('/api/macro-categories'))
-      .send({ code, name: 'First' })
+  // ── Sequence ──────────────────────────────────────────────────────────────
+  it('POST twice → strictly increasing MC sequence (codes never collide)', async () => {
+    const a = await auth(request(server()).post('/api/macro-categories'))
+      .send({ name: 'Seq A' })
       .expect(201);
-    await auth(request(server()).post('/api/macro-categories'))
-      .send({ code, name: 'Second' })
-      .expect(409);
-  });
-
-  it('PATCH /api/macro-categories/:id → 409 when the new code belongs to another row', async () => {
-    const codeA = uniqueCode('E2ECA');
-    const codeB = uniqueCode('E2ECB');
-    await auth(request(server()).post('/api/macro-categories'))
-      .send({ code: codeA, name: 'Holder' })
+    const b = await auth(request(server()).post('/api/macro-categories'))
+      .send({ name: 'Seq B' })
       .expect(201);
-    const second = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code: codeB, name: 'Mover' })
-      .expect(201);
-    await auth(request(server()).patch(`/api/macro-categories/${second.body.id}`))
-      .send({ code: codeA })
-      .expect(409);
+    expect(b.body.code).not.toBe(a.body.code);
   });
 
   // ── Delete guard + soft delete ────────────────────────────────────────────
   it('DELETE → 400 while child categories exist, then 200 once empty, then GET → 404', async () => {
     // Build the hierarchy: macro category + one child category.
     const mc = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code: uniqueCode('E2EDEL'), name: 'Delete Guard' })
+      .send({ name: 'Delete Guard' })
       .expect(201);
     const cat = await auth(request(server()).post('/api/categories'))
-      .send({
-        macroCategoryId: mc.body.id,
-        code: uniqueCode('E2EDELC'),
-        name: 'Blocking Child',
-      })
+      .send({ macroCategoryId: mc.body.id, name: 'Blocking Child' })
       .expect(201);
 
     // Blocked while the child exists.
@@ -192,7 +179,7 @@ describe('MacroCategories (e2e)', () => {
   // invisible and immutable for B — 404 on detail/patch/delete, absent from B's list.
   it('a macro category created under tenant A is 404/absent/immutable for tenant B', async () => {
     const created = await auth(request(server()).post('/api/macro-categories'))
-      .send({ code: uniqueCode('E2EISO'), name: 'Tenant-A Only' })
+      .send({ name: 'Tenant-A Only' })
       .expect(201);
     const id = created.body.id;
 

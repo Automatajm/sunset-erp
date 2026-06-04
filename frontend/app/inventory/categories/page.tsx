@@ -8,7 +8,7 @@ import { categoriesApi } from '@/lib/api/categories';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { Category, MacroCategory, CreateCategoryDto } from '@/lib/api/types';
  
-const EMPTY_FORM: CreateCategoryDto = { macroCategoryId: '', code: '', name: '', description: '', isActive: true };
+const EMPTY_FORM: CreateCategoryDto = { macroCategoryId: '', name: '', description: '', isActive: true };
  
 function CategoryModal({ open, onClose, onSaved, initial, macroCategories }: {
   open: boolean; onClose: () => void; onSaved: () => void;
@@ -23,7 +23,7 @@ function CategoryModal({ open, onClose, onSaved, initial, macroCategories }: {
       setError('');
       setForm(initial ? {
         macroCategoryId: initial.macroCategoryId,
-        code: initial.code, name: initial.name,
+        name: initial.name,
         description: initial.description ?? '', isActive: initial.isActive,
         inventoryAccountId: initial.inventoryAccountId, cogsAccountId: initial.cogsAccountId,
       } : EMPTY_FORM);
@@ -35,7 +35,7 @@ function CategoryModal({ open, onClose, onSaved, initial, macroCategories }: {
  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.macroCategoryId || !form.code.trim() || !form.name.trim()) { setError('Macro category, code and name are required'); return; }
+    if (!form.macroCategoryId || !form.name.trim()) { setError('Macro category and name are required'); return; }
     setSubmitting(true); setError('');
     try {
       if (initial) await categoriesApi.update(initial.id, form);
@@ -67,8 +67,9 @@ function CategoryModal({ open, onClose, onSaved, initial, macroCategories }: {
               </div>
               <div className="catm-row">
                 <div className="catm-field">
-                  <label className="catm-label">Code *</label>
-                  <input className="catm-input" placeholder="FG-FURN" value={form.code} onChange={set('code')} />
+                  <label className="catm-label">Code</label>
+                  {/* Codes are system-assigned and immutable (spec-012) */}
+                  <input className="catm-input" value={initial?.code ?? 'Auto (CAT-YYYY-NNNN)'} disabled readOnly />
                 </div>
                 <div className="catm-field">
                   <label className="catm-label">Name *</label>

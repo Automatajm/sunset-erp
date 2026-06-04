@@ -7,7 +7,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { macroCategoriesApi } from '@/lib/api/macro-categories';
 import { MacroCategory, CreateMacroCategoryDto } from '@/lib/api/types';
  
-const EMPTY: CreateMacroCategoryDto = { code: '', name: '', description: '', isActive: true };
+const EMPTY: CreateMacroCategoryDto = { name: '', description: '', isActive: true };
  
 function Modal({ open, onClose, onSaved, initial }: {
   open: boolean; onClose: () => void; onSaved: () => void; initial: MacroCategory | null;
@@ -19,7 +19,7 @@ function Modal({ open, onClose, onSaved, initial }: {
   useEffect(() => {
     if (open) {
       setError('');
-      setForm(initial ? { code: initial.code, name: initial.name, description: initial.description ?? '', isActive: initial.isActive } : EMPTY);
+      setForm(initial ? { name: initial.name, description: initial.description ?? '', isActive: initial.isActive } : EMPTY);
     }
   }, [open, initial]);
  
@@ -28,7 +28,7 @@ function Modal({ open, onClose, onSaved, initial }: {
  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required'); return; }
+    if (!form.name.trim()) { setError('Name is required'); return; }
     setSubmitting(true); setError('');
     try {
       if (initial) await macroCategoriesApi.update(initial.id, form);
@@ -54,8 +54,9 @@ function Modal({ open, onClose, onSaved, initial }: {
               {error && <div className="mc-error">{error}</div>}
               <div className="mc-row">
                 <div className="mc-field">
-                  <label className="mc-label">Code *</label>
-                  <input className="mc-input" placeholder="WOOD" value={form.code} onChange={set('code')} />
+                  <label className="mc-label">Code</label>
+                  {/* Codes are system-assigned and immutable (spec-012) */}
+                  <input className="mc-input" value={initial?.code ?? 'Auto (MC-YYYY-NNNN)'} disabled readOnly />
                 </div>
                 <div className="mc-field">
                   <label className="mc-label">Name *</label>

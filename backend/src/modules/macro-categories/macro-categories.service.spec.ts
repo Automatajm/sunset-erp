@@ -5,11 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import {
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { MacroCategoriesService } from './macro-categories.service';
 import { CategoriesService } from '../categories/categories.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -93,20 +89,33 @@ describe('MacroCategoriesService', () => {
     await expect(service.findOne(TENANT_B, 'owned-by-A')).rejects.toThrow(NotFoundException);
   });
 
-  // ── Create ────────────────────────────────────────────────────────────────
-  it('create runs the duplicate-code check scoped to tenantId + deletedAt: null', async () => {
-    prisma.macroCategory.findFirst.mockResolvedValue(null);
+  // ── Create + auto-code MC-YYYY-NNNN (spec-012) ───────────────────────────
+  it('create auto-generates MC-YYYY-0001 when the tenant has no codes for the year', async () => {
+    prisma.macroCategory.findMany.mockResolvedValue([]); // generateCode lookup
     prisma.macroCategory.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
-    await service.create(TENANT_A, USER, { code: 'WOOD', name: 'Wood' } as any);
-    expect(prisma.macroCategory.findFirst).toHaveBeenCalledWith({
-      where: { tenantId: TENANT_A, code: 'WOOD', deletedAt: null },
-    });
+    const result: any = await service.create(TENANT_A, USER, { name: 'Wood' } as any);
+    const year = new Date().getFullYear();
+    expect(result.code).toBe(`MC-${year}-0001`);
+  });
+
+  it('create increments from the NUMERIC max code (not lexicographic) and spans soft-deleted', async () => {
+    const year = new Date().getFullYear();
+    prisma.macroCategory.findMany.mockResolvedValue([
+      { code: `MC-${year}-99` },
+      { code: `MC-${year}-104` },
+    ]);
+    prisma.macroCategory.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
+    const result: any = await service.create(TENANT_A, USER, { name: 'Wood' } as any);
+    expect(result.code).toBe(`MC-${year}-0105`);
+    const [arg] = prisma.macroCategory.findMany.mock.calls[0];
+    expect(arg.where.tenantId).toBe(TENANT_A);
+    expect(arg.where).not.toHaveProperty('deletedAt'); // unique constraint spans soft-deleted
   });
 
   it('create writes tenantId from the JWT plus audit columns, isActive defaults true', async () => {
-    prisma.macroCategory.findFirst.mockResolvedValue(null);
+    prisma.macroCategory.findMany.mockResolvedValue([]);
     prisma.macroCategory.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
-    await service.create(TENANT_A, USER, { code: 'WOOD', name: 'Wood' } as any);
+    await service.create(TENANT_A, USER, { name: 'Wood' } as any);
     expect(prisma.macroCategory.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -119,40 +128,12 @@ describe('MacroCategoriesService', () => {
     );
   });
 
-  it('create throws ConflictException on a duplicate code', async () => {
-    prisma.macroCategory.findFirst.mockResolvedValue({ id: 'dup', code: 'WOOD' });
-    await expect(
-      service.create(TENANT_A, USER, { code: 'WOOD', name: 'Dup' } as any),
-    ).rejects.toThrow(ConflictException);
-  });
-
   // ── Update ────────────────────────────────────────────────────────────────
   it('update throws NotFoundException when the macro category is in another tenant', async () => {
     prisma.macroCategory.findFirst.mockResolvedValue(null);
     await expect(service.update(TENANT_B, USER, 'id', {} as any)).rejects.toThrow(
       NotFoundException,
     );
-  });
-
-  it('update code-conflict check is tenant-scoped and excludes self', async () => {
-    prisma.macroCategory.findFirst
-      .mockResolvedValueOnce({ id: 'id' }) // findOne guard
-      .mockResolvedValueOnce(null); // conflict check
-    prisma.macroCategory.update.mockResolvedValue({ id: 'id' });
-    prisma.macroCategory.updateMany.mockResolvedValue({ count: 1 });
-    await service.update(TENANT_A, USER, 'id', { code: 'NEW' } as any);
-    expect(prisma.macroCategory.findFirst).toHaveBeenNthCalledWith(2, {
-      where: { tenantId: TENANT_A, code: 'NEW', id: { not: 'id' }, deletedAt: null },
-    });
-  });
-
-  it('update throws ConflictException when the new code belongs to another row', async () => {
-    prisma.macroCategory.findFirst
-      .mockResolvedValueOnce({ id: 'id' }) // findOne guard
-      .mockResolvedValueOnce({ id: 'other', code: 'TAKEN' }); // conflict
-    await expect(
-      service.update(TENANT_A, USER, 'id', { code: 'TAKEN' } as any),
-    ).rejects.toThrow(ConflictException);
   });
 
   it('[GAP] update writes are tenant-scoped at the write itself (spec §Tenant scoping — currently where:{id})', async () => {

@@ -128,14 +128,6 @@ describe('BomService', () => {
     expect(prisma.bom.create).not.toHaveBeenCalled();
   });
 
-  it('create throws ConflictException on a duplicate active bomNumber (tenant-scoped)', async () => {
-    prisma.bom.findMany.mockResolvedValue([]);
-    prisma.bom.findFirst.mockResolvedValue({ id: 'dup', bomNumber: 'BOM-X' });
-    await expect(
-      service.create(TENANT_A, USER, { ...validCreate(), bomCode: 'BOM-X' }),
-    ).rejects.toThrow(ConflictException);
-  });
-
   it('create writes tenantId + audit on the BOM and its components, auto-filling consumptionUomId', async () => {
     prisma.bom.findMany.mockResolvedValue([]);
     prisma.bom.findFirst.mockResolvedValue(null);
@@ -205,15 +197,6 @@ describe('BomService', () => {
     prisma.bom.findFirst.mockResolvedValue(null);
     await expect(service.update(TENANT_B, USER, 'id', {} as any)).rejects.toThrow(
       NotFoundException,
-    );
-  });
-
-  it('update throws ConflictException when the new bomCode belongs to another row', async () => {
-    prisma.bom.findFirst
-      .mockResolvedValueOnce(bomRow()) // findOne guard
-      .mockResolvedValueOnce({ id: 'other', bomNumber: 'TAKEN' }); // conflict
-    await expect(service.update(TENANT_A, USER, 'id', { bomCode: 'TAKEN' } as any)).rejects.toThrow(
-      ConflictException,
     );
   });
 

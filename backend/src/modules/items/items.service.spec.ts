@@ -5,7 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { ItemsService } from './items.service';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
@@ -87,9 +87,8 @@ describe('ItemsService', () => {
   });
 
   // ── Create ────────────────────────────────────────────────────────────────
-  it('create auto-generates an ITEM-NNNN code when none is supplied', async () => {
+  it('create auto-generates an ITEM-NNNN code (spec-012: always system-assigned)', async () => {
     prisma.item.findMany.mockResolvedValueOnce([]); // generateItemCode: no prior codes
-    prisma.item.findFirst.mockResolvedValueOnce(null); // duplicate check
     prisma.item.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     const result: any = await service.create(TENANT_A, USER, {
       name: 'Bolt',
@@ -102,29 +101,15 @@ describe('ItemsService', () => {
     );
   });
 
-  it('create defaults barcodeInternal to the item code when omitted', async () => {
+  it('create defaults barcodeInternal to the generated code when omitted', async () => {
     prisma.item.findMany.mockResolvedValueOnce([]);
-    prisma.item.findFirst.mockResolvedValueOnce(null);
     prisma.item.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     const result: any = await service.create(TENANT_A, USER, {
       name: 'Bolt',
       itemType: 'raw_material',
       baseUom: 'PCS',
-      code: 'CUSTOM-1',
     } as any);
-    expect(result.barcodeInternal).toBe('CUSTOM-1');
-  });
-
-  it('create throws ConflictException on a duplicate code', async () => {
-    prisma.item.findFirst.mockResolvedValueOnce({ id: 'dup', code: 'ITEM-0001' });
-    await expect(
-      service.create(TENANT_A, USER, {
-        name: 'Dup',
-        itemType: 'service',
-        baseUom: 'PCS',
-        code: 'ITEM-0001',
-      } as any),
-    ).rejects.toThrow(ConflictException);
+    expect(result.barcodeInternal).toBe(result.code);
   });
 
   // ── Update / remove ───────────────────────────────────────────────────────
@@ -133,15 +118,6 @@ describe('ItemsService', () => {
     await expect(service.update(TENANT_B, USER, 'id', { name: 'X' } as any)).rejects.toThrow(
       NotFoundException,
     );
-  });
-
-  it('update throws ConflictException when the new code collides', async () => {
-    prisma.item.findFirst
-      .mockResolvedValueOnce({ id: 'id', code: 'ITEM-0001' }) // findOne guard
-      .mockResolvedValueOnce({ id: 'other', code: 'ITEM-0002' }); // dup check hit
-    await expect(
-      service.update(TENANT_A, USER, 'id', { code: 'ITEM-0002' } as any),
-    ).rejects.toThrow(ConflictException);
   });
 
   it('[GAP] update writes are tenant-scoped (spec §Data model — currently where:{id})', async () => {

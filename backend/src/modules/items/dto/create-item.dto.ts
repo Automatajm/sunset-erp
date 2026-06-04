@@ -19,15 +19,6 @@ const VALUATION_METHODS = ['average', 'fifo', 'standard'];
 export class CreateItemDto {
   // ── Identity ────────────────────────────────────────────────────────────────
 
-  @ApiPropertyOptional({
-    example: 'ITEM001',
-    description: 'Item code — auto-generated if omitted (ITEM-0001, ITEM-0002, …)',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  code?: string;
-
   @ApiProperty({ example: 'Steel Bolt M8x50', description: 'Item name' })
   @IsString()
   @MaxLength(255)

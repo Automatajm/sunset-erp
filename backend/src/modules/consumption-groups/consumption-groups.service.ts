@@ -22,13 +22,16 @@ export class ConsumptionGroupsService {
   private async generateCode(tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `CG-${year}`;
-    const last = await this.prisma.consumptionGroup.findFirst({
+    // Numeric max, not lexicographic ('-99' ranks above '-104' as a string) — spec-012.
+    const rows = await this.prisma.consumptionGroup.findMany({
       where: { tenantId, code: { startsWith: prefix } },
-      orderBy: { code: 'desc' },
+      select: { code: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const n = parseInt(last.code.split('-')[2], 10);
-    return `${prefix}-${(isNaN(n) ? 1 : n + 1).toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
   }
 
   // ── Create ──────────────────────────────────────────────────────────────

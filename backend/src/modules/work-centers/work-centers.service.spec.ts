@@ -5,7 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { WorkCentersService } from './work-centers.service';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -83,21 +83,26 @@ describe('WorkCentersService', () => {
     );
   });
 
-  // ── Create ────────────────────────────────────────────────────────────────
-  it('create throws ConflictException on a duplicate code (tenant-scoped check)', async () => {
-    prisma.workCenter.findFirst.mockResolvedValue({ id: 'dup', code: 'WC-001' });
-    await expect(
-      service.create(TENANT_A, USER, { code: 'WC-001', name: 'X' } as any),
-    ).rejects.toThrow(ConflictException);
-    expect(prisma.workCenter.findFirst).toHaveBeenCalledWith({
-      where: { tenantId: TENANT_A, code: 'WC-001', deletedAt: null },
-    });
+  // ── Create + auto-code WC-YYYY-NNNN (spec-012) ───────────────────────────
+  it('create auto-generates WC-YYYY-NNNN from the NUMERIC max, spanning soft-deleted rows', async () => {
+    const year = new Date().getFullYear();
+    prisma.workCenter.findMany.mockResolvedValue([
+      { code: `WC-${year}-99` },
+      { code: `WC-${year}-104` },
+      { code: 'WC-PREP-01' }, // legacy mnemonic — prefix differs, ignored
+    ]);
+    prisma.workCenter.create.mockImplementation(({ data }) => row({ ...data }));
+    const result: any = await service.create(TENANT_A, USER, { name: 'X' } as any);
+    expect(result.code).toBe(`WC-${year}-0105`);
+    const [arg] = prisma.workCenter.findMany.mock.calls[0];
+    expect(arg.where.tenantId).toBe(TENANT_A);
+    expect(arg.where).not.toHaveProperty('deletedAt');
   });
 
   it('create writes tenantId from the JWT, audit columns, and defaults (type machine, active)', async () => {
-    prisma.workCenter.findFirst.mockResolvedValue(null);
-    prisma.workCenter.create.mockResolvedValue(row({ code: 'WC-001' }));
-    await service.create(TENANT_A, USER, { code: 'WC-001', name: 'X' } as any);
+    prisma.workCenter.findMany.mockResolvedValue([]);
+    prisma.workCenter.create.mockResolvedValue(row({ code: 'WC-2026-0001' }));
+    await service.create(TENANT_A, USER, { name: 'X' } as any);
     expect(prisma.workCenter.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -116,15 +121,6 @@ describe('WorkCentersService', () => {
     prisma.workCenter.findFirst.mockResolvedValue(null);
     await expect(service.update(TENANT_B, USER, 'id', {} as any)).rejects.toThrow(
       NotFoundException,
-    );
-  });
-
-  it('update code-conflict check is tenant-scoped and excludes self (409)', async () => {
-    prisma.workCenter.findFirst
-      .mockResolvedValueOnce(row()) // findOne guard
-      .mockResolvedValueOnce({ id: 'other', code: 'TAKEN' }); // conflict
-    await expect(service.update(TENANT_A, USER, 'id', { code: 'TAKEN' } as any)).rejects.toThrow(
-      ConflictException,
     );
   });
 

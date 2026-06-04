@@ -43,7 +43,6 @@ export class BomController {
   @ApiOperation({ summary: 'Create a new BOM with components' })
   @ApiResponse({ status: 201, description: 'BOM created' })
   @ApiResponse({ status: 404, description: 'Parent item or consumption group not found' })
-  @ApiResponse({ status: 409, description: 'BOM code already exists' })
   async create(@Request() req, @Body() dto: CreateBomDto) {
     return this.bomService.create(req.user.tenantId, req.user.id, dto);
   }
@@ -89,7 +88,6 @@ export class BomController {
   @ApiParam({ name: 'id', description: 'BOM UUID' })
   @ApiResponse({ status: 200, description: 'BOM updated' })
   @ApiResponse({ status: 404, description: 'BOM or re-parent item not found in tenant' })
-  @ApiResponse({ status: 409, description: 'BOM code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateBomDto) {
     return this.bomService.update(req.user.tenantId, req.user.id, id, dto);
   }

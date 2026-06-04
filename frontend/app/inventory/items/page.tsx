@@ -37,7 +37,7 @@ const UOM_TYPE_COLOR: Record<string, string> = {
 };
 
 const EMPTY_FORM: CreateItemDto = {
-  code: '', name: '', itemType: 'raw_material', baseUom: 'PCS',
+  name: '', itemType: 'raw_material', baseUom: 'PCS',
   description: '', valuationMethod: 'average',
   categoryId: undefined, consumptionGroupId: undefined,
   purchaseUomId: undefined, purchaseToConsumptionFactor: 1,
@@ -458,7 +458,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
       const a = initial as any;
       setMacroFilter(a?.category?.macroCategory?.id ?? a?.category?.macroCategoryId ?? '');
       setForm(initial ? {
-        code: initial.code, name: initial.name,
+        name: initial.name,
         itemType: initial.itemType, baseUom: initial.baseUom,
         description: initial.description ?? '',
         valuationMethod: initial.valuationMethod,
@@ -599,7 +599,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Code</label>
-                        <input className="im-input" placeholder="Auto-generated" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
+                        {/* Codes are system-assigned and immutable (spec-012) */}
+                        <input className="im-input" value={initial?.code ?? 'Auto (ITEM-NNNN)'} disabled readOnly />
                       </div>
                       <div className="im-field">
                         <label className="im-label">Item Type *</label>

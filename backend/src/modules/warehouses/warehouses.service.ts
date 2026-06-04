@@ -2,7 +2,7 @@
 // FILE: backend/src/modules/warehouses/warehouses.service.ts
 // ============================================================================
 
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
@@ -42,14 +42,9 @@ export class WarehousesService {
 
   async create(tenantId: string, userId: string, dto: CreateWarehouseDto) {
     const warehouseType = dto.warehouseType || 'regular';
-    const code = dto.code?.trim()
-      ? dto.code.trim().toUpperCase()
-      : await this.generateCode(tenantId, warehouseType);
-
-    const existing = await this.prisma.warehouse.findFirst({
-      where: { tenantId, code, deletedAt: null },
-    });
-    if (existing) throw new ConflictException(`Warehouse with code ${code} already exists`);
+    // Codes are always system-assigned (spec-012) — generator spans soft-deleted
+    // rows and never collides among active rows.
+    const code = await this.generateCode(tenantId, warehouseType);
 
     return this.prisma.warehouse.create({
       data: {
@@ -301,14 +296,7 @@ export class WarehousesService {
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateWarehouseDto) {
     await this.findOne(tenantId, id);
-    if (dto.code) {
-      const codeUpper = dto.code.trim().toUpperCase();
-      const existing = await this.prisma.warehouse.findFirst({
-        where: { tenantId, code: codeUpper, id: { not: id }, deletedAt: null },
-      });
-      if (existing) throw new ConflictException(`Warehouse with code ${codeUpper} already exists`);
-      dto.code = codeUpper;
-    }
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
     // Tenant-scoped write: the write itself enforces tenancy, not just the preceding findOne.
     await this.prisma.warehouse.updateMany({
       where: { id, tenantId, deletedAt: null },

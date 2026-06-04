@@ -45,7 +45,7 @@ const SUPPLIER_CATEGORIES = [
 ];
 
 const EMPTY_FORM: CreateSupplierDto = {
-  code:'', name:'', legalName:'', taxId:'', taxType:'',
+  name:'', legalName:'', taxId:'', taxType:'',
   phone:'', email:'', website:'',
   contactName:'', contactPhone:'', contactEmail:'',
   address:'', city:'', country:'',
@@ -104,7 +104,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
       if (initial) {
         const s = initial as any;
         setForm({
-          code: s.code, name: s.name, legalName: s.legalName ?? '',
+          name: s.name, legalName: s.legalName ?? '',
           taxId: s.taxId ?? '', taxType: s.taxType ?? '',
           phone: s.phone ?? '', email: s.email ?? '', website: s.website ?? '',
           contactName: s.contactName ?? '', contactPhone: s.contactPhone ?? '',
@@ -219,8 +219,9 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                   <>
                     <div className="sm-row">
                       <div className="sm-field">
-                        <label style={L}>Code *</label>
-                        <input style={F} placeholder="Auto-generated (e.g. SUP-2026-0001)" value={form.code} onChange={set('code')} />
+                        <label style={L}>Code</label>
+                        {/* Codes are system-assigned and immutable (spec-012) */}
+                        <input style={F} value={(initial as { code?: string } | null)?.code ?? 'Auto (SUP-YYYY-NNNN)'} disabled readOnly />
                       </div>
                       <div className="sm-field">
                         <label style={L}>Category</label>

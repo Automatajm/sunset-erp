@@ -1,7 +1,7 @@
 ﻿// ============================================================================
 // FILE: backend/src/modules/items/items.service.ts
 // ============================================================================
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -101,14 +101,9 @@ export class ItemsService {
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateItemDto) {
-    const code = dto.code?.trim()
-      ? dto.code.trim().toUpperCase()
-      : await this.generateItemCode(tenantId);
-
-    const existing = await this.prisma.item.findFirst({
-      where: { tenantId, code, deletedAt: null },
-    });
-    if (existing) throw new ConflictException(`Item with code ${code} already exists`);
+    // Codes are always system-assigned (spec-012) — generator spans soft-deleted
+    // rows and never collides among active rows.
+    const code = await this.generateItemCode(tenantId);
 
     // Auto-generate barcodeInternal from code if not provided
     const barcodeInternal = dto.barcodeInternal?.trim() || code;
@@ -276,12 +271,7 @@ export class ItemsService {
   async update(tenantId: string, userId: string, id: string, dto: UpdateItemDto) {
     const current = await this.findOne(tenantId, id);
 
-    if (dto.code) {
-      const existing = await this.prisma.item.findFirst({
-        where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null },
-      });
-      if (existing) throw new ConflictException(`Item with code ${dto.code} already exists`);
-    }
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
 
     // Resolve effective UOM IDs
     const a = current as any;
@@ -297,13 +287,6 @@ export class ItemsService {
     }
 
     // If code changed and barcodeInternal was auto-generated from code, update it too
-    if (dto.code && !dto.barcodeInternal) {
-      const currentBarcode = (current as any).barcodeInternal;
-      const currentCode = (current as any).code;
-      if (currentBarcode === currentCode) {
-        data.barcodeInternal = dto.code.trim().toUpperCase();
-      }
-    }
 
     // Auto-calculate factors when UOM fields are being changed
     const isPurchaseUomChanging =

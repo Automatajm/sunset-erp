@@ -5,7 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { ChartOfAccountsService } from '../chart-of-accounts/chart-of-accounts.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -85,22 +85,29 @@ describe('CategoriesService', () => {
     );
   });
 
-  // ── Create ────────────────────────────────────────────────────────────────
-  it('create throws ConflictException on a duplicate code (tenant-scoped check)', async () => {
-    prisma.category.findFirst.mockResolvedValue({ id: 'dup', code: 'TAKEN' });
-    await expect(
-      service.create(TENANT_A, USER, { macroCategoryId: MC_ID, code: 'TAKEN', name: 'X' } as any),
-    ).rejects.toThrow(ConflictException);
-    expect(prisma.category.findFirst).toHaveBeenCalledWith({
-      where: { tenantId: TENANT_A, code: 'TAKEN', deletedAt: null },
-    });
+  // ── Create + auto-code CAT-YYYY-NNNN (spec-012) ──────────────────────────
+  it('create auto-generates CAT-YYYY-NNNN from the NUMERIC max, spanning soft-deleted rows', async () => {
+    const year = new Date().getFullYear();
+    prisma.macroCategory.findFirst.mockResolvedValue({ id: MC_ID });
+    prisma.category.findMany.mockResolvedValue([
+      { code: `CAT-${year}-99` },
+      { code: `CAT-${year}-104` },
+    ]);
+    prisma.category.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
+    const result: any = await service.create(TENANT_A, USER, {
+      macroCategoryId: MC_ID,
+      name: 'X',
+    } as any);
+    expect(result.code).toBe(`CAT-${year}-0105`);
+    const [arg] = prisma.category.findMany.mock.calls[0];
+    expect(arg.where.tenantId).toBe(TENANT_A);
+    expect(arg.where).not.toHaveProperty('deletedAt');
   });
 
   it('create validates macroCategoryId with a tenant-scoped lookup and 404s when missing', async () => {
-    prisma.category.findFirst.mockResolvedValue(null); // no code conflict
     prisma.macroCategory.findFirst.mockResolvedValue(null); // macro not in tenant
     await expect(
-      service.create(TENANT_A, USER, { macroCategoryId: MC_ID, code: 'C', name: 'X' } as any),
+      service.create(TENANT_A, USER, { macroCategoryId: MC_ID, name: 'X' } as any),
     ).rejects.toThrow(NotFoundException);
     expect(prisma.macroCategory.findFirst).toHaveBeenCalledWith({
       where: { id: MC_ID, tenantId: TENANT_A, deletedAt: null },
@@ -108,10 +115,10 @@ describe('CategoriesService', () => {
   });
 
   it('create writes tenantId from the JWT, audit columns, isActive default', async () => {
-    prisma.category.findFirst.mockResolvedValue(null);
+    prisma.category.findMany.mockResolvedValue([]);
     prisma.macroCategory.findFirst.mockResolvedValue({ id: MC_ID });
     prisma.category.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
-    await service.create(TENANT_A, USER, { macroCategoryId: MC_ID, code: 'C', name: 'X' } as any);
+    await service.create(TENANT_A, USER, { macroCategoryId: MC_ID, name: 'X' } as any);
     expect(prisma.category.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -125,14 +132,13 @@ describe('CategoriesService', () => {
   });
 
   it('[GAP] create validates GL accounts via ChartOfAccountsService.findOne (in-tenant) and 404s', async () => {
-    prisma.category.findFirst.mockResolvedValue(null);
+    prisma.category.findMany.mockResolvedValue([]);
     prisma.macroCategory.findFirst.mockResolvedValue({ id: MC_ID });
     prisma.category.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     coaService.findOne.mockRejectedValue(new NotFoundException('Account not found'));
     await expect(
       service.create(TENANT_A, USER, {
         macroCategoryId: MC_ID,
-        code: 'C',
         name: 'X',
         inventoryAccountId: ACC_ID,
       } as any),
@@ -146,15 +152,6 @@ describe('CategoriesService', () => {
     prisma.category.findFirst.mockResolvedValue(null);
     await expect(service.update(TENANT_B, USER, 'id', {} as any)).rejects.toThrow(
       NotFoundException,
-    );
-  });
-
-  it('update code-conflict check is tenant-scoped and excludes self (409)', async () => {
-    prisma.category.findFirst
-      .mockResolvedValueOnce({ id: 'id' }) // findOne guard
-      .mockResolvedValueOnce({ id: 'other', code: 'TAKEN' }); // conflict
-    await expect(service.update(TENANT_A, USER, 'id', { code: 'TAKEN' } as any)).rejects.toThrow(
-      ConflictException,
     );
   });
 

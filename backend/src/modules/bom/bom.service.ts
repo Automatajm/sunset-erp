@@ -85,11 +85,9 @@ export class BomService {
       }
     }
 
-    const bomNumber = createBomDto.bomCode || (await this.generateBomNumber(tenantId));
-    const existing = await this.prisma.bom.findFirst({
-      where: { tenantId, bomNumber, deletedAt: null },
-    });
-    if (existing) throw new ConflictException(`BOM with number ${bomNumber} already exists`);
+    // BOM numbers are always system-assigned (spec-012) — generator spans
+    // soft-deleted rows and never collides among active rows.
+    const bomNumber = await this.generateBomNumber(tenantId);
 
     const versionNumber = createBomDto.version ? parseInt(createBomDto.version) : 1;
 
@@ -156,19 +154,11 @@ export class BomService {
   async update(tenantId: string, userId: string, id: string, updateBomDto: UpdateBomDto) {
     await this.findOne(tenantId, id);
 
-    if (updateBomDto.bomCode) {
-      const existing = await this.prisma.bom.findFirst({
-        where: { tenantId, bomNumber: updateBomDto.bomCode, id: { not: id }, deletedAt: null },
-      });
-      if (existing)
-        throw new ConflictException(`BOM with number ${updateBomDto.bomCode} already exists`);
-    }
-
+    // BOM numbers are immutable (spec-012) — the DTO no longer carries one.
     // Re-parenting must resolve in-tenant (cross-tenant FK vector, spec-011).
     if (updateBomDto.itemId) await this.itemsService.findOne(tenantId, updateBomDto.itemId);
 
     const updateData: any = { updatedBy: userId };
-    if (updateBomDto.bomCode) updateData.bomNumber = updateBomDto.bomCode;
     if (updateBomDto.version) updateData.version = parseInt(updateBomDto.version);
     if (updateBomDto.isActive !== undefined) updateData.isActive = updateBomDto.isActive;
     if (updateBomDto.itemId) updateData.parentItemId = updateBomDto.itemId;

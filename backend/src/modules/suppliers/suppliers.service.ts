@@ -1,7 +1,7 @@
 ﻿// ============================================================================
 // FILE: backend/src/modules/suppliers/suppliers.service.ts
 // ============================================================================
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
@@ -19,27 +19,24 @@ export class SuppliersService {
     // constraint spans soft-deleted rows, so a soft-deleted supplier still occupies its code.
     // Considering all codes (including soft-deleted) guarantees we never regenerate a code that
     // would collide on the unique constraint.
-    const last = await this.prisma.supplier.findFirst({
+    // Numeric max, not lexicographic ('-99' ranks above '-104' as a string) — spec-012.
+    const rows = await this.prisma.supplier.findMany({
       where: { tenantId, code: { startsWith: prefix } },
-      orderBy: { code: 'desc' },
+      select: { code: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.code.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
   }
 
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateSupplierDto) {
-    // Auto-generate code if not provided
-    const code = dto.code?.trim() || (await this.generateCode(tenantId));
-
-    const existing = await this.prisma.supplier.findFirst({
-      where: { tenantId, code, deletedAt: null },
-    });
-    if (existing) throw new ConflictException(`Supplier with code ${code} already exists`);
+    // Codes are always system-assigned (spec-012) — generator spans soft-deleted
+    // rows and never collides among active rows.
+    const code = await this.generateCode(tenantId);
 
     return this.prisma.supplier.create({
       data: {
@@ -108,13 +105,7 @@ export class SuppliersService {
   async update(tenantId: string, userId: string, id: string, dto: UpdateSupplierDto) {
     await this.findOne(tenantId, id);
 
-    if (dto.code) {
-      const duplicate = await this.prisma.supplier.findFirst({
-        where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null },
-      });
-      if (duplicate) throw new ConflictException(`Supplier with code ${dto.code} already exists`);
-    }
-
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
     // Tenant-scoped write: the write itself enforces tenancy, not just the preceding findOne.
     await this.prisma.supplier.updateMany({
       where: { id, tenantId, deletedAt: null },

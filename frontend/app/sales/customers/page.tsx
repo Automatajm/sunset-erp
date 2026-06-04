@@ -8,7 +8,6 @@ import { Customer, CreateCustomerDto, CreditStatus } from '@/lib/api/types';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: CreateCustomerDto = {
-  code: '',
   name: '',
   legalName: '',
   taxId: '',
@@ -70,7 +69,6 @@ function CustomerModal({
     if (open) {
       setError('');
       setForm(initial ? {
-        code:          initial.code,
         name:          initial.name,
         legalName:     initial.legalName     ?? '',
         taxId:         initial.taxId         ?? '',
@@ -98,7 +96,7 @@ function CustomerModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name are required.'); return; }
+    if (!form.name.trim()) { setError('Name is required.'); return; }
     setSubmitting(true); setError('');
     try {
       if (initial) await customersApi.update(initial.id, form);
@@ -199,8 +197,9 @@ function CustomerModal({
 
               <div className="cm-row">
                 <div className="cm-field">
-                  <label className="cm-label">Code *</label>
-                  <input className="cm-input" placeholder="CUST001" value={form.code} onChange={set('code')} required />
+                  <label className="cm-label">Code</label>
+                  {/* Codes are system-assigned and immutable (spec-012) */}
+                  <input className="cm-input" value={initial?.code ?? 'Auto (CL-YYYY-NNNN)'} disabled readOnly />
                 </div>
                 <div className="cm-field">
                   <label className="cm-label">Currency</label>

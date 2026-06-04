@@ -11,11 +11,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWorkCenterDto {
-  @ApiProperty({ example: 'WC-001', description: 'Work center code' })
-  @IsString()
-  @MaxLength(50)
-  code: string;
-
   @ApiProperty({ example: 'Assembly Line 1', description: 'Work center name' })
   @IsString()
   @MaxLength(255)

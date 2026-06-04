@@ -2,11 +2,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCustomerDto {
-  @ApiProperty({ example: 'CUST001', description: 'Customer code' })
-  @IsString()
-  @MaxLength(50)
-  code: string;
-
   @ApiProperty({ example: 'ABC Manufacturing Inc.', description: 'Customer name' })
   @IsString()
   @MaxLength(255)

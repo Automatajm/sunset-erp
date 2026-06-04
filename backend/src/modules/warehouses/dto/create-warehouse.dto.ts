@@ -7,15 +7,6 @@ import { IsString, IsOptional, IsBoolean, IsIn, MaxLength } from 'class-validato
 const WAREHOUSE_TYPES = ['regular', 'consignment', 'transit'];
 
 export class CreateWarehouseDto {
-  @ApiPropertyOptional({
-    example: 'WH-REG-001',
-    description: 'Warehouse code. If omitted, auto-generated as WH-{TYPE}-{NNN}',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  code?: string;
-
   @ApiProperty({ example: 'Main Warehouse' })
   @IsString()
   @MaxLength(100)

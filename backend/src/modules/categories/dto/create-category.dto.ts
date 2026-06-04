@@ -7,11 +7,6 @@ export class CreateCategoryDto {
   @IsUUID()
   macroCategoryId: string;
 
-  @ApiProperty({ example: 'FG-FURNITURE', description: 'Unique category code' })
-  @IsString()
-  @MaxLength(50)
-  code: string;
-
   @ApiProperty({ example: 'Finished Furniture', description: 'Category name' })
   @IsString()
   @MaxLength(255)

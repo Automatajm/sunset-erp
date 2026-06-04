@@ -17,12 +17,6 @@ export class CreateBomDto {
   @IsUUID()
   itemId: string;
 
-  @ApiPropertyOptional({ example: 'BOM-001', description: 'BOM code' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  bomCode?: string;
-
   @ApiPropertyOptional({ example: '1', description: 'BOM version (integer as string)' })
   @IsOptional()
   @IsString()

@@ -31,7 +31,6 @@ export class MacroCategoriesController {
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a new macro category' })
   @ApiResponse({ status: 201, description: 'Macro category created successfully' })
-  @ApiResponse({ status: 409, description: 'Macro category code already exists' })
   async create(@Request() req, @Body() dto: CreateMacroCategoryDto) {
     return this.macroCategoriesService.create(req.user.tenantId, req.user.id, dto);
   }
@@ -60,7 +59,6 @@ export class MacroCategoriesController {
   @ApiParam({ name: 'id', description: 'MacroCategory UUID' })
   @ApiResponse({ status: 200, description: 'Macro category updated successfully' })
   @ApiResponse({ status: 404, description: 'Macro category not found' })
-  @ApiResponse({ status: 409, description: 'Code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateMacroCategoryDto) {
     return this.macroCategoriesService.update(req.user.tenantId, req.user.id, id, dto);
   }

@@ -1,10 +1,5 @@
 // --- categories/categories.service.ts ---
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ChartOfAccountsService } from '../chart-of-accounts/chart-of-accounts.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -45,17 +40,30 @@ export class CategoriesService {
     if (!mc) throw new NotFoundException(`MacroCategory ${macroCategoryId} not found`);
   }
 
-  async create(tenantId: string, userId: string, dto: CreateCategoryDto) {
-    const existing = await this.prisma.category.findFirst({
-      where: { tenantId, code: dto.code, deletedAt: null },
+  // ── Auto-code CAT-YYYY-NNNN (spec-012: codes are system-assigned, immutable) ──
+  private async generateCode(tenantId: string): Promise<string> {
+    const prefix = `CAT-${new Date().getFullYear()}`;
+    // Numeric max (never lexicographic), NaN-guarded, spanning soft-deleted rows —
+    // @@unique([tenantId, code]) spans them (house convention).
+    const rows = await this.prisma.category.findMany({
+      where: { tenantId, code: { startsWith: prefix } },
+      select: { code: true },
     });
-    if (existing) throw new ConflictException(`Category code ${dto.code} already exists`);
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
+  }
+
+  async create(tenantId: string, userId: string, dto: CreateCategoryDto) {
     await this.validateMacroCategory(tenantId, dto.macroCategoryId);
     await this.validateAccounts(tenantId, dto);
     return this.prisma.category.create({
       data: {
-        tenantId,
         ...dto,
+        tenantId,
+        code: await this.generateCode(tenantId),
         isActive: dto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
@@ -99,13 +107,7 @@ export class CategoriesService {
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateCategoryDto) {
     await this.findOne(tenantId, id);
-    if (dto.code) {
-      const conflict = await this.prisma.category.findFirst({
-        where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null },
-      });
-      if (conflict) throw new ConflictException(`Category code ${dto.code} already exists`);
-    }
-    // Re-parenting and GL mapping must resolve in-tenant (spec-009).
+    // Codes are immutable (spec-012). Re-parenting and GL mapping must resolve in-tenant (spec-009).
     if (dto.macroCategoryId !== undefined)
       await this.validateMacroCategory(tenantId, dto.macroCategoryId);
     await this.validateAccounts(tenantId, dto);

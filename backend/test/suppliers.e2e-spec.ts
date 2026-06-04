@@ -96,12 +96,11 @@ describe('Suppliers (e2e)', () => {
       request(server()).delete('/api/suppliers/00000000-0000-0000-0000-000000000000'),
     ).expect(404));
 
-  // ── Duplicate code → 409 ──────────────────────────────────────────────────
-  it('POST /api/suppliers → 409 on a duplicate explicit code', async () => {
-    const code = `SUP-DUP-${Math.floor(performance.now())}`;
-    await auth(request(server()).post('/api/suppliers')).send({ name: 'First', code }).expect(201);
-    await auth(request(server()).post('/api/suppliers')).send({ name: 'Second', code }).expect(409);
-  });
+  // ── Codes are system-assigned (spec-012) ──────────────────────────────────
+  it('POST /api/suppliers → 400 on a client-supplied code', () =>
+    auth(request(server()).post('/api/suppliers'))
+      .send({ name: 'Hack Attempt', code: 'SUP-HACK' })
+      .expect(400));
 
   // ── Tenant isolation ──────────────────────────────────────────────────────
   // A: DEMO (token), B: TENANT2 (tokenB). A supplier created under A must be

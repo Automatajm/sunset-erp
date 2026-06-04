@@ -47,7 +47,7 @@ const ZONE_TYPES = [
 const BIN_TYPES = ['standard', 'pallet', 'big_bag', 'tank', 'silo', 'ibc', 'container', 'bulk'];
 
 const EMPTY_WH_FORM: CreateWarehouseDto = {
-  code: '', name: '', warehouseType: 'regular',
+  name: '', warehouseType: 'regular',
   address: '', isActive: true, locationTrackingEnabled: false,
 };
 
@@ -538,7 +538,6 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
     if (open) {
       setError(''); setTab('general'); setStats(null);
       setForm(initial ? {
-        code:                    initial.code,
         name:                    initial.name,
         warehouseType:           initial.warehouseType ?? 'regular',
         address:                 initial.address ?? '',
@@ -614,8 +613,9 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                 {tab === 'general' && (<>
                   <div className="wm-row">
                     <div className="wm-field">
-                      <label style={FLBL}>Code <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400, textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
-                      <input style={FINP} placeholder="Auto-generated (e.g. WH-REG-001)" value={form.code ?? ''} onChange={e => setForm(f=>({...f, code: e.target.value || undefined}))} />
+                      <label style={FLBL}>Code</label>
+                      {/* Codes are system-assigned and immutable (spec-012) */}
+                      <input style={FINP} value={initial?.code ?? 'Auto (WH-TYPE-NNN)'} disabled readOnly />
                     </div>
                     <div className="wm-field"><label style={FLBL}>Type</label>
                       <select style={FINP} value={form.warehouseType} onChange={e => setForm(f=>({...f, warehouseType:e.target.value as any}))}>

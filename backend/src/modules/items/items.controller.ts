@@ -42,7 +42,6 @@ export class ItemsController {
   @ApiOperation({ summary: 'Create a new item' })
   @ApiResponse({ status: 201, description: 'Item created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 409, description: 'Item code already exists' })
   async create(@Request() req, @Body() createItemDto: CreateItemDto) {
     return this.itemsService.create(req.user.tenantId, req.user.id, createItemDto);
   }
@@ -105,7 +104,6 @@ export class ItemsController {
   @ApiParam({ name: 'id', description: 'Item UUID' })
   @ApiResponse({ status: 200, description: 'Item updated successfully' })
   @ApiResponse({ status: 404, description: 'Item not found' })
-  @ApiResponse({ status: 409, description: 'Item code already exists' })
   async update(@Request() req, @Param('id') id: string, @Body() updateItemDto: UpdateItemDto) {
     return this.itemsService.update(req.user.tenantId, req.user.id, id, updateItemDto);
   }

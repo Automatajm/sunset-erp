@@ -5,7 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { WarehousesService } from './warehouses.service';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -140,13 +140,6 @@ describe('WarehousesService', () => {
     expect(res.code).toBe('WH-CON-105');
   });
 
-  it('create throws ConflictException on a duplicate explicit code', async () => {
-    prisma.warehouse.findFirst.mockResolvedValue(warehouseRow());
-    await expect(
-      service.create(TENANT_A, USER, { name: 'Dup', code: 'WH-REG-001' } as any),
-    ).rejects.toThrow(ConflictException);
-  });
-
   it('create generateCode read is tenant-scoped and SPANS soft-deleted rows', async () => {
     // @@unique([tenantId, code]) spans soft-deleted rows — codegen must consider them
     // (suppliers convention); filtering deletedAt regenerated occupied codes (P2002).
@@ -160,15 +153,6 @@ describe('WarehousesService', () => {
   });
 
   // ── Update ──────────────────────────────────────────────────────────────────
-  it('update throws ConflictException on a duplicate code', async () => {
-    prisma.warehouse.findFirst
-      .mockResolvedValueOnce(warehouseRow()) // findOne
-      .mockResolvedValueOnce(warehouseRow({ id: 'other' })); // dup check
-    await expect(
-      service.update(TENANT_A, USER, WH_ID, { code: 'WH-REG-002' } as any),
-    ).rejects.toThrow(ConflictException);
-  });
-
   it('[GAP] update write is tenant-scoped via updateMany({ id, tenantId, deletedAt })', async () => {
     prisma.warehouse.findFirst.mockResolvedValue(warehouseRow());
     prisma.warehouse.updateMany.mockResolvedValue({ count: 1 });

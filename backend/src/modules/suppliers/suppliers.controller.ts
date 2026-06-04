@@ -31,7 +31,6 @@ export class SuppliersController {
   @ApiOperation({ summary: 'Create a new supplier' })
   @ApiResponse({ status: 201, description: 'Supplier created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  @ApiResponse({ status: 409, description: 'Supplier code already exists' })
   async create(@Request() req, @Body() createSupplierDto: CreateSupplierDto) {
     return this.suppliersService.create(req.user.tenantId, req.user.id, createSupplierDto);
   }
@@ -66,7 +65,6 @@ export class SuppliersController {
   @ApiResponse({ status: 200, description: 'Supplier updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Supplier not found' })
-  @ApiResponse({ status: 409, description: 'Supplier code already exists' })
   async update(
     @Request() req,
     @Param('id') id: string,

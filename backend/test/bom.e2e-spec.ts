@@ -71,7 +71,7 @@ describe('BOM (e2e)', () => {
     cgId = cg.body.id;
 
     const wc = await authed(request(app.getHttpServer()).post('/api/work-centers'))
-      .send({ code: 'E2EBWC-' + Math.floor(performance.now()), name: 'E2E BOM WC' })
+      .send({ name: 'E2E BOM WC' })
       .expect(201);
     wcId = wc.body.id;
   });
@@ -85,7 +85,6 @@ describe('BOM (e2e)', () => {
   const server = () => app.getHttpServer();
   const validBom = () => ({
     itemId,
-    bomCode: 'E2EBOM-' + Math.floor(performance.now()),
     components: [{ consumptionGroupId: cgId, quantity: 0.15, uom: 'KG', scrapPercent: 3 }],
   });
 
@@ -148,10 +147,14 @@ describe('BOM (e2e)', () => {
       .expect(404);
   });
 
-  it('POST /api/bom → 409 on a duplicate bomCode', async () => {
-    const body = validBom();
-    await auth(request(server()).post('/api/bom')).send(body).expect(201);
-    await auth(request(server()).post('/api/bom')).send(body).expect(409);
+  it('POST /api/bom → 400 on a client-supplied bomCode (spec-012: system-assigned)', () =>
+    auth(request(server()).post('/api/bom'))
+      .send({ ...validBom(), bomCode: 'BOM-HACK' })
+      .expect(400));
+
+  it('POST /api/bom → 201 with auto bomNumber BOM-YYYY-NNNN', async () => {
+    const res = await auth(request(server()).post('/api/bom')).send(validBom()).expect(201);
+    expect(res.body.bomNumber).toMatch(/^BOM-\d{4}-\d{4,}$/);
   });
 
   it('[GAP] POST /api/bom → 400 on the removed phantom description field', () =>

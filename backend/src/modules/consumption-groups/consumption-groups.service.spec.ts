@@ -89,7 +89,7 @@ describe('ConsumptionGroupsService', () => {
 
   // ── Create + code generation ──────────────────────────────────────────────
   it('create auto-generates CG-YYYY-0001 when the tenant has no codes for the year', async () => {
-    prisma.consumptionGroup.findFirst.mockResolvedValue(null); // generateCode lookup
+    prisma.consumptionGroup.findMany.mockResolvedValue([]); // generateCode lookup
     prisma.consumptionGroup.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     await service.create(TENANT_A, USER, { name: 'G', consumptionUomId: UOM_ID } as any);
     const year = new Date().getFullYear();
@@ -106,28 +106,28 @@ describe('ConsumptionGroupsService', () => {
     );
   });
 
-  it('create increments the sequence from the latest code', async () => {
+  it('create increments from the NUMERIC max code (not lexicographic)', async () => {
     const year = new Date().getFullYear();
-    prisma.consumptionGroup.findFirst.mockResolvedValue({ code: `CG-${year}-0007` });
+    prisma.consumptionGroup.findMany.mockResolvedValue([
+      { code: `CG-${year}-99` },
+      { code: `CG-${year}-0007` },
+    ]);
     prisma.consumptionGroup.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     await service.create(TENANT_A, USER, { name: 'G', consumptionUomId: UOM_ID } as any);
     expect(prisma.consumptionGroup.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ code: `CG-${year}-0008` }),
+        data: expect.objectContaining({ code: `CG-${year}-0100` }),
       }),
     );
   });
 
   it('generateCode intentionally spans soft-deleted rows (no deletedAt in its where)', async () => {
-    prisma.consumptionGroup.findFirst.mockResolvedValue(null);
+    prisma.consumptionGroup.findMany.mockResolvedValue([]);
     prisma.consumptionGroup.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     await service.create(TENANT_A, USER, { name: 'G', consumptionUomId: UOM_ID } as any);
-    const codeLookup = prisma.consumptionGroup.findFirst.mock.calls.find(
-      ([arg]) => arg?.where?.code?.startsWith,
-    );
-    expect(codeLookup).toBeDefined();
-    expect(codeLookup[0].where).not.toHaveProperty('deletedAt');
-    expect(codeLookup[0].where.tenantId).toBe(TENANT_A);
+    const [arg] = prisma.consumptionGroup.findMany.mock.calls[0];
+    expect(arg.where).not.toHaveProperty('deletedAt');
+    expect(arg.where.tenantId).toBe(TENANT_A);
   });
 
   it('[GAP] create validates consumptionUomId via UomService.findOneUnit and 404s on a bad id', async () => {

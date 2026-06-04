@@ -5,7 +5,7 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -58,23 +58,18 @@ describe('SuppliersService', () => {
   });
 
   // ── Create ────────────────────────────────────────────────────────────────
-  it('create auto-generates a SUP-YYYY-NNNN code when none is supplied', async () => {
-    prisma.supplier.findFirst
-      .mockResolvedValueOnce(null) // generateCode: no prior code
-      .mockResolvedValueOnce(null); // duplicate check
+  it('create auto-generates SUP-YYYY-NNNN from the NUMERIC max (spec-012: always system-assigned)', async () => {
+    const year = new Date().getFullYear();
+    prisma.supplier.findMany.mockResolvedValue([
+      { code: `SUP-${year}-99` },
+      { code: `SUP-${year}-104` },
+    ]);
     prisma.supplier.create.mockImplementation(({ data }) => ({ id: 'new', ...data }));
     const result = await service.create(TENANT_A, USER, { name: 'Acme' } as any);
-    expect(result.code).toMatch(/^SUP-\d{4}-0001$/);
+    expect(result.code).toBe(`SUP-${year}-0105`);
     expect(prisma.supplier.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ tenantId: TENANT_A }) }),
     );
-  });
-
-  it('create throws ConflictException on a duplicate code', async () => {
-    prisma.supplier.findFirst.mockResolvedValueOnce({ id: 'dup', code: 'SUP-2026-0001' });
-    await expect(
-      service.create(TENANT_A, USER, { name: 'Dup', code: 'SUP-2026-0001' } as any),
-    ).rejects.toThrow(ConflictException);
   });
 
   // ── Update / remove ───────────────────────────────────────────────────────

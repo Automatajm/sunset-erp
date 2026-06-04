@@ -52,7 +52,7 @@ describe('Categories (e2e)', () => {
     const mc = await request(app.getHttpServer())
       .post('/api/macro-categories')
       .set('Authorization', `Bearer ${token}`)
-      .send({ code: 'E2EC-' + Math.floor(performance.now()), name: 'E2E Cat Parent' })
+      .send({ name: 'E2E Cat Parent' })
       .expect(201);
     mcId = mc.body.id;
   });
@@ -64,10 +64,8 @@ describe('Categories (e2e)', () => {
   const auth = (req: request.Test) => req.set('Authorization', `Bearer ${token}`);
   const authB = (req: request.Test) => req.set('Authorization', `Bearer ${tokenB}`);
   const server = () => app.getHttpServer();
-  const uniqueCode = (prefix: string) => `${prefix}-${Math.floor(performance.now())}`;
   const validCategory = () => ({
     macroCategoryId: mcId,
-    code: uniqueCode('E2ECAT'),
     name: 'E2E Category',
   });
 
@@ -92,10 +90,11 @@ describe('Categories (e2e)', () => {
         expect(r.body).toHaveProperty('count');
       }));
 
-  it('POST /api/categories → 201 with macroCategory and _count.items', async () => {
+  it('POST /api/categories → 201 with auto code CAT-YYYY-NNNN, macroCategory and _count.items', async () => {
     const res = await auth(request(server()).post('/api/categories'))
       .send(validCategory())
       .expect(201);
+    expect(res.body.code).toMatch(/^CAT-\d{4}-\d{4}$/);
     expect(res.body.macroCategory.id).toBe(mcId);
     expect(res.body.isActive).toBe(true);
     expect(res.body._count).toEqual(expect.objectContaining({ items: 0 }));
@@ -132,26 +131,23 @@ describe('Categories (e2e)', () => {
 
   it('POST /api/categories → 400 on a non-UUID macroCategoryId', () =>
     auth(request(server()).post('/api/categories'))
-      .send({ macroCategoryId: 'nope', code: uniqueCode('E2EBAD'), name: 'X' })
+      .send({ macroCategoryId: 'nope', name: 'X' })
+      .expect(400));
+
+  it('POST /api/categories → 400 on a client-supplied code (spec-012: system-assigned)', () =>
+    auth(request(server()).post('/api/categories'))
+      .send({ ...validCategory(), code: 'HACK' })
       .expect(400));
 
   it('POST /api/categories → 404 when macroCategoryId does not resolve in the tenant', () =>
     auth(request(server()).post('/api/categories'))
-      .send({ macroCategoryId: ZERO, code: uniqueCode('E2EGHOST'), name: 'X' })
+      .send({ macroCategoryId: ZERO, name: 'X' })
       .expect(404));
 
   it('[GAP] POST /api/categories → 404 (not 500) on an unknown inventoryAccountId', () =>
     auth(request(server()).post('/api/categories'))
       .send({ ...validCategory(), inventoryAccountId: ZERO })
       .expect(404));
-
-  it('POST /api/categories → 409 on a duplicate code', async () => {
-    const body = validCategory();
-    await auth(request(server()).post('/api/categories')).send(body).expect(201);
-    await auth(request(server()).post('/api/categories'))
-      .send({ ...body, name: 'Second' })
-      .expect(409);
-  });
 
   it('GET/DELETE /api/categories/:id → 404 for an unknown id', async () => {
     await auth(request(server()).get(`/api/categories/${ZERO}`)).expect(404);
@@ -224,7 +220,7 @@ describe('Categories (e2e)', () => {
   it("[GAP] re-parenting to ANOTHER TENANT's macro category → 404 (cross-tenant FK vector)", async () => {
     // B creates a macro category in TENANT2.
     const mcB = await authB(request(server()).post('/api/macro-categories'))
-      .send({ code: uniqueCode('E2EB'), name: 'Tenant-B Macro' })
+      .send({ name: 'Tenant-B Macro' })
       .expect(201);
     // A tries to point its own category at B's macro category — must be 404,
     // never a silent cross-tenant link.

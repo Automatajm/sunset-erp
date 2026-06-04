@@ -1,10 +1,5 @@
 // --- macro-categories/macro-categories.service.ts ---
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CategoriesService } from '../categories/categories.service';
 import { CreateMacroCategoryDto } from './dto/create-macro-category.dto';
@@ -17,15 +12,28 @@ export class MacroCategoriesService {
     private categoriesService: CategoriesService,
   ) {}
 
-  async create(tenantId: string, userId: string, dto: CreateMacroCategoryDto) {
-    const existing = await this.prisma.macroCategory.findFirst({
-      where: { tenantId, code: dto.code, deletedAt: null },
+  // ── Auto-code MC-YYYY-NNNN (spec-012: codes are system-assigned, immutable) ──
+  private async generateCode(tenantId: string): Promise<string> {
+    const prefix = `MC-${new Date().getFullYear()}`;
+    // Numeric max (never lexicographic), NaN-guarded, spanning soft-deleted rows —
+    // @@unique([tenantId, code]) spans them (house convention).
+    const rows = await this.prisma.macroCategory.findMany({
+      where: { tenantId, code: { startsWith: prefix } },
+      select: { code: true },
     });
-    if (existing) throw new ConflictException(`MacroCategory code ${dto.code} already exists`);
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-')[2] ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${String(max + 1).padStart(4, '0')}`;
+  }
+
+  async create(tenantId: string, userId: string, dto: CreateMacroCategoryDto) {
     return this.prisma.macroCategory.create({
       data: {
-        tenantId,
         ...dto,
+        tenantId,
+        code: await this.generateCode(tenantId),
         isActive: dto.isActive ?? true,
         createdBy: userId,
         updatedBy: userId,
@@ -60,12 +68,7 @@ export class MacroCategoriesService {
 
   async update(tenantId: string, userId: string, id: string, dto: UpdateMacroCategoryDto) {
     await this.findOne(tenantId, id);
-    if (dto.code) {
-      const conflict = await this.prisma.macroCategory.findFirst({
-        where: { tenantId, code: dto.code, id: { not: id }, deletedAt: null },
-      });
-      if (conflict) throw new ConflictException(`MacroCategory code ${dto.code} already exists`);
-    }
+    // Codes are immutable (spec-012) — the DTO no longer carries one.
     // Tenant scope enforced at the write itself (updateMany — Prisma update() only
     // accepts unique wheres), then re-fetch to preserve the response shape.
     await this.prisma.macroCategory.updateMany({

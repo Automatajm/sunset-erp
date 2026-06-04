@@ -52,10 +52,11 @@ function WCModal({ wc, onClose, onSaved }: { wc: WorkCenter | null; onClose: () 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.name.trim()) { setError('Code and name required.'); return; }
+    if (!form.name.trim()) { setError('Name required.'); return; }
     setBusy(true); setError('');
     try {
-      const payload = { code: form.code, name: form.name, workCenterType: form.workCenterType as WorkCenterType || undefined, capacityPerHour: form.capacityPerHour ? Number(form.capacityPerHour) : undefined, efficiencyPercent: form.efficiencyPercent ? Number(form.efficiencyPercent) : undefined, costPerHour: form.costPerHour ? Number(form.costPerHour) : undefined, isActive: form.isActive };
+      // Codes are system-assigned and immutable (spec-012) — never sent.
+      const payload = { name: form.name, workCenterType: form.workCenterType as WorkCenterType || undefined, capacityPerHour: form.capacityPerHour ? Number(form.capacityPerHour) : undefined, efficiencyPercent: form.efficiencyPercent ? Number(form.efficiencyPercent) : undefined, costPerHour: form.costPerHour ? Number(form.costPerHour) : undefined, isActive: form.isActive };
       if (wc) await workCentersApi.update(wc.id, payload); else await workCentersApi.create(payload);
       onSaved(); onClose();
     } catch (err) { setError((err as {response?:{data?:{message?:string}}}).response?.data?.message || 'Failed.'); }
@@ -74,7 +75,7 @@ function WCModal({ wc, onClose, onSaved }: { wc: WorkCenter | null; onClose: () 
           <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
             {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              <Field label="Code *"><input style={INPUT} placeholder="WC-001" value={form.code} onChange={set('code')} required /></Field>
+              <Field label="Code"><input style={INPUT} value={wc?.code ?? 'Auto (WC-YYYY-NNNN)'} disabled readOnly /></Field>
               <Field label="Type">
                 <select style={INPUT} value={form.workCenterType} onChange={set('workCenterType')}>
                   <option value="">— None —</option>

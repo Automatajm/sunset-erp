@@ -85,7 +85,6 @@ export interface Item {
 }
 
 export interface CreateItemDto {
-  code?:            string;   // auto-generated if omitted (ITEM-0001, …)
   name:             string;
   description?:     string;
   itemType:         ItemType;
@@ -132,7 +131,6 @@ export interface MacroCategory {
 }
 
 export interface CreateMacroCategoryDto {
-  code:         string;
   name:         string;
   description?: string;
   isActive?:    boolean;
@@ -160,7 +158,6 @@ export interface Category {
 
 export interface CreateCategoryDto {
   macroCategoryId:     string;
-  code:                string;
   name:                string;
   description?:        string;
   inventoryAccountId?: string;
@@ -246,7 +243,6 @@ export interface Warehouse {
 }
 
 export interface CreateWarehouseDto {
-  code?:         string;   // auto-generated if omitted (WH-{TYPE}-{NNN})
   name:          string;
   warehouseType?: WarehouseType;
   address?:      string;
@@ -388,7 +384,6 @@ export interface Supplier {
 
 export interface CreateSupplierDto {
   // Identity
-  code:      string;
   name:      string;
   legalName?: string;
   taxId?:     string;
@@ -571,7 +566,6 @@ export interface Customer {
 }
 
 export interface CreateCustomerDto {
-  code:          string;
   name:          string;
   legalName?:    string;
   taxId?:        string;
