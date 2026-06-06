@@ -1,6 +1,6 @@
 # spec-016 — Stock Transactions (Inventory Movements, WAC Costing & Reports)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `stock-transactions` (touches `frontend/lib/api/stock-transactions.ts` for the list envelope)  
@@ -365,3 +365,4 @@ cd backend && pnpm build && pnpm test stock-transactions.service && pnpm test:e2
 | 2026-06-06 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 73) | Draft — 6 cross-tenant reference lookups, 3 unscoped stock writes, silent negative stock, phantom transfer/adjustment receipts, P2002 mapping, ignored warehouseId filter, DTO/query whitelists + caps, list envelope captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (18 unit / 17 e2e, 16 tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 12 gaps implemented: tenantId on 6 reference lookups + 3 stock writes (updateMany), insufficient-stock guard (issue <= on-hand, missing row = 0, asymmetric clamp removed), receipt/issue whitelist + service guard, P2002->409, warehouseId filter applied, query DTOs, quantity/unitCost caps, { movements, count } envelope + frontend unwrap, @ApiResponse on /planning | Unit 18/18, e2e 17/17 (incl. live WAC flow 100@10+100@20->15), backend build OK, frontend build OK, module lint clean |
+| 2026-06-06 | Shipped to origin (`5ab1f9e`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
