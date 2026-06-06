@@ -1,36 +1,65 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateJournalEntryDto } from './dto/create-journal-entry.dto';
 import { UpdateJournalEntryDto } from './dto/update-journal-entry.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// Shared include for entry reads — lines must exclude soft-deleted rows.
+const LINES_INCLUDE = {
+  lines: {
+    where: { deletedAt: null },
+    include: {
+      account: {
+        select: {
+          id: true,
+          accountNumber: true,
+          name: true,
+          accountType: true,
+        },
+      },
+    },
+    orderBy: {
+      lineNumber: 'asc' as const,
+    },
+  },
+};
 
 @Injectable()
 export class JournalEntriesService {
   constructor(private prisma: PrismaService) {}
 
   async create(tenantId: string, userId: string, createJournalEntryDto: CreateJournalEntryDto) {
-    // Validate double-entry: debits must equal credits
+    // Validate double-entry cent-exact: sum integer cents, zero tolerance.
+    const toCents = (amount: number) => Math.round(amount * 100);
     const totalDebits = createJournalEntryDto.lines.reduce(
-      (sum, line) => sum + line.debitAmount,
+      (sum, line) => sum + toCents(line.debitAmount),
       0,
     );
     const totalCredits = createJournalEntryDto.lines.reduce(
-      (sum, line) => sum + line.creditAmount,
+      (sum, line) => sum + toCents(line.creditAmount),
       0,
     );
 
-    if (Math.abs(totalDebits - totalCredits) > 0.01) {
+    if (totalDebits !== totalCredits) {
       throw new BadRequestException(
-        `Journal entry is not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}`,
+        `Journal entry is not balanced. Debits: ${totalDebits / 100}, Credits: ${totalCredits / 100}`,
       );
     }
 
-    // Validate that each line has either debit or credit (not both, not neither)
+    // Validate that each line has either debit or credit (not both, not neither),
+    // compared in cents so sub-cent noise cannot slip through either side.
     for (const line of createJournalEntryDto.lines) {
-      if (line.debitAmount > 0 && line.creditAmount > 0) {
+      const debitCents = toCents(line.debitAmount);
+      const creditCents = toCents(line.creditAmount);
+      if (debitCents > 0 && creditCents > 0) {
         throw new BadRequestException('A line cannot have both debit and credit amounts');
       }
-      if (line.debitAmount === 0 && line.creditAmount === 0) {
+      if (debitCents === 0 && creditCents === 0) {
         throw new BadRequestException('A line must have either a debit or credit amount');
       }
     }
@@ -69,53 +98,48 @@ export class JournalEntriesService {
     const entryDate = new Date(createJournalEntryDto.entryDate);
     const fiscalPeriod = `${entryDate.getFullYear()}-${(entryDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
-    // Create journal entry with lines
-    const journalEntry = await this.prisma.journalEntry.create({
-      data: {
-        tenantId,
-        entryNumber,
-        entryDate: entryDate,
-        postingDate: entryDate,
-        fiscalPeriod,
-        journalType: createJournalEntryDto.journalType || 'general',
-        description: createJournalEntryDto.description,
-        reference: createJournalEntryDto.reference ?? null,
-        status: 'draft',
-        createdBy: userId,
-        updatedBy: userId,
-        lines: {
-          create: createJournalEntryDto.lines.map((line, index) => ({
-            tenantId,
-            accountId: line.accountId,
-            lineNumber: index + 1,
-            debitAmount: new Decimal(line.debitAmount),
-            creditAmount: new Decimal(line.creditAmount),
-            description: line.description,
-            currency: 'USD',
-            exchangeRate: new Decimal(1),
-            createdBy: userId,
-            updatedBy: userId,
-          })),
-        },
-      },
-      include: {
-        lines: {
-          include: {
-            account: {
-              select: {
-                id: true,
-                accountNumber: true,
-                name: true,
-                accountType: true,
-              },
-            },
-          },
-          orderBy: {
-            lineNumber: 'asc',
+    // Create journal entry with lines. The @@unique([tenantId, entryNumber])
+    // index can race on concurrent creates — surface that as 409, never a 500.
+    let journalEntry;
+    try {
+      journalEntry = await this.prisma.journalEntry.create({
+        data: {
+          tenantId,
+          entryNumber,
+          entryDate: entryDate,
+          postingDate: entryDate,
+          fiscalPeriod,
+          journalType: createJournalEntryDto.journalType || 'general',
+          description: createJournalEntryDto.description,
+          reference: createJournalEntryDto.reference ?? null,
+          status: 'draft',
+          createdBy: userId,
+          updatedBy: userId,
+          lines: {
+            create: createJournalEntryDto.lines.map((line, index) => ({
+              tenantId,
+              accountId: line.accountId,
+              lineNumber: index + 1,
+              debitAmount: new Decimal(line.debitAmount),
+              creditAmount: new Decimal(line.creditAmount),
+              description: line.description,
+              currency: 'USD',
+              exchangeRate: new Decimal(1),
+              createdBy: userId,
+              updatedBy: userId,
+            })),
           },
         },
-      },
-    });
+        include: LINES_INCLUDE,
+      });
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Journal entry number ${entryNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
 
     return this.formatJournalEntryResponse(journalEntry);
   }
@@ -134,6 +158,7 @@ export class JournalEntriesService {
       where,
       include: {
         lines: {
+          where: { deletedAt: null },
           include: {
             account: {
               select: {
@@ -152,7 +177,10 @@ export class JournalEntriesService {
       },
     });
 
-    return entries.map((entry) => this.formatJournalEntryResponse(entry));
+    return {
+      journalEntries: entries.map((entry) => this.formatJournalEntryResponse(entry)),
+      count: entries.length,
+    };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -162,23 +190,7 @@ export class JournalEntriesService {
         tenantId,
         deletedAt: null,
       },
-      include: {
-        lines: {
-          include: {
-            account: {
-              select: {
-                id: true,
-                accountNumber: true,
-                name: true,
-                accountType: true,
-              },
-            },
-          },
-          orderBy: {
-            lineNumber: 'asc',
-          },
-        },
-      },
+      include: LINES_INCLUDE,
     });
 
     if (!entry) {
@@ -216,29 +228,13 @@ export class JournalEntriesService {
     if (updateJournalEntryDto.reference !== undefined)
       updateData.reference = updateJournalEntryDto.reference;
 
-    const updatedEntry = await this.prisma.journalEntry.update({
-      where: { id },
+    // Tenant-scoped at the write itself (not only via the findOne above).
+    await this.prisma.journalEntry.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: updateData,
-      include: {
-        lines: {
-          include: {
-            account: {
-              select: {
-                id: true,
-                accountNumber: true,
-                name: true,
-                accountType: true,
-              },
-            },
-          },
-          orderBy: {
-            lineNumber: 'asc',
-          },
-        },
-      },
     });
 
-    return this.formatJournalEntryResponse(updatedEntry);
+    return this.findOne(tenantId, id);
   }
 
   async post(tenantId: string, userId: string, id: string) {
@@ -248,24 +244,17 @@ export class JournalEntriesService {
       throw new BadRequestException('Only draft journal entries can be posted');
     }
 
-    const updated = await this.prisma.journalEntry.update({
-      where: { id },
+    await this.prisma.journalEntry.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'posted',
         updatedBy: userId,
-      },
-      include: {
-        lines: {
-          include: {
-            account: true,
-          },
-        },
       },
     });
 
     return {
       message: `Journal entry ${entry.entryNumber} posted successfully`,
-      journalEntry: this.formatJournalEntryResponse(updated),
+      journalEntry: await this.findOne(tenantId, id),
     };
   }
 
@@ -276,24 +265,17 @@ export class JournalEntriesService {
       throw new BadRequestException('Only posted journal entries can be unposted');
     }
 
-    const updated = await this.prisma.journalEntry.update({
-      where: { id },
+    await this.prisma.journalEntry.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'draft',
         updatedBy: userId,
-      },
-      include: {
-        lines: {
-          include: {
-            account: true,
-          },
-        },
       },
     });
 
     return {
       message: `Journal entry ${entry.entryNumber} unposted successfully`,
-      journalEntry: this.formatJournalEntryResponse(updated),
+      journalEntry: await this.findOne(tenantId, id),
     };
   }
 
@@ -304,8 +286,8 @@ export class JournalEntriesService {
       throw new BadRequestException('Only draft journal entries can be deleted');
     }
 
-    await this.prisma.journalEntry.update({
-      where: { id },
+    await this.prisma.journalEntry.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,
@@ -323,6 +305,7 @@ export class JournalEntriesService {
     const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
     const prefix = `JE-${year}${month}`;
 
+    // Deliberately spans soft-deleted rows (spec-012: numbers are never reused).
     const lastJe = await this.prisma.journalEntry.findFirst({
       where: {
         tenantId,

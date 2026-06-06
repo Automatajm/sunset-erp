@@ -23,6 +23,7 @@ import {
 import { JournalEntriesService } from './journal-entries.service';
 import { CreateJournalEntryDto } from './dto/create-journal-entry.dto';
 import { UpdateJournalEntryDto } from './dto/update-journal-entry.dto';
+import { FindJournalEntriesQueryDto } from './dto/find-journal-entries-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -40,6 +41,8 @@ export class JournalEntriesController {
   @ApiResponse({ status: 201, description: 'Journal entry created successfully' })
   @ApiResponse({ status: 400, description: 'Journal entry not balanced or validation error' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
+  @ApiResponse({ status: 404, description: 'Line account not found in tenant' })
+  @ApiResponse({ status: 409, description: 'Entry number collision (concurrent create) - retry' })
   async create(@Request() req, @Body() createJournalEntryDto: CreateJournalEntryDto) {
     return this.journalEntriesService.create(req.user.tenantId, req.user.id, createJournalEntryDto);
   }
@@ -48,10 +51,11 @@ export class JournalEntriesController {
   @RequirePermissions('ACCOUNTING:VIEW')
   @ApiOperation({ summary: 'Get all journal entries' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by status (draft, posted)' })
-  @ApiResponse({ status: 200, description: 'List of journal entries' })
+  @ApiResponse({ status: 200, description: 'Envelope { journalEntries, count }' })
+  @ApiResponse({ status: 400, description: 'status must be draft or posted' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  async findAll(@Request() req, @Query('status') status?: string) {
-    return this.journalEntriesService.findAll(req.user.tenantId, status);
+  async findAll(@Request() req, @Query() query: FindJournalEntriesQueryDto) {
+    return this.journalEntriesService.findAll(req.user.tenantId, query.status);
   }
 
   @Get(':id')

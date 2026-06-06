@@ -12,6 +12,8 @@ import {
 function extractList(data: unknown): JournalEntry[] {
   if (Array.isArray(data)) return data as JournalEntry[];
   const d = data as Record<string, unknown>;
+  if (d?.journalEntries && Array.isArray(d.journalEntries))
+    return d.journalEntries as JournalEntry[];
   if (d?.value && Array.isArray(d.value)) return d.value as JournalEntry[];
   return [];
 }

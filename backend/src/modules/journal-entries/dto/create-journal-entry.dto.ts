@@ -2,6 +2,7 @@
   IsString,
   IsDateString,
   IsArray,
+  IsIn,
   ValidateNested,
   IsOptional,
   MaxLength,
@@ -11,13 +12,20 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateJournalEntryLineDto } from './create-journal-entry-line.dto';
 
+export const JOURNAL_TYPES = ['general', 'adjustment', 'closing', 'opening'];
+
 export class CreateJournalEntryDto {
   @ApiProperty({ example: '2026-03-15' })
   @IsDateString()
   entryDate: string;
 
-  @ApiProperty({ example: 'general', description: 'general | adjustment | closing | opening' })
+  @ApiProperty({
+    example: 'general',
+    enum: JOURNAL_TYPES,
+    description: 'general | adjustment | closing | opening',
+  })
   @IsString()
+  @IsIn(JOURNAL_TYPES)
   @MaxLength(50)
   journalType: string;
 
