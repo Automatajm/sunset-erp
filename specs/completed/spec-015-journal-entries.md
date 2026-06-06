@@ -1,6 +1,6 @@
 # spec-015 — Journal Entries (General Ledger)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `journal-entries` (touches `frontend/lib/api/journal-entries.ts` for the list envelope)  
@@ -320,3 +320,4 @@ cd backend && pnpm build && pnpm test journal-entries.service && pnpm test:e2e j
 | 2026-06-06 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 51) | Draft — 4 unscoped writes, line-include soft-delete gap, float-tolerant balance check, P2002 mapping, journalType/status whitelists, phantom referenceType/referenceId DTO fields, amount caps, list envelope captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (26 unit / 17 e2e, 15 tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 10 gaps implemented: tenant-scoped writes (updateMany + refetch), cent-exact balance, P2002→409, deletedAt-filtered line includes, journalType/status whitelists, phantom DTO fields removed, @Max(1e15) caps, list envelope + frontend unwrap | Unit 26/26 ✅, e2e 17/17 ✅, backend build ✅, frontend build ✅, module lint clean |
+| 2026-06-06 | Shipped to origin (`1dd6f59`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
