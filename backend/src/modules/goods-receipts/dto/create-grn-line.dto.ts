@@ -11,6 +11,7 @@ import {
   IsDateString,
   MaxLength,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -30,6 +31,7 @@ export class CreateGrnLineDto {
   @ApiProperty({ example: 100.5, description: 'Received quantity' })
   @IsNumber()
   @IsPositive()
+  @Max(99999999999) // Decimal(15,3) capacity − 1 order of magnitude
   @Type(() => Number)
   receivedQuantity: number;
 
@@ -42,6 +44,7 @@ export class CreateGrnLineDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(9999999999) // Decimal(15,4) capacity − 1 order of magnitude
   @Type(() => Number)
   unitCost?: number;
 

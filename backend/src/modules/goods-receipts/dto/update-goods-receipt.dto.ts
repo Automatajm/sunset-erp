@@ -2,13 +2,15 @@
 // FILE: backend/src/modules/goods-receipts/dto/update-goods-receipt.dto.ts
 // ============================================================================
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsIn } from 'class-validator';
 
 export class UpdateGoodsReceiptDto {
-  @ApiPropertyOptional({ example: 'complete' })
+  @ApiPropertyOptional({
+    example: 'complete',
+    enum: ['complete', 'partial', 'damaged', 'rejected'],
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
+  @IsIn(['complete', 'partial', 'damaged', 'rejected'])
   condition?: string;
 
   @ApiPropertyOptional({ example: 'Additional notes after inspection' })

@@ -24,15 +24,17 @@ export class GoodsReceiptsService {
   private async generateGrnNumber(tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `GRN-${year}`;
-    const last = await this.prisma.goodsReceipt.findFirst({
+    // Numeric max — string orderBy breaks past -9999. Deliberately spans
+    // soft-deleted rows (spec-012 exception).
+    const rows = await this.prisma.goodsReceipt.findMany({
       where: { tenantId, grnNumber: { startsWith: prefix } },
-      orderBy: { grnNumber: 'desc' },
+      select: { grnNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.grnNumber.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.grnNumber.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   // ── Auto-generate movement number ─────────────────────────────────────────
@@ -40,15 +42,16 @@ export class GoodsReceiptsService {
   private async generateMovementNumber(tx: any, tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `MOV-${year}`;
-    const last = await tx.stockMovement.findFirst({
+    // Numeric max — same pattern as generateGrnNumber.
+    const rows = await tx.stockMovement.findMany({
       where: { tenantId, movementNumber: { startsWith: prefix } },
-      orderBy: { movementNumber: 'desc' },
+      select: { movementNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.movementNumber.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
+    const max = rows.reduce((m: number, r: { movementNumber: string }) => {
+      const n = parseInt(r.movementNumber.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   // ── Resolve supplierId: from DTO, or from PO ───────────────────────────────
@@ -60,7 +63,7 @@ export class GoodsReceiptsService {
     if (dto.supplierId) return dto.supplierId;
     if (dto.poId) {
       const po = await this.prisma.purchaseOrder.findFirst({
-        where: { id: dto.poId, tenantId },
+        where: { id: dto.poId, tenantId, deletedAt: null },
         select: { supplierId: true },
       });
       return po?.supplierId ?? null;
@@ -100,17 +103,30 @@ export class GoodsReceiptsService {
       consumptionUom: string;
     }> = [];
 
+    // Cumulative incoming purchase qty per PO line (a GRN may repeat a poLineId)
+    const incomingByPoLine = new Map<string, number>();
+
     for (const line of dto.lines) {
       const item = await this.prisma.item.findFirst({
         where: { id: line.itemId, tenantId, deletedAt: null },
       });
       if (!item) throw new NotFoundException(`Item ${line.itemId} not found`);
 
+      let poLine: { purchaseOrderId: string; orderedQuantity: any; receivedQuantity: any } | null =
+        null;
       if (line.poLineId) {
-        const poLine = await this.prisma.purchaseOrderLine.findFirst({
-          where: { id: line.poLineId, deletedAt: null },
+        if (!dto.poId)
+          throw new BadRequestException(
+            `Line with PO line ${line.poLineId} requires poId on the GRN header`,
+          );
+        poLine = await this.prisma.purchaseOrderLine.findFirst({
+          where: { id: line.poLineId, tenantId, deletedAt: null },
         });
         if (!poLine) throw new NotFoundException(`PO line ${line.poLineId} not found`);
+        if (poLine.purchaseOrderId !== dto.poId)
+          throw new BadRequestException(
+            `PO line ${line.poLineId} does not belong to PO ${dto.poId}`,
+          );
       }
 
       // Find SupplierItem for conversion factor
@@ -129,163 +145,187 @@ export class GoodsReceiptsService {
         tenantId,
         supplierItemId,
       );
+
+      // Over-receipt guard — hard block, no tolerance (spec-023 policy)
+      if (poLine && line.poLineId) {
+        const incoming = (incomingByPoLine.get(line.poLineId) ?? 0) + allQties.purchaseQty;
+        const ordered = Number(poLine.orderedQuantity);
+        const alreadyReceived = Number(poLine.receivedQuantity);
+        if (alreadyReceived + incoming > ordered)
+          throw new BadRequestException(
+            `Over-receipt on PO line ${line.poLineId}: ordered ${ordered}, ` +
+              `already received ${alreadyReceived}, remaining ${ordered - alreadyReceived}, ` +
+              `attempted ${incoming}`,
+          );
+        incomingByPoLine.set(line.poLineId, incoming);
+      }
+
       lineData.push(allQties);
     }
 
     const grnNumber = await this.generateGrnNumber(tenantId);
 
-    const grn = await this.prisma.$transaction(async (tx) => {
-      // 1. Create GRN header
-      const grn = await tx.goodsReceipt.create({
-        data: {
-          tenantId,
-          grnNumber,
-          poId: dto.poId ?? null,
-          supplierId: supplierId ?? null,
-          warehouseId: dto.warehouseId,
-          receivedDate: dto.receivedDate ? new Date(dto.receivedDate) : new Date(),
-          status: 'posted',
-          condition: dto.condition ?? 'complete',
-          notes: dto.notes ?? null,
-          supplierRef: dto.supplierRef ?? null,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-
-      // 2. Create lines + stock movements
-      let lineNumber = 1;
-      for (let i = 0; i < dto.lines.length; i++) {
-        const line = dto.lines[i];
-        const allQtys = lineData[i];
-        const unitCost = line.unitCost ? Number(line.unitCost) : null;
-
-        const movementNumber = await this.generateMovementNumber(tx, tenantId);
-
-        const currentStock = await tx.stock.findFirst({
-          where: { tenantId, itemId: line.itemId, warehouseId: dto.warehouseId },
-        });
-        const currentWAC = currentStock?.unitCost ? Number(currentStock.unitCost) : 0;
-
-        const incomingCost = unitCost ?? currentWAC;
-        const wacResult = this.uom.calcNewWAC(
-          currentStock ? Number(currentStock.purchaseQty ?? currentStock.onHandQuantity) : 0,
-          currentWAC,
-          allQtys.purchaseQty,
-          incomingCost,
-        );
-
-        const movementValue = allQtys.purchaseQty * incomingCost;
-
-        const movement = await tx.stockMovement.create({
+    let grn: { id: string };
+    try {
+      grn = await this.prisma.$transaction(async (tx) => {
+        // 1. Create GRN header
+        const grn = await tx.goodsReceipt.create({
           data: {
             tenantId,
-            movementNumber,
-            movementType: 'receipt',
-            itemId: line.itemId,
-            fromWarehouseId: null,
-            toWarehouseId: dto.warehouseId,
-            quantity: allQtys.storageQty,
-            uom: allQtys.storageUom,
-            purchaseQty: allQtys.purchaseQty,
-            purchaseUom: allQtys.purchaseUom,
-            consumptionQty: allQtys.consumptionQty,
-            consumptionUom: allQtys.consumptionUom,
-            unitCost: incomingCost,
-            unitCostAtMovement: incomingCost,
-            movementValue: Math.round(movementValue * 100) / 100,
-            lotNumber: line.lotNumber ?? null,
-            referenceType: 'GRN',
-            referenceId: grn.id,
-            notes: line.notes ?? null,
-            createdBy: userId,
-          },
-        });
-
-        await tx.goodsReceiptLine.create({
-          data: {
-            tenantId,
-            grnId: grn.id,
-            lineNumber: lineNumber++,
-            poLineId: line.poLineId ?? null,
-            itemId: line.itemId,
+            grnNumber,
+            poId: dto.poId ?? null,
+            supplierId: supplierId ?? null,
             warehouseId: dto.warehouseId,
-            stockMovementId: movement.id,
-            receivedQuantity: allQtys.purchaseQty,
-            uom: allQtys.purchaseUom,
-            storageQty: allQtys.storageQty,
-            storageUom: allQtys.storageUom,
-            consumptionQty: allQtys.consumptionQty,
-            consumptionUom: allQtys.consumptionUom,
-            unitCost: unitCost,
-            lotNumber: line.lotNumber ?? null,
-            expiryDate: line.expiryDate ? new Date(line.expiryDate) : null,
-            notes: line.notes ?? null,
+            receivedDate: dto.receivedDate ? new Date(dto.receivedDate) : new Date(),
+            status: 'posted',
+            condition: dto.condition ?? 'complete',
+            notes: dto.notes ?? null,
+            supplierRef: dto.supplierRef ?? null,
             createdBy: userId,
             updatedBy: userId,
           },
         });
 
-        // Upsert stock
-        if (currentStock) {
-          await tx.stock.update({
-            where: { id: currentStock.id },
-            data: {
-              purchaseQty: wacResult.newPurchaseQty,
-              purchaseUom: allQtys.purchaseUom,
-              onHandQuantity: { increment: allQtys.storageQty },
-              storageQty: { increment: allQtys.storageQty },
-              storageUom: allQtys.storageUom,
-              consumptionQty: { increment: allQtys.consumptionQty },
-              consumptionUom: allQtys.consumptionUom,
-              unitCost: wacResult.newUnitCost,
-            },
+        // 2. Create lines + stock movements
+        let lineNumber = 1;
+        for (let i = 0; i < dto.lines.length; i++) {
+          const line = dto.lines[i];
+          const allQtys = lineData[i];
+          const unitCost = line.unitCost ? Number(line.unitCost) : null;
+
+          const movementNumber = await this.generateMovementNumber(tx, tenantId);
+
+          const currentStock = await tx.stock.findFirst({
+            where: { tenantId, itemId: line.itemId, warehouseId: dto.warehouseId },
           });
-        } else {
-          await tx.stock.create({
+          const currentWAC = currentStock?.unitCost ? Number(currentStock.unitCost) : 0;
+
+          const incomingCost = unitCost ?? currentWAC;
+          const wacResult = this.uom.calcNewWAC(
+            currentStock ? Number(currentStock.purchaseQty ?? currentStock.onHandQuantity) : 0,
+            currentWAC,
+            allQtys.purchaseQty,
+            incomingCost,
+          );
+
+          const movementValue = allQtys.purchaseQty * incomingCost;
+
+          const movement = await tx.stockMovement.create({
             data: {
               tenantId,
+              movementNumber,
+              movementType: 'receipt',
               itemId: line.itemId,
-              warehouseId: dto.warehouseId,
+              fromWarehouseId: null,
+              toWarehouseId: dto.warehouseId,
+              quantity: allQtys.storageQty,
+              uom: allQtys.storageUom,
               purchaseQty: allQtys.purchaseQty,
               purchaseUom: allQtys.purchaseUom,
-              onHandQuantity: allQtys.storageQty,
+              consumptionQty: allQtys.consumptionQty,
+              consumptionUom: allQtys.consumptionUom,
+              unitCost: incomingCost,
+              unitCostAtMovement: incomingCost,
+              movementValue: Math.round(movementValue * 100) / 100,
+              lotNumber: line.lotNumber ?? null,
+              referenceType: 'GRN',
+              referenceId: grn.id,
+              notes: line.notes ?? null,
+              createdBy: userId,
+            },
+          });
+
+          await tx.goodsReceiptLine.create({
+            data: {
+              tenantId,
+              grnId: grn.id,
+              lineNumber: lineNumber++,
+              poLineId: line.poLineId ?? null,
+              itemId: line.itemId,
+              warehouseId: dto.warehouseId,
+              stockMovementId: movement.id,
+              receivedQuantity: allQtys.purchaseQty,
+              uom: allQtys.purchaseUom,
               storageQty: allQtys.storageQty,
               storageUom: allQtys.storageUom,
               consumptionQty: allQtys.consumptionQty,
               consumptionUom: allQtys.consumptionUom,
-              reservedQuantity: 0,
-              unitCost: incomingCost,
+              unitCost: unitCost,
+              lotNumber: line.lotNumber ?? null,
+              expiryDate: line.expiryDate ? new Date(line.expiryDate) : null,
+              notes: line.notes ?? null,
+              createdBy: userId,
+              updatedBy: userId,
             },
           });
+
+          // Upsert stock (Stock has no soft delete — tenantId scope only)
+          if (currentStock) {
+            await tx.stock.updateMany({
+              where: { id: currentStock.id, tenantId },
+              data: {
+                purchaseQty: wacResult.newPurchaseQty,
+                purchaseUom: allQtys.purchaseUom,
+                onHandQuantity: { increment: allQtys.storageQty },
+                storageQty: { increment: allQtys.storageQty },
+                storageUom: allQtys.storageUom,
+                consumptionQty: { increment: allQtys.consumptionQty },
+                consumptionUom: allQtys.consumptionUom,
+                unitCost: wacResult.newUnitCost,
+              },
+            });
+          } else {
+            await tx.stock.create({
+              data: {
+                tenantId,
+                itemId: line.itemId,
+                warehouseId: dto.warehouseId,
+                purchaseQty: allQtys.purchaseQty,
+                purchaseUom: allQtys.purchaseUom,
+                onHandQuantity: allQtys.storageQty,
+                storageQty: allQtys.storageQty,
+                storageUom: allQtys.storageUom,
+                consumptionQty: allQtys.consumptionQty,
+                consumptionUom: allQtys.consumptionUom,
+                reservedQuantity: 0,
+                unitCost: incomingCost,
+              },
+            });
+          }
+
+          if (line.poLineId) {
+            await tx.purchaseOrderLine.updateMany({
+              where: { id: line.poLineId, tenantId, deletedAt: null },
+              data: { receivedQuantity: { increment: allQtys.purchaseQty } },
+            });
+          }
         }
 
-        if (line.poLineId) {
-          await tx.purchaseOrderLine.update({
-            where: { id: line.poLineId },
-            data: { receivedQuantity: { increment: allQtys.purchaseQty } },
+        // Update PO status
+        if (dto.poId) {
+          const poLines = await tx.purchaseOrderLine.findMany({
+            where: { purchaseOrderId: dto.poId, tenantId, deletedAt: null },
+          });
+          const allReceived = poLines.every(
+            (l) => Number(l.receivedQuantity) >= Number(l.orderedQuantity),
+          );
+          const anyReceived = poLines.some((l) => Number(l.receivedQuantity) > 0);
+          const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : 'confirmed';
+          await tx.purchaseOrder.updateMany({
+            where: { id: dto.poId, tenantId, deletedAt: null },
+            data: { status: newStatus, updatedBy: userId },
           });
         }
-      }
 
-      // Update PO status
-      if (dto.poId) {
-        const poLines = await tx.purchaseOrderLine.findMany({
-          where: { purchaseOrderId: dto.poId, deletedAt: null },
-        });
-        const allReceived = poLines.every(
-          (l) => Number(l.receivedQuantity) >= Number(l.orderedQuantity),
-        );
-        const anyReceived = poLines.some((l) => Number(l.receivedQuantity) > 0);
-        const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : 'confirmed';
-        await tx.purchaseOrder.update({
-          where: { id: dto.poId },
-          data: { status: newStatus, updatedBy: userId },
-        });
-      }
-
-      return grn;
-    });
+        return grn;
+      });
+    } catch (e: any) {
+      // Concurrent creates can collide on @@unique([tenantId, grnNumber]) or
+      // the movement number — surface as a retryable conflict, not a 500.
+      if (e?.code === 'P2002')
+        throw new ConflictException('Document number collision — please retry the request');
+      throw e;
+    }
 
     return this.findOne(tenantId, grn.id);
   }
@@ -310,7 +350,7 @@ export class GoodsReceiptsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return grns.map((g) => ({
+    const goodsReceipts = grns.map((g) => ({
       ...g,
       lineCount: g._count.lines,
       totalValue: g.lines.reduce(
@@ -324,6 +364,7 @@ export class GoodsReceiptsService {
       warehouseCode: g.warehouse.code,
       warehouseName: g.warehouse.name,
     }));
+    return { goodsReceipts, count: goodsReceipts.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -367,7 +408,7 @@ export class GoodsReceiptsService {
   // ── Find by PO ─────────────────────────────────────────────────────────────
 
   async findByPo(tenantId: string, poId: string) {
-    return this.prisma.goodsReceipt.findMany({
+    const goodsReceipts = await this.prisma.goodsReceipt.findMany({
       where: { tenantId, poId, deletedAt: null },
       include: {
         warehouse: { select: { code: true, name: true } },
@@ -379,6 +420,7 @@ export class GoodsReceiptsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return { goodsReceipts, count: goodsReceipts.length };
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -386,10 +428,11 @@ export class GoodsReceiptsService {
   async update(tenantId: string, userId: string, id: string, dto: UpdateGoodsReceiptDto) {
     const grn = await this.findOne(tenantId, id);
     if (grn.status === 'cancelled') throw new BadRequestException('Cannot update a cancelled GRN');
-    return this.prisma.goodsReceipt.update({
-      where: { id },
+    await this.prisma.goodsReceipt.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
     });
+    return this.findOne(tenantId, id);
   }
 
   // ── Cancel ─────────────────────────────────────────────────────────────────
@@ -399,14 +442,16 @@ export class GoodsReceiptsService {
     if (grn.status === 'cancelled') throw new ConflictException('GRN is already cancelled');
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.goodsReceipt.update({
-        where: { id },
+      await tx.goodsReceipt.updateMany({
+        where: { id, tenantId, deletedAt: null },
         data: { status: 'cancelled', updatedBy: userId },
       });
 
       for (const line of grn.lines) {
         const originalMovement = line.stockMovementId
-          ? await tx.stockMovement.findFirst({ where: { id: line.stockMovementId } })
+          ? await tx.stockMovement.findFirst({
+              where: { id: line.stockMovementId, tenantId },
+            })
           : null;
 
         const originalCost = originalMovement?.unitCostAtMovement
@@ -466,8 +511,8 @@ export class GoodsReceiptsService {
           const newWAC =
             newPurchaseQty > 0 ? Math.round((newTotalValue / newPurchaseQty) * 10_000) / 10_000 : 0;
 
-          await tx.stock.update({
-            where: { id: currentStock.id },
+          await tx.stock.updateMany({
+            where: { id: currentStock.id, tenantId },
             data: {
               purchaseQty: newPurchaseQty,
               onHandQuantity: { decrement: storageQty },
@@ -479,8 +524,8 @@ export class GoodsReceiptsService {
         }
 
         if (line.poLineId) {
-          await tx.purchaseOrderLine.update({
-            where: { id: line.poLineId },
+          await tx.purchaseOrderLine.updateMany({
+            where: { id: line.poLineId, tenantId, deletedAt: null },
             data: { receivedQuantity: { decrement: purchaseQty } },
           });
         }
@@ -488,11 +533,11 @@ export class GoodsReceiptsService {
 
       if (grn.poId) {
         const poLines = await tx.purchaseOrderLine.findMany({
-          where: { purchaseOrderId: grn.poId, deletedAt: null },
+          where: { purchaseOrderId: grn.poId, tenantId, deletedAt: null },
         });
         const anyReceived = poLines.some((l) => Number(l.receivedQuantity) > 0);
-        await tx.purchaseOrder.update({
-          where: { id: grn.poId },
+        await tx.purchaseOrder.updateMany({
+          where: { id: grn.poId, tenantId, deletedAt: null },
           data: { status: anyReceived ? 'partial' : 'confirmed', updatedBy: userId },
         });
       }
@@ -531,207 +576,5 @@ export class GoodsReceiptsService {
     `;
 
     return { total, posted, cancelled, today, totalValue: valueAgg[0]?.total_value ?? 0 };
-  }
-
-  // ── Inventory Turnover ─────────────────────────────────────────────────────
-
-  async getInventoryTurnover(
-    tenantId: string,
-    filters?: {
-      warehouseId?: string;
-      itemType?: string;
-      dateFrom?: string;
-      dateTo?: string;
-    },
-  ) {
-    const now = new Date();
-    const dateFrom = filters?.dateFrom
-      ? new Date(filters.dateFrom)
-      : new Date(now.getFullYear(), 0, 1);
-    const dateTo = filters?.dateTo ? new Date(filters.dateTo + 'T23:59:59Z') : now;
-    const days = Math.max(
-      1,
-      Math.round((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)),
-    );
-
-    const stockWhere: any = { tenantId };
-    if (filters?.warehouseId) stockWhere.warehouseId = filters.warehouseId;
-
-    const stock = await this.prisma.stock.findMany({
-      where: stockWhere,
-      include: {
-        item: { select: { id: true, code: true, name: true, itemType: true, baseUom: true } },
-        warehouse: { select: { id: true, code: true, name: true } },
-      },
-    });
-
-    const filtered = stock.filter(
-      (s) => !filters?.itemType || s.item.itemType === filters.itemType,
-    );
-
-    const issueWhere: any = {
-      tenantId,
-      movementType: 'issue',
-      movementDate: { gte: dateFrom, lte: dateTo },
-    };
-    if (filters?.warehouseId)
-      issueWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId: filters.warehouseId },
-      ];
-
-    const issues = await this.prisma.stockMovement.findMany({
-      where: issueWhere,
-      include: { item: { select: { id: true, itemType: true } } },
-    });
-
-    const cogsMap = new Map<string, number>();
-    for (const mv of issues) {
-      if (!mv.itemId) continue;
-      if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const val = Math.abs(
-        mv.movementValue
-          ? Number(mv.movementValue)
-          : Number(mv.quantity) * Number(mv.unitCost ?? 0),
-      );
-      cogsMap.set(mv.itemId, (cogsMap.get(mv.itemId) ?? 0) + val);
-    }
-
-    const openingWhere: any = { tenantId, movementDate: { lt: dateFrom } };
-    if (filters?.warehouseId)
-      openingWhere.OR = [
-        { fromWarehouseId: filters.warehouseId },
-        { toWarehouseId: filters.warehouseId },
-      ];
-
-    const openingMovements = await this.prisma.stockMovement.findMany({
-      where: openingWhere,
-      select: {
-        itemId: true,
-        movementType: true,
-        purchaseQty: true,
-        unitCost: true,
-        movementValue: true,
-        item: { select: { id: true, itemType: true } },
-      },
-    });
-
-    const openingQtyMap = new Map<string, number>();
-    const openingCostMap = new Map<string, number>();
-    for (const mv of openingMovements) {
-      if (!mv.itemId) continue;
-      if (filters?.itemType && mv.item?.itemType !== filters.itemType) continue;
-      const qty = Number(mv.purchaseQty ?? 0);
-      openingQtyMap.set(
-        mv.itemId,
-        (openingQtyMap.get(mv.itemId) ?? 0) + (mv.movementType === 'issue' ? -qty : qty),
-      );
-      if (mv.movementType !== 'issue' && mv.unitCost)
-        openingCostMap.set(mv.itemId, Number(mv.unitCost));
-    }
-
-    const itemMap = new Map<string, any>();
-    for (const s of filtered) {
-      const purchaseQty = Number(s.purchaseQty ?? s.onHandQuantity);
-      const unitCost = Number(s.unitCost ?? 0);
-      const value = Math.round(purchaseQty * unitCost * 100) / 100;
-      const ex = itemMap.get(s.item.id);
-      if (ex) {
-        ex.closingValue += value;
-        ex.closingQty += purchaseQty;
-        ex.warehouses.push(s.warehouse.code);
-      } else
-        itemMap.set(s.item.id, {
-          itemId: s.item.id,
-          itemCode: s.item.code,
-          itemName: s.item.name,
-          itemType: s.item.itemType,
-          closingValue: value,
-          closingQty: purchaseQty,
-          unitCost,
-          cogs: 0,
-          warehouses: [s.warehouse.code],
-        });
-    }
-
-    for (const [itemId, cogs] of cogsMap) {
-      const ex = itemMap.get(itemId);
-      if (ex) ex.cogs = Math.round(cogs * 100) / 100;
-    }
-
-    const rows = [...itemMap.values()].map((item) => {
-      const openingQty = Math.max(0, openingQtyMap.get(item.itemId) ?? 0);
-      const openingCost = openingCostMap.get(item.itemId) ?? item.unitCost;
-      const openingValue = Math.round(openingQty * openingCost * 100) / 100;
-      const avgInventory = Math.round(((openingValue + item.closingValue) / 2) * 100) / 100;
-      const annualizedCogs =
-        days < 365 ? Math.round((item.cogs / days) * 365 * 100) / 100 : item.cogs;
-      const turnoverRatio =
-        avgInventory > 0 ? Math.round((annualizedCogs / avgInventory) * 100) / 100 : null;
-      const daysOnHand =
-        turnoverRatio && turnoverRatio > 0 ? Math.round((365 / turnoverRatio) * 10) / 10 : null;
-      let performance: 'excellent' | 'good' | 'fair' | 'poor' | 'no_movement';
-      if (item.cogs === 0) performance = 'no_movement';
-      else if (!turnoverRatio) performance = 'poor';
-      else if (turnoverRatio >= 12) performance = 'excellent';
-      else if (turnoverRatio >= 6) performance = 'good';
-      else if (turnoverRatio >= 3) performance = 'fair';
-      else performance = 'poor';
-      return {
-        itemId: item.itemId,
-        itemCode: item.itemCode,
-        itemName: item.itemName,
-        itemType: item.itemType,
-        warehouses: [...new Set(item.warehouses)],
-        openingValue,
-        closingValue: Math.round(item.closingValue * 100) / 100,
-        avgInventory,
-        cogs: item.cogs,
-        annualizedCogs,
-        turnoverRatio,
-        daysOnHand,
-        performance,
-      };
-    });
-
-    rows.sort((a, b) =>
-      a.turnoverRatio === null
-        ? -1
-        : b.turnoverRatio === null
-          ? 1
-          : a.turnoverRatio - b.turnoverRatio,
-    );
-
-    const totalCogs = Math.round(rows.reduce((s, r) => s + r.cogs, 0) * 100) / 100;
-    const totalAvgInventory = Math.round(rows.reduce((s, r) => s + r.avgInventory, 0) * 100) / 100;
-    const overallTurnover =
-      totalAvgInventory > 0 ? Math.round((totalCogs / totalAvgInventory) * 100) / 100 : null;
-    const overallDaysOnHand =
-      overallTurnover && overallTurnover > 0 ? Math.round((365 / overallTurnover) * 10) / 10 : null;
-
-    return {
-      rows,
-      summary: {
-        totalItems: rows.length,
-        totalCogs,
-        totalAvgInventory,
-        totalClosingValue: Math.round(rows.reduce((s, r) => s + r.closingValue, 0) * 100) / 100,
-        overallTurnover,
-        overallDaysOnHand,
-        periodDays: days,
-        excellentCount: rows.filter((r) => r.performance === 'excellent').length,
-        goodCount: rows.filter((r) => r.performance === 'good').length,
-        fairCount: rows.filter((r) => r.performance === 'fair').length,
-        poorCount: rows.filter((r) => r.performance === 'poor').length,
-        noMovementCount: rows.filter((r) => r.performance === 'no_movement').length,
-      },
-      period: {
-        dateFrom: dateFrom.toISOString().split('T')[0],
-        dateTo: dateTo.toISOString().split('T')[0],
-        days,
-        isAnnualized: days < 365,
-      },
-      asOf: new Date(),
-    };
   }
 }

@@ -33,8 +33,12 @@ export class GoodsReceiptsController {
   @RequirePermissions('INVENTORY:CREATE')
   @ApiOperation({ summary: 'Create a Goods Receipt (GRN) — posts stock and creates movement' })
   @ApiResponse({ status: 201, description: 'GRN created and stock posted' })
-  @ApiResponse({ status: 400, description: 'Validation error or cancelled PO' })
-  @ApiResponse({ status: 404, description: 'Warehouse, PO, or item not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error, cancelled PO, PO line not in PO, or over-receipt',
+  })
+  @ApiResponse({ status: 404, description: 'Warehouse, PO, item, or PO line not found' })
+  @ApiResponse({ status: 409, description: 'Document number collision — retry' })
   async create(@Request() req, @Body() dto: CreateGoodsReceiptDto) {
     return this.service.create(req.user.tenantId, req.user.id, dto);
   }
@@ -43,7 +47,7 @@ export class GoodsReceiptsController {
   @Get()
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List all GRNs with supplier, PO, warehouse and value' })
-  @ApiResponse({ status: 200, description: 'GRN list' })
+  @ApiResponse({ status: 200, description: '{ goodsReceipts: [...], count: n }' })
   async findAll(@Request() req) {
     return this.service.findAll(req.user.tenantId);
   }
@@ -73,7 +77,7 @@ export class GoodsReceiptsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all GRNs linked to a specific PO' })
   @ApiParam({ name: 'poId', description: 'Purchase Order UUID' })
-  @ApiResponse({ status: 200, description: 'GRNs for PO' })
+  @ApiResponse({ status: 200, description: '{ goodsReceipts: [...], count: n }' })
   async findByPo(@Request() req, @Param('poId') poId: string) {
     return this.service.findByPo(req.user.tenantId, poId);
   }

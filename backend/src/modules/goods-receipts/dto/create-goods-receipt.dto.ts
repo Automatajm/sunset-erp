@@ -2,7 +2,17 @@
 // FILE: backend/src/modules/goods-receipts/dto/create-goods-receipt.dto.ts
 // ============================================================================
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsArray, ValidateNested, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsArray,
+  IsDateString,
+  IsIn,
+  ValidateNested,
+  ArrayMinSize,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateGrnLineDto } from './create-grn-line.dto';
 
@@ -26,13 +36,16 @@ export class CreateGoodsReceiptDto {
 
   @ApiPropertyOptional({ example: '2026-04-01' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   receivedDate?: string;
 
-  @ApiPropertyOptional({ example: 'complete', default: 'complete' })
+  @ApiPropertyOptional({
+    example: 'complete',
+    default: 'complete',
+    enum: ['complete', 'partial', 'damaged', 'rejected'],
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
+  @IsIn(['complete', 'partial', 'damaged', 'rejected'])
   condition?: string;
 
   @ApiPropertyOptional({ example: 'Delivered by truck' })
@@ -49,8 +62,9 @@ export class CreateGoodsReceiptDto {
   @MaxLength(100)
   supplierRef?: string;
 
-  @ApiProperty({ description: 'GRN lines', type: [CreateGrnLineDto] })
+  @ApiProperty({ description: 'GRN lines (min 1)', type: [CreateGrnLineDto] })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateGrnLineDto)
   lines: CreateGrnLineDto[];

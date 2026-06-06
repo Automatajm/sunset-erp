@@ -74,7 +74,8 @@ export interface CreateGoodsReceiptDto {
 export const goodsReceiptsApi = {
   getAll: async (): Promise<GoodsReceipt[]> => {
     const res = await apiClient.get('/goods-receipts');
-    return Array.isArray(res.data) ? res.data : [];
+    // spec-023 envelope { goodsReceipts, count }; tolerate legacy bare array
+    return Array.isArray(res.data) ? res.data : (res.data?.goodsReceipts ?? []);
   },
 
   getStats: async (): Promise<GrnStats> => {
@@ -89,7 +90,8 @@ export const goodsReceiptsApi = {
 
   getByPo: async (poId: string): Promise<GoodsReceipt[]> => {
     const res = await apiClient.get(`/goods-receipts/by-po/${poId}`);
-    return Array.isArray(res.data) ? res.data : [];
+    // spec-023 envelope { goodsReceipts, count }; tolerate legacy bare array
+    return Array.isArray(res.data) ? res.data : (res.data?.goodsReceipts ?? []);
   },
 
   create: async (data: CreateGoodsReceiptDto): Promise<GoodsReceipt> => {
