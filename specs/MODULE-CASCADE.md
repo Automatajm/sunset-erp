@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 16 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions` |
-| Pending | 22 |
+| Specced (Done) | 17 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation` |
+| Pending | 21 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -79,7 +79,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | ✅ spec-002 | suppliers | Supplier, SupplierScore | items |
 | ✅ spec-011 | bom | Bom, BomComponent, BomRouting | consumption-groups, items, uom, work-centers |
 | ✅ spec-016 | stock-transactions | StockMovement, StockLocationUpdate, Stock | items, uom, warehouse-locations, warehouses |
-| ⬜ | stock-reconciliation | StockCountSession, StockCountLine, StockCountAssignment | items, uom, warehouse-locations, warehouses |
+| ✅ spec-017 | stock-reconciliation | StockCountSession, StockCountLine, StockCountAssignment | items, uom, warehouse-locations, warehouses |
 
 ### Tier 4 — operations & clusters
 | Status | Module | Owns (Prisma) | Depends on |
@@ -125,4 +125,5 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 9. ~~**journal-entries**~~ ✅ spec-015 — Tier 1, prerequisite of production-orders, invoices.
 10. ~~**bom**~~ ✅ spec-011 — Tier 3, prerequisite of production cluster.
 11. ~~**stock-transactions**~~ ✅ spec-016 — Tier 3, prerequisite of goods-receipts, stock-reconciliation, invoices.
-12. **stock-reconciliation** — Tier 3 (deps all ✅), cycle counts feeding the movement ledger. ← **next**
+12. ~~**stock-reconciliation**~~ ✅ spec-017 — Tier 3, cycle counts feeding the movement ledger.
+13. **supplier-items** — Tier 4 (deps all ✅: items, suppliers, uom), last single module before the procurement/production clusters. ← **next**

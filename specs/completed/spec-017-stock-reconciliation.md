@@ -1,6 +1,6 @@
 # spec-017 — Stock Reconciliation (Cycle Counts & Count Assignments)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `stock-reconciliation` (touches `stock-transactions` for the movement-number API and `frontend/app/inventory/stock-reconciliation/page.tsx` for the list envelope)  
@@ -375,3 +375,4 @@ cd backend && pnpm build && pnpm test stock-reconciliation && pnpm test:e2e stoc
 | 2026-06-06 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 96) | Draft — 11 unscoped writes + 1 unscoped read, duplicated SM generator + P2002 mapping, both-qty silent preference, empty-session create, unvalidated assignment userId, stub preview, query DTO, @Max caps, 12 missing @ApiResponse, list envelope captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (34 unit / 12 e2e, tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 13 gaps implemented: 11 writes tenant-scoped (8 session + 3 assignment), item read deletedAt, empty-session 400, both-qty 400, shared tx-aware generateMovementNumber (StockTransactionsService made public) + P2002->409, userTenant membership check, real dry-run preview via shared resolver, query DTO, @Max caps, 12 @ApiResponse, { sessions, count } envelope + frontend unwrap | Unit 34/34 + stock-transactions 18/18, e2e 12/12 (full lifecycle vs live ledger), backend + frontend builds OK, lint clean |
+| 2026-06-06 | Shipped to origin (`5bded9a`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
