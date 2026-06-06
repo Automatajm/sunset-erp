@@ -54,7 +54,7 @@ Audit of 2026-06-06 across all 49 `page.tsx` files under `frontend/app/`. For ea
 |---|---|---|---|---|---|---|
 | ABC Analysis | /inventory/abc-analysis | ERPTable+FilterBar | none | working | medium | 3 |
 | Categories | /inventory/categories | custom table | FormModal (has) | working | low | 3 |
-| Consumption Groups | /inventory/consumption-groups | ERPTable+FilterBar | FormModal (has) | **broken** | low | 8 |
+| Consumption Groups | /inventory/consumption-groups | ERPTable+FilterBar | FormModal (has) | working (P0 fixed 2026-06-06) | low | 4 |
 | Inventory Turnover | /inventory/inventory-turnover | ERPTable+FilterBar+DatePicker | none | working | medium | 4 |
 | Items | /inventory/items | ERPTable+FilterBar | FormModal (has, tabbed), ConfirmModal (has) | working | high | 6 |
 | Labels | /inventory/labels | custom table (print selectors) | none (utility) | working | medium | 4 |
@@ -121,7 +121,7 @@ Audit of 2026-06-06 across all 49 `page.tsx` files under `frontend/app/`. For ea
 | Dimension | Count |
 |---|---|
 | Pages total | 49 |
-| **State**: working / broken / empty / unknown | 48 / **1** / 0 / 0 |
+| **State**: working / broken / empty / unknown | 49 / 0 / 0 / 0 *(P0 fixed)* |
 | **Table type**: ERPTable(+FilterBar) / ERPTreeTable / custom table / none | 17 / 4 / 22 / 6 |
 | **Priority**: high / medium / low | 19 / 13 / 17 |
 | **Friction**: 6+ (needs redesign attention) / 3–5 / 0–2 | 15 / 26 / 8 |
@@ -213,3 +213,4 @@ batches. Friction in parentheses.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-06 | Full 49-page audit (6 parallel auditors, data paths traced page→lib/api→backend, ux-reviewer friction rubric applied per page) | 48 working, 1 broken (consumption-groups envelope); 17 unguarded destructive actions; 22 hand-rolled tables; 4 TreeTable pages; roadmap P0–P4 established |
+| 2026-06-06 | P0 fixed (`lib/api/consumption-groups.ts` envelope unwrap) + full frontend-sync sweep of all 19 envelope contracts: every other getter/direct consumer verified compatible; the stale getter also affected the consumption-group dropdowns in items, bom and boms modals (4 consumers repaired by the one fix) | frontend build green |

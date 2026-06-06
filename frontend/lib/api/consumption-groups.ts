@@ -5,7 +5,8 @@ import { ConsumptionGroup, CreateConsumptionGroupDto, UpdateConsumptionGroupDto 
 export const consumptionGroupsApi = {
   getAll: async (): Promise<ConsumptionGroup[]> => {
     const res = await apiClient.get('/consumption-groups');
-    return res.data;
+    // List endpoint returns an envelope { consumptionGroups, count } (spec-008)
+    return res.data.consumptionGroups ?? [];
   },
   getById: async (id: string): Promise<ConsumptionGroup> => {
     const res = await apiClient.get(`/consumption-groups/${id}`);
