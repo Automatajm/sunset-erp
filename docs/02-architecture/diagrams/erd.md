@@ -185,12 +185,15 @@ erDiagram
 
   "mc_exchange_rates" {
     String id "🗝️"
+    String tenant_id 
     String from_currency 
     String to_currency 
     Decimal rate 
     DateTime effective_date 
+    String source 
     DateTime created_at 
     DateTime updated_at 
+    String created_by "❓"
     }
   
 
@@ -1110,6 +1113,7 @@ erDiagram
   "cfg_tenant_settings" {
     String id "🗝️"
     String tenant_id 
+    String base_currency 
     String default_uom_system 
     String volume_base_uom_id "❓"
     String mass_base_uom_id "❓"
@@ -1674,6 +1678,7 @@ erDiagram
     "auth_role_permissions" }o--|| auth_permissions : "permission"
     "auth_user_roles" }o--|| auth_users : "user"
     "auth_user_roles" }o--|| auth_roles : "role"
+    "mc_exchange_rates" }o--|| saas_tenants : "tenant"
     "mc_exchange_rates" }o--|| mc_currencies : "fromCurrencyRelation"
     "mc_exchange_rates" }o--|| mc_currencies : "toCurrencyRelation"
     "i18n_translations" }o--|| i18n_languages : "language"

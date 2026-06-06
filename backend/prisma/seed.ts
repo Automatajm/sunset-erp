@@ -4,6 +4,7 @@ import { seedLanguages } from './seeds/02-languages.seed';
 import { seedPermissions } from './seeds/03-permissions.seed';
 import { seedDemoTenant } from './seeds/04-demo-tenant.seed';
 import { seedDemoBurgerBorinquen } from './seeds/05-demo-burger-borinquen.seed';
+import { seedDemoExchangeRates } from './seeds/06-demo-exchange-rates.seed';
 
 const prisma = new PrismaClient();
 
@@ -86,6 +87,10 @@ async function main() {
       throw e;
     }
   }
+
+  // Step 5: Demo exchange rates (spec-021) — idempotent, skips if BURGER missing
+  console.log('\n💱 Seeding demo exchange rates...');
+  await seedDemoExchangeRates(prisma);
 
   console.log('\n✅ Database seeded successfully!');
   console.log('\n📋 Default credentials:');

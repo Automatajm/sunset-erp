@@ -287,6 +287,12 @@ When a service needs data from another module:
 - `@Max()` cap on all Decimal columns (use column capacity − 1 order of magnitude): always add this, never ask
 - Soft delete (`deletedAt` + `deletedBy`), never hard delete: always, never ask
   (exception: models documented as hard-delete by design, e.g. `StockCountAssignment`)
+- **Frozen-rate pattern (spec-021)** on every monetary transaction: store five fields —
+  `amount`, `currency`, `exchangeRate` (frozen at creation via `CurrencyService.getRate`),
+  `amountBase`, `baseCurrency` (copied from `TenantSettings.baseCurrency` at creation).
+  The rate is FROZEN at creation and never recalculated; updates that change `amount`
+  recompute `amountBase` with the frozen rate. Always inject `CurrencyService`
+  (`modules/currency/`), never query `mc_exchange_rates` directly: always, never ask
 - `deletedAt: null` filter on all reads: always, never ask
   (exception: code generators deliberately span soft-deleted rows — spec-012)
 - Re-add after `git mv` to ensure edits are staged: always do this, never ask

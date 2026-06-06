@@ -27,6 +27,7 @@ import { AutomationModule } from './modules/automation/automation.module';
 import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
 import { ApInvoicesModule } from './modules/ap-invoices/ap-invoices.module';
 import { UomModule } from './modules/uom/uom.module';
+import { CurrencyModule } from './modules/currency/currency.module';
 import { TenantSettingsModule } from './modules/tenant-settings/tenant-settings.module';
 import { MacroCategoriesModule } from './modules/macro-categories/macro-categories.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -71,6 +72,7 @@ import { RfqsModule } from './modules/rfqs/rfqs.module';
     BulkImportModule,
     ApInvoicesModule,
     UomModule,
+    CurrencyModule,
     TenantSettingsModule,
     MacroCategoriesModule,
     CategoriesModule,

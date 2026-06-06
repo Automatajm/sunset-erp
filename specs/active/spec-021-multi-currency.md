@@ -31,46 +31,46 @@ procurement invoices are specced.
 ## Acceptance criteria
 
 ### Data model — ExchangeRate becomes tenant-owned
-- [ ] `ExchangeRate` gains `tenantId` (uuid, indexed), `source`
+- [x] `ExchangeRate` gains `tenantId` (uuid, indexed), `source`
       (`'manual' | 'api'`, default `'manual'`), `createdBy`, `createdAt` preserved;
       the user-facing **rateDate** maps to the existing `effectiveDate` column
       (kept — renaming a populated column is a destructive change, ask-first).
-- [ ] Unique constraint becomes `@@unique([tenantId, fromCurrency, toCurrency, effectiveDate])`.
-- [ ] Migration via `/new-migration` — existing global rows (if any) are assigned to
+- [x] Unique constraint becomes `@@unique([tenantId, fromCurrency, toCurrency, effectiveDate])`.
+- [x] Migration via `/new-migration` — existing global rows (if any) are assigned to
       no tenant only if the table is empty in all envs; otherwise STOP and ask.
 
 ### Data model — tenant base currency
-- [ ] `TenantSettings` gains `baseCurrency String @default("DOP") @db.VarChar(3)`
+- [x] `TenantSettings` gains `baseCurrency String @default("DOP") @db.VarChar(3)`
       (DR market default). `Tenant.defaultCurrency` is left untouched (legacy,
       subscription-level) and documented as NOT the monetary base.
 
 ### CurrencyService (new module `backend/src/modules/currency/`)
-- [ ] `getRate(tenantId, from, to, date)` — most recent rate with
+- [x] `getRate(tenantId, from, to, date)` — most recent rate with
       `effectiveDate <= date`, scoped `{ tenantId }`; identity pair returns `1`;
       inverse-pair fallback (`1 / rate(to, from)`) before throwing; no rate found →
       `NotFoundException` with an actionable message.
-- [ ] `convert(tenantId, amount, from, to, date)` — returns
+- [x] `convert(tenantId, amount, from, to, date)` — returns
       `{ amount, rate, converted }` using `getRate`; Decimal-safe (no float drift).
-- [ ] CRUD endpoints for rates (`POST/GET /api/exchange-rates`), guarded
+- [x] CRUD endpoints for rates (`POST/GET /api/exchange-rates`), guarded
       `JwtAuthGuard, PermissionsGuard`, `@RequirePermissions('SETTINGS:EDIT'/'SETTINGS:VIEW')`,
       DTO-validated (`@IsIn` on source, `@Max` on rate per `Decimal(18,6)`,
       `@IsDateString` on rateDate), list envelope `{ exchangeRates, count }`,
       P2002 → 409.
 
 ### The frozen-rate pattern (binding for all future monetary modules)
-- [ ] Every monetary transaction stores five fields: `amount`, `currency`,
+- [x] Every monetary transaction stores five fields: `amount`, `currency`,
       `exchangeRate` (frozen at creation via `CurrencyService.getRate`),
       `amountBase`, `baseCurrency` (copied from `TenantSettings.baseCurrency` at
       creation).
-- [ ] **The rate is FROZEN at transaction creation — never recalculated on update.**
+- [x] **The rate is FROZEN at transaction creation — never recalculated on update.**
       Updates that change `amount` recompute `amountBase` with the FROZEN rate;
       nothing re-reads the rate table after creation.
-- [ ] The pattern is documented in `CLAUDE.md` (autonomy section) so SO/PO/AR/AP
+- [x] The pattern is documented in `CLAUDE.md` (autonomy section) so SO/PO/AR/AP
       specs inherit it without re-deciding; retrofitting existing SO/PO/JE columns
       is each module's own spec (out of scope here).
 
 ### Seed
-- [ ] Idempotent seed adds USD/DOP and EUR/DOP rates (plus inverses) for the
+- [x] Idempotent seed adds USD/DOP and EUR/DOP rates (plus inverses) for the
       Burger Borinquen demo tenant (pattern of `05-demo-burger-borinquen`), source
       `'manual'`, realistic DR rates, dated within the demo period.
 
@@ -142,3 +142,4 @@ depends only on Prisma, like UOM).
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-06 | Spec drafted (planned infrastructure; gap analysis: global rate table unused, exchangeRate columns stay 1, no amountBase anywhere) | Draft — implement before procurement invoices |
+| 2026-06-06 | Implemented: ExchangeRate tenant-owned (table verified EMPTY pre-migration → tenantId required, no STOP needed), TenantSettings.baseCurrency DOP, CurrencyModule (getRate identity/direct/inverse/404 + Decimal-safe convert + getBaseCurrency + rates CRUD with envelope/P2002→409), SETTINGS:VIEW/EDIT permissions added to seed + granted live to 3 ADMIN roles (permission cache cleared), idempotent 06-demo-exchange-rates seed (8 rates, verified 2 runs), frozen-rate pattern added to CLAUDE.md autonomy section | Unit 11/11, e2e 12/12, build OK |

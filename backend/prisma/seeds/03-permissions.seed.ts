@@ -61,6 +61,10 @@ export async function seedPermissions(prisma: PrismaClient) {
     { code: 'ADMIN:USERS',         name: 'Manage Users',                  module: 'admin' },
     { code: 'ADMIN:ROLES',         name: 'Manage Roles',                  module: 'admin' },
     { code: 'ADMIN:SETTINGS',      name: 'Manage Settings',               module: 'admin' },
+
+    // ── Settings (spec-021 — tenant configuration: exchange rates, etc.) ─────
+    { code: 'SETTINGS:VIEW',       name: 'View Tenant Settings',          module: 'settings' },
+    { code: 'SETTINGS:EDIT',       name: 'Edit Tenant Settings',          module: 'settings' },
   ];
 
   let created = 0;
