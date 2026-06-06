@@ -64,19 +64,36 @@ implement the [ ] gaps → make the GAP tests green, flip the spec checkboxes
 first; the "Recommended spec order" list at the bottom marks `← next`). Never spec a
 module before its dependencies.
 
-## Progress: 18/38 backend modules specced (specs 001–018, all shipped at 100%)
+## Progress: 24/38 backend modules specced (specs 001–020, all shipped at 100%)
 
 `auth` (001) · `suppliers` (002) · `items` (003) · `warehouses` (004) · `uom` (005) ·
 `macro-categories` (006) · `chart-of-accounts` (007) · `consumption-groups` (008) ·
 `categories` (009) · `work-centers` (010) · `bom` (011) · auto-codes cross-cutting
 (012) · `customers` (013) · `warehouse-locations` (014) · `journal-entries` (015) ·
-`stock-transactions` (016) · `stock-reconciliation` (017) · `supplier-items` (018)
+`stock-transactions` (016) · `stock-reconciliation` (017) · `supplier-items` (018) ·
+production cluster `sales-orders ↔ production-plans` (019) · procurement cluster
+`purchase-orders ↔ rfqs ↔ purchase-requisitions ↔ general-needs` (020)
 
-**Next:** the **Production cluster** — `sales-orders` ↔ `production-plans` (cyclic,
-spec as ONE unit; `/new-spec` is single-module, adapt). Then: procurement cluster
-(`purchase-orders ↔ rfqs ↔ purchase-requisitions ↔ general-needs`), `goods-receipts`,
-`production-orders`, `ar-invoices`, `ap-invoices`, and the admin Tier 0s
+**Next:** `goods-receipts` (wires the `GoodsReceipt` model that `PO.receive`
+bypasses — documented spec-020 exception). Then: `production-orders`,
+`ar-invoices`, `ap-invoices`, and the admin Tier 0s
 (`tenants`/`users`/`roles`/`automation`/`fiscal-periods`/`bulk-import`).
+
+**Planned infrastructure (specs drafted, NOT yet implemented — read before
+touching monetary/outbound/printing work):**
+- `specs/active/spec-021-multi-currency.md` — tenant-scoped `ExchangeRate` +
+  `CurrencyService` + `TenantSettings.baseCurrency` (DOP) + the **frozen-rate
+  pattern** (`amount`/`currency`/`exchangeRate`/`amountBase`/`baseCurrency` on every
+  monetary tx, rate frozen at creation). Infrastructure like UOM — implement
+  **before** procurement invoices; all future monetary modules must follow it.
+- `specs/active/spec-022-notifications.md` — queue-first `Notification` model +
+  per-tenant email provider + `{{variable}}` templates + 5 event triggers
+  (SO confirmed, PO generated, RFQ sent, invoice overdue, reorder point).
+  Implement **after** invoices (the triggers need those modules).
+- `specs/active/spec-frontend-005-document-printing.md` — print/PDF for PO, SO,
+  AR/AP invoice, goods receipt, stock movement report via shared `DocumentLayout`
+  + print CSS (no new backend endpoints). Implement **after** invoices +
+  notifications.
 
 Frontend: `specs/active/spec-frontend-001..003` — 003 is the 49-page audit matrix and
 the P0–P4 roadmap for 002 (data components + modal system). **Backend specs come first**
