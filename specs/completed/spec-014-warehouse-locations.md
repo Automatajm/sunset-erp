@@ -1,6 +1,6 @@
 # spec-014 — Warehouse Locations (Zones / Aisles / Racks / Levels / Bins)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `warehouse-locations` (touches `frontend/lib/api/warehouse-locations.ts` for the list envelope)  
@@ -406,3 +406,4 @@ cd backend && pnpm build && pnpm lint && pnpm test warehouse-locations
 | 2026-06-06 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 80) | Draft — 7 unscoped queries, 3 missing delete guards, fullCode cascade staleness, update dup-checks, P2002 mapping, zoneType/binType whitelists, list envelope captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (40 unit / 18 e2e, 31 tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 15 gaps implemented: tenant-scoped dup-checks + guards, child delete guards, transactional fullCode cascade, update dup-checks + uppercase, P2002→409, @IsIn whitelists, list envelopes (backend + frontend consumers) | Unit 40/40 ✅, e2e 18/18 ✅, backend build ✅, frontend build ✅, module lint clean (repo lint errors pre-existing only) |
+| 2026-06-06 | Shipped to origin (`500160d`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
