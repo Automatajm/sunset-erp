@@ -85,11 +85,11 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
 | ✅ spec-018 | supplier-items | SupplierItem | items, suppliers, uom |
-| ⬜ | **Procurement cluster** ↺ | — | items, suppliers, warehouses, consumption-groups |
-| ⬜ | · purchase-orders | PurchaseOrder, PurchaseOrderLine, ConsolidationConfig | items, suppliers, uom, rfqs* |
-| ⬜ | · purchase-requisitions | PurchaseRequisition, PurchaseRequisitionLine | items, purchase-orders*, warehouses |
-| ⬜ | · rfqs | Rfq, RfqLine, RfqSupplier, RfqResponseLine | items, suppliers, general-needs*, purchase-orders*, purchase-requisitions* |
-| ⬜ | · general-needs | GeneralNeed, GeneralNeedLine | items, suppliers, consumption-groups, purchase-requisitions* |
+| ✅ spec-020 | **Procurement cluster** ↺ | — | items, suppliers, warehouses, consumption-groups |
+| ✅ spec-020 | · purchase-orders | PurchaseOrder, PurchaseOrderLine, ConsolidationConfig | items, suppliers, uom, rfqs* |
+| ✅ spec-020 | · purchase-requisitions | PurchaseRequisition, PurchaseRequisitionLine | items, purchase-orders*, warehouses |
+| ✅ spec-020 | · rfqs | Rfq, RfqLine, RfqSupplier, RfqResponseLine | items, suppliers, general-needs*, purchase-orders*, purchase-requisitions* |
+| ✅ spec-020 | · general-needs | GeneralNeed, GeneralNeedLine | items, suppliers, consumption-groups, purchase-requisitions* |
 | ✅ spec-019 | **Production cluster** ↺ | — | bom, items, customers |
 | ✅ spec-019 | · production-plans | ProductionPlan, ProductionPlanLine | bom, items, sales-orders* |
 | ✅ spec-019 | · sales-orders | SalesOrder, SalesOrderLine | customers, items, production-plans* |
@@ -128,4 +128,5 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 12. ~~**stock-reconciliation**~~ ✅ spec-017 — Tier 3, cycle counts feeding the movement ledger.
 13. ~~**supplier-items**~~ ✅ spec-018 — Tier 4, last single module before the clusters.
 14. ~~**Production cluster**~~ ✅ spec-019 — first cluster spec, one unit.
-15. **Procurement cluster** (`purchase-orders ↔ rfqs ↔ purchase-requisitions ↔ general-needs`) — Tier 4, four-module cycle as one unit; deps all ✅. ← **next**
+15. ~~**Procurement cluster**~~ ✅ spec-020 — Tier 4, four-module cycle shipped as one unit (award injection fix, 5 transactions, shared tx-aware generators).
+16. **goods-receipts** — Tier 5, wires the GoodsReceipt model that PO.receive bypasses; deps now all ✅. ← **next**
