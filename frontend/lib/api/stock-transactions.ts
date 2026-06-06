@@ -16,7 +16,7 @@ export const stockTransactionsApi = {
     transactionType?: TransactionType;
   }): Promise<StockTransaction[]> => {
     const res = await apiClient.get('/stock-transactions', { params });
-    return res.data;
+    return (res.data as { movements: StockTransaction[]; count: number }).movements;
   },
 
   getById: async (id: string): Promise<StockTransaction> => {

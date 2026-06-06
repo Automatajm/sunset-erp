@@ -1,7 +1,12 @@
 // ============================================================================
 // FILE: backend/src/modules/stock-transactions/stock-transactions.service.ts
 // ============================================================================
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateStockTransactionDto } from './dto/create-stock-transaction.dto';
@@ -27,103 +32,135 @@ export class StockTransactionsService {
     });
     if (!warehouse) throw new NotFoundException('Warehouse not found');
 
-    const movementNumber = await this.generateMovementNumber(tenantId);
     const isReceipt = dto.transactionType === 'receipt';
     const isIssue = dto.transactionType === 'issue';
+    // Defense-in-depth behind the DTO whitelist: the manual endpoint only ever
+    // moves stock as a receipt or an issue — anything else would create a
+    // phantom movement with both warehouse FKs null.
+    if (!isReceipt && !isIssue) {
+      throw new BadRequestException('transactionType must be receipt or issue');
+    }
+
+    const movementNumber = await this.generateMovementNumber(tenantId);
     const absQty = Math.abs(dto.quantity);
 
     const allQtys = await this.uom.calcAllQties(absQty, dto.itemId, tenantId);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const movement = await tx.stockMovement.create({
-        data: {
-          tenantId,
-          movementNumber,
-          movementType: dto.transactionType,
-          movementDate: dto.transactionDate ? new Date(dto.transactionDate) : new Date(),
-          itemId: dto.itemId,
-          fromWarehouseId: isIssue ? dto.warehouseId : null,
-          toWarehouseId: isReceipt ? dto.warehouseId : null,
-          quantity: new Decimal(absQty),
-          uom: dto.uom ?? allQtys.storageUom,
-          purchaseQty: allQtys.purchaseQty,
-          purchaseUom: allQtys.purchaseUom,
-          consumptionQty: allQtys.consumptionQty,
-          consumptionUom: allQtys.consumptionUom,
-          lotNumber: dto.lotNumber,
-          serialNumber: dto.serialNumber,
-          referenceType: dto.referenceType,
-          referenceId: dto.referenceId,
-          notes: dto.notes,
-          createdBy: userId,
-        },
-      });
+    let result;
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.stock.findFirst({
+          where: { tenantId, itemId: dto.itemId, warehouseId: dto.warehouseId },
+        });
 
-      const existing = await tx.stock.findFirst({
-        where: { tenantId, itemId: dto.itemId, warehouseId: dto.warehouseId },
-      });
-
-      if (existing) {
-        const currentPurchaseQty = Number(existing.purchaseQty ?? existing.onHandQuantity);
-        const currentUnitCost = Number(existing.unitCost ?? 0);
-        let newUnitCost = currentUnitCost;
-        let newPurchaseQty =
-          currentPurchaseQty + (isIssue ? -allQtys.purchaseQty : allQtys.purchaseQty);
-
-        if (isReceipt && dto.unitCost) {
-          const wacResult = this.uom.calcNewWAC(
-            currentPurchaseQty,
-            currentUnitCost,
-            allQtys.purchaseQty,
-            dto.unitCost,
-          );
-          newUnitCost = wacResult.newUnitCost;
-          newPurchaseQty = wacResult.newPurchaseQty;
+        // Issues require sufficient stock — storageQty can never go negative
+        // through this endpoint. A missing Stock row is by definition empty.
+        if (isIssue) {
+          const available = Number(existing?.storageQty ?? 0);
+          if (allQtys.storageQty > available) {
+            throw new BadRequestException(
+              `Insufficient stock: available ${available}, requested ${allQtys.storageQty}`,
+            );
+          }
         }
 
-        await tx.stock.update({
-          where: { id: existing.id },
-          data: {
-            purchaseQty: Math.max(0, newPurchaseQty),
-            purchaseUom: allQtys.purchaseUom,
-            onHandQuantity: {
-              increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty),
-            },
-            storageQty: {
-              increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty),
-            },
-            storageUom: allQtys.storageUom,
-            consumptionQty: {
-              increment: new Decimal(isIssue ? -allQtys.consumptionQty : allQtys.consumptionQty),
-            },
-            consumptionUom: allQtys.consumptionUom,
-            unitCost: new Decimal(newUnitCost),
-          },
-        });
-      } else {
-        const initCost = dto.unitCost ?? 0;
-        await tx.stock.create({
+        const movement = await tx.stockMovement.create({
           data: {
             tenantId,
+            movementNumber,
+            movementType: dto.transactionType,
+            movementDate: dto.transactionDate ? new Date(dto.transactionDate) : new Date(),
             itemId: dto.itemId,
-            warehouseId: dto.warehouseId,
-            purchaseQty: new Decimal(Math.max(0, allQtys.purchaseQty)),
+            fromWarehouseId: isIssue ? dto.warehouseId : null,
+            toWarehouseId: isReceipt ? dto.warehouseId : null,
+            quantity: new Decimal(absQty),
+            uom: dto.uom ?? allQtys.storageUom,
+            purchaseQty: allQtys.purchaseQty,
             purchaseUom: allQtys.purchaseUom,
-            onHandQuantity: new Decimal(Math.max(0, allQtys.storageQty)),
-            storageQty: new Decimal(Math.max(0, allQtys.storageQty)),
-            storageUom: allQtys.storageUom,
-            consumptionQty: new Decimal(Math.max(0, allQtys.consumptionQty)),
+            consumptionQty: allQtys.consumptionQty,
             consumptionUom: allQtys.consumptionUom,
-            reservedQuantity: new Decimal(0),
-            unitCost: new Decimal(initCost),
             lotNumber: dto.lotNumber,
             serialNumber: dto.serialNumber,
+            referenceType: dto.referenceType,
+            referenceId: dto.referenceId,
+            notes: dto.notes,
+            createdBy: userId,
           },
         });
-      }
 
-      return movement;
-    });
+        if (existing) {
+          const currentPurchaseQty = Number(existing.purchaseQty ?? existing.onHandQuantity);
+          const currentUnitCost = Number(existing.unitCost ?? 0);
+          let newUnitCost = currentUnitCost;
+          // All three UOM quantities move consistently — the insufficient-stock
+          // guard above replaces the old asymmetric Math.max clamp.
+          let newPurchaseQty =
+            currentPurchaseQty + (isIssue ? -allQtys.purchaseQty : allQtys.purchaseQty);
+
+          if (isReceipt && dto.unitCost) {
+            const wacResult = this.uom.calcNewWAC(
+              currentPurchaseQty,
+              currentUnitCost,
+              allQtys.purchaseQty,
+              dto.unitCost,
+            );
+            newUnitCost = wacResult.newUnitCost;
+            newPurchaseQty = wacResult.newPurchaseQty;
+          }
+
+          await tx.stock.updateMany({
+            where: { id: existing.id, tenantId },
+            data: {
+              purchaseQty: newPurchaseQty,
+              purchaseUom: allQtys.purchaseUom,
+              onHandQuantity: {
+                increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty),
+              },
+              storageQty: {
+                increment: new Decimal(isIssue ? -allQtys.storageQty : allQtys.storageQty),
+              },
+              storageUom: allQtys.storageUom,
+              consumptionQty: {
+                increment: new Decimal(isIssue ? -allQtys.consumptionQty : allQtys.consumptionQty),
+              },
+              consumptionUom: allQtys.consumptionUom,
+              unitCost: new Decimal(newUnitCost),
+            },
+          });
+        } else {
+          // Only receipts reach here — issues against a missing row were rejected.
+          const initCost = dto.unitCost ?? 0;
+          await tx.stock.create({
+            data: {
+              tenantId,
+              itemId: dto.itemId,
+              warehouseId: dto.warehouseId,
+              purchaseQty: new Decimal(allQtys.purchaseQty),
+              purchaseUom: allQtys.purchaseUom,
+              onHandQuantity: new Decimal(allQtys.storageQty),
+              storageQty: new Decimal(allQtys.storageQty),
+              storageUom: allQtys.storageUom,
+              consumptionQty: new Decimal(allQtys.consumptionQty),
+              consumptionUom: allQtys.consumptionUom,
+              reservedQuantity: new Decimal(0),
+              unitCost: new Decimal(initCost),
+              lotNumber: dto.lotNumber,
+              serialNumber: dto.serialNumber,
+            },
+          });
+        }
+
+        return movement;
+      });
+    } catch (e) {
+      // @@unique([tenantId, movementNumber]) can race on concurrent creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Movement number ${movementNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
 
     return this.findOne(tenantId, result.id);
   }
@@ -137,6 +174,9 @@ export class StockTransactionsService {
     const where: any = { tenantId };
     if (filters?.itemId) where.itemId = filters.itemId;
     if (filters?.transactionType) where.movementType = filters.transactionType;
+    if (filters?.warehouseId) {
+      where.OR = [{ fromWarehouseId: filters.warehouseId }, { toWarehouseId: filters.warehouseId }];
+    }
 
     const movements = await this.prisma.stockMovement.findMany({
       where,
@@ -156,7 +196,7 @@ export class StockTransactionsService {
     const cycleSessions =
       cycleCountIds.length > 0
         ? await this.prisma.stockCountSession.findMany({
-            where: { id: { in: cycleCountIds } },
+            where: { id: { in: cycleCountIds }, tenantId },
             select: { id: true, sessionNumber: true },
           })
         : [];
@@ -164,7 +204,7 @@ export class StockTransactionsService {
       cycleSessions.map((s) => [s.id, s.sessionNumber] as [string, string]),
     );
 
-    return movements.map((m) => ({
+    const rows = movements.map((m) => ({
       ...m,
       quantity: Number(m.quantity),
       purchaseQty: m.purchaseQty ? Number(m.purchaseQty) : null,
@@ -177,6 +217,8 @@ export class StockTransactionsService {
           ? (cycleMap.get(m.referenceId) ?? m.referenceId)
           : (m.referenceId ?? null),
     }));
+
+    return { movements: rows, count: rows.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -329,8 +371,8 @@ export class StockTransactionsService {
         });
 
         if (existing) {
-          await tx.stock.update({
-            where: { id: existing.id },
+          await tx.stock.updateMany({
+            where: { id: existing.id, tenantId },
             data: {
               purchaseQty: wacResult.newPurchaseQty,
               purchaseUom: allQtys.purchaseUom,
@@ -434,8 +476,8 @@ export class StockTransactionsService {
         });
 
         if (existing) {
-          await tx.stock.update({
-            where: { id: existing.id },
+          await tx.stock.updateMany({
+            where: { id: existing.id, tenantId },
             data: {
               purchaseQty: { decrement: new Decimal(allQtys.purchaseQty) },
               onHandQuantity: { decrement: new Decimal(allQtys.storageQty) },
@@ -530,31 +572,31 @@ export class StockTransactionsService {
     const [arInvoices, apInvoices, poOrders, grnReceipts, cycleSessions] = await Promise.all([
       arIds.length > 0
         ? this.prisma.arInvoice.findMany({
-            where: { id: { in: arIds } },
+            where: { id: { in: arIds }, tenantId },
             select: { id: true, invoiceNumber: true },
           })
         : [],
       apIds.length > 0
         ? this.prisma.apInvoice.findMany({
-            where: { id: { in: apIds } },
+            where: { id: { in: apIds }, tenantId },
             select: { id: true, invoiceNumber: true },
           })
         : [],
       poIds.length > 0
         ? this.prisma.purchaseOrder.findMany({
-            where: { id: { in: poIds } },
+            where: { id: { in: poIds }, tenantId },
             select: { id: true, poNumber: true },
           })
         : [],
       grnIds.length > 0
         ? this.prisma.goodsReceipt.findMany({
-            where: { id: { in: grnIds } },
+            where: { id: { in: grnIds }, tenantId },
             select: { id: true, grnNumber: true },
           })
         : [],
       cycleIds.length > 0
         ? this.prisma.stockCountSession.findMany({
-            where: { id: { in: cycleIds } },
+            where: { id: { in: cycleIds }, tenantId },
             select: { id: true, sessionNumber: true },
           })
         : [],

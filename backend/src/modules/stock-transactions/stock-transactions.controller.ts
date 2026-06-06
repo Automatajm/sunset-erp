@@ -9,6 +9,14 @@ import {
 } from '@nestjs/swagger';
 import { StockTransactionsService } from './stock-transactions.service';
 import { CreateStockTransactionDto } from './dto/create-stock-transaction.dto';
+import {
+  FindMovementsQueryDto,
+  BalanceQueryDto,
+  ReportQueryDto,
+  PlanningQueryDto,
+  TurnoverQueryDto,
+  LedgerQueryDto,
+} from './dto/query.dtos';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -47,14 +55,11 @@ export class StockTransactionsController {
     description: 'raw_material | finished_good | consumable',
   })
   @ApiResponse({ status: 200, description: 'ABC Analysis report' })
-  async getAbcAnalysis(
-    @Request() req,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-  ) {
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getAbcAnalysis(@Request() req, @Query() query: ReportQueryDto) {
     return this.stockTransactionsService.getAbcAnalysis(req.user.tenantId, {
-      warehouseId,
-      itemType,
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
     });
   }
 
@@ -70,14 +75,11 @@ export class StockTransactionsController {
     description: 'raw_material | finished_good | consumable',
   })
   @ApiResponse({ status: 200, description: 'Stock aging report' })
-  async getStockAging(
-    @Request() req,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-  ) {
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getStockAging(@Request() req, @Query() query: ReportQueryDto) {
     return this.stockTransactionsService.getStockAging(req.user.tenantId, {
-      warehouseId,
-      itemType,
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
     });
   }
 
@@ -87,18 +89,14 @@ export class StockTransactionsController {
   @ApiQuery({ name: 'itemId', required: false, description: 'Filter by item' })
   @ApiQuery({ name: 'warehouseId', required: false, description: 'Filter by warehouse' })
   @ApiQuery({ name: 'transactionType', required: false, description: 'Filter by type' })
-  @ApiResponse({ status: 200, description: 'List of stock transactions' })
+  @ApiResponse({ status: 200, description: 'Envelope { movements, count }' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  async findAll(
-    @Request() req,
-    @Query('itemId') itemId?: string,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('transactionType') transactionType?: string,
-  ) {
+  async findAll(@Request() req, @Query() query: FindMovementsQueryDto) {
     return this.stockTransactionsService.findAll(req.user.tenantId, {
-      itemId,
-      warehouseId,
-      transactionType,
+      itemId: query.itemId,
+      warehouseId: query.warehouseId,
+      transactionType: query.transactionType,
     });
   }
 
@@ -108,15 +106,12 @@ export class StockTransactionsController {
   @ApiQuery({ name: 'itemId', required: false, description: 'Filter by item' })
   @ApiQuery({ name: 'warehouseId', required: false, description: 'Filter by warehouse' })
   @ApiResponse({ status: 200, description: 'Current stock balances' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  async getStockBalance(
-    @Request() req,
-    @Query('itemId') itemId?: string,
-    @Query('warehouseId') warehouseId?: string,
-  ) {
+  async getStockBalance(@Request() req, @Query() query: BalanceQueryDto) {
     return this.stockTransactionsService.getStockBalance(req.user.tenantId, {
-      itemId,
-      warehouseId,
+      itemId: query.itemId,
+      warehouseId: query.warehouseId,
     });
   }
 
@@ -126,16 +121,13 @@ export class StockTransactionsController {
   @ApiQuery({ name: 'warehouseId', required: false })
   @ApiQuery({ name: 'itemType', required: false })
   @ApiQuery({ name: 'alertOnly', required: false })
-  async getStockPlanning(
-    @Request() req,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-    @Query('alertOnly') alertOnly?: string,
-  ) {
+  @ApiResponse({ status: 200, description: 'Stock planning report (rows + summary)' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getStockPlanning(@Request() req, @Query() query: PlanningQueryDto) {
     return this.stockTransactionsService.getStockPlanning(req.user.tenantId, {
-      warehouseId,
-      itemType,
-      alertOnly: alertOnly === 'true',
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
+      alertOnly: query.alertOnly === 'true',
     });
   }
 
@@ -164,24 +156,16 @@ export class StockTransactionsController {
   @ApiQuery({ name: 'dateFrom', required: false, description: 'YYYY-MM-DD' })
   @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD' })
   @ApiResponse({ status: 200, description: 'Stock ledger with running balance and totals' })
-  async getLedger(
-    @Request() req,
-    @Query('itemId') itemId?: string,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-    @Query('movementType') movementType?: string,
-    @Query('referenceNumber') referenceNumber?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ) {
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getLedger(@Request() req, @Query() query: LedgerQueryDto) {
     return this.stockTransactionsService.getLedger(req.user.tenantId, {
-      itemId,
-      warehouseId,
-      itemType,
-      movementType,
-      referenceNumber,
-      dateFrom,
-      dateTo,
+      itemId: query.itemId,
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
+      movementType: query.movementType,
+      referenceNumber: query.referenceNumber,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
     });
   }
 
@@ -195,12 +179,12 @@ export class StockTransactionsController {
     description: 'raw_material | finished_good | consumable',
   })
   @ApiResponse({ status: 200, description: 'Inventory valuation report' })
-  async getValuation(
-    @Request() req,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-  ) {
-    return this.stockTransactionsService.getValuation(req.user.tenantId, { warehouseId, itemType });
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getValuation(@Request() req, @Query() query: ReportQueryDto) {
+    return this.stockTransactionsService.getValuation(req.user.tenantId, {
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
+    });
   }
 
   @Get('turnover')
@@ -219,18 +203,13 @@ export class StockTransactionsController {
   })
   @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD (default: today)' })
   @ApiResponse({ status: 200, description: 'Inventory turnover report' })
-  async getInventoryTurnover(
-    @Request() req,
-    @Query('warehouseId') warehouseId?: string,
-    @Query('itemType') itemType?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ) {
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async getInventoryTurnover(@Request() req, @Query() query: TurnoverQueryDto) {
     return this.stockTransactionsService.getInventoryTurnover(req.user.tenantId, {
-      warehouseId,
-      itemType,
-      dateFrom,
-      dateTo,
+      warehouseId: query.warehouseId,
+      itemType: query.itemType,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
     });
   }
 

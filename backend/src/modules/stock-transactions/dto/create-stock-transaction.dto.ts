@@ -2,19 +2,32 @@
   IsString,
   IsUUID,
   IsNumber,
+  IsIn,
   IsOptional,
   IsDateString,
+  IsPositive,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// Manual endpoint moves stock as a receipt or an issue only — transfer and
+// adjustment movement types belong to internal flows (GRN cancel, cycle count).
+export const MANUAL_TRANSACTION_TYPES = ['receipt', 'issue'];
+
+// Safe cap within Decimal(15,3) quantity / Decimal(15,4) cost column capacity.
+const MAX_QUANTITY = 999999999999;
+const MAX_UNIT_COST = 999999999999;
+
 export class CreateStockTransactionDto {
   @ApiProperty({
     example: 'receipt',
-    description: 'Transaction type: receipt, issue, transfer, adjustment',
+    enum: MANUAL_TRANSACTION_TYPES,
+    description: 'Transaction type: receipt | issue',
   })
   @IsString()
+  @IsIn(MANUAL_TRANSACTION_TYPES)
   @MaxLength(50)
   transactionType: string;
 
@@ -26,8 +39,13 @@ export class CreateStockTransactionDto {
   @IsUUID()
   warehouseId: string;
 
-  @ApiProperty({ example: 100, description: 'Quantity (positive for IN, negative for OUT)' })
+  @ApiProperty({
+    example: 100,
+    description: 'Quantity, strictly positive — direction comes from transactionType',
+  })
   @IsNumber()
+  @IsPositive()
+  @Max(MAX_QUANTITY)
   quantity: number;
 
   @ApiProperty({ example: 'PCS', description: 'Unit of measure' })
@@ -41,6 +59,8 @@ export class CreateStockTransactionDto {
   })
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(MAX_UNIT_COST)
   unitCost?: number;
 
   @ApiPropertyOptional({ description: 'Reference document ID (PO, SO, Production Order, etc.)' })
