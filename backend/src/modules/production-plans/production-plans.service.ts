@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import {
@@ -28,6 +33,16 @@ export class ProductionPlansService {
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateProductionPlanDto) {
+    // Date sanity — inverted ranges are always a data-entry error.
+    if (new Date(dto.periodEnd) < new Date(dto.periodStart)) {
+      throw new BadRequestException('periodEnd must be on or after periodStart');
+    }
+    for (const line of dto.lines) {
+      if (new Date(line.plannedEnd) < new Date(line.plannedStart)) {
+        throw new BadRequestException('Each line plannedEnd must be on or after its plannedStart');
+      }
+    }
+
     // Validate items and resolve BOMs
     const resolvedLines: Array<{
       itemId: string;
@@ -65,7 +80,7 @@ export class ProductionPlansService {
 
       if (line.soLineId) {
         const soLine = await this.prisma.salesOrderLine.findFirst({
-          where: { id: line.soLineId, tenantId },
+          where: { id: line.soLineId, tenantId, deletedAt: null },
         });
         if (!soLine) throw new NotFoundException(`SO line ${line.soLineId} not found`);
       }
@@ -84,39 +99,49 @@ export class ProductionPlansService {
 
     const planNumber = await this.generatePlanNumber(tenantId);
 
-    return this.prisma.productionPlan.create({
-      data: {
-        tenantId,
-        planNumber,
-        title: dto.title,
-        horizon: dto.horizon,
-        source: dto.source ?? 'free',
-        periodStart: new Date(dto.periodStart),
-        periodEnd: new Date(dto.periodEnd),
-        status: 'draft',
-        notes: dto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: {
-          create: resolvedLines.map((l, idx) => ({
-            tenantId,
-            lineNumber: idx + 1,
-            itemId: l.itemId,
-            bomId: l.bomId,
-            plannedQty: new Decimal(l.plannedQty),
-            uom: l.uom,
-            plannedStart: l.plannedStart,
-            plannedEnd: l.plannedEnd,
-            soLineId: l.soLineId,
-            notes: l.notes,
-            status: 'pending',
-            createdBy: userId,
-            updatedBy: userId,
-          })),
+    try {
+      return await this.prisma.productionPlan.create({
+        data: {
+          tenantId,
+          planNumber,
+          title: dto.title,
+          horizon: dto.horizon,
+          source: dto.source ?? 'free',
+          periodStart: new Date(dto.periodStart),
+          periodEnd: new Date(dto.periodEnd),
+          status: 'draft',
+          notes: dto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: {
+            create: resolvedLines.map((l, idx) => ({
+              tenantId,
+              lineNumber: idx + 1,
+              itemId: l.itemId,
+              bomId: l.bomId,
+              plannedQty: new Decimal(l.plannedQty),
+              uom: l.uom,
+              plannedStart: l.plannedStart,
+              plannedEnd: l.plannedEnd,
+              soLineId: l.soLineId,
+              notes: l.notes,
+              status: 'pending',
+              createdBy: userId,
+              updatedBy: userId,
+            })),
+          },
         },
-      },
-      include: this.planInclude(),
-    });
+        include: this.planInclude(),
+      });
+    } catch (e) {
+      // @@unique([tenantId, planNumber]) can race on concurrent creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Plan number ${planNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   // ── Find All ───────────────────────────────────────────────────────────────
@@ -126,7 +151,7 @@ export class ProductionPlansService {
     if (horizon) where.horizon = horizon;
     if (status) where.status = status;
 
-    return this.prisma.productionPlan.findMany({
+    const productionPlans = await this.prisma.productionPlan.findMany({
       where,
       include: {
         _count: { select: { lines: true } },
@@ -143,6 +168,8 @@ export class ProductionPlansService {
       },
       orderBy: { periodStart: 'desc' },
     });
+
+    return { productionPlans, count: productionPlans.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -164,16 +191,22 @@ export class ProductionPlansService {
       throw new BadRequestException('Can only update draft or confirmed plans');
     }
 
-    return this.prisma.productionPlan.update({
-      where: { id },
+    if (dto.periodStart && dto.periodEnd && new Date(dto.periodEnd) < new Date(dto.periodStart)) {
+      throw new BadRequestException('periodEnd must be on or after periodStart');
+    }
+
+    // Tenant-scoped at the write itself, then re-fetch for the joined response.
+    await this.prisma.productionPlan.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...dto,
         periodStart: dto.periodStart ? new Date(dto.periodStart) : undefined,
         periodEnd: dto.periodEnd ? new Date(dto.periodEnd) : undefined,
         updatedBy: userId,
       },
-      include: this.planInclude(),
     });
+
+    return this.findOne(tenantId, id);
   }
 
   // ── Update line ────────────────────────────────────────────────────────────
@@ -199,7 +232,14 @@ export class ProductionPlansService {
     if (dto.plannedEnd) data.plannedEnd = new Date(dto.plannedEnd);
     if (dto.notes !== undefined) data.notes = dto.notes;
 
-    return this.prisma.productionPlanLine.update({ where: { id: lineId }, data });
+    await this.prisma.productionPlanLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
+      data,
+    });
+
+    return this.prisma.productionPlanLine.findFirst({
+      where: { id: lineId, tenantId, deletedAt: null },
+    });
   }
 
   // ── Status transitions ─────────────────────────────────────────────────────
@@ -219,9 +259,13 @@ export class ProductionPlansService {
       );
     }
 
-    const updated = await this.prisma.productionPlan.update({
-      where: { id },
+    await this.prisma.productionPlan.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status, updatedBy: userId },
+    });
+
+    const updated = await this.prisma.productionPlan.findFirst({
+      where: { id, tenantId, deletedAt: null },
     });
 
     return { message: `Plan ${plan.planNumber} → ${status}`, productionPlan: updated };
@@ -254,50 +298,64 @@ export class ProductionPlansService {
 
     const created: any[] = [];
 
-    for (const line of lines) {
-      // Generate MO number
-      const year = new Date().getFullYear();
-      const prefix = `MO-${year}`;
-      const last = await this.prisma.productionOrder.findFirst({
-        where: { tenantId, poNumber: { startsWith: prefix } },
-        orderBy: { poNumber: 'desc' },
-      });
-      const moNum = last
-        ? `${prefix}-${(parseInt(last.poNumber.split('-')[2], 10) + 1).toString().padStart(4, '0')}`
-        : `${prefix}-0001`;
+    // Atomic: MOs + line flips + plan promotion commit together or not at all.
+    // MO numbers are generated through the tx so sequential generations in this
+    // loop see their own uncommitted MOs. (Moving the MO-number generator into
+    // the production-orders module is deferred to that module's spec.)
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        for (const line of lines) {
+          const year = new Date().getFullYear();
+          const prefix = `MO-${year}`;
+          const last = await tx.productionOrder.findFirst({
+            where: { tenantId, poNumber: { startsWith: prefix } },
+            orderBy: { poNumber: 'desc' },
+          });
+          const moNum = last
+            ? `${prefix}-${(parseInt(last.poNumber.split('-')[2], 10) + 1).toString().padStart(4, '0')}`
+            : `${prefix}-0001`;
 
-      const mo = await this.prisma.productionOrder.create({
-        data: {
-          tenantId,
-          poNumber: moNum,
-          itemId: line.itemId,
-          bomId: line.bomId ?? undefined,
-          quantityToProduce: new Decimal(Number(line.plannedQty)),
-          quantityProduced: new Decimal(0),
-          plannedStartDate: line.plannedStart,
-          plannedEndDate: line.plannedEnd,
-          status: 'draft',
-          planLineId: line.id,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
+          const mo = await tx.productionOrder.create({
+            data: {
+              tenantId,
+              poNumber: moNum,
+              itemId: line.itemId,
+              bomId: line.bomId ?? undefined,
+              quantityToProduce: new Decimal(Number(line.plannedQty)),
+              quantityProduced: new Decimal(0),
+              plannedStartDate: line.plannedStart,
+              plannedEndDate: line.plannedEnd,
+              status: 'draft',
+              planLineId: line.id,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
 
-      // Update plan line status
-      await this.prisma.productionPlanLine.update({
-        where: { id: line.id },
-        data: { status: 'mo_created', updatedBy: userId },
-      });
+          await tx.productionPlanLine.updateMany({
+            where: { id: line.id, tenantId, deletedAt: null },
+            data: { status: 'mo_created', updatedBy: userId },
+          });
 
-      created.push(mo);
-    }
+          created.push(mo);
+        }
 
-    // If plan is still confirmed, move to in_progress
-    if (plan.status === 'confirmed') {
-      await this.prisma.productionPlan.update({
-        where: { id },
-        data: { status: 'in_progress', updatedBy: userId },
+        // If plan is still confirmed, move to in_progress
+        if (plan.status === 'confirmed') {
+          await tx.productionPlan.updateMany({
+            where: { id, tenantId, deletedAt: null },
+            data: { status: 'in_progress', updatedBy: userId },
+          });
+        }
       });
+    } catch (e) {
+      // @@unique on poNumber can race with concurrent generations.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          'A production-order number was just taken by a concurrent request. Please retry.',
+        );
+      }
+      throw e;
     }
 
     return {
@@ -322,13 +380,21 @@ export class ProductionPlansService {
     });
     if (!mo) throw new NotFoundException(`Production Order ${moId} not found`);
 
-    await this.prisma.productionOrder.update({
-      where: { id: moId },
+    // An MO belongs to at most one plan line — never silently steal it.
+    if (mo.planLineId && mo.planLineId !== lineId) {
+      throw new ConflictException(`MO ${mo.poNumber} is already linked to another plan line`);
+    }
+    if (line.status === 'mo_created') {
+      throw new BadRequestException(`Plan line ${line.lineNumber} already has a linked MO`);
+    }
+
+    await this.prisma.productionOrder.updateMany({
+      where: { id: moId, tenantId, deletedAt: null },
       data: { planLineId: lineId, updatedBy: userId },
     });
 
-    await this.prisma.productionPlanLine.update({
-      where: { id: lineId },
+    await this.prisma.productionPlanLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
       data: { status: 'mo_created', updatedBy: userId },
     });
 
@@ -404,8 +470,8 @@ export class ProductionPlansService {
       throw new BadRequestException('Can only delete draft plans');
     }
 
-    await this.prisma.productionPlan.update({
-      where: { id },
+    await this.prisma.productionPlan.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
 

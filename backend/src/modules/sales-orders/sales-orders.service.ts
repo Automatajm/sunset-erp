@@ -1,7 +1,22 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
+
+// SO lifecycle state machine (spec-019). 'confirmed' and 'shipped' are
+// load-bearing for spec-016's planning ATP — keep the exact strings.
+const SO_TRANSITIONS: Record<string, string[]> = {
+  draft: ['confirmed', 'cancelled'],
+  confirmed: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+  delivered: ['closed'],
+  // closed / cancelled are terminal
+};
 
 @Injectable()
 export class SalesOrdersService {
@@ -67,59 +82,71 @@ export class SalesOrdersService {
 
     const total = subtotal; // Can add tax later
 
-    // Create SO with lines
-    const salesOrder = await this.prisma.salesOrder.create({
-      data: {
-        tenantId,
-        soNumber,
-        customerId: createSalesOrderDto.customerId,
-        orderDate: new Date(),
-        customerPo: createSalesOrderDto.customerPo,
-        requestedDate: createSalesOrderDto.requestedDate
-          ? new Date(createSalesOrderDto.requestedDate)
-          : null,
-        promisedDate: createSalesOrderDto.promisedDate
-          ? new Date(createSalesOrderDto.promisedDate)
-          : null,
-        paymentTerms: createSalesOrderDto.paymentTerms,
-        currency: createSalesOrderDto.currency || 'USD',
-        exchangeRate: 1,
-        subtotal,
-        discountAmount: 0,
-        taxAmount: 0,
-        total,
-        status: 'draft',
-        notes: createSalesOrderDto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: {
-          create: linesWithTotals.map((line) => ({
-            tenantId,
-            ...line,
-          })),
-        },
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
+    // Create SO with lines. @@unique([tenantId, soNumber]) can race on
+    // concurrent creates — surface that as 409, never a 500.
+    let salesOrder;
+    try {
+      salesOrder = await this.prisma.salesOrder.create({
+        data: {
+          tenantId,
+          soNumber,
+          customerId: createSalesOrderDto.customerId,
+          orderDate: new Date(),
+          customerPo: createSalesOrderDto.customerPo,
+          requestedDate: createSalesOrderDto.requestedDate
+            ? new Date(createSalesOrderDto.requestedDate)
+            : null,
+          promisedDate: createSalesOrderDto.promisedDate
+            ? new Date(createSalesOrderDto.promisedDate)
+            : null,
+          paymentTerms: createSalesOrderDto.paymentTerms,
+          currency: createSalesOrderDto.currency || 'USD',
+          exchangeRate: 1,
+          subtotal,
+          discountAmount: 0,
+          taxAmount: 0,
+          total,
+          status: 'draft',
+          notes: createSalesOrderDto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: {
+            create: linesWithTotals.map((line) => ({
+              tenantId,
+              ...line,
+            })),
           },
         },
-        lines: {
-          include: {
-            item: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          lines: {
+            where: { deletedAt: null },
+            include: {
+              item: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Sales order number ${soNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
 
     return salesOrder;
   }
@@ -155,7 +182,7 @@ export class SalesOrdersService {
       },
     });
 
-    return salesOrders;
+    return { salesOrders, count: salesOrders.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -176,6 +203,7 @@ export class SalesOrdersService {
           },
         },
         lines: {
+          where: { deletedAt: null },
           include: {
             item: {
               select: {
@@ -212,30 +240,39 @@ export class SalesOrdersService {
       throw new BadRequestException('Can only update sales orders in draft status');
     }
 
-    const salesOrder = await this.prisma.salesOrder.update({
-      where: { id },
+    // A changed customerId must point at an in-tenant, non-deleted customer —
+    // the FK alone is global (spec-018 precedent).
+    if (updateSalesOrderDto.customerId && updateSalesOrderDto.customerId !== so.customerId) {
+      const customer = await this.prisma.customer.findFirst({
+        where: { id: updateSalesOrderDto.customerId, tenantId, deletedAt: null },
+      });
+      if (!customer) throw new NotFoundException('Customer not found');
+    }
+
+    // Tenant-scoped at the write itself, then re-fetch for the joined response.
+    await this.prisma.salesOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...updateSalesOrderDto,
         updatedBy: userId,
       },
-      include: {
-        customer: true,
-        lines: {
-          include: {
-            item: true,
-          },
-        },
-      },
     });
 
-    return salesOrder;
+    return this.findOne(tenantId, id);
   }
 
   async updateStatus(tenantId: string, userId: string, id: string, status: string) {
     const so = await this.findOne(tenantId, id);
 
-    const salesOrder = await this.prisma.salesOrder.update({
-      where: { id },
+    const allowed = SO_TRANSITIONS[so.status] ?? [];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(
+        `Cannot transition from '${so.status}' to '${status}'. Allowed: ${allowed.join(', ') || 'none'}`,
+      );
+    }
+
+    await this.prisma.salesOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status,
         updatedBy: userId,
@@ -244,7 +281,7 @@ export class SalesOrdersService {
 
     return {
       message: `Sales Order ${so.soNumber} ${status}`,
-      salesOrder,
+      salesOrder: await this.findOne(tenantId, id),
     };
   }
 
@@ -255,8 +292,8 @@ export class SalesOrdersService {
       throw new BadRequestException('Can only delete sales orders in draft status');
     }
 
-    await this.prisma.salesOrder.update({
-      where: { id },
+    await this.prisma.salesOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,

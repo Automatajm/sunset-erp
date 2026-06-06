@@ -7,6 +7,8 @@ import { CreateSalesOrderDto, UpdateSalesOrderDto, SOStatus } from './types';
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  // List endpoint returns an envelope { salesOrders, count } (spec-019)
+  if (d?.salesOrders && Array.isArray(d.salesOrders)) return d.salesOrders;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }

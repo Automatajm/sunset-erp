@@ -7,7 +7,10 @@ export const productionPlansApi = {
   getAll: async (params?: { horizon?: string; status?: string }) => {
     const res = await apiClient.get('/production-plans', { params });
     const d = res.data;
-    return Array.isArray(d) ? d : (d?.value && Array.isArray(d.value)) ? d.value : [];
+    // List endpoint returns an envelope { productionPlans, count } (spec-019)
+    if (Array.isArray(d)) return d;
+    if (d?.productionPlans && Array.isArray(d.productionPlans)) return d.productionPlans;
+    return d?.value && Array.isArray(d.value) ? d.value : [];
   },
 
   getById: async (id: string) => {

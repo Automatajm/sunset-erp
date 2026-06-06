@@ -23,6 +23,7 @@ import {
 import { SalesOrdersService } from './sales-orders.service';
 import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
+import { FindSalesOrdersQueryDto } from './dto/find-sales-orders-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -40,6 +41,7 @@ export class SalesOrdersController {
   @ApiResponse({ status: 201, description: 'SO created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Customer or item not found' })
+  @ApiResponse({ status: 409, description: 'SO number collision (concurrent) - retry' })
   async create(@Request() req, @Body() createSalesOrderDto: CreateSalesOrderDto) {
     return this.salesOrdersService.create(req.user.tenantId, req.user.id, createSalesOrderDto);
   }
@@ -48,10 +50,11 @@ export class SalesOrdersController {
   @RequirePermissions('SALES:VIEW')
   @ApiOperation({ summary: 'Get all sales orders' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by status' })
-  @ApiResponse({ status: 200, description: 'List of sales orders' })
+  @ApiResponse({ status: 200, description: 'Envelope { salesOrders, count }' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
-  async findAll(@Request() req, @Query('status') status?: string) {
-    return this.salesOrdersService.findAll(req.user.tenantId, status);
+  async findAll(@Request() req, @Query() query: FindSalesOrdersQueryDto) {
+    return this.salesOrdersService.findAll(req.user.tenantId, query.status);
   }
 
   @Get(':id')
@@ -86,7 +89,8 @@ export class SalesOrdersController {
   @ApiOperation({ summary: 'Update sales order status' })
   @ApiParam({ name: 'id', description: 'SO UUID' })
   @ApiParam({ name: 'status', description: 'New status: confirmed, shipped, delivered, closed' })
-  @ApiResponse({ status: 200, description: 'Status updated successfully' })
+  @ApiResponse({ status: 200, description: 'Status transitioned' })
+  @ApiResponse({ status: 400, description: 'Illegal transition (lists allowed targets)' })
   @ApiResponse({ status: 403, description: 'Forbidden - missing permission' })
   @ApiResponse({ status: 404, description: 'Sales order not found' })
   async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {

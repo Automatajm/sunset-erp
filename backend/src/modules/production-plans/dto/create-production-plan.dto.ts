@@ -8,6 +8,7 @@ import {
   IsUUID,
   IsNumber,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -28,6 +29,7 @@ export class CreateProductionPlanLineDto {
   @ApiProperty({ example: 1000 })
   @IsNumber()
   @Min(0.001)
+  @Max(999999999999)
   plannedQty: number;
 
   @ApiProperty({ example: 'PCS' })
