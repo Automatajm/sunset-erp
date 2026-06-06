@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "concurrently -n services,backend,frontend -c yellow,blue,green \"bash scripts/check-services.sh\" \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev": "bash scripts/check-services.sh && sleep 2 && concurrently -n backend,frontend -c blue,green --kill-others-on-fail \"pnpm run dev:backend\" \"sleep 8 && pnpm run dev:frontend\"",
     "dev:backend": "NODE_OPTIONS=--max-old-space-size=768 pnpm --dir backend start:dev",
     "dev:frontend": "NODE_OPTIONS=--max-old-space-size=1536 pnpm --dir frontend dev",
     "build": "pnpm --dir backend build && pnpm --dir frontend build",
