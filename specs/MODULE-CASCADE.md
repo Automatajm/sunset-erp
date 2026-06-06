@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 17 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation` |
-| Pending | 21 |
+| Specced (Done) | 18 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation`, `supplier-items` |
+| Pending | 20 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -84,7 +84,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 ### Tier 4 — operations & clusters
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
-| ⬜ | supplier-items | SupplierItem | items, suppliers, uom |
+| ✅ spec-018 | supplier-items | SupplierItem | items, suppliers, uom |
 | ⬜ | **Procurement cluster** ↺ | — | items, suppliers, warehouses, consumption-groups |
 | ⬜ | · purchase-orders | PurchaseOrder, PurchaseOrderLine, ConsolidationConfig | items, suppliers, uom, rfqs* |
 | ⬜ | · purchase-requisitions | PurchaseRequisition, PurchaseRequisitionLine | items, purchase-orders*, warehouses |
@@ -126,4 +126,5 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 10. ~~**bom**~~ ✅ spec-011 — Tier 3, prerequisite of production cluster.
 11. ~~**stock-transactions**~~ ✅ spec-016 — Tier 3, prerequisite of goods-receipts, stock-reconciliation, invoices.
 12. ~~**stock-reconciliation**~~ ✅ spec-017 — Tier 3, cycle counts feeding the movement ledger.
-13. **supplier-items** — Tier 4 (deps all ✅: items, suppliers, uom), last single module before the procurement/production clusters. ← **next**
+13. ~~**supplier-items**~~ ✅ spec-018 — Tier 4, last single module before the clusters.
+14. **Production cluster** (`sales-orders` + `production-plans`) — Tier 4, two-module cycle specced as one unit; deps all ✅ (bom, items, customers). ← **next**

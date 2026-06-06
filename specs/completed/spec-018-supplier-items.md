@@ -1,6 +1,6 @@
 # spec-018 — Supplier Items (Supplier↔Item Catalog Links)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `supplier-items` (touches `frontend/lib/api/supplier-items.ts` for the list envelopes)  
@@ -265,3 +265,4 @@ cd backend && pnpm build && pnpm test supplier-items.service && pnpm test:e2e su
 | 2026-06-06 | Spec generated from code by spec-generator (seeded by opportunity-finder audit, score 50) | Draft — unvalidated supplierId (cross-tenant linkage), 5 unscoped writes, item read missing deletedAt, P2002 mapping, dangling defaultSupplierId on preferred removal, @Max caps, query DTO, list envelopes captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (19 unit / 15 e2e, tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 9 gaps implemented: in-tenant supplier check (404), 5 writes tenant-scoped (updateMany + refetch), deletedAt on UOM-rule read, P2002->409, defaultSupplierId cleared on preferred removal, per-column @Max caps (corrected from draft to actual Decimal capacities), conversionFactor description fixed, query DTO, { supplierItems, count } envelopes + 3 frontend getters | Unit 19/19, e2e 15/15 (incl. same-id reactivation + preferred lifecycle), backend + frontend builds OK, lint clean |
+| 2026-06-06 | Shipped to origin (`80e90a2`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
