@@ -4,13 +4,14 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../database/prisma.module';
 import { UomModule } from '../uom/uom.module';
+import { StockTransactionsModule } from '../stock-transactions/stock-transactions.module';
 import { StockReconciliationService } from './stock-reconciliation.service';
 import { StockReconciliationController } from './stock-reconciliation.controller';
 import { StockCountAssignmentService } from './stock-count-assignment.service';
 import { StockCountAssignmentController } from './stock-count-assignment.controller';
 
 @Module({
-  imports: [PrismaModule, UomModule],
+  imports: [PrismaModule, UomModule, StockTransactionsModule],
   controllers: [StockReconciliationController, StockCountAssignmentController],
   providers: [StockReconciliationService, StockCountAssignmentService],
   exports: [StockReconciliationService, StockCountAssignmentService],

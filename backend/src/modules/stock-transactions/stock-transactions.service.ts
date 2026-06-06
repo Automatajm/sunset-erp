@@ -7,6 +7,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateStockTransactionDto } from './dto/create-stock-transaction.dto';
@@ -286,10 +287,13 @@ export class StockTransactionsService {
 
   // ── Movement number generator ──────────────────────────────────────────────
 
-  private async generateMovementNumber(tenantId: string): Promise<string> {
+  // Public shared API (spec-017): in-transaction callers (e.g. cycle-count posting)
+  // pass their tx so sequential generations see their own uncommitted movements.
+  async generateMovementNumber(tenantId: string, tx?: Prisma.TransactionClient): Promise<string> {
+    const db = tx ?? this.prisma;
     const year = new Date().getFullYear();
     const prefix = `SM-${year}`;
-    const last = await this.prisma.stockMovement.findFirst({
+    const last = await db.stockMovement.findFirst({
       where: { tenantId, movementNumber: { startsWith: prefix } },
       orderBy: { movementNumber: 'desc' },
     });

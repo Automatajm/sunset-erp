@@ -31,6 +31,7 @@ export class StockCountAssignmentController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'List assignments for a session' })
   @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiResponse({ status: 200, description: 'Assignments enriched with user + assignedCount' })
   async findAll(@Request() req, @Param('sessionId') sessionId: string) {
     return this.service.findBySession(req.user.tenantId, sessionId);
   }
@@ -54,6 +55,11 @@ export class StockCountAssignmentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Preview how many lines would be assigned (dry run)' })
   @ApiParam({ name: 'sessionId', description: 'Session UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dry run — { totalLines, unassignedLines, matchedLines }, nothing persisted',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found' })
   async preview(
     @Request() req,
     @Param('sessionId') sessionId: string,
@@ -68,6 +74,8 @@ export class StockCountAssignmentController {
   @ApiOperation({ summary: 'Remove assignment and release lines' })
   @ApiParam({ name: 'sessionId', description: 'Session UUID' })
   @ApiParam({ name: 'assignmentId', description: 'Assignment UUID' })
+  @ApiResponse({ status: 200, description: 'Assignment removed, lines released' })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
   async remove(
     @Request() req,
     @Param('sessionId') sessionId: string,

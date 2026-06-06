@@ -236,7 +236,7 @@ export default function StockReconciliationPage() {
         apiClient.get('/stock-reconciliation'),
         warehousesApi.getAll(),
       ]);
-      setSessions(sess.data as CountSession[]);
+      setSessions((sess.data as { sessions: CountSession[]; count: number }).sessions);
       setWarehouses(whs as Warehouse[]);
     } catch { setError('Failed to load sessions.'); }
     finally { setLoading(false); }

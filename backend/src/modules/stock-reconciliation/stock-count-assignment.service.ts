@@ -5,43 +5,34 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../database/prisma.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 
+// Minimal line shape the resolver needs (matches the session include below).
+interface AssignableLine {
+  id: string;
+  itemId: string;
+  levelId: string | null;
+  binId: string | null;
+  item: { id: string; categoryId: string | null } | null;
+}
+
 @Injectable()
 export class StockCountAssignmentService {
   constructor(private prisma: PrismaService) {}
 
-  // ── Create assignment — resolve lines from filter criteria ────────────────
+  // ── Shared resolution logic (create + preview) ─────────────────────────────
   //
-  // Resolution logic (AND between filter types, OR within each type):
-  //   1. Start with ALL pending lines in the session
-  //   2. If location filters provided → keep lines whose locationCode is in those zones/aisles/levels/bins
+  // Resolution (AND between filter types, OR within each type):
+  //   1. Start with ALL lines in the session not yet assigned to another user
+  //   2. If location filters provided → keep lines whose levelId/binId is in the
+  //      expanded zone/aisle/level/bin sets
   //   3. If category/macroCategory filters → keep lines whose item.categoryId matches
   //   4. If itemIds provided → keep those specific lines
-  //   5. Exclude lines already assigned to another user
-  //   6. Store resolved lineIds in assignedLineIds[]
 
-  async create(tenantId: string, userId: string, sessionId: string, dto: CreateAssignmentDto) {
-    // Verify session exists and is in_progress
-    const session = await this.prisma.stockCountSession.findFirst({
-      where: { id: sessionId, tenantId, deletedAt: null },
-      include: {
-        lines: {
-          where: { deletedAt: null },
-          include: { item: { select: { id: true, categoryId: true } } },
-        },
-      },
-    });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.status !== 'in_progress') {
-      throw new BadRequestException(`Cannot assign lines — session is "${session.status}"`);
-    }
-
-    // Get already-assigned line IDs (to avoid double assignment)
-    const existingAssignments = await this.prisma.stockCountAssignment.findMany({
-      where: { sessionId, tenantId },
-      select: { assignedLineIds: true },
-    });
-    const alreadyAssigned = new Set(existingAssignments.flatMap((a) => a.assignedLineIds));
-
+  private async resolveAssignableLines(
+    tenantId: string,
+    lines: AssignableLine[],
+    alreadyAssigned: Set<string>,
+    dto: CreateAssignmentDto,
+  ): Promise<string[]> {
     // Resolve location filters → collect matching level/bin IDs
     let locationLevelIds: Set<string> | null = null;
     let locationBinIds: Set<string> | null = null;
@@ -140,7 +131,7 @@ export class StockCountAssignmentService {
     // Apply all filters to session lines
     const resolvedLineIds: string[] = [];
 
-    for (const line of session.lines) {
+    for (const line of lines) {
       // Skip already assigned
       if (alreadyAssigned.has(line.id)) continue;
 
@@ -163,6 +154,49 @@ export class StockCountAssignmentService {
 
       resolvedLineIds.push(line.id);
     }
+
+    return resolvedLineIds;
+  }
+
+  private async getAlreadyAssigned(tenantId: string, sessionId: string): Promise<Set<string>> {
+    const existingAssignments = await this.prisma.stockCountAssignment.findMany({
+      where: { sessionId, tenantId },
+      select: { assignedLineIds: true },
+    });
+    return new Set(existingAssignments.flatMap((a) => a.assignedLineIds));
+  }
+
+  // ── Create assignment — resolve lines from filter criteria ────────────────
+
+  async create(tenantId: string, userId: string, sessionId: string, dto: CreateAssignmentDto) {
+    // Verify session exists and is in_progress
+    const session = await this.prisma.stockCountSession.findFirst({
+      where: { id: sessionId, tenantId, deletedAt: null },
+      include: {
+        lines: {
+          where: { deletedAt: null },
+          include: { item: { select: { id: true, categoryId: true } } },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+    if (session.status !== 'in_progress') {
+      throw new BadRequestException(`Cannot assign lines — session is "${session.status}"`);
+    }
+
+    // The assignee must be an active member of this tenant.
+    const member = await this.prisma.userTenant.findFirst({
+      where: { tenantId, userId: dto.userId, isActive: true },
+    });
+    if (!member) throw new NotFoundException('User not found in tenant');
+
+    const alreadyAssigned = await this.getAlreadyAssigned(tenantId, sessionId);
+    const resolvedLineIds = await this.resolveAssignableLines(
+      tenantId,
+      session.lines as AssignableLine[],
+      alreadyAssigned,
+      dto,
+    );
 
     if (resolvedLineIds.length === 0) {
       throw new BadRequestException('No unassigned lines match the provided filters');
@@ -189,7 +223,7 @@ export class StockCountAssignmentService {
 
     // Update StockCountLine.assignedToUserId for each resolved line
     await this.prisma.stockCountLine.updateMany({
-      where: { id: { in: resolvedLineIds } },
+      where: { id: { in: resolvedLineIds }, tenantId },
       data: { assignedToUserId: dto.userId },
     });
 
@@ -237,36 +271,46 @@ export class StockCountAssignmentService {
 
     // Un-assign lines
     await this.prisma.stockCountLine.updateMany({
-      where: { id: { in: assignment.assignedLineIds } },
+      where: { id: { in: assignment.assignedLineIds }, tenantId },
       data: { assignedToUserId: null },
     });
 
-    await this.prisma.stockCountAssignment.delete({ where: { id: assignmentId } });
+    await this.prisma.stockCountAssignment.deleteMany({
+      where: { id: assignmentId, tenantId },
+    });
     return { message: 'Assignment removed', releasedLines: assignment.assignedLineIds.length };
   }
 
   // ── Preview — how many lines would be assigned (dry run) ──────────────────
 
   async preview(tenantId: string, sessionId: string, dto: CreateAssignmentDto) {
-    // Temporarily call create logic but don't persist — just return the count
-    // We reuse the same resolution logic by simulating it
-
     const session = await this.prisma.stockCountSession.findFirst({
       where: { id: sessionId, tenantId, deletedAt: null },
       include: {
         lines: {
           where: { deletedAt: null },
-          select: { id: true, itemId: true, levelId: true, binId: true, assignedToUserId: true },
+          include: { item: { select: { id: true, categoryId: true } } },
         },
       },
     });
     if (!session) throw new NotFoundException('Session not found');
 
-    const unassigned = session.lines.filter((l) => !l.assignedToUserId);
+    const alreadyAssigned = await this.getAlreadyAssigned(tenantId, sessionId);
+    const matched = await this.resolveAssignableLines(
+      tenantId,
+      session.lines as AssignableLine[],
+      alreadyAssigned,
+      dto,
+    );
+
+    const unassigned = session.lines.filter(
+      (l) => !(l as { assignedToUserId?: string | null }).assignedToUserId,
+    );
     return {
       totalLines: session.lines.length,
       unassignedLines: unassigned.length,
-      message: 'Use POST to create the assignment',
+      matchedLines: matched.length,
+      message: `${matched.length} lines would be assigned`,
     };
   }
 }
