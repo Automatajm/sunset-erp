@@ -1,6 +1,6 @@
 # spec-021 — Multi-Currency Infrastructure
 
-Status: **Draft**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: planned infrastructure (implement BEFORE procurement invoices)
 Module(s): currency (new), tenant-settings, cross-cutting pattern for sales-orders, purchase-orders, ar-invoices, ap-invoices, journal-entries
@@ -143,3 +143,4 @@ depends only on Prisma, like UOM).
 |---|---|---|
 | 2026-06-06 | Spec drafted (planned infrastructure; gap analysis: global rate table unused, exchangeRate columns stay 1, no amountBase anywhere) | Draft — implement before procurement invoices |
 | 2026-06-06 | Implemented: ExchangeRate tenant-owned (table verified EMPTY pre-migration → tenantId required, no STOP needed), TenantSettings.baseCurrency DOP, CurrencyModule (getRate identity/direct/inverse/404 + Decimal-safe convert + getBaseCurrency + rates CRUD with envelope/P2002→409), SETTINGS:VIEW/EDIT permissions added to seed + granted live to 3 ADMIN roles (permission cache cleared), idempotent 06-demo-exchange-rates seed (8 rates, verified 2 runs), frozen-rate pattern added to CLAUDE.md autonomy section | Unit 11/11, e2e 12/12, build OK |
+| 2026-06-06 | Shipped to origin (8b799e3); marked Complete and moved to specs/completed/ | All code-verifiable acceptance criteria met (100%); frozen-rate pattern now gates consumer specs |
