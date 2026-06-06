@@ -300,20 +300,23 @@ export class ProductionPlansService {
 
     // Atomic: MOs + line flips + plan promotion commit together or not at all.
     // MO numbers are generated through the tx so sequential generations in this
-    // loop see their own uncommitted MOs. (Moving the MO-number generator into
-    // the production-orders module is deferred to that module's spec.)
+    // loop see their own uncommitted MOs. Numbering logic = numeric max, identical
+    // to ProductionOrdersService.generatePoNumber (spec-024 owns the shared
+    // MO-<year> sequence; @@unique([tenantId, poNumber]) backstops races).
     try {
       await this.prisma.$transaction(async (tx) => {
         for (const line of lines) {
           const year = new Date().getFullYear();
           const prefix = `MO-${year}`;
-          const last = await tx.productionOrder.findFirst({
+          const moRows = await tx.productionOrder.findMany({
             where: { tenantId, poNumber: { startsWith: prefix } },
-            orderBy: { poNumber: 'desc' },
+            select: { poNumber: true },
           });
-          const moNum = last
-            ? `${prefix}-${(parseInt(last.poNumber.split('-')[2], 10) + 1).toString().padStart(4, '0')}`
-            : `${prefix}-0001`;
+          const moMax = moRows.reduce((m: number, r: { poNumber: string }) => {
+            const n = parseInt(r.poNumber.split('-').pop() ?? '', 10);
+            return isNaN(n) ? m : Math.max(m, n);
+          }, 0);
+          const moNum = `${prefix}-${(moMax + 1).toString().padStart(4, '0')}`;
 
           const mo = await tx.productionOrder.create({
             data: {

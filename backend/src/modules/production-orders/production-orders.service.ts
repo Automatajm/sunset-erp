@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from './dto/update-production-order.dto';
@@ -10,6 +15,16 @@ import {
 } from './dto/production-actuals.dto';
 import { AutomationService } from '../automation/automation.service';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// spec-024 — MO state machine. Terminal statuses have no outgoing transitions.
+const MO_STATUSES = ['released', 'in_progress', 'completed', 'cancelled'] as const;
+const MO_TRANSITIONS: Record<string, string[]> = {
+  draft: ['released', 'cancelled'],
+  released: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+};
 
 @Injectable()
 export class ProductionOrdersService {
@@ -32,31 +47,34 @@ export class ProductionOrdersService {
     });
     if (!bom) throw new NotFoundException('BOM not found');
 
-    if (dto.workCenterId) {
-      const wc = await this.prisma.workCenter.findFirst({
-        where: { id: dto.workCenterId, tenantId, deletedAt: null },
-      });
-      if (!wc) throw new NotFoundException('Work center not found');
-    }
-
     const poNumber = await this.generatePoNumber(tenantId);
 
-    const productionOrder = await this.prisma.productionOrder.create({
-      data: {
-        tenantId,
-        poNumber,
-        bomId: dto.bomId,
-        itemId: bom.parentItemId,
-        quantityToProduce: new Decimal(dto.quantityOrdered),
-        quantityProduced: new Decimal(0),
-        plannedStartDate: dto.plannedStartDate ? new Date(dto.plannedStartDate) : null,
-        plannedEndDate: dto.plannedEndDate ? new Date(dto.plannedEndDate) : null,
-        status: 'draft',
-        notes: dto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-    });
+    let productionOrder;
+    try {
+      productionOrder = await this.prisma.productionOrder.create({
+        data: {
+          tenantId,
+          poNumber,
+          bomId: dto.bomId,
+          itemId: bom.parentItemId,
+          quantityToProduce: new Decimal(dto.quantityOrdered),
+          quantityProduced: new Decimal(0),
+          plannedStartDate: dto.plannedStartDate ? new Date(dto.plannedStartDate) : null,
+          plannedEndDate: dto.plannedEndDate ? new Date(dto.plannedEndDate) : null,
+          status: 'draft',
+          priority: dto.priority ?? null,
+          notes: dto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (e: any) {
+      // Concurrent creates (or production-plans generateMos) can collide on
+      // @@unique([tenantId, poNumber]) — surface as a retryable conflict.
+      if (e?.code === 'P2002')
+        throw new ConflictException('MO number collision — please retry the request');
+      throw e;
+    }
 
     return this.formatMo(productionOrder, bom);
   }
@@ -68,7 +86,8 @@ export class ProductionOrdersService {
       where,
       orderBy: { createdAt: 'desc' },
     });
-    return orders.map((o) => this.formatMo(o));
+    const productionOrders = orders.map((o) => this.formatMo(o));
+    return { productionOrders, count: productionOrders.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -80,7 +99,7 @@ export class ProductionOrdersService {
     let bom = null;
     if (order.bomId) {
       bom = await this.prisma.bom.findFirst({
-        where: { id: order.bomId },
+        where: { id: order.bomId, tenantId, deletedAt: null },
         include: {
           parentItem: true,
           components: { include: { consumptionGroup: true, consumptionUom: true } },
@@ -100,16 +119,34 @@ export class ProductionOrdersService {
       data.quantityToProduce = new Decimal(dto.quantityOrdered);
     if (dto.plannedStartDate) data.plannedStartDate = new Date(dto.plannedStartDate);
     if (dto.plannedEndDate) data.plannedEndDate = new Date(dto.plannedEndDate);
+    if (dto.priority !== undefined) data.priority = dto.priority;
     if (dto.notes !== undefined) data.notes = dto.notes;
 
-    const updated = await this.prisma.productionOrder.update({ where: { id }, data });
-    return this.formatMo(updated);
+    await this.prisma.productionOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
+      data,
+    });
+    return this.findOne(tenantId, id);
   }
 
   async updateStatus(tenantId: string, userId: string, id: string, status: string) {
+    if (!MO_STATUSES.includes(status as (typeof MO_STATUSES)[number])) {
+      throw new BadRequestException(
+        `Invalid status "${status}" — allowed: ${MO_STATUSES.join(', ')}`,
+      );
+    }
     const order = await this.findOne(tenantId, id);
-    const updated = await this.prisma.productionOrder.update({
-      where: { id },
+    const allowed = MO_TRANSITIONS[order.status] ?? [];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(
+        `Invalid transition "${order.status}" → "${status}"` +
+          (allowed.length
+            ? ` — allowed: ${allowed.join(', ')}`
+            : ` — "${order.status}" is terminal`),
+      );
+    }
+    await this.prisma.productionOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status,
         actualStartDate:
@@ -118,9 +155,10 @@ export class ProductionOrdersService {
         updatedBy: userId,
       },
     });
+    const updated = await this.findOne(tenantId, id);
     return {
       message: `Production order ${order.poNumber} status updated to ${status}`,
-      productionOrder: this.formatMo(updated),
+      productionOrder: updated,
     };
   }
 
@@ -129,8 +167,8 @@ export class ProductionOrdersService {
     if (order.status !== 'draft') {
       throw new BadRequestException('Can only delete production orders in draft status');
     }
-    await this.prisma.productionOrder.update({
-      where: { id },
+    await this.prisma.productionOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Production order deleted', id };
@@ -255,7 +293,9 @@ export class ProductionOrdersService {
 
   async deliverFinishedGoods(tenantId: string, userId: string, moId: string, dto: DeliverFgDto) {
     const mo = await this.findOne(tenantId, moId);
-    if (!['released', 'in_progress', 'completed'].includes(mo.status)) {
+    // spec-024: 'completed' is NOT deliverable — a second delivery would
+    // overwrite quantityProduced and post a duplicate JE.
+    if (!['released', 'in_progress'].includes(mo.status)) {
       throw new BadRequestException(`Cannot deliver FG for MO in status "${mo.status}"`);
     }
 
@@ -265,8 +305,8 @@ export class ProductionOrdersService {
     const totalFgValue = qtyDelivered * unitCost;
 
     // 1. Update quantityProduced
-    await this.prisma.productionOrder.update({
-      where: { id: moId },
+    await this.prisma.productionOrder.updateMany({
+      where: { id: moId, tenantId, deletedAt: null },
       data: {
         quantityProduced: new Decimal(qtyDelivered),
         status: 'completed',
@@ -351,12 +391,13 @@ export class ProductionOrdersService {
     const where: any = { tenantId, deletedAt: null };
     if (filters.status) where.status = filters.status;
     if (filters.varianceType) where.varianceType = filters.varianceType;
-    const variances = await this.prisma.productionVariance.findMany({
+    const rows = await this.prisma.productionVariance.findMany({
       where,
       include: { productionOrder: { select: { id: true, poNumber: true, status: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    return variances.map((v) => this.formatVariance(v));
+    const variances = rows.map((v) => this.formatVariance(v));
+    return { variances, count: variances.length };
   }
 
   async postVarianceJe(
@@ -379,8 +420,8 @@ export class ProductionOrdersService {
     const je = await this.createVarianceJe(tenantId, userId, variance, dto);
     if (!je) throw new BadRequestException('Variance JE skipped — module set to manual');
 
-    await this.prisma.productionVariance.update({
-      where: { id: varianceId },
+    await this.prisma.productionVariance.updateMany({
+      where: { id: varianceId, tenantId, deletedAt: null },
       data: { status: 'je_posted', jeId: je.id, updatedBy: userId },
     });
 
@@ -474,10 +515,14 @@ export class ProductionOrdersService {
         });
 
     const debitAcct = dto.debitAccountId
-      ? await this.prisma.account.findFirst({ where: { id: dto.debitAccountId, tenantId } })
+      ? await this.prisma.account.findFirst({
+          where: { id: dto.debitAccountId, tenantId, deletedAt: null },
+        })
       : defaultDebitAcct;
     const creditAcct = dto.creditAccountId
-      ? await this.prisma.account.findFirst({ where: { id: dto.creditAccountId, tenantId } })
+      ? await this.prisma.account.findFirst({
+          where: { id: dto.creditAccountId, tenantId, deletedAt: null },
+        })
       : defaultCreditAcct;
 
     if (!debitAcct || !creditAcct) {
@@ -580,26 +625,36 @@ export class ProductionOrdersService {
   // PRIVATE — Generators
   // ─────────────────────────────────────────────
 
+  // Numeric max — string orderBy breaks past -9999. Deliberately spans
+  // soft-deleted rows (spec-012 exception). The MO-<year> sequence is SHARED
+  // with production-plans.generateMos — both producers use this exact logic
+  // (spec-024 owns it per the spec-019 deferral); @@unique([tenantId, poNumber])
+  // backstops races via P2002 → 409.
   private async generatePoNumber(tenantId: string): Promise<string> {
     const prefix = `MO-${new Date().getFullYear()}`;
-    const last = await this.prisma.productionOrder.findFirst({
+    const rows = await this.prisma.productionOrder.findMany({
       where: { tenantId, poNumber: { startsWith: prefix } },
-      orderBy: { poNumber: 'desc' },
+      select: { poNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    return `${prefix}-${(parseInt(last.poNumber.split('-')[2]) + 1).toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.poNumber.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
     const now = new Date();
     const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const last = await this.prisma.journalEntry.findFirst({
+    const rows = await this.prisma.journalEntry.findMany({
       where: { tenantId, entryNumber: { startsWith: prefix } },
-      orderBy: { entryNumber: 'desc' },
+      select: { entryNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.entryNumber.split('-');
-    return `${prefix}-${(parseInt(parts[parts.length - 1]) + 1).toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.entryNumber.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   private toFiscalPeriod(date: Date): string {

@@ -29,6 +29,7 @@ import {
   DeliverFgDto,
   PostVarianceJeDto,
 } from './dto/production-actuals.dto';
+import { QueryProductionOrdersDto, QueryVariancesDto } from './dto/query-production-orders.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -58,8 +59,10 @@ export class ProductionOrdersController {
     required: false,
     description: 'draft | released | in_progress | completed | cancelled',
   })
-  async findAll(@Request() req, @Query('status') status?: string) {
-    return this.productionOrdersService.findAll(req.user.tenantId, status);
+  @ApiResponse({ status: 200, description: '{ productionOrders: [...], count: n }' })
+  @ApiResponse({ status: 400, description: 'status outside the whitelist' })
+  async findAll(@Request() req, @Query() query: QueryProductionOrdersDto) {
+    return this.productionOrdersService.findAll(req.user.tenantId, query.status);
   }
 
   @Get('variances')
@@ -71,15 +74,12 @@ export class ProductionOrdersController {
     required: false,
     description: 'merma | surplus | labor | material',
   })
-  @ApiResponse({ status: 200, description: 'Variance list' })
-  async getAllVariances(
-    @Request() req,
-    @Query('status') status?: string,
-    @Query('varianceType') varianceType?: string,
-  ) {
+  @ApiResponse({ status: 200, description: '{ variances: [...], count: n }' })
+  @ApiResponse({ status: 400, description: 'status/varianceType outside the whitelist' })
+  async getAllVariances(@Request() req, @Query() query: QueryVariancesDto) {
     return this.productionOrdersService.getAllVariances(req.user.tenantId, {
-      status,
-      varianceType,
+      status: query.status,
+      varianceType: query.varianceType,
     });
   }
 
@@ -110,6 +110,8 @@ export class ProductionOrdersController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get production order by ID with BOM' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
+  @ApiResponse({ status: 200, description: 'MO detail with BOM and components' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.productionOrdersService.findOne(req.user.tenantId, id);
   }
@@ -118,6 +120,9 @@ export class ProductionOrdersController {
   @RequirePermissions('INVENTORY:EDIT')
   @ApiOperation({ summary: 'Update production order (draft only)' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
+  @ApiResponse({ status: 200, description: 'MO updated' })
+  @ApiResponse({ status: 400, description: 'MO is not draft' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductionOrderDto) {
     return this.productionOrdersService.update(req.user.tenantId, req.user.id, id, dto);
   }
@@ -127,6 +132,9 @@ export class ProductionOrdersController {
   @ApiOperation({ summary: 'Update MO status: released | in_progress | completed | cancelled' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
   @ApiParam({ name: 'status', description: 'New status' })
+  @ApiResponse({ status: 200, description: 'Status updated; actual dates stamped' })
+  @ApiResponse({ status: 400, description: 'Status outside whitelist or invalid transition' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.productionOrdersService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
@@ -151,6 +159,8 @@ export class ProductionOrdersController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get labor actuals for a production order with efficiency summary' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
+  @ApiResponse({ status: 200, description: '{ actuals, summary } with efficiency' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async getLaborActuals(@Request() req, @Param('id') id: string) {
     return this.productionOrdersService.getLaborActuals(req.user.tenantId, id);
   }
@@ -180,6 +190,8 @@ export class ProductionOrdersController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get material actuals for a production order with variance summary' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
+  @ApiResponse({ status: 200, description: '{ actuals, summary } with variance cost' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async getMaterialActuals(@Request() req, @Param('id') id: string) {
     return this.productionOrdersService.getMaterialActuals(req.user.tenantId, id);
   }
@@ -224,6 +236,9 @@ export class ProductionOrdersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete production order (draft only)' })
   @ApiParam({ name: 'id', description: 'MO UUID' })
+  @ApiResponse({ status: 200, description: 'MO soft-deleted' })
+  @ApiResponse({ status: 400, description: 'MO is not draft' })
+  @ApiResponse({ status: 404, description: 'MO not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.productionOrdersService.remove(req.user.tenantId, req.user.id, id);
   }

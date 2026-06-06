@@ -1,14 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsNumber,
-  IsDateString,
-  Min,
-  IsArray,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsUUID, IsOptional, IsNumber, IsDateString, Min, Max } from 'class-validator';
 
 export class CreateLaborActualDto {
   @ApiPropertyOptional({ example: '2026-03-21' })
@@ -21,7 +12,7 @@ export class CreateLaborActualDto {
   @IsString()
   employeeId?: string;
 
-  @ApiPropertyOptional({ example: 'Juan Pérez' })
+  @ApiPropertyOptional({ example: 'Juan Perez' })
   @IsOptional()
   @IsString()
   employeeName?: string;
@@ -30,17 +21,20 @@ export class CreateLaborActualDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999) // Decimal(8,2) capacity − 1 order of magnitude
   hoursPlanned?: number;
 
   @ApiProperty({ example: 9.5, description: 'Actual hours worked' })
   @IsNumber()
   @Min(0.01)
+  @Max(99999) // Decimal(8,2) capacity − 1 order of magnitude
   hoursActual: number;
 
   @ApiPropertyOptional({ example: 15.0, description: 'Labor cost per hour' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999) // Decimal(10,4) capacity − 1 order of magnitude
   laborRate?: number;
 
   @ApiPropertyOptional({ example: 'Overtime due to machine downtime' })
@@ -51,23 +45,26 @@ export class CreateLaborActualDto {
 
 export class CreateMaterialActualDto {
   @ApiProperty({ example: 'uuid-item-id' })
-  @IsString()
+  @IsUUID()
   itemId: string;
 
   @ApiProperty({ example: 100, description: 'Planned quantity from BOM' })
   @IsNumber()
   @Min(0)
+  @Max(9999999999) // Decimal(15,4) capacity − 1 order of magnitude
   qtyPlanned: number;
 
   @ApiProperty({ example: 108, description: 'Actual quantity consumed' })
   @IsNumber()
   @Min(0)
+  @Max(9999999999) // Decimal(15,4) capacity − 1 order of magnitude
   qtyActual: number;
 
   @ApiPropertyOptional({ example: 2.5, description: 'Unit cost for variance calculation' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999) // Decimal(10,4) capacity − 1 order of magnitude
   unitCost?: number;
 
   @ApiPropertyOptional({ example: 'Extra usage due to defects' })
@@ -80,11 +77,12 @@ export class DeliverFgDto {
   @ApiProperty({ example: 950, description: 'Quantity of finished goods actually delivered' })
   @IsNumber()
   @Min(0.001)
+  @Max(99999999999) // Decimal(15,3) capacity − 1 order of magnitude
   quantityDelivered: number;
 
   @ApiPropertyOptional({ example: 'uuid-warehouse-id', description: 'Target FG warehouse' })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   warehouseId?: string;
 
   @ApiPropertyOptional({
@@ -94,6 +92,7 @@ export class DeliverFgDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999) // Decimal(10,4) capacity − 1 order of magnitude
   unitCost?: number;
 
   @ApiPropertyOptional({ example: 'Delivered to main warehouse' })
@@ -108,7 +107,7 @@ export class PostVarianceJeDto {
     description: 'Override debit account (merma expense)',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   debitAccountId?: string;
 
   @ApiPropertyOptional({
@@ -116,7 +115,7 @@ export class PostVarianceJeDto {
     description: 'Override credit account (FG inventory)',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   creditAccountId?: string;
 
   @ApiPropertyOptional({ example: 'Merma adjustment Q1 2026' })

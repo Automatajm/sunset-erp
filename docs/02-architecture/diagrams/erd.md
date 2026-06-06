@@ -583,6 +583,7 @@ erDiagram
     DateTime actual_start_date "❓"
     DateTime actual_end_date "❓"
     String status 
+    String priority "❓"
     String notes "❓"
     String plan_line_id "❓"
     DateTime created_at 

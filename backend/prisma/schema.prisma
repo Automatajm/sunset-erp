@@ -1034,6 +1034,8 @@ model ProductionOrder {
   actualStartDate   DateTime? @map("actual_start_date") @db.Date
   actualEndDate     DateTime? @map("actual_end_date") @db.Date
   status            String    @default("draft") @db.VarChar(20)
+  // spec-024 — low | medium | high | urgent (UI already renders it)
+  priority          String?   @db.VarChar(20)
   notes             String?   @db.Text
   // Sprint 16 — link to ProductionPlanLine (null = standalone MO)
   planLineId        String?   @map("plan_line_id") @db.Uuid

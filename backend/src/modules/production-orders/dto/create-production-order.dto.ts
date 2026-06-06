@@ -1,27 +1,25 @@
-﻿import {
+import {
   IsUUID,
   IsNumber,
   IsOptional,
   IsDateString,
+  IsIn,
   Min,
-  MaxLength,
+  Max,
   IsString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// spec-024: workCenterId removed — no column, no consumer, was validated then dropped.
 export class CreateProductionOrderDto {
   @ApiProperty({ description: 'BOM UUID' })
   @IsUUID()
   bomId: string;
 
-  @ApiPropertyOptional({ description: 'Work Center UUID' })
-  @IsOptional()
-  @IsUUID()
-  workCenterId?: string;
-
   @ApiProperty({ example: 100, description: 'Quantity to produce' })
   @IsNumber()
   @Min(0.001)
+  @Max(99999999999) // Decimal(15,3) capacity − 1 order of magnitude
   quantityOrdered: number;
 
   @ApiPropertyOptional({ example: '2026-04-01', description: 'Planned start date' })
@@ -34,10 +32,13 @@ export class CreateProductionOrderDto {
   @IsDateString()
   plannedEndDate?: string;
 
-  @ApiPropertyOptional({ example: 'high', description: 'Priority: low, medium, high, urgent' })
+  @ApiPropertyOptional({
+    example: 'high',
+    enum: ['low', 'medium', 'high', 'urgent'],
+    description: 'Priority',
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @IsIn(['low', 'medium', 'high', 'urgent'])
   priority?: string;
 
   @ApiPropertyOptional({ description: 'Notes' })

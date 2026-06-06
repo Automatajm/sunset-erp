@@ -7,6 +7,9 @@ import { ProductionOrderStatus, ProductionPriority } from './types';
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  // spec-024 envelopes
+  if (d?.productionOrders && Array.isArray(d.productionOrders)) return d.productionOrders;
+  if (d?.variances && Array.isArray(d.variances)) return d.variances;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }
@@ -36,7 +39,12 @@ export const productionOrdersApi = {
     quantityToProduce: number; plannedStartDate: string;
     plannedEndDate: string; priority: ProductionPriority; notes: string;
   }>) => {
-    const res = await apiClient.patch(`/production-orders/${id}`, data);
+    // Backend DTO field is quantityOrdered — quantityToProduce was rejected by
+    // forbidNonWhitelisted (spec-024 frontend-sync fix).
+    const { quantityToProduce, ...rest } = data;
+    const payload =
+      quantityToProduce !== undefined ? { ...rest, quantityOrdered: quantityToProduce } : rest;
+    const res = await apiClient.patch(`/production-orders/${id}`, payload);
     return res.data;
   },
   updateStatus: async (id: string, status: ProductionOrderStatus) => {
@@ -89,7 +97,8 @@ export const productionOrdersApi = {
   },
   getAllVariances: async (params?: { status?: string; varianceType?: string }) => {
     const res = await apiClient.get('/production-orders/variances', { params });
-    return res.data;
+    // spec-024 envelope { variances, count }; tolerate legacy bare array
+    return extractList(res.data);
   },
   postVarianceJe: async (varianceId: string, data?: {
     debitAccountId?: string; creditAccountId?: string; notes?: string;
