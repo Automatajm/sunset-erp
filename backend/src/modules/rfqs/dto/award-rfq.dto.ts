@@ -1,4 +1,4 @@
-import { IsUUID, IsOptional, IsNumber, IsArray, ValidateNested, Min } from 'class-validator';
+import { IsUUID, IsOptional, IsNumber, IsArray, ValidateNested, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -15,6 +15,7 @@ export class AwardLineDto {
   @IsOptional()
   @IsNumber()
   @Min(0.001)
+  @Max(999999999999) // Decimal(15,3) capacity
   awardedQty?: number;
 }
 
@@ -27,9 +28,4 @@ export class AwardRfqDto {
   @ValidateNested({ each: true })
   @Type(() => AwardLineDto)
   awards: AwardLineDto[];
-
-  @ApiPropertyOptional({ description: 'Warehouse ID for delivery (used in generated POs)' })
-  @IsOptional()
-  @IsUUID()
-  warehouseId?: string;
 }

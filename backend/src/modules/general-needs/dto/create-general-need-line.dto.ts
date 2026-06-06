@@ -4,7 +4,9 @@ import {
   IsUUID,
   IsNumber,
   IsDateString,
+  IsIn,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -24,6 +26,7 @@ export class CreateGeneralNeedLineDto {
   @ApiProperty({ example: 100, description: 'Quantity needed' })
   @IsNumber()
   @Min(0.001)
+  @Max(999999999999) // Decimal(15,3) capacity
   quantity: number;
 
   @ApiProperty({ example: 'KG', description: 'Unit of measure code' })
@@ -46,12 +49,12 @@ export class CreateGeneralNeedLineDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999999999) // Decimal(15,4) capacity
   estimatedUnitCost?: number;
 
   @ApiPropertyOptional({ description: 'Source type: mo | manual' })
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @IsIn(['mo', 'manual'])
   sourceType?: string;
 
   @ApiPropertyOptional({ description: 'Production Order ID if exploded from MO' })

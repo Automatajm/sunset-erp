@@ -4,10 +4,12 @@
 import apiClient from './client';
 
 export const purchaseOrdersApi = {
-  getAll: async (params?: { status?: string; supplierId?: string }) => {
+  getAll: async (params?: { status?: string }) => {
     const res = await apiClient.get('/purchase-orders', { params });
     const d = res.data;
-    return Array.isArray(d) ? d : (d?.value && Array.isArray(d.value)) ? d.value : [];
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d?.purchaseOrders)) return d.purchaseOrders; // spec-020 envelope { purchaseOrders, count }
+    return Array.isArray(d?.value) ? d.value : [];
   },
 
   getById: async (id: string) => {

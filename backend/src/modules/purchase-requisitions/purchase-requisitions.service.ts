@@ -1,26 +1,40 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { RfqsService } from '../rfqs/rfqs.service';
 import { CreatePurchaseRequisitionDto } from './dto/create-purchase-requisition.dto';
 import { UpdatePurchaseRequisitionDto } from './dto/update-purchase-requisition.dto';
 
 @Injectable()
 export class PurchaseRequisitionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private rfqs: RfqsService,
+  ) {}
 
   // ── Auto-generate PR number ────────────────────────────────────────────────
 
-  private async generatePrNumber(tenantId: string): Promise<string> {
+  // Public shared API (spec-020): GeneralNeedsService injects this for convert-to-pr.
+  // Numeric max over findMany; spans soft-deleted rows (spec-012).
+  async generatePrNumber(tenantId: string, tx?: Prisma.TransactionClient): Promise<string> {
+    const db = tx ?? this.prisma;
     const year = new Date().getFullYear();
     const prefix = `PR-${year}`;
-    const last = await this.prisma.purchaseRequisition.findFirst({
+    const existing = await db.purchaseRequisition.findMany({
       where: { tenantId, prNumber: { startsWith: prefix } },
-      orderBy: { prNumber: 'desc' },
+      select: { prNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.prNumber.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
+    const max = existing.reduce((m, r) => {
+      const parts = r.prNumber.split('-');
+      const n = parseInt(parts[parts.length - 1], 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   // ── Create ─────────────────────────────────────────────────────────────────
@@ -44,43 +58,53 @@ export class PurchaseRequisitionsService {
 
     const prNumber = await this.generatePrNumber(tenantId);
 
-    return this.prisma.purchaseRequisition.create({
-      data: {
-        tenantId,
-        prNumber,
-        title: dto.title,
-        requestedBy: userId,
-        departmentId: dto.departmentId,
-        priority: dto.priority ?? 'normal',
-        requiredDate: new Date(dto.requiredDate),
-        justification: dto.justification,
-        source: dto.source ?? 'manual',
-        estimatedAmount: dto.estimatedAmount,
-        status: 'draft',
-        notes: dto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: {
-          create: dto.lines.map((line, index) => ({
-            tenantId,
-            lineNumber: index + 1,
-            itemId: line.itemId,
-            itemStatus: line.itemId ? 'catalog' : (line.itemStatus ?? 'pending_item'),
-            genericDescription: line.genericDescription,
-            genericSpec: line.genericSpec,
-            quantity: line.quantity,
-            uom: line.uom,
-            unitEstimate: line.unitEstimate,
-            requiredDate: new Date(line.requiredDate),
-            warehouseId: line.warehouseId,
-            notes: line.notes,
-            createdBy: userId,
-            updatedBy: userId,
-          })),
+    try {
+      return await this.prisma.purchaseRequisition.create({
+        data: {
+          tenantId,
+          prNumber,
+          title: dto.title,
+          requestedBy: userId,
+          departmentId: dto.departmentId,
+          priority: dto.priority ?? 'normal',
+          requiredDate: new Date(dto.requiredDate),
+          justification: dto.justification,
+          source: dto.source ?? 'manual',
+          estimatedAmount: dto.estimatedAmount,
+          status: 'draft',
+          notes: dto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: {
+            create: dto.lines.map((line, index) => ({
+              tenantId,
+              lineNumber: index + 1,
+              itemId: line.itemId,
+              itemStatus: line.itemId ? 'catalog' : (line.itemStatus ?? 'pending_item'),
+              genericDescription: line.genericDescription,
+              genericSpec: line.genericSpec,
+              quantity: line.quantity,
+              uom: line.uom,
+              unitEstimate: line.unitEstimate,
+              requiredDate: new Date(line.requiredDate),
+              warehouseId: line.warehouseId,
+              notes: line.notes,
+              createdBy: userId,
+              updatedBy: userId,
+            })),
+          },
         },
-      },
-      include: this.prInclude(),
-    });
+        include: this.prInclude(),
+      });
+    } catch (e) {
+      // @@unique([tenantId, prNumber]) can race on concurrent creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `PR number ${prNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   // ── Find All ───────────────────────────────────────────────────────────────
@@ -90,13 +114,15 @@ export class PurchaseRequisitionsService {
     if (status) where.status = status;
     if (priority) where.priority = priority;
 
-    return this.prisma.purchaseRequisition.findMany({
+    const purchaseRequisitions = await this.prisma.purchaseRequisition.findMany({
       where,
       include: {
         _count: { select: { lines: true, rfqs: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return { purchaseRequisitions, count: purchaseRequisitions.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -118,15 +144,16 @@ export class PurchaseRequisitionsService {
       throw new BadRequestException('Can only update draft or submitted PRs');
     }
 
-    return this.prisma.purchaseRequisition.update({
-      where: { id },
+    await this.prisma.purchaseRequisition.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...dto,
         requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : undefined,
         updatedBy: userId,
       },
-      include: this.prInclude(),
     });
+
+    return this.findOne(tenantId, id);
   }
 
   // ── Status transitions ─────────────────────────────────────────────────────
@@ -168,12 +195,15 @@ export class PurchaseRequisitionsService {
       data.rejectionReason = reason;
     }
 
-    const updated = await this.prisma.purchaseRequisition.update({
-      where: { id },
+    await this.prisma.purchaseRequisition.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data,
     });
 
-    return { message: `PR ${pr.prNumber} → ${status}`, purchaseRequisition: updated };
+    return {
+      message: `PR ${pr.prNumber} → ${status}`,
+      purchaseRequisition: await this.findOne(tenantId, id),
+    };
   }
 
   // ── Convert to RFQ ─────────────────────────────────────────────────────────
@@ -216,62 +246,70 @@ export class PurchaseRequisitionsService {
       if (!supplier) throw new NotFoundException(`Supplier ${supplierId} not found`);
     }
 
-    // Generate RFQ number
-    const year = new Date().getFullYear();
-    const rfqPrefix = `RFQ-${year}`;
-    const lastRfq = await this.prisma.rfq.findFirst({
-      where: { tenantId, rfqNumber: { startsWith: rfqPrefix } },
-      orderBy: { rfqNumber: 'desc' },
-    });
-    const rfqNext = lastRfq
-      ? (parseInt(lastRfq.rfqNumber.split('-')[2], 10) + 1).toString().padStart(4, '0')
-      : '0001';
-    const rfqNumber = `${rfqPrefix}-${rfqNext}`;
+    // Atomic: RFQ + supplier invites + lines + PR status commit together.
+    // The RFQ number comes from the owning module's shared tx-aware generator.
+    let rfq: any;
+    let rfqNumber = '';
+    try {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        rfqNumber = await this.rfqs.generateRfqNumber(tenantId, tx);
 
-    const rfq = await this.prisma.rfq.create({
-      data: {
-        tenantId,
-        rfqNumber,
-        title: rfqTitle,
-        currency,
-        responseDeadline: responseDeadline ? new Date(responseDeadline) : null,
-        prId,
-        status: 'draft',
-        createdBy: userId,
-        updatedBy: userId,
-        rfqSuppliers: {
-          create: supplierIds.map((supplierId) => ({
+        rfq = await tx.rfq.create({
+          data: {
             tenantId,
-            supplierId,
-            status: 'invited',
+            rfqNumber,
+            title: rfqTitle,
+            currency,
+            responseDeadline: responseDeadline ? new Date(responseDeadline) : null,
+            prId,
+            status: 'draft',
             createdBy: userId,
             updatedBy: userId,
-          })),
-        },
-        lines: {
-          create: lines.map((l, idx) => ({
-            tenantId,
-            lineNumber: idx + 1,
-            itemId: l.itemId,
-            genericDescription: l.genericDescription,
-            quantity: Number(l.quantity),
-            uom: l.uom,
-            requiredDate: l.requiredDate,
-            prLineId: l.id,
-            status: 'open',
-            createdBy: userId,
-            updatedBy: userId,
-          })),
-        },
-      },
-      include: { lines: true, rfqSuppliers: true },
-    });
+            rfqSuppliers: {
+              create: supplierIds.map((supplierId) => ({
+                tenantId,
+                supplierId,
+                status: 'invited',
+                createdBy: userId,
+                updatedBy: userId,
+              })),
+            },
+            lines: {
+              create: lines.map((l, idx) => ({
+                tenantId,
+                lineNumber: idx + 1,
+                itemId: l.itemId,
+                genericDescription: l.genericDescription,
+                quantity: Number(l.quantity),
+                uom: l.uom,
+                requiredDate: l.requiredDate,
+                prLineId: l.id,
+                status: 'open',
+                createdBy: userId,
+                updatedBy: userId,
+              })),
+            },
+          },
+          include: { lines: true, rfqSuppliers: true },
+        });
 
-    // Update PR status to in_progress
-    await this.prisma.purchaseRequisition.update({
-      where: { id: prId },
-      data: { status: 'in_progress', updatedBy: userId },
-    });
+        // PR moves to in_progress along the existing approved → in_progress map
+        // edge (no second status authority); already-in_progress PRs stay put.
+        if (pr.status === 'approved') {
+          await tx.purchaseRequisition.updateMany({
+            where: { id: prId, tenantId, deletedAt: null },
+            data: { status: 'in_progress', updatedBy: userId },
+          });
+        }
+      });
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          'An RFQ number was just taken by a concurrent request. Please retry.',
+        );
+      }
+      throw e;
+    }
 
     return {
       message: `RFQ ${rfqNumber} created from PR ${pr.prNumber}`,
@@ -287,8 +325,8 @@ export class PurchaseRequisitionsService {
       throw new BadRequestException('Can only delete draft PRs');
     }
 
-    await this.prisma.purchaseRequisition.update({
-      where: { id },
+    await this.prisma.purchaseRequisition.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
 

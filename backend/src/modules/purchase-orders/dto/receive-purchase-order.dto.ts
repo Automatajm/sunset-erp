@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  Max,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -20,12 +21,14 @@ export class ReceiveLineDto {
   @ApiProperty({ description: 'Quantity received in this delivery' })
   @IsNumber()
   @Min(0)
+  @Max(999999999999) // Decimal(15,3) capacity
   receivedQuantity: number;
 
   @ApiPropertyOptional({ description: 'Unit cost override (if different from PO price)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999999999) // Decimal(15,4) capacity
   unitCost?: number;
 
   @ApiPropertyOptional()

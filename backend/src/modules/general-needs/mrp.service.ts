@@ -70,7 +70,10 @@ export class MrpService {
       );
     }
 
-    // 2. Load Production Orders with BOM components
+    // 2. Load Production Orders with BOM components.
+    // NOTE: this whitelist (draft|released|in_progress) intentionally diverges from
+    // the legacy explodeFromMos path (draft|confirmed) — unifying the semantics is
+    // out of scope for spec-020; runMrp is the canonical MRP entry point.
     const mos = await this.prisma.productionOrder.findMany({
       where: {
         id: { in: moIds },
@@ -97,7 +100,7 @@ export class MrpService {
       }
 
       const components = await this.prisma.bomComponent.findMany({
-        where: { bomId: mo.bomId, deletedAt: null },
+        where: { bomId: mo.bomId, tenantId, deletedAt: null },
         include: {
           consumptionGroup: {
             select: {
@@ -222,74 +225,79 @@ export class MrpService {
     });
     let nextLineNum = (lastLine?.lineNumber ?? 0) + 1;
 
-    // 7. Create GeneralNeedLines — one per ConsumptionGroup
-    const createdLines: any[] = [];
+    // 7+8. Create GeneralNeedLines (one per ConsumptionGroup) and flip the GN
+    // source — atomically, so a failed run never leaves a half-exploded GN.
+    const createdLines = await this.prisma.$transaction(async (tx) => {
+      const lines: any[] = [];
 
-    for (const [, demand] of demandMap) {
-      // Find preferred supplier for any item in this group
-      const preferredItem = await this.prisma.item.findFirst({
-        where: {
-          tenantId,
-          consumptionGroupId: demand.consumptionGroupId,
-          deletedAt: null,
-          isPurchasable: true,
-        },
-        include: {
-          supplierItems: {
-            where: { isPreferred: true, deletedAt: null },
-            include: { supplier: { select: { id: true, code: true, name: true } } },
-            take: 1,
+      for (const [, demand] of demandMap) {
+        // Find preferred supplier for any item in this group
+        const preferredItem = await tx.item.findFirst({
+          where: {
+            tenantId,
+            consumptionGroupId: demand.consumptionGroupId,
+            deletedAt: null,
+            isPurchasable: true,
           },
-        },
+          include: {
+            supplierItems: {
+              where: { isPreferred: true, deletedAt: null },
+              include: { supplier: { select: { id: true, code: true, name: true } } },
+              take: 1,
+            },
+          },
+        });
+
+        const preferredSupplierId = preferredItem?.supplierItems?.[0]?.supplierId ?? null;
+        const estimatedUnitCost = preferredItem?.supplierItems?.[0]?.lastPrice
+          ? Number(preferredItem.supplierItems[0].lastPrice)
+          : null;
+
+        // Earliest required date from MO planned starts
+        const requiredDate =
+          demand.sources
+            .map((s) => s.plannedStart)
+            .filter((d): d is Date => d !== null)
+            .sort((a, b) => a.getTime() - b.getTime())[0] ?? new Date(gn.periodEnd);
+
+        // Build notes with source breakdown
+        const notesLines = demand.sources.map(
+          (s) =>
+            `MO ${s.moNumber}: ${s.qtyFormulador} ${s.uomFormulador}` +
+            (s.conversionFactor !== 1
+              ? ` × ${s.conversionFactor} = ${s.qtyConverted} ${demand.consumptionUomCode}`
+              : ''),
+        );
+
+        const line = await tx.generalNeedLine.create({
+          data: {
+            tenantId,
+            gnId,
+            lineNumber: nextLineNum++,
+            consumptionGroupId: demand.consumptionGroupId,
+            quantity: new Decimal(demand.totalQty),
+            uom: demand.consumptionUomCode,
+            requiredDate,
+            suggestedSupplierId: preferredSupplierId,
+            estimatedUnitCost: estimatedUnitCost ? new Decimal(estimatedUnitCost) : null,
+            sourceType: 'mo',
+            status: 'pending',
+            notes: `MRP Explode — ${demand.consumptionGroupCode}\n${notesLines.join('\n')}`,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+
+        lines.push(line);
+      }
+
+      // 8. Update GN source to mrp_explode
+      await tx.generalNeed.updateMany({
+        where: { id: gnId, tenantId, deletedAt: null },
+        data: { source: 'mrp_explode', status: 'in_progress', updatedBy: userId },
       });
 
-      const preferredSupplierId = preferredItem?.supplierItems?.[0]?.supplierId ?? null;
-      const estimatedUnitCost = preferredItem?.supplierItems?.[0]?.lastPrice
-        ? Number(preferredItem.supplierItems[0].lastPrice)
-        : null;
-
-      // Earliest required date from MO planned starts
-      const requiredDate =
-        demand.sources
-          .map((s) => s.plannedStart)
-          .filter((d): d is Date => d !== null)
-          .sort((a, b) => a.getTime() - b.getTime())[0] ?? new Date(gn.periodEnd);
-
-      // Build notes with source breakdown
-      const notesLines = demand.sources.map(
-        (s) =>
-          `MO ${s.moNumber}: ${s.qtyFormulador} ${s.uomFormulador}` +
-          (s.conversionFactor !== 1
-            ? ` × ${s.conversionFactor} = ${s.qtyConverted} ${demand.consumptionUomCode}`
-            : ''),
-      );
-
-      const line = await this.prisma.generalNeedLine.create({
-        data: {
-          tenantId,
-          gnId,
-          lineNumber: nextLineNum++,
-          consumptionGroupId: demand.consumptionGroupId,
-          quantity: new Decimal(demand.totalQty),
-          uom: demand.consumptionUomCode,
-          requiredDate,
-          suggestedSupplierId: preferredSupplierId,
-          estimatedUnitCost: estimatedUnitCost ? new Decimal(estimatedUnitCost) : null,
-          sourceType: 'mo',
-          status: 'pending',
-          notes: `MRP Explode — ${demand.consumptionGroupCode}\n${notesLines.join('\n')}`,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-
-      createdLines.push(line);
-    }
-
-    // 8. Update GN source to mrp_explode
-    await this.prisma.generalNeed.update({
-      where: { id: gnId },
-      data: { source: 'mrp_explode', status: 'in_progress', updatedBy: userId },
+      return lines;
     });
 
     return {

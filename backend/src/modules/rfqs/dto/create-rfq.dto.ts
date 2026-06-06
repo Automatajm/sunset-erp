@@ -6,7 +6,6 @@ import {
   IsArray,
   ValidateNested,
   MaxLength,
-  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -46,7 +45,7 @@ export class CreateRfqDto {
 
   @ApiProperty({ description: 'Supplier IDs to invite (1-N)', type: [String] })
   @IsArray()
-  @IsUUID('all', { each: true })
+  @IsUUID('4', { each: true })
   supplierIds: string[];
 
   @ApiProperty({ type: [CreateRfqLineDto] })

@@ -7,7 +7,9 @@ export const rfqsApi = {
   getAll: async (params?: { status?: string }) => {
     const res = await apiClient.get('/rfqs', { params });
     const d = res.data;
-    return Array.isArray(d) ? d : (d?.value && Array.isArray(d.value)) ? d.value : [];
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d?.rfqs)) return d.rfqs; // spec-020 envelope { rfqs, count }
+    return Array.isArray(d?.value) ? d.value : [];
   },
 
   getById: async (id: string) => {

@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsDateString,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -24,6 +25,7 @@ export class CreateRfqLineDto {
   @ApiProperty({ example: 100 })
   @IsNumber()
   @Min(0.001)
+  @Max(999999999999) // Decimal(15,3) capacity
   quantity: number;
 
   @ApiProperty({ example: 'KG' })

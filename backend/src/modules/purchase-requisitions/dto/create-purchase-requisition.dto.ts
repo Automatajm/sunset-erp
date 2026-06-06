@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsNumber,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -51,6 +52,7 @@ export class CreatePurchaseRequisitionDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(9999999999999) // Decimal(15,2) capacity
   estimatedAmount?: number;
 
   @ApiPropertyOptional()

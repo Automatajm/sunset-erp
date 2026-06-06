@@ -1,4 +1,12 @@
-﻿import { IsString, IsUUID, IsOptional, IsArray, ValidateNested, MaxLength } from 'class-validator';
+﻿import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsArray,
+  IsDateString,
+  ValidateNested,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreatePurchaseOrderLineDto } from './create-purchase-order-line.dto';
@@ -10,7 +18,7 @@ export class CreatePurchaseOrderDto {
 
   @ApiPropertyOptional({ example: '2026-04-01', description: 'Expected delivery date' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   expectedDate?: string;
 
   @ApiPropertyOptional({ example: '123 Main St', description: 'Delivery address' })

@@ -12,20 +12,16 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { GeneralNeedsService } from './general-needs.service';
 import { MrpService } from './mrp.service';
 import { CreateGeneralNeedDto } from './dto/create-general-need.dto';
 import { UpdateGeneralNeedDto } from './dto/update-general-need.dto';
 import { UpdateGeneralNeedLineDto } from './dto/update-general-need-line.dto';
 import { RunMrpDto } from './dto/run-mrp.dto';
+import { QueryGeneralNeedsDto } from './dto/query-general-needs.dto';
+import { ConvertToPrDto } from './dto/convert-to-pr.dto';
+import { ExplodeMosDto } from './dto/explode-mos.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -51,19 +47,17 @@ export class GeneralNeedsController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all General Needs' })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    description: 'draft | in_progress | completed | cancelled',
-  })
-  async findAll(@Request() req, @Query('status') status?: string) {
-    return this.generalNeedsService.findAll(req.user.tenantId, status);
+  @ApiResponse({ status: 200, description: 'Envelope { generalNeeds, count }' })
+  async findAll(@Request() req, @Query() query: QueryGeneralNeedsDto) {
+    return this.generalNeedsService.findAll(req.user.tenantId, query.status);
   }
 
   @Get(':id')
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get General Need by ID with lines' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
+  @ApiResponse({ status: 200, description: 'GN with lines' })
+  @ApiResponse({ status: 404, description: 'GN not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.generalNeedsService.findOne(req.user.tenantId, id);
   }
@@ -72,6 +66,9 @@ export class GeneralNeedsController {
   @RequirePermissions('PROCUREMENT:EDIT')
   @ApiOperation({ summary: 'Update General Need header (draft or in_progress only)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
+  @ApiResponse({ status: 200, description: 'GN updated' })
+  @ApiResponse({ status: 400, description: 'GN is not editable in its current status' })
+  @ApiResponse({ status: 404, description: 'GN not found' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateGeneralNeedDto) {
     return this.generalNeedsService.update(req.user.tenantId, req.user.id, id, dto);
   }
@@ -81,6 +78,9 @@ export class GeneralNeedsController {
   @ApiOperation({ summary: 'Transition General Need status' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
   @ApiParam({ name: 'status', description: 'in_progress | completed | cancelled' })
+  @ApiResponse({ status: 200, description: 'Status transitioned' })
+  @ApiResponse({ status: 400, description: 'Illegal status transition' })
+  @ApiResponse({ status: 404, description: 'GN not found' })
   async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.generalNeedsService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
@@ -90,6 +90,8 @@ export class GeneralNeedsController {
   @ApiOperation({ summary: 'Update a single GN line' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
   @ApiParam({ name: 'lineId', description: 'GN Line UUID' })
+  @ApiResponse({ status: 200, description: 'Line updated' })
+  @ApiResponse({ status: 404, description: 'GN or line not found' })
   async updateLine(
     @Request() req,
     @Param('id') id: string,
@@ -104,11 +106,9 @@ export class GeneralNeedsController {
   @ApiOperation({ summary: 'Convert selected GN lines into a Purchase Requisition' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
   @ApiResponse({ status: 201, description: 'PR created from GN lines' })
-  async convertToPr(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() body: { lineIds: string[]; prTitle: string; priority?: string },
-  ) {
+  @ApiResponse({ status: 400, description: 'GN not convertible or no lines match' })
+  @ApiResponse({ status: 404, description: 'GN not found' })
+  async convertToPr(@Request() req, @Param('id') id: string, @Body() body: ConvertToPrDto) {
     return this.generalNeedsService.convertToPr(
       req.user.tenantId,
       req.user.id,
@@ -123,7 +123,9 @@ export class GeneralNeedsController {
   @RequirePermissions('PROCUREMENT:CREATE')
   @ApiOperation({ summary: 'Explode BOM from selected MOs into GN lines (legacy)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
-  async explodeFromMos(@Request() req, @Param('id') id: string, @Body() body: { moIds: string[] }) {
+  @ApiResponse({ status: 201, description: 'GN lines created from MO BOMs' })
+  @ApiResponse({ status: 404, description: 'GN not found or no open MOs' })
+  async explodeFromMos(@Request() req, @Param('id') id: string, @Body() body: ExplodeMosDto) {
     return this.generalNeedsService.explodeFromMos(req.user.tenantId, req.user.id, id, body.moIds);
   }
 
@@ -160,6 +162,9 @@ Requirements:
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete General Need (draft only, soft delete)' })
   @ApiParam({ name: 'id', description: 'GN UUID' })
+  @ApiResponse({ status: 200, description: 'GN soft-deleted' })
+  @ApiResponse({ status: 400, description: 'Only draft GNs can be deleted' })
+  @ApiResponse({ status: 404, description: 'GN not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.generalNeedsService.remove(req.user.tenantId, req.user.id, id);
   }

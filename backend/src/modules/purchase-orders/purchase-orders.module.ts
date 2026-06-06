@@ -2,9 +2,10 @@
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PrismaModule } from '../../database/prisma.module';
+import { StockTransactionsModule } from '../stock-transactions/stock-transactions.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, StockTransactionsModule],
   controllers: [PurchaseOrdersController],
   providers: [PurchaseOrdersService],
   exports: [PurchaseOrdersService],

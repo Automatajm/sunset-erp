@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsDateString,
   Min,
+  Max,
   MaxLength,
   IsArray,
   ValidateNested,
@@ -20,6 +21,7 @@ export class RfqResponseLineDto {
   @ApiProperty({ example: 100 })
   @IsNumber()
   @Min(0.001)
+  @Max(999999999999) // Decimal(15,3) capacity
   offeredQty: number;
 
   @ApiProperty({ example: 'KG' })
@@ -30,6 +32,7 @@ export class RfqResponseLineDto {
   @ApiProperty({ example: 12.5, description: 'Unit price offered' })
   @IsNumber()
   @Min(0)
+  @Max(99999999999) // Decimal(15,4) capacity
   unitPrice: number;
 
   @ApiProperty({ example: 7, description: 'Lead time in days' })
@@ -46,12 +49,14 @@ export class RfqResponseLineDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(99999999999) // Decimal(15,4) capacity
   packSize?: number;
 
   @ApiPropertyOptional({ example: 10, description: 'Minimum order quantity' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(999999999999) // Decimal(15,3) capacity
   moq?: number;
 
   @ApiPropertyOptional()

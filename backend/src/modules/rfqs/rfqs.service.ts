@@ -1,42 +1,61 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
 import { UpdateRfqDto } from './dto/update-rfq.dto';
 import { SubmitRfqResponseDto } from './dto/submit-rfq-response.dto';
 import { AwardRfqDto } from './dto/award-rfq.dto';
 
+// RFQ lifecycle state machine (spec-020) — the single status authority.
+// send/submitResponse/award/cancel all move along these edges only.
+const RFQ_TRANSITIONS: Record<string, string[]> = {
+  draft: ['sent', 'cancelled'],
+  sent: ['partial_response', 'fully_responded', 'cancelled'],
+  partial_response: ['partial_response', 'fully_responded', 'awarded', 'cancelled'],
+  fully_responded: ['awarded', 'cancelled'],
+  // awarded / cancelled are terminal
+};
+
 @Injectable()
 export class RfqsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private purchaseOrders: PurchaseOrdersService,
+  ) {}
+
+  private assertTransition(current: string, target: string) {
+    const allowed = RFQ_TRANSITIONS[current] ?? [];
+    if (!allowed.includes(target)) {
+      throw new BadRequestException(
+        `Cannot transition RFQ from '${current}' to '${target}'. Allowed: ${allowed.join(', ') || 'none'}`,
+      );
+    }
+  }
 
   // ── Auto-generate RFQ number ───────────────────────────────────────────────
 
-  private async generateRfqNumber(tenantId: string): Promise<string> {
+  // Public shared API (spec-020): PurchaseRequisitionsService injects this for
+  // convert-to-rfq. Numeric max over findMany; spans soft-deleted rows (spec-012).
+  async generateRfqNumber(tenantId: string, tx?: Prisma.TransactionClient): Promise<string> {
+    const db = tx ?? this.prisma;
     const year = new Date().getFullYear();
     const prefix = `RFQ-${year}`;
-    const last = await this.prisma.rfq.findFirst({
+    const existing = await db.rfq.findMany({
       where: { tenantId, rfqNumber: { startsWith: prefix } },
-      orderBy: { rfqNumber: 'desc' },
+      select: { rfqNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.rfqNumber.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
-  }
-
-  private async generatePoNumber(tenantId: string): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `PO-${year}`;
-    const last = await this.prisma.purchaseOrder.findFirst({
-      where: { tenantId, poNumber: { startsWith: prefix } },
-      orderBy: { poNumber: 'desc' },
-    });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.poNumber.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-    return `${prefix}-${nextNum.toString().padStart(4, '0')}`;
+    const max = existing.reduce((m, r) => {
+      const parts = r.rfqNumber.split('-');
+      const n = parseInt(parts[parts.length - 1], 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   // ── Create ─────────────────────────────────────────────────────────────────
@@ -62,50 +81,60 @@ export class RfqsService {
 
     const rfqNumber = await this.generateRfqNumber(tenantId);
 
-    return this.prisma.rfq.create({
-      data: {
-        tenantId,
-        rfqNumber,
-        title: dto.title,
-        currency: dto.currency ?? 'USD',
-        responseDeadline: dto.responseDeadline ? new Date(dto.responseDeadline) : null,
-        prId: dto.prId,
-        gnId: dto.gnId,
-        status: 'draft',
-        notes: dto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-        // Create supplier invitations
-        rfqSuppliers: {
-          create: dto.supplierIds.map((supplierId) => ({
-            tenantId,
-            supplierId,
-            status: 'invited',
-            createdBy: userId,
-            updatedBy: userId,
-          })),
+    try {
+      return await this.prisma.rfq.create({
+        data: {
+          tenantId,
+          rfqNumber,
+          title: dto.title,
+          currency: dto.currency ?? 'USD',
+          responseDeadline: dto.responseDeadline ? new Date(dto.responseDeadline) : null,
+          prId: dto.prId,
+          gnId: dto.gnId,
+          status: 'draft',
+          notes: dto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+          // Create supplier invitations
+          rfqSuppliers: {
+            create: dto.supplierIds.map((supplierId) => ({
+              tenantId,
+              supplierId,
+              status: 'invited',
+              createdBy: userId,
+              updatedBy: userId,
+            })),
+          },
+          // Create lines
+          lines: {
+            create: dto.lines.map((line, index) => ({
+              tenantId,
+              lineNumber: index + 1,
+              itemId: line.itemId,
+              genericDescription: line.genericDescription,
+              quantity: line.quantity,
+              uom: line.uom,
+              requiredDate: new Date(line.requiredDate),
+              prLineId: line.prLineId,
+              gnLineId: line.gnLineId,
+              status: 'open',
+              notes: line.notes,
+              createdBy: userId,
+              updatedBy: userId,
+            })),
+          },
         },
-        // Create lines
-        lines: {
-          create: dto.lines.map((line, index) => ({
-            tenantId,
-            lineNumber: index + 1,
-            itemId: line.itemId,
-            genericDescription: line.genericDescription,
-            quantity: line.quantity,
-            uom: line.uom,
-            requiredDate: new Date(line.requiredDate),
-            prLineId: line.prLineId,
-            gnLineId: line.gnLineId,
-            status: 'open',
-            notes: line.notes,
-            createdBy: userId,
-            updatedBy: userId,
-          })),
-        },
-      },
-      include: this.rfqInclude(),
-    });
+        include: this.rfqInclude(),
+      });
+    } catch (e) {
+      // @@unique([tenantId, rfqNumber]) can race on concurrent creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `RFQ number ${rfqNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   // ── Find All ───────────────────────────────────────────────────────────────
@@ -114,7 +143,7 @@ export class RfqsService {
     const where: any = { tenantId, deletedAt: null };
     if (status) where.status = status;
 
-    return this.prisma.rfq.findMany({
+    const rfqs = await this.prisma.rfq.findMany({
       where,
       include: {
         _count: { select: { lines: true, rfqSuppliers: true } },
@@ -128,6 +157,8 @@ export class RfqsService {
       },
       orderBy: { issueDate: 'desc' },
     });
+
+    return { rfqs, count: rfqs.length };
   }
 
   // ── Find One ───────────────────────────────────────────────────────────────
@@ -149,24 +180,23 @@ export class RfqsService {
       throw new BadRequestException('Can only update draft or sent RFQs');
     }
 
-    return this.prisma.rfq.update({
-      where: { id },
+    await this.prisma.rfq.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...dto,
         responseDeadline: dto.responseDeadline ? new Date(dto.responseDeadline) : undefined,
         updatedBy: userId,
       },
-      include: this.rfqInclude(),
     });
+
+    return this.findOne(tenantId, id);
   }
 
   // ── Send RFQ to suppliers ──────────────────────────────────────────────────
 
   async send(tenantId: string, userId: string, id: string) {
     const rfq = await this.findOne(tenantId, id);
-    if (rfq.status !== 'draft') {
-      throw new BadRequestException('Only draft RFQs can be sent');
-    }
+    this.assertTransition(rfq.status, 'sent');
     if ((rfq as any).rfqSuppliers.length === 0) {
       throw new BadRequestException('RFQ must have at least one supplier invited');
     }
@@ -176,19 +206,18 @@ export class RfqsService {
 
     // Mark all invited suppliers as sent
     await this.prisma.rfqSupplier.updateMany({
-      where: { rfqId: id, status: 'invited' },
+      where: { rfqId: id, tenantId, status: 'invited' },
       data: { status: 'sent', sentAt: new Date(), updatedBy: userId },
     });
 
-    const updated = await this.prisma.rfq.update({
-      where: { id },
+    await this.prisma.rfq.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'sent', updatedBy: userId },
-      include: this.rfqInclude(),
     });
 
     return {
       message: `RFQ ${rfq.rfqNumber} sent to ${(rfq as any).rfqSuppliers.length} suppliers`,
-      rfq: updated,
+      rfq: await this.findOne(tenantId, id),
     };
   }
 
@@ -196,14 +225,24 @@ export class RfqsService {
 
   async submitResponse(tenantId: string, userId: string, rfqId: string, dto: SubmitRfqResponseDto) {
     const rfq = await this.findOne(tenantId, rfqId);
-    if (rfq.status !== 'sent') {
-      throw new BadRequestException('Responses can only be submitted for sent RFQs');
+    // Responses are valid while sent OR partial_response — the old sent-only
+    // guard locked out every remaining supplier after the first response.
+    if (!['sent', 'partial_response'].includes(rfq.status)) {
+      throw new BadRequestException(
+        'Responses can only be submitted while the RFQ is sent or partially responded',
+      );
     }
 
     const rfqSupplier = await this.prisma.rfqSupplier.findFirst({
       where: { id: dto.rfqSupplierId, rfqId, tenantId },
     });
     if (!rfqSupplier) throw new NotFoundException(`RFQ Supplier ${dto.rfqSupplierId} not found`);
+    // Re-submission is fine (responded), but awarded/declined suppliers are done.
+    if (!['invited', 'sent', 'responded'].includes(rfqSupplier.status)) {
+      throw new BadRequestException(
+        `Supplier in status '${rfqSupplier.status}' can no longer submit a response`,
+      );
+    }
 
     // Validate all rfqLineIds exist on this RFQ
     for (const responseLine of dto.lines) {
@@ -213,221 +252,257 @@ export class RfqsService {
       if (!rfqLine) throw new NotFoundException(`RFQ Line ${responseLine.rfqLineId} not found`);
     }
 
-    // Upsert response lines (allow re-submission)
-    const responseLines = await Promise.all(
-      dto.lines.map((line) =>
-        this.prisma.rfqResponseLine.upsert({
-          where: {
-            rfqSupplierId_rfqLineId: {
+    let linesRecorded = 0;
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Upsert response lines (allow re-submission)
+      const responseLines = await Promise.all(
+        dto.lines.map((line) =>
+          tx.rfqResponseLine.upsert({
+            where: {
+              rfqSupplierId_rfqLineId: {
+                rfqSupplierId: dto.rfqSupplierId,
+                rfqLineId: line.rfqLineId,
+              },
+            },
+            create: {
+              tenantId,
               rfqSupplierId: dto.rfqSupplierId,
               rfqLineId: line.rfqLineId,
+              offeredQty: line.offeredQty,
+              uom: line.uom,
+              unitPrice: line.unitPrice,
+              leadTimeDays: line.leadTimeDays,
+              validUntil: line.validUntil ? new Date(line.validUntil) : null,
+              packSize: line.packSize,
+              moq: line.moq,
+              notes: line.notes,
+              createdBy: userId,
+              updatedBy: userId,
             },
-          },
-          create: {
-            tenantId,
-            rfqSupplierId: dto.rfqSupplierId,
-            rfqLineId: line.rfqLineId,
-            offeredQty: line.offeredQty,
-            uom: line.uom,
-            unitPrice: line.unitPrice,
-            leadTimeDays: line.leadTimeDays,
-            validUntil: line.validUntil ? new Date(line.validUntil) : null,
-            packSize: line.packSize,
-            moq: line.moq,
-            notes: line.notes,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-          update: {
-            offeredQty: line.offeredQty,
-            uom: line.uom,
-            unitPrice: line.unitPrice,
-            leadTimeDays: line.leadTimeDays,
-            validUntil: line.validUntil ? new Date(line.validUntil) : null,
-            packSize: line.packSize,
-            moq: line.moq,
-            notes: line.notes,
-            updatedBy: userId,
-          },
-        }),
-      ),
-    );
+            update: {
+              offeredQty: line.offeredQty,
+              uom: line.uom,
+              unitPrice: line.unitPrice,
+              leadTimeDays: line.leadTimeDays,
+              validUntil: line.validUntil ? new Date(line.validUntil) : null,
+              packSize: line.packSize,
+              moq: line.moq,
+              notes: line.notes,
+              updatedBy: userId,
+            },
+          }),
+        ),
+      );
+      linesRecorded = responseLines.length;
 
-    // Calculate total offered amount
-    const totalOfferedAmount = responseLines.reduce(
-      (sum, rl) => sum + Number(rl.unitPrice) * Number(rl.offeredQty),
-      0,
-    );
+      // Calculate total offered amount
+      const totalOfferedAmount = responseLines.reduce(
+        (sum, rl) => sum + Number(rl.unitPrice) * Number(rl.offeredQty),
+        0,
+      );
 
-    // Mark supplier as responded
-    await this.prisma.rfqSupplier.update({
-      where: { id: dto.rfqSupplierId },
-      data: { status: 'responded', respondedAt: new Date(), totalOfferedAmount, updatedBy: userId },
+      // Mark supplier as responded (tenant-scoped at the write itself)
+      await tx.rfqSupplier.updateMany({
+        where: { id: dto.rfqSupplierId, tenantId },
+        data: {
+          status: 'responded',
+          respondedAt: new Date(),
+          totalOfferedAmount,
+          updatedBy: userId,
+        },
+      });
+
+      // All suppliers responded → fully_responded, else partial_response —
+      // both along map edges from sent/partial_response.
+      const pendingSuppliers = await tx.rfqSupplier.count({
+        where: { rfqId, tenantId, status: { in: ['invited', 'sent'] } },
+      });
+      const target = pendingSuppliers === 0 ? 'fully_responded' : 'partial_response';
+      this.assertTransition(rfq.status, target);
+
+      await tx.rfq.updateMany({
+        where: { id: rfqId, tenantId, deletedAt: null },
+        data: { status: target, updatedBy: userId },
+      });
     });
 
-    // Check if all suppliers responded → update RFQ status
-    const pendingSuppliers = await this.prisma.rfqSupplier.count({
-      where: { rfqId, status: { in: ['invited', 'sent'] } },
-    });
-
-    await this.prisma.rfq.update({
-      where: { id: rfqId },
-      data: {
-        status: pendingSuppliers === 0 ? 'fully_responded' : 'partial_response',
-        updatedBy: userId,
-      },
-    });
-
-    return { message: 'Response submitted successfully', linesRecorded: responseLines.length };
+    return { message: 'Response submitted successfully', linesRecorded };
   }
 
   // ── Award lines and generate POs ──────────────────────────────────────────
 
   async award(tenantId: string, userId: string, rfqId: string, dto: AwardRfqDto) {
     const rfq = await this.findOne(tenantId, rfqId);
-    if (!['partial_response', 'fully_responded'].includes(rfq.status)) {
-      throw new BadRequestException('RFQ must have at least partial responses to award');
-    }
+    this.assertTransition(rfq.status, 'awarded');
 
-    // Validate all awards reference valid response lines on this RFQ
+    // Validate every award id in-tenant AND in-RFQ before any write (the DTO ids
+    // were previously trusted verbatim — a cross-tenant injection hole).
+    const validated: Array<{ award: (typeof dto.awards)[number]; responseLine: any }> = [];
     for (const a of dto.awards) {
       const responseLine = await this.prisma.rfqResponseLine.findFirst({
-        where: { id: a.rfqResponseLineId, rfqLineId: a.rfqLineId },
-        include: { rfqSupplier: { select: { supplierId: true } } },
+        where: { id: a.rfqResponseLineId, rfqLineId: a.rfqLineId, tenantId },
+        include: { rfqLine: true },
       });
-      if (!responseLine) {
-        throw new NotFoundException(`Response line ${a.rfqResponseLineId} not found`);
+      if (!responseLine || responseLine.rfqLine.rfqId !== rfqId) {
+        throw new NotFoundException(`Response line ${a.rfqResponseLineId} not found on this RFQ`);
       }
+      if (responseLine.rfqLine.status === 'awarded') {
+        throw new ConflictException(
+          `RFQ line ${responseLine.rfqLine.lineNumber ?? a.rfqLineId} is already awarded`,
+        );
+      }
+      validated.push({ award: a, responseLine });
     }
 
-    // Group awards by supplier to create one PO per supplier
-    const awardsBySupplier = new Map<string, typeof dto.awards>();
-
-    for (const a of dto.awards) {
-      const responseLine = await this.prisma.rfqResponseLine.findFirst({
-        where: { id: a.rfqResponseLineId },
-        include: { rfqSupplier: { select: { supplierId: true } } },
+    // Group awards by supplier (via the tenant-scoped rfqSupplier) — the awarded
+    // response must come from a supplier that actually responded.
+    const awardsBySupplier = new Map<
+      string,
+      Array<{ award: (typeof dto.awards)[number]; responseLine: any }>
+    >();
+    for (const v of validated) {
+      const rfqSupplier = await this.prisma.rfqSupplier.findFirst({
+        where: { id: v.responseLine.rfqSupplierId, rfqId, tenantId },
       });
-      const supplierId = responseLine!.rfqSupplier.supplierId;
-
+      if (!rfqSupplier) {
+        throw new NotFoundException(`RFQ supplier for response ${v.responseLine.id} not found`);
+      }
+      if (rfqSupplier.status !== 'responded') {
+        throw new BadRequestException(
+          `Supplier in status '${rfqSupplier.status}' cannot be awarded — it has not responded`,
+        );
+      }
+      const supplierId = rfqSupplier.supplierId;
       if (!awardsBySupplier.has(supplierId)) awardsBySupplier.set(supplierId, []);
-      awardsBySupplier.get(supplierId)!.push(a);
+      awardsBySupplier.get(supplierId)!.push(v);
     }
 
     const createdPos: any[] = [];
 
-    for (const [supplierId, awards] of awardsBySupplier) {
-      const supplier = await this.prisma.supplier.findFirst({
-        where: { id: supplierId, tenantId },
+    // Atomic: POs + response/line/supplier/RFQ updates commit together. PO
+    // numbers come from the owning module's shared tx-aware generator.
+    try {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        for (const [supplierId, awards] of awardsBySupplier) {
+          const supplier = await tx.supplier.findFirst({
+            where: { id: supplierId, tenantId, deletedAt: null },
+          });
+          if (!supplier) throw new NotFoundException(`Supplier ${supplierId} not found`);
+
+          const poNumber = await this.purchaseOrders.generatePoNumber(tenantId, tx);
+
+          // Build PO lines from awarded response lines
+          const poLines: any[] = [];
+          let subtotal = 0;
+
+          for (let i = 0; i < awards.length; i++) {
+            const { award: a, responseLine } = awards[i];
+
+            const qty = a.awardedQty ?? Number(responseLine.offeredQty);
+            const lineTotal = qty * Number(responseLine.unitPrice);
+            subtotal += lineTotal;
+
+            poLines.push({
+              tenantId,
+              lineNumber: i + 1,
+              itemId: responseLine.rfqLine.itemId!,
+              orderedQuantity: qty,
+              receivedQuantity: 0,
+              uom: responseLine.uom,
+              unitPrice: responseLine.unitPrice,
+              discountPercent: 0,
+              lineTotal,
+              expectedDate: responseLine.rfqLine.requiredDate,
+              status: 'open',
+              createdBy: userId,
+              updatedBy: userId,
+            });
+
+            // Mark response line as awarded
+            await tx.rfqResponseLine.updateMany({
+              where: { id: a.rfqResponseLineId, tenantId },
+              data: { isAwarded: true, awardedQty: qty, updatedBy: userId },
+            });
+
+            // Update RFQ line with award info
+            await tx.rfqLine.updateMany({
+              where: { id: a.rfqLineId, tenantId, deletedAt: null },
+              data: {
+                status: 'awarded',
+                awardedSupplierId: supplierId,
+                awardedResponseLineId: a.rfqResponseLineId,
+                awardedUnitPrice: responseLine.unitPrice,
+                awardedQty: qty,
+                updatedBy: userId,
+              },
+            });
+          }
+
+          // Create PO (PurchaseOrder is owned by purchase-orders — direct write
+          // inside the cluster tx is a documented spec-020 exception).
+          const po = await tx.purchaseOrder.create({
+            data: {
+              tenantId,
+              poNumber,
+              supplierId,
+              rfqId,
+              poDate: new Date(),
+              currency: rfq.currency,
+              exchangeRate: 1,
+              subtotal,
+              discountAmount: 0,
+              taxAmount: 0,
+              total: subtotal,
+              paymentTerms: supplier.paymentTerms,
+              status: 'draft',
+              notes: `Generated from RFQ ${rfq.rfqNumber}`,
+              createdBy: userId,
+              updatedBy: userId,
+              lines: { create: poLines },
+            },
+            include: {
+              supplier: { select: { id: true, code: true, name: true } },
+              lines: { include: { item: { select: { id: true, code: true, name: true } } } },
+            },
+          });
+
+          // Link RFQ lines to PO lines
+          for (let i = 0; i < awards.length; i++) {
+            await tx.rfqLine.updateMany({
+              where: { id: awards[i].award.rfqLineId, tenantId, deletedAt: null },
+              data: { poLineId: po.lines[i].id, updatedBy: userId },
+            });
+          }
+
+          // Mark RFQ supplier as awarded
+          const rfqSupplier = await tx.rfqSupplier.findFirst({
+            where: { rfqId, supplierId, tenantId },
+          });
+          if (rfqSupplier) {
+            await tx.rfqSupplier.updateMany({
+              where: { id: rfqSupplier.id, tenantId },
+              data: { status: 'awarded', updatedBy: userId },
+            });
+          }
+
+          createdPos.push(po);
+        }
+
+        // Update RFQ status to awarded (map edge asserted above)
+        await tx.rfq.updateMany({
+          where: { id: rfqId, tenantId, deletedAt: null },
+          data: { status: 'awarded', awardedAt: new Date(), awardedBy: userId, updatedBy: userId },
+        });
       });
-
-      const poNumber = await this.generatePoNumber(tenantId);
-
-      // Build PO lines from awarded response lines
-      const poLines: any[] = [];
-      let subtotal = 0;
-
-      for (let i = 0; i < awards.length; i++) {
-        const a = awards[i];
-        const responseLine = await this.prisma.rfqResponseLine.findFirst({
-          where: { id: a.rfqResponseLineId },
-          include: { rfqLine: true },
-        });
-
-        const qty = a.awardedQty ?? Number(responseLine!.offeredQty);
-        const lineTotal = qty * Number(responseLine!.unitPrice);
-        subtotal += lineTotal;
-
-        poLines.push({
-          tenantId,
-          lineNumber: i + 1,
-          itemId: responseLine!.rfqLine.itemId!,
-          orderedQuantity: qty,
-          receivedQuantity: 0,
-          uom: responseLine!.uom,
-          unitPrice: responseLine!.unitPrice,
-          discountPercent: 0,
-          lineTotal,
-          expectedDate: responseLine!.rfqLine.requiredDate,
-          status: 'open',
-          createdBy: userId,
-          updatedBy: userId,
-        });
-
-        // Mark response line as awarded
-        await this.prisma.rfqResponseLine.update({
-          where: { id: a.rfqResponseLineId },
-          data: { isAwarded: true, awardedQty: qty, updatedBy: userId },
-        });
-
-        // Update RFQ line with award info
-        await this.prisma.rfqLine.update({
-          where: { id: a.rfqLineId },
-          data: {
-            status: 'awarded',
-            awardedSupplierId: supplierId,
-            awardedResponseLineId: a.rfqResponseLineId,
-            awardedUnitPrice: responseLine!.unitPrice,
-            awardedQty: qty,
-            updatedBy: userId,
-          },
-        });
+    } catch (e) {
+      // PO-number unique can race with concurrent awards/creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          'A purchase-order number was just taken by a concurrent request. Please retry the award.',
+        );
       }
-
-      // Create PO
-      const po = await this.prisma.purchaseOrder.create({
-        data: {
-          tenantId,
-          poNumber,
-          supplierId,
-          rfqId,
-          poDate: new Date(),
-          currency: rfq.currency,
-          exchangeRate: 1,
-          subtotal,
-          discountAmount: 0,
-          taxAmount: 0,
-          total: subtotal,
-          paymentTerms: supplier!.paymentTerms,
-          status: 'draft',
-          notes: `Generated from RFQ ${rfq.rfqNumber}`,
-          createdBy: userId,
-          updatedBy: userId,
-          lines: { create: poLines },
-        },
-        include: {
-          supplier: { select: { id: true, code: true, name: true } },
-          lines: { include: { item: { select: { id: true, code: true, name: true } } } },
-        },
-      });
-
-      // Link RFQ lines to PO lines
-      for (let i = 0; i < awards.length; i++) {
-        await this.prisma.rfqLine.update({
-          where: { id: awards[i].rfqLineId },
-          data: { poLineId: po.lines[i].id, updatedBy: userId },
-        });
-      }
-
-      // Mark RFQ supplier as awarded
-      const rfqSupplier = await this.prisma.rfqSupplier.findFirst({
-        where: { rfqId, supplierId },
-      });
-      if (rfqSupplier) {
-        await this.prisma.rfqSupplier.update({
-          where: { id: rfqSupplier.id },
-          data: { status: 'awarded', updatedBy: userId },
-        });
-      }
-
-      createdPos.push(po);
+      throw e;
     }
-
-    // Update RFQ status to awarded
-    await this.prisma.rfq.update({
-      where: { id: rfqId },
-      data: { status: 'awarded', awardedAt: new Date(), awardedBy: userId, updatedBy: userId },
-    });
 
     return {
       message: `RFQ ${rfq.rfqNumber} awarded — ${createdPos.length} PO(s) created`,
@@ -443,18 +518,17 @@ export class RfqsService {
 
   async cancel(tenantId: string, userId: string, id: string) {
     const rfq = await this.findOne(tenantId, id);
-    if (rfq.status === 'awarded') {
-      throw new BadRequestException(
-        'Cannot cancel an awarded RFQ — cancel the generated POs instead',
-      );
-    }
+    this.assertTransition(rfq.status, 'cancelled');
 
-    const updated = await this.prisma.rfq.update({
-      where: { id },
+    await this.prisma.rfq.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'cancelled', updatedBy: userId },
     });
 
-    return { message: `RFQ ${rfq.rfqNumber} cancelled`, rfq: updated };
+    return {
+      message: `RFQ ${rfq.rfqNumber} cancelled`,
+      rfq: await this.findOne(tenantId, id),
+    };
   }
 
   // ── Remove ─────────────────────────────────────────────────────────────────
@@ -465,8 +539,8 @@ export class RfqsService {
       throw new BadRequestException('Can only delete draft RFQs');
     }
 
-    await this.prisma.rfq.update({
-      where: { id },
+    await this.prisma.rfq.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
 

@@ -1,12 +1,32 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 
+// PO lifecycle state machine (spec-020) — the single status authority.
+// receive() routes its partially_received/received writes through these edges too.
+const PO_TRANSITIONS: Record<string, string[]> = {
+  draft: ['confirmed', 'cancelled'],
+  confirmed: ['partially_received', 'received', 'cancelled'],
+  partially_received: ['partially_received', 'received', 'closed'],
+  received: ['closed'],
+  // closed / cancelled are terminal
+};
+
 @Injectable()
 export class PurchaseOrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private stockTransactions: StockTransactionsService,
+  ) {}
 
   async create(tenantId: string, userId: string, createPurchaseOrderDto: CreatePurchaseOrderDto) {
     const supplier = await this.prisma.supplier.findFirst({
@@ -46,47 +66,55 @@ export class PurchaseOrdersService {
       };
     });
 
-    const purchaseOrder = await this.prisma.purchaseOrder.create({
-      data: {
-        tenantId,
-        poNumber,
-        supplierId: createPurchaseOrderDto.supplierId,
-        poDate: new Date(),
-        expectedDate: createPurchaseOrderDto.expectedDate
-          ? new Date(createPurchaseOrderDto.expectedDate)
-          : null,
-        deliveryAddress: createPurchaseOrderDto.deliveryAddress,
-        paymentTerms: createPurchaseOrderDto.paymentTerms,
-        currency: createPurchaseOrderDto.currency || 'USD',
-        exchangeRate: 1,
-        subtotal,
-        discountAmount: 0,
-        taxAmount: 0,
-        total: subtotal,
-        status: 'draft',
-        notes: createPurchaseOrderDto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: {
-          create: linesWithTotals.map((line) => ({ tenantId, ...line })),
+    try {
+      return await this.prisma.purchaseOrder.create({
+        data: {
+          tenantId,
+          poNumber,
+          supplierId: createPurchaseOrderDto.supplierId,
+          poDate: new Date(),
+          expectedDate: createPurchaseOrderDto.expectedDate
+            ? new Date(createPurchaseOrderDto.expectedDate)
+            : null,
+          deliveryAddress: createPurchaseOrderDto.deliveryAddress,
+          paymentTerms: createPurchaseOrderDto.paymentTerms,
+          currency: createPurchaseOrderDto.currency || 'USD',
+          exchangeRate: 1,
+          subtotal,
+          discountAmount: 0,
+          taxAmount: 0,
+          total: subtotal,
+          status: 'draft',
+          notes: createPurchaseOrderDto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: {
+            create: linesWithTotals.map((line) => ({ tenantId, ...line })),
+          },
         },
-      },
-      include: {
-        supplier: { select: { id: true, code: true, name: true } },
-        lines: {
-          include: { item: { select: { id: true, code: true, name: true } } },
+        include: {
+          supplier: { select: { id: true, code: true, name: true } },
+          lines: {
+            include: { item: { select: { id: true, code: true, name: true } } },
+          },
         },
-      },
-    });
-
-    return purchaseOrder;
+      });
+    } catch (e) {
+      // @@unique([tenantId, poNumber]) can race on concurrent creates.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Purchase order number ${poNumber} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   async findAll(tenantId: string, status?: string) {
     const where: any = { tenantId, deletedAt: null };
     if (status) where.status = status;
 
-    return this.prisma.purchaseOrder.findMany({
+    const purchaseOrders = await this.prisma.purchaseOrder.findMany({
       where,
       include: {
         supplier: { select: { id: true, code: true, name: true } },
@@ -94,6 +122,8 @@ export class PurchaseOrdersService {
       },
       orderBy: { poDate: 'desc' },
     });
+
+    return { purchaseOrders, count: purchaseOrders.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -126,42 +156,33 @@ export class PurchaseOrdersService {
       throw new BadRequestException('Can only update purchase orders in draft status');
     }
 
-    return this.prisma.purchaseOrder.update({
-      where: { id },
+    // Tenant-scoped at the write itself, then re-fetch for the joined response.
+    await this.prisma.purchaseOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...updatePurchaseOrderDto, updatedBy: userId },
-      include: {
-        supplier: true,
-        lines: { include: { item: true } },
-      },
     });
+
+    return this.findOne(tenantId, id);
   }
 
   async updateStatus(tenantId: string, userId: string, id: string, status: string) {
     const po = await this.findOne(tenantId, id);
 
-    // State machine validation
-    const validTransitions: Record<string, string[]> = {
-      draft: ['confirmed', 'cancelled'],
-      confirmed: ['cancelled'],
-      partially_received: ['received', 'closed'],
-      received: ['closed'],
-    };
-
-    const allowed = validTransitions[po.status] ?? [];
+    const allowed = PO_TRANSITIONS[po.status] ?? [];
     if (!allowed.includes(status)) {
       throw new BadRequestException(
         `Cannot transition from '${po.status}' to '${status}'. Allowed: ${allowed.join(', ') || 'none'}`,
       );
     }
 
-    const purchaseOrder = await this.prisma.purchaseOrder.update({
-      where: { id },
+    await this.prisma.purchaseOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status, updatedBy: userId },
     });
 
     return {
       message: `Purchase Order ${po.poNumber} → ${status}`,
-      purchaseOrder,
+      purchaseOrder: await this.findOne(tenantId, id),
     };
   }
 
@@ -180,104 +201,131 @@ export class PurchaseOrdersService {
     });
     if (!warehouse) throw new NotFoundException('Warehouse not found');
 
-    // Process each line (movement number generated per line)
+    // Pre-validate every line (membership + over-receive) before any write.
     for (const recv of dto.lines) {
       if (recv.receivedQuantity <= 0) continue;
-
       const line = (po.lines as any[]).find((l) => l.id === recv.lineId);
       if (!line) throw new NotFoundException(`PO Line ${recv.lineId} not found`);
-
       const remaining = Number(line.orderedQuantity) - Number(line.receivedQuantity);
       if (recv.receivedQuantity > remaining) {
         throw new BadRequestException(
           `Cannot receive ${recv.receivedQuantity} for line ${line.lineNumber}. Remaining: ${remaining}`,
         );
       }
-
-      const unitCost = recv.unitCost ?? Number(line.unitPrice);
-      const newReceived = Number(line.receivedQuantity) + recv.receivedQuantity;
-      const lineFullyClosed = newReceived >= Number(line.orderedQuantity);
-
-      // Update PO line received quantity
-      await this.prisma.purchaseOrderLine.update({
-        where: { id: recv.lineId },
-        data: {
-          receivedQuantity: { increment: recv.receivedQuantity },
-          status: lineFullyClosed ? 'closed' : 'open',
-          updatedBy: userId,
-        },
-      });
-
-      // Find-or-create stock record (avoids Prisma null constraint issue in unique where)
-      const existingStock = await this.prisma.stock.findFirst({
-        where: {
-          tenantId,
-          itemId: line.itemId,
-          warehouseId: dto.warehouseId,
-          lotNumber: recv.lotNumber ?? null,
-          serialNumber: null,
-        },
-      });
-
-      if (existingStock) {
-        await this.prisma.stock.update({
-          where: { id: existingStock.id },
-          data: {
-            onHandQuantity: { increment: recv.receivedQuantity },
-            unitCost,
-          },
-        });
-      } else {
-        await this.prisma.stock.create({
-          data: {
-            tenantId,
-            itemId: line.itemId,
-            warehouseId: dto.warehouseId,
-            onHandQuantity: recv.receivedQuantity,
-            reservedQuantity: 0,
-            unitCost,
-            lotNumber: recv.lotNumber ?? null,
-            serialNumber: null,
-          },
-        });
-      }
-
-      // Create stock movement record — unique number per line
-      const movNumber = await this.generateMovNumber(tenantId);
-      await this.prisma.stockMovement.create({
-        data: {
-          tenantId,
-          movementNumber: movNumber,
-          movementType: 'receipt',
-          movementDate: new Date(),
-          itemId: line.itemId,
-          toWarehouseId: dto.warehouseId,
-          quantity: recv.receivedQuantity,
-          uom: line.uom,
-          unitCost,
-          referenceType: 'purchase_order',
-          referenceId: po.id,
-          lotNumber: recv.lotNumber ?? null,
-          notes: dto.notes,
-          createdBy: userId,
-        },
-      });
     }
 
-    // Re-fetch lines to determine new PO status
-    const updatedLines = await this.prisma.purchaseOrderLine.findMany({
-      where: { purchaseOrderId: id, deletedAt: null },
-    });
+    // Atomic: line updates + stock + movements + PO status commit together.
+    // Movement numbers come from the shared spec-017 generator (tx-aware so the
+    // per-line generations see their own uncommitted movements).
+    try {
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        for (const recv of dto.lines) {
+          if (recv.receivedQuantity <= 0) continue;
+          const line = (po.lines as any[]).find((l) => l.id === recv.lineId);
 
-    const allClosed = updatedLines.every((l) => l.status === 'closed');
-    const anyReceived = updatedLines.some((l) => Number(l.receivedQuantity) > 0);
+          const unitCost = recv.unitCost ?? Number(line.unitPrice);
+          const newReceived = Number(line.receivedQuantity) + recv.receivedQuantity;
+          const lineFullyClosed = newReceived >= Number(line.orderedQuantity);
 
-    const newStatus = allClosed ? 'received' : anyReceived ? 'partially_received' : po.status;
+          await tx.purchaseOrderLine.updateMany({
+            where: { id: recv.lineId, tenantId, deletedAt: null },
+            data: {
+              receivedQuantity: { increment: recv.receivedQuantity },
+              status: lineFullyClosed ? 'closed' : 'open',
+              updatedBy: userId,
+            },
+          });
 
-    await this.prisma.purchaseOrder.update({
-      where: { id },
-      data: { status: newStatus, updatedBy: userId },
-    });
+          // Find-or-create stock record (Stock is owned by stock-transactions —
+          // direct write is a documented spec-020 exception, tenant-scoped here).
+          const existingStock = await tx.stock.findFirst({
+            where: {
+              tenantId,
+              itemId: line.itemId,
+              warehouseId: dto.warehouseId,
+              lotNumber: recv.lotNumber ?? null,
+              serialNumber: null,
+            },
+          });
+
+          if (existingStock) {
+            await tx.stock.updateMany({
+              where: { id: existingStock.id, tenantId },
+              data: {
+                onHandQuantity: { increment: recv.receivedQuantity },
+                unitCost,
+              },
+            });
+          } else {
+            await tx.stock.create({
+              data: {
+                tenantId,
+                itemId: line.itemId,
+                warehouseId: dto.warehouseId,
+                onHandQuantity: recv.receivedQuantity,
+                reservedQuantity: 0,
+                unitCost,
+                lotNumber: recv.lotNumber ?? null,
+                serialNumber: null,
+              },
+            });
+          }
+
+          const movNumber = await this.stockTransactions.generateMovementNumber(tenantId, tx);
+          await tx.stockMovement.create({
+            data: {
+              tenantId,
+              movementNumber: movNumber,
+              movementType: 'receipt',
+              movementDate: new Date(),
+              itemId: line.itemId,
+              toWarehouseId: dto.warehouseId,
+              quantity: recv.receivedQuantity,
+              uom: line.uom,
+              unitCost,
+              referenceType: 'purchase_order',
+              referenceId: po.id,
+              lotNumber: recv.lotNumber ?? null,
+              notes: dto.notes,
+              createdBy: userId,
+            },
+          });
+        }
+
+        // Re-fetch lines to determine the new PO status, then route it through
+        // the state machine — receive is no longer a second status authority.
+        const updatedLines = await tx.purchaseOrderLine.findMany({
+          where: { purchaseOrderId: id, tenantId, deletedAt: null },
+        });
+
+        const allClosed =
+          updatedLines.length > 0 && updatedLines.every((l) => l.status === 'closed');
+        const anyReceived = updatedLines.some((l) => Number(l.receivedQuantity) > 0);
+        const newStatus = allClosed ? 'received' : anyReceived ? 'partially_received' : po.status;
+
+        if (newStatus !== po.status) {
+          const allowed = PO_TRANSITIONS[po.status] ?? [];
+          if (!allowed.includes(newStatus)) {
+            throw new BadRequestException(
+              `Receive would transition '${po.status}' to '${newStatus}', which is not allowed`,
+            );
+          }
+        }
+
+        await tx.purchaseOrder.updateMany({
+          where: { id, tenantId, deletedAt: null },
+          data: { status: newStatus, updatedBy: userId },
+        });
+      });
+    } catch (e) {
+      // Movement-number unique can race with concurrent receipts.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          'A movement number was just taken by a concurrent request. Please retry the receive.',
+        );
+      }
+      throw e;
+    }
 
     return this.findOne(tenantId, id);
   }
@@ -288,8 +336,8 @@ export class PurchaseOrdersService {
       throw new BadRequestException('Can only delete purchase orders in draft status');
     }
 
-    await this.prisma.purchaseOrder.update({
-      where: { id },
+    await this.prisma.purchaseOrder.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
 
@@ -298,29 +346,21 @@ export class PurchaseOrdersService {
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
-  private async generatePoNumber(tenantId: string): Promise<string> {
+  // Public shared API (spec-020): RfqsService injects this for award-generated POs.
+  // Numeric max over findMany (lexicographic findFirst breaks past mixed widths);
+  // deliberately spans soft-deleted rows so numbers are never reused (spec-012).
+  async generatePoNumber(tenantId: string, tx?: Prisma.TransactionClient): Promise<string> {
+    const db = tx ?? this.prisma;
     const year = new Date().getFullYear();
     const prefix = `PO-${year}`;
-    const last = await this.prisma.purchaseOrder.findFirst({
+    const existing = await db.purchaseOrder.findMany({
       where: { tenantId, poNumber: { startsWith: prefix } },
-      orderBy: { poNumber: 'desc' },
+      select: { poNumber: true },
     });
-    const next = last
-      ? (parseInt(last.poNumber.split('-')[2]) + 1).toString().padStart(4, '0')
-      : '0001';
-    return `${prefix}-${next}`;
-  }
-
-  private async generateMovNumber(tenantId: string): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `SM-${year}`;
-    const last = await this.prisma.stockMovement.findFirst({
-      where: { tenantId, movementNumber: { startsWith: prefix } },
-      orderBy: { movementNumber: 'desc' },
-    });
-    const next = last
-      ? (parseInt(last.movementNumber.split('-')[2]) + 1).toString().padStart(4, '0')
-      : '0001';
-    return `${prefix}-${next}`;
+    const max = existing.reduce((m, r) => {
+      const n = parseInt(r.poNumber.split('-')[2], 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
   }
 }

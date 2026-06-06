@@ -12,18 +12,12 @@
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
+import { QueryPurchaseOrdersDto } from './dto/query-purchase-orders.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -47,15 +41,17 @@ export class PurchaseOrdersController {
   @Get()
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get all purchase orders' })
-  @ApiQuery({ name: 'status', required: false })
-  async findAll(@Request() req, @Query('status') status?: string) {
-    return this.purchaseOrdersService.findAll(req.user.tenantId, status);
+  @ApiResponse({ status: 200, description: 'Envelope { purchaseOrders, count }' })
+  async findAll(@Request() req, @Query() query: QueryPurchaseOrdersDto) {
+    return this.purchaseOrdersService.findAll(req.user.tenantId, query.status);
   }
 
   @Get(':id')
   @RequirePermissions('PROCUREMENT:VIEW')
   @ApiOperation({ summary: 'Get purchase order by ID' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
+  @ApiResponse({ status: 200, description: 'PO with lines and supplier' })
+  @ApiResponse({ status: 404, description: 'PO not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.purchaseOrdersService.findOne(req.user.tenantId, id);
   }
@@ -64,6 +60,9 @@ export class PurchaseOrdersController {
   @RequirePermissions('PROCUREMENT:EDIT')
   @ApiOperation({ summary: 'Update purchase order (draft only)' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
+  @ApiResponse({ status: 200, description: 'PO updated' })
+  @ApiResponse({ status: 400, description: 'PO is not in draft status' })
+  @ApiResponse({ status: 404, description: 'PO not found' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdatePurchaseOrderDto) {
     return this.purchaseOrdersService.update(req.user.tenantId, req.user.id, id, dto);
   }
@@ -73,12 +72,16 @@ export class PurchaseOrdersController {
   @ApiOperation({ summary: 'Transition purchase order status' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
   @ApiParam({ name: 'status', description: 'confirmed | cancelled | closed' })
+  @ApiResponse({ status: 200, description: 'Status transitioned' })
+  @ApiResponse({ status: 400, description: 'Illegal status transition' })
+  @ApiResponse({ status: 404, description: 'PO not found' })
   async updateStatus(@Request() req, @Param('id') id: string, @Param('status') status: string) {
     return this.purchaseOrdersService.updateStatus(req.user.tenantId, req.user.id, id, status);
   }
 
   @Post(':id/receive')
   @RequirePermissions('PROCUREMENT:EDIT')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Receive goods against a purchase order — updates stock' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
   @ApiResponse({ status: 200, description: 'Goods received, stock updated' })
@@ -93,6 +96,9 @@ export class PurchaseOrdersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete purchase order (draft only, soft delete)' })
   @ApiParam({ name: 'id', description: 'PO UUID' })
+  @ApiResponse({ status: 200, description: 'PO soft-deleted' })
+  @ApiResponse({ status: 400, description: 'Only draft POs can be deleted' })
+  @ApiResponse({ status: 404, description: 'PO not found' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.purchaseOrdersService.remove(req.user.tenantId, req.user.id, id);
   }

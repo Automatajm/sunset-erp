@@ -7,7 +7,9 @@ export const generalNeedsApi = {
   getAll: async (params?: { status?: string }) => {
     const res = await apiClient.get('/general-needs', { params });
     const d = res.data;
-    return Array.isArray(d) ? d : (d?.value && Array.isArray(d.value)) ? d.value : [];
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d?.generalNeeds)) return d.generalNeeds; // spec-020 envelope { generalNeeds, count }
+    return Array.isArray(d?.value) ? d.value : [];
   },
 
   getById: async (id: string) => {
