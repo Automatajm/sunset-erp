@@ -1,6 +1,6 @@
 # spec-020 — Procurement Cluster (Purchase Orders ↔ RFQs ↔ Requisitions ↔ General Needs)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `purchase-orders` + `rfqs` + `purchase-requisitions` + `general-needs` (incl. `mrp.service.ts`) — four-module cyclic cluster, specced as one unit per `specs/MODULE-CASCADE.md`; touches the 4 frontend `lib/api` getters for the list envelopes  
@@ -276,3 +276,4 @@ up the chain — the cycle exists only at FK level).
 |---|---|---|
 | 2026-06-06 | Cluster spec generated (two parallel audits, combined ~316 pts / 100 findings) | Draft — award cross-tenant injection, ~30 unscoped writes, 5 untransacted flows, RFQ map missing + dual status authorities, supplier lock-out bug, item-less preferred-supplier bug, 4 lexicographic generators (2 duplicated cross-module), P2002 ×4, @Max/@IsDateString/inline-body gaps, 22 missing @ApiResponse, 4 bare-array lists captured as unchecked criteria |
 | 2026-06-06 | Implemented all 23 open criteria: award in-tenant validation, ~30 scoped writes, 5 transactions (receive/award/convertToRfq/convertToPr/runMrp+explodeFromMos), 4 public tx-aware numeric-max generators on the acyclic injection chain GN→PR→RFQ→PO→StockTransactions, RFQ map + completed PO map + PR map edge, submitResponse/award guards, AwardRfqDto.warehouseId removed, @Max/@IsDateString caps, 4 new DTOs + 4 query DTOs, 22 @ApiResponse, 4 envelopes + frontend getters | 45/45 unit + 9/9 procurement e2e + 32/32 regression e2e green; both builds green |
+| 2026-06-06 | Shipped to origin (5cbc315); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
