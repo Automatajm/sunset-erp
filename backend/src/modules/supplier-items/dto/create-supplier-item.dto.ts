@@ -7,8 +7,17 @@ import {
   IsNumber,
   IsInt,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
+
+// Safe caps within the Decimal column capacities — overflow fails 400, never 500.
+// packSize/lastPrice: Decimal(15,4) (< 1e11) | moq: Decimal(15,3) (< 1e12) |
+// conversionFactor: Decimal(18,8) (< 1e10).
+const MAX_PRICE_OR_PACK = 99999999999;
+const MAX_MOQ = 999999999999;
+const MAX_FACTOR = 9999999999;
+const MAX_LEAD_TIME_DAYS = 3650;
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSupplierItemDto {
@@ -43,28 +52,32 @@ export class CreateSupplierItemDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(MAX_PRICE_OR_PACK)
   packSize?: number;
 
   @ApiPropertyOptional({
-    example: 3.78541,
+    example: 1,
     description:
-      'Conversion factor: how many consumptionUom per 1 purchaseUom. Auto-calculated from catalog if omitted.',
+      'Conversion factor: defaults to 1 — the purchase-UOM rule forces unit equality with the item, so no conversion is needed (triple-UOM conversion lives on the Item factors).',
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(MAX_FACTOR)
   conversionFactor?: number;
 
   @ApiPropertyOptional({ example: 45.99, description: 'Last known price per purchase UOM' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(MAX_PRICE_OR_PACK)
   lastPrice?: number;
 
   @ApiPropertyOptional({ example: 7, description: 'Lead time in days', default: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(MAX_LEAD_TIME_DAYS)
   leadTimeDays?: number;
 
   @ApiPropertyOptional({
@@ -75,6 +88,7 @@ export class CreateSupplierItemDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(MAX_MOQ)
   moq?: number;
 
   @ApiPropertyOptional({ default: false, description: 'Mark as preferred supplier for this item' })

@@ -2,18 +2,20 @@
 import apiClient from './client';
 import { SupplierItem, CreateSupplierItemDto, UpdateSupplierItemDto } from './types';
  
+type SupplierItemsEnvelope = { supplierItems: SupplierItem[]; count: number };
+
 export const supplierItemsApi = {
   getAll: async (params?: { itemId?: string; supplierId?: string; isPreferred?: boolean }): Promise<SupplierItem[]> => {
     const res = await apiClient.get('/supplier-items', { params });
-    return res.data;
+    return (res.data as SupplierItemsEnvelope).supplierItems;
   },
   getByItem: async (itemId: string): Promise<SupplierItem[]> => {
     const res = await apiClient.get(`/supplier-items/by-item/${itemId}`);
-    return res.data;
+    return (res.data as SupplierItemsEnvelope).supplierItems;
   },
   getBySupplier: async (supplierId: string): Promise<SupplierItem[]> => {
     const res = await apiClient.get(`/supplier-items/by-supplier/${supplierId}`);
-    return res.data;
+    return (res.data as SupplierItemsEnvelope).supplierItems;
   },
   getById: async (id: string): Promise<SupplierItem> => {
     const res = await apiClient.get(`/supplier-items/${id}`);

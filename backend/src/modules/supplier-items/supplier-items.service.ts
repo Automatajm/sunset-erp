@@ -44,7 +44,7 @@ export class SupplierItemsService {
     purchaseUomId: string,
   ): Promise<void> {
     const item = await this.prisma.item.findFirst({
-      where: { id: itemId, tenantId },
+      where: { id: itemId, tenantId, deletedAt: null },
       select: {
         code: true,
         name: true,
@@ -79,6 +79,13 @@ export class SupplierItemsService {
   // ── Create ─────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, userId: string, dto: CreateSupplierItemDto) {
+    // The supplier must exist in this tenant — the FK alone is global, so an
+    // unchecked id could link another tenant's supplier (or 500 on bogus ids).
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id: dto.supplierId, tenantId, deletedAt: null },
+    });
+    if (!supplier) throw new NotFoundException('Supplier not found');
+
     // Enforce UOM rule before anything else
     await this.validatePurchaseUom(dto.itemId, tenantId, dto.purchaseUomId);
 
@@ -89,9 +96,9 @@ export class SupplierItemsService {
 
     if (existing) {
       if (existing.deletedAt) {
-        // Previously removed — reactivate and update
-        const reactivated = await this.prisma.supplierItem.update({
-          where: { id: existing.id },
+        // Previously removed — reactivate and update (tenant-scoped at the write)
+        await this.prisma.supplierItem.updateMany({
+          where: { id: existing.id, tenantId },
           data: {
             deletedAt: null,
             deletedBy: null,
@@ -107,6 +114,9 @@ export class SupplierItemsService {
             notes: dto.notes ?? existing.notes,
             updatedBy: userId,
           },
+        });
+        const reactivated = await this.prisma.supplierItem.findFirst({
+          where: { id: existing.id, tenantId },
           include: INCLUDE,
         });
         return this.enrich(reactivated);
@@ -126,31 +136,41 @@ export class SupplierItemsService {
       });
     }
 
-    const si = await this.prisma.supplierItem.create({
-      data: {
-        tenantId,
-        supplierId: dto.supplierId,
-        itemId: dto.itemId,
-        supplierItemCode: dto.supplierItemCode,
-        supplierItemName: dto.supplierItemName,
-        purchaseUomId: dto.purchaseUomId,
-        packSize: dto.packSize ?? 1,
-        conversionFactor,
-        lastPrice: dto.lastPrice,
-        leadTimeDays: dto.leadTimeDays ?? 0,
-        moq: dto.moq ?? 1,
-        isPreferred: dto.isPreferred ?? false,
-        isActive: dto.isActive ?? true,
-        notes: dto.notes,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-      include: INCLUDE,
-    });
+    let si;
+    try {
+      si = await this.prisma.supplierItem.create({
+        data: {
+          tenantId,
+          supplierId: dto.supplierId,
+          itemId: dto.itemId,
+          supplierItemCode: dto.supplierItemCode,
+          supplierItemName: dto.supplierItemName,
+          purchaseUomId: dto.purchaseUomId,
+          packSize: dto.packSize ?? 1,
+          conversionFactor,
+          lastPrice: dto.lastPrice,
+          leadTimeDays: dto.leadTimeDays ?? 0,
+          moq: dto.moq ?? 1,
+          isPreferred: dto.isPreferred ?? false,
+          isActive: dto.isActive ?? true,
+          notes: dto.notes,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        include: INCLUDE,
+      });
+    } catch (e) {
+      // @@unique([tenantId, supplierId, itemId]) can race between the existence
+      // check above and this create.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException('This supplier already has an active entry for this item');
+      }
+      throw e;
+    }
 
     if (dto.isPreferred) {
-      await this.prisma.item.update({
-        where: { id: dto.itemId },
+      await this.prisma.item.updateMany({
+        where: { id: dto.itemId, tenantId },
         data: { defaultSupplierId: dto.supplierId },
       });
     }
@@ -174,7 +194,8 @@ export class SupplierItemsService {
       include: INCLUDE,
       orderBy: [{ isPreferred: 'desc' }, { supplier: { name: 'asc' } }],
     });
-    return rows.map((r) => this.enrich(r));
+    const supplierItems = rows.map((r) => this.enrich(r));
+    return { supplierItems, count: supplierItems.length };
   }
 
   async findByItem(tenantId: string, itemId: string) {
@@ -215,28 +236,37 @@ export class SupplierItemsService {
         },
         data: { isPreferred: false },
       });
-      await this.prisma.item.update({
-        where: { id: (si as any).itemId },
+      await this.prisma.item.updateMany({
+        where: { id: (si as any).itemId, tenantId },
         data: { defaultSupplierId: (si as any).supplierId },
       });
     }
 
-    const updated = await this.prisma.supplierItem.update({
-      where: { id },
+    // Tenant-scoped at the write itself, then re-fetch for the enriched response.
+    await this.prisma.supplierItem.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...dto, updatedBy: userId },
-      include: INCLUDE,
     });
-    return this.enrich(updated);
+    return this.findOne(tenantId, id);
   }
 
   // ── Remove ─────────────────────────────────────────────────────────────────
 
   async remove(tenantId: string, userId: string, id: string) {
-    await this.findOne(tenantId, id);
-    await this.prisma.supplierItem.update({
-      where: { id },
+    const si: any = await this.findOne(tenantId, id);
+    await this.prisma.supplierItem.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
+
+    // Removing the preferred entry must not leave Item.defaultSupplierId dangling.
+    if (si.isPreferred) {
+      await this.prisma.item.updateMany({
+        where: { id: si.itemId, tenantId },
+        data: { defaultSupplierId: null },
+      });
+    }
+
     return { message: 'Supplier item deleted successfully', id };
   }
 

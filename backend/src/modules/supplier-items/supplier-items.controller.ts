@@ -24,6 +24,7 @@ import {
 import { SupplierItemsService } from './supplier-items.service';
 import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
 import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
+import { FindSupplierItemsQueryDto } from './dto/find-supplier-items-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -54,18 +55,15 @@ export class SupplierItemsController {
   @ApiQuery({ name: 'isPreferred', required: false, description: 'true | false' })
   @ApiResponse({
     status: 200,
-    description: 'List of supplier-item relationships with conversion preview',
+    description: 'Envelope { supplierItems, count } with conversion preview',
   })
-  async findAll(
-    @Request() req,
-    @Query('itemId') itemId?: string,
-    @Query('supplierId') supplierId?: string,
-    @Query('isPreferred') isPreferred?: string,
-  ) {
+  @ApiResponse({ status: 400, description: 'Invalid query parameter' })
+  async findAll(@Request() req, @Query() query: FindSupplierItemsQueryDto) {
     return this.supplierItemsService.findAll(req.user.tenantId, {
-      itemId,
-      supplierId,
-      isPreferred: isPreferred === 'true' ? true : isPreferred === 'false' ? false : undefined,
+      itemId: query.itemId,
+      supplierId: query.supplierId,
+      isPreferred:
+        query.isPreferred === 'true' ? true : query.isPreferred === 'false' ? false : undefined,
     });
   }
 
