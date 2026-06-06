@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 18 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation`, `supplier-items` |
-| Pending | 20 |
+| Specced (Done) | 20 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation`, `supplier-items`, `sales-orders` + `production-plans` (spec-019, production cluster) |
+| Pending | 18 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -90,9 +90,9 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | ⬜ | · purchase-requisitions | PurchaseRequisition, PurchaseRequisitionLine | items, purchase-orders*, warehouses |
 | ⬜ | · rfqs | Rfq, RfqLine, RfqSupplier, RfqResponseLine | items, suppliers, general-needs*, purchase-orders*, purchase-requisitions* |
 | ⬜ | · general-needs | GeneralNeed, GeneralNeedLine | items, suppliers, consumption-groups, purchase-requisitions* |
-| ⬜ | **Production cluster** ↺ | — | bom, items, customers |
-| ⬜ | · production-plans | ProductionPlan, ProductionPlanLine | bom, items, sales-orders* |
-| ⬜ | · sales-orders | SalesOrder, SalesOrderLine | customers, items, production-plans* |
+| ✅ spec-019 | **Production cluster** ↺ | — | bom, items, customers |
+| ✅ spec-019 | · production-plans | ProductionPlan, ProductionPlanLine | bom, items, sales-orders* |
+| ✅ spec-019 | · sales-orders | SalesOrder, SalesOrderLine | customers, items, production-plans* |
 
 `*` = intra-cluster cyclic edge — spec the cluster as one unit.
 
@@ -127,4 +127,5 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 11. ~~**stock-transactions**~~ ✅ spec-016 — Tier 3, prerequisite of goods-receipts, stock-reconciliation, invoices.
 12. ~~**stock-reconciliation**~~ ✅ spec-017 — Tier 3, cycle counts feeding the movement ledger.
 13. ~~**supplier-items**~~ ✅ spec-018 — Tier 4, last single module before the clusters.
-14. **Production cluster** (`sales-orders` + `production-plans`) — Tier 4, two-module cycle specced as one unit; deps all ✅ (bom, items, customers). ← **next**
+14. ~~**Production cluster**~~ ✅ spec-019 — first cluster spec, one unit.
+15. **Procurement cluster** (`purchase-orders ↔ rfqs ↔ purchase-requisitions ↔ general-needs`) — Tier 4, four-module cycle as one unit; deps all ✅. ← **next**

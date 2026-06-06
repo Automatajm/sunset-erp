@@ -1,6 +1,6 @@
 # spec-019 — Production Cluster (Sales Orders ↔ Production Plans)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: 19  
 Module(s): `sales-orders` + `production-plans` (cyclic cluster — specced as one unit per `specs/MODULE-CASCADE.md`; touches `frontend/lib/api/sales-orders.ts` + `production-plans.ts` for the list envelopes)  
@@ -361,3 +361,4 @@ cd backend && pnpm build && pnpm test sales-orders && pnpm test production-plans
 | 2026-06-06 | Cluster spec generated from code by spec-generator (seeded by opportunity-finder combined audit, SO 43 + PP 81 = 124) | Draft — 13 unscoped writes + 3 unscoped reads, missing SO state machine, untransacted generateMos + inline MO generator, linkMo steal guards, customerId re-validation, discount cap, inline bodies → DTOs, query DTOs, 9 missing @ApiResponse, list envelopes captured as unchecked criteria |
 | 2026-06-06 | Test scaffolding written (17 + 27 unit / 15 e2e, tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 17 gaps implemented: 13 writes tenant-scoped (updateMany + refetch), SO state machine (draft->confirmed->shipped->delivered->closed, terminals enforced), customerId re-validation, transactional generateMos with tx-aware MO numbering, linkMo steal (409) + already-linked (400) guards, P2002->409 x3, soLine/lines deletedAt filters, date sanity, @Max(100) discount + per-column caps, GenerateMosDto/LinkMoDto, query DTOs, 29 @ApiResponse on PP controller, { salesOrders / productionPlans, count } envelopes + both frontend getters | Unit 17/17 + 27/27, e2e 15/15 (full SO->plan->MO cycle live), backend + frontend builds OK, lint clean |
+| 2026-06-06 | Shipped to origin (`6edbd46`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
