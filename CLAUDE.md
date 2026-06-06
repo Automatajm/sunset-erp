@@ -268,6 +268,47 @@ When a service needs data from another module:
 
 ---
 
+## Autonomy rules (pre-approved decisions — never ask, just execute)
+
+### Writes and file operations
+- `sed -i`, `git mv`, python3 file patches: always approved when scope is files already tracked in this repo
+- `git add` + `git commit` + `git push origin main`: always approved
+- `pnpm build`, `pnpm test`, `pnpm test:e2e`: always approved
+- `npx eslint --fix` on changed files only: always approved
+- `prisma generate`: always approved
+
+### Design decisions pre-approved for all specs
+- `updateMany({ where: { id, tenantId, deletedAt: null } })` instead of `update({ where: { id } })`: always use this pattern, never ask
+- `P2002 → 409 ConflictException` with retry message: always do this, never ask
+- Numeric max codegen (`findMany` → reduce `Math.max`): always use this pattern, never ask
+- `{ resource, count }` envelope on all list endpoints: always add this, never ask
+  (and always run the `frontend-sync` sweep for its consumers in the same spec)
+- `@IsIn()` whitelist on all enum string fields: always add this, never ask
+- `@Max()` cap on all Decimal columns (use column capacity − 1 order of magnitude): always add this, never ask
+- Soft delete (`deletedAt` + `deletedBy`), never hard delete: always, never ask
+  (exception: models documented as hard-delete by design, e.g. `StockCountAssignment`)
+- `deletedAt: null` filter on all reads: always, never ask
+  (exception: code generators deliberately span soft-deleted rows — spec-012)
+- Re-add after `git mv` to ensure edits are staged: always do this, never ask
+
+### State machine decisions
+- When a module has a status field with no validation: always implement a whitelist
+  `@IsIn` and a transition map — use the pattern from `production-plans.service.ts`
+- When a generator uses `findFirst` + `orderBy` instead of `findMany` + reduce
+  `Math.max`: always migrate to numeric max, never ask
+
+### What still requires asking
+- Dropping a column or table (destructive schema change)
+- Changing a public API contract that has frontend consumers (check `frontend-sync` first)
+- Adding a new npm dependency
+- Any change outside the sunset-erp repo directory
+
+> Note: these rules govern in-conversation decisions. Shell-level permission prompts
+> are controlled separately by `.claude/settings.json` (`/fewer-permission-prompts`
+> can generate that allowlist).
+
+---
+
 ## Specs directory structure
 
 ```
