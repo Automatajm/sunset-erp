@@ -1,6 +1,6 @@
 # spec-024 — Production Orders (MO)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Manufacturing  
 Sprint: Production cluster follow-up (post spec-019)  
 Module(s): `production-orders` (touches `production-plans` for the shared MO number
@@ -466,3 +466,4 @@ pnpm build && cd ../frontend && pnpm build
 | 2026-06-06 | Spec generated from code by spec-generator (opportunity-finder score 84: 7 critical scoping, 2 architecture, 6 DTO, 6 error-handling, 7 swagger) | Draft — pending review |
 | 2026-06-06 | Test scaffolds written (28 unit / 24 e2e, 27 tagged [GAP] red) | Red as designed |
 | 2026-06-06 | All 24 gaps implemented: mo_priority additive migration (shadow-DB workaround: migrate diff + deploy), MO state machine (whitelist + transition map, terminals enforced), deliver re-entry blocked (duplicate JE closed), numeric-max MO/JE generators + production-plans generateMos aligned, P2002→409, bom/account lookups scoped, 5 writes → updateMany + refetch, priority persisted, workCenterId dropped, @IsUUID/@Max/@IsIn DTOs + query DTOs, envelopes + frontend-sync (extractList, quantityOrdered fix — UI quantity edit unbroken), DI fix (AutomationModule import) | Unit 33/33, e2e 26/26; spec-019 regression: plans 27/27, cluster e2e 15/15 |
+| 2026-06-06 | Shipped to origin (05d9981); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
