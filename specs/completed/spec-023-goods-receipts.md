@@ -1,6 +1,6 @@
 # spec-023 — Goods Receipts (GRN)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Procurement  
 Sprint: Procurement cluster (post spec-020)  
 Module(s): `goods-receipts`  
@@ -414,3 +414,4 @@ pnpm build && pnpm lint && cd ../frontend && pnpm build
 | 2026-06-06 | Spec generated from code by spec-generator (opportunity-finder score 66: 6 critical scoping, 5 DTO, 6 error-handling, 1 architecture) | Draft — pending review |
 | 2026-06-06 | Test scaffolds written (27 unit / 19 e2e, 23 tagged [GAP] red) | Red as designed |
 | 2026-06-06 | All 20 gaps implemented: tenant-scoped reads/writes (updateMany pattern), numeric-max generators, P2002→409, PO-linkage + over-receipt guards, DTO whitelist/caps/ArrayMinSize, `{ goodsReceipts, count }` envelopes + frontend-sync (getAll/getByPo unwrap), dead getInventoryTurnover deleted (−202 lines) | Unit 30/30 ✅, e2e 22/22 ✅ (cross-tenant write leak verified closed) |
+| 2026-06-06 | Shipped to origin (3d8fb3d); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
