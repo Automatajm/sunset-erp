@@ -53,17 +53,18 @@ export class WarehouseLocationsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all zones for a warehouse' })
   @ApiParam({ name: 'warehouseId', description: 'Warehouse UUID' })
-  @ApiResponse({ status: 200, description: 'List of zones with aisle counts' })
+  @ApiResponse({ status: 200, description: 'Envelope { zones, count } with aisle counts' })
   async findZones(@Request() req, @Param('warehouseId') warehouseId: string) {
     return this.warehouseLocationsService.findZones(req.user.tenantId, warehouseId);
   }
 
   @Patch('zones/:id')
   @RequirePermissions('INVENTORY:EDIT')
-  @ApiOperation({ summary: 'Update a zone' })
+  @ApiOperation({ summary: 'Update a zone. Code change cascades fullCode to all descendants' })
   @ApiParam({ name: 'id', description: 'Zone UUID' })
   @ApiResponse({ status: 200, description: 'Zone updated successfully' })
   @ApiResponse({ status: 404, description: 'Zone not found' })
+  @ApiResponse({ status: 409, description: 'New code already used by a sibling zone' })
   async updateZone(@Request() req, @Param('id') id: string, @Body() dto: UpdateZoneDto) {
     return this.warehouseLocationsService.updateZone(req.user.tenantId, req.user.id, id, dto);
   }
@@ -71,9 +72,10 @@ export class WarehouseLocationsController {
   @Delete('zones/:id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a zone (soft delete)' })
+  @ApiOperation({ summary: 'Delete a zone (soft delete). Fails if active aisles exist.' })
   @ApiParam({ name: 'id', description: 'Zone UUID' })
   @ApiResponse({ status: 200, description: 'Zone deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — active aisles exist' })
   @ApiResponse({ status: 404, description: 'Zone not found' })
   async removeZone(@Request() req, @Param('id') id: string) {
     return this.warehouseLocationsService.removeZone(req.user.tenantId, req.user.id, id);
@@ -95,17 +97,18 @@ export class WarehouseLocationsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all aisles for a zone' })
   @ApiParam({ name: 'zoneId', description: 'Zone UUID' })
-  @ApiResponse({ status: 200, description: 'List of aisles with rack counts' })
+  @ApiResponse({ status: 200, description: 'Envelope { aisles, count } with rack counts' })
   async findAisles(@Request() req, @Param('zoneId') zoneId: string) {
     return this.warehouseLocationsService.findAisles(req.user.tenantId, zoneId);
   }
 
   @Patch('aisles/:id')
   @RequirePermissions('INVENTORY:EDIT')
-  @ApiOperation({ summary: 'Update an aisle' })
+  @ApiOperation({ summary: 'Update an aisle. Code change cascades fullCode to all descendants' })
   @ApiParam({ name: 'id', description: 'Aisle UUID' })
   @ApiResponse({ status: 200, description: 'Aisle updated successfully' })
   @ApiResponse({ status: 404, description: 'Aisle not found' })
+  @ApiResponse({ status: 409, description: 'New code already used by a sibling aisle' })
   async updateAisle(@Request() req, @Param('id') id: string, @Body() dto: UpdateAisleDto) {
     return this.warehouseLocationsService.updateAisle(req.user.tenantId, req.user.id, id, dto);
   }
@@ -113,9 +116,10 @@ export class WarehouseLocationsController {
   @Delete('aisles/:id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete an aisle (soft delete)' })
+  @ApiOperation({ summary: 'Delete an aisle (soft delete). Fails if active racks exist.' })
   @ApiParam({ name: 'id', description: 'Aisle UUID' })
   @ApiResponse({ status: 200, description: 'Aisle deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — active racks exist' })
   @ApiResponse({ status: 404, description: 'Aisle not found' })
   async removeAisle(@Request() req, @Param('id') id: string) {
     return this.warehouseLocationsService.removeAisle(req.user.tenantId, req.user.id, id);
@@ -137,17 +141,18 @@ export class WarehouseLocationsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all racks for an aisle' })
   @ApiParam({ name: 'aisleId', description: 'Aisle UUID' })
-  @ApiResponse({ status: 200, description: 'List of racks with level counts' })
+  @ApiResponse({ status: 200, description: 'Envelope { racks, count } with level counts' })
   async findRacks(@Request() req, @Param('aisleId') aisleId: string) {
     return this.warehouseLocationsService.findRacks(req.user.tenantId, aisleId);
   }
 
   @Patch('racks/:id')
   @RequirePermissions('INVENTORY:EDIT')
-  @ApiOperation({ summary: 'Update a rack' })
+  @ApiOperation({ summary: 'Update a rack. Code change cascades fullCode to all descendants' })
   @ApiParam({ name: 'id', description: 'Rack UUID' })
   @ApiResponse({ status: 200, description: 'Rack updated successfully' })
   @ApiResponse({ status: 404, description: 'Rack not found' })
+  @ApiResponse({ status: 409, description: 'New code already used by a sibling rack' })
   async updateRack(@Request() req, @Param('id') id: string, @Body() dto: UpdateRackDto) {
     return this.warehouseLocationsService.updateRack(req.user.tenantId, req.user.id, id, dto);
   }
@@ -155,9 +160,10 @@ export class WarehouseLocationsController {
   @Delete('racks/:id')
   @RequirePermissions('INVENTORY:DELETE')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a rack (soft delete)' })
+  @ApiOperation({ summary: 'Delete a rack (soft delete). Fails if active levels exist.' })
   @ApiParam({ name: 'id', description: 'Rack UUID' })
   @ApiResponse({ status: 200, description: 'Rack deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete — active levels exist' })
   @ApiResponse({ status: 404, description: 'Rack not found' })
   async removeRack(@Request() req, @Param('id') id: string) {
     return this.warehouseLocationsService.removeRack(req.user.tenantId, req.user.id, id);
@@ -181,17 +187,18 @@ export class WarehouseLocationsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all levels for a rack' })
   @ApiParam({ name: 'rackId', description: 'Rack UUID' })
-  @ApiResponse({ status: 200, description: 'List of levels with bin and stock counts' })
+  @ApiResponse({ status: 200, description: 'Envelope { levels, count } with bin and stock counts' })
   async findLevels(@Request() req, @Param('rackId') rackId: string) {
     return this.warehouseLocationsService.findLevels(req.user.tenantId, rackId);
   }
 
   @Patch('levels/:id')
   @RequirePermissions('INVENTORY:EDIT')
-  @ApiOperation({ summary: 'Update a level' })
+  @ApiOperation({ summary: 'Update a level. Code change cascades fullCode to descendant bins' })
   @ApiParam({ name: 'id', description: 'Level UUID' })
   @ApiResponse({ status: 200, description: 'Level updated successfully' })
   @ApiResponse({ status: 404, description: 'Level not found' })
+  @ApiResponse({ status: 409, description: 'New code already used by a sibling level' })
   async updateLevel(@Request() req, @Param('id') id: string, @Body() dto: UpdateLevelDto) {
     return this.warehouseLocationsService.updateLevel(req.user.tenantId, req.user.id, id, dto);
   }
@@ -226,7 +233,7 @@ export class WarehouseLocationsController {
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get all bins for a level' })
   @ApiParam({ name: 'levelId', description: 'Level UUID' })
-  @ApiResponse({ status: 200, description: 'List of bins with stock line counts' })
+  @ApiResponse({ status: 200, description: 'Envelope { bins, count } with stock line counts' })
   async findBins(@Request() req, @Param('levelId') levelId: string) {
     return this.warehouseLocationsService.findBins(req.user.tenantId, levelId);
   }
@@ -237,6 +244,7 @@ export class WarehouseLocationsController {
   @ApiParam({ name: 'id', description: 'Bin UUID' })
   @ApiResponse({ status: 200, description: 'Bin updated successfully' })
   @ApiResponse({ status: 404, description: 'Bin not found' })
+  @ApiResponse({ status: 409, description: 'New code already used by a sibling bin' })
   async updateBin(@Request() req, @Param('id') id: string, @Body() dto: UpdateBinDto) {
     return this.warehouseLocationsService.updateBin(req.user.tenantId, req.user.id, id, dto);
   }

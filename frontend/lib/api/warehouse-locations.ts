@@ -53,7 +53,7 @@ export const warehouseLocationsApi = {
   },
   getZones: async (warehouseId: string) => {
     const res = await apiClient.get(`/warehouse-locations/zones/by-warehouse/${warehouseId}`);
-    return res.data as WZone[];
+    return (res.data as { zones: WZone[]; count: number }).zones;
   },
   updateZone: async (id: string, data: Partial<{ code: string; name: string; zoneType: string; description: string; isActive: boolean }>) => {
     const res = await apiClient.patch(`/warehouse-locations/zones/${id}`, data);
@@ -70,7 +70,7 @@ export const warehouseLocationsApi = {
   },
   getAisles: async (zoneId: string) => {
     const res = await apiClient.get(`/warehouse-locations/aisles/by-zone/${zoneId}`);
-    return res.data as WAisle[];
+    return (res.data as { aisles: WAisle[]; count: number }).aisles;
   },
   updateAisle: async (id: string, data: Partial<{ code: string; name: string; isActive: boolean }>) => {
     const res = await apiClient.patch(`/warehouse-locations/aisles/${id}`, data);
@@ -87,7 +87,7 @@ export const warehouseLocationsApi = {
   },
   getRacks: async (aisleId: string) => {
     const res = await apiClient.get(`/warehouse-locations/racks/by-aisle/${aisleId}`);
-    return res.data as WRack[];
+    return (res.data as { racks: WRack[]; count: number }).racks;
   },
   updateRack: async (id: string, data: Partial<{ code: string; name: string; isActive: boolean }>) => {
     const res = await apiClient.patch(`/warehouse-locations/racks/${id}`, data);
@@ -104,7 +104,7 @@ export const warehouseLocationsApi = {
   },
   getLevels: async (rackId: string) => {
     const res = await apiClient.get(`/warehouse-locations/levels/by-rack/${rackId}`);
-    return res.data as WLevel[];
+    return (res.data as { levels: WLevel[]; count: number }).levels;
   },
   updateLevel: async (id: string, data: Partial<{ code: string; name: string; isActive: boolean; maxWeightKg: number; maxVolumeLtr: number; maxPallets: number }>) => {
     const res = await apiClient.patch(`/warehouse-locations/levels/${id}`, data);
@@ -121,7 +121,7 @@ export const warehouseLocationsApi = {
   },
   getBins: async (levelId: string) => {
     const res = await apiClient.get(`/warehouse-locations/bins/by-level/${levelId}`);
-    return res.data as WBin[];
+    return (res.data as { bins: WBin[]; count: number }).bins;
   },
   updateBin: async (id: string, data: Partial<{ code: string; name: string; binType: string; maxWeightKg: number; maxVolumeLtr: number; maxPallets: number; allowMixedItems: boolean; isActive: boolean; notes: string }>) => {
     const res = await apiClient.patch(`/warehouse-locations/bins/${id}`, data);

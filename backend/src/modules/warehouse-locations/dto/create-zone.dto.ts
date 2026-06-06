@@ -2,7 +2,16 @@
 // FILE: backend/src/modules/warehouse-locations/dto/create-zone.dto.ts
 // ─────────────────────────────────────────────────────────────────────────────
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsBoolean, IsIn, MaxLength } from 'class-validator';
+
+export const ZONE_TYPES = [
+  'storage',
+  'receiving',
+  'shipping',
+  'quarantine',
+  'production',
+  'returns',
+];
 
 export class CreateZoneDto {
   @ApiProperty({ example: 'uuid-warehouse-id', description: 'Parent warehouse UUID' })
@@ -21,11 +30,13 @@ export class CreateZoneDto {
 
   @ApiPropertyOptional({
     example: 'storage',
+    enum: ZONE_TYPES,
     description: 'Zone type: storage | receiving | shipping | quarantine | production | returns',
     default: 'storage',
   })
   @IsOptional()
   @IsString()
+  @IsIn(ZONE_TYPES)
   @MaxLength(30)
   zoneType?: string;
 

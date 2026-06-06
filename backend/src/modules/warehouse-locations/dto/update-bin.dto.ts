@@ -2,8 +2,9 @@
 // FILE: backend/src/modules/warehouse-locations/dto/update-bin.dto.ts
 // ─────────────────────────────────────────────────────────────────────────────
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, MaxLength, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsIn, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BIN_TYPES } from './create-bin.dto';
 
 export class UpdateBinDto {
   @ApiPropertyOptional({ example: '01' })
@@ -18,9 +19,10 @@ export class UpdateBinDto {
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ example: 'standard' })
+  @ApiPropertyOptional({ example: 'standard', enum: BIN_TYPES })
   @IsOptional()
   @IsString()
+  @IsIn(BIN_TYPES)
   @MaxLength(30)
   binType?: string;
 

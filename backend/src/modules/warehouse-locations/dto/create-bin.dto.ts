@@ -2,8 +2,28 @@
 // FILE: backend/src/modules/warehouse-locations/dto/create-bin.dto.ts
 // ─────────────────────────────────────────────────────────────────────────────
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsBoolean, IsNumber, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsIn,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+export const BIN_TYPES = [
+  'standard',
+  'pallet',
+  'big_bag',
+  'tank',
+  'silo',
+  'ibc',
+  'container',
+  'bulk',
+];
 
 export class CreateBinDto {
   @ApiProperty({ example: 'uuid-level-id', description: 'Parent level UUID' })
@@ -26,11 +46,13 @@ export class CreateBinDto {
 
   @ApiPropertyOptional({
     example: 'standard',
+    enum: BIN_TYPES,
     description: 'Bin type: standard | pallet | big_bag | tank | silo | ibc | container | bulk',
     default: 'standard',
   })
   @IsOptional()
   @IsString()
+  @IsIn(BIN_TYPES)
   @MaxLength(30)
   binType?: string;
 
