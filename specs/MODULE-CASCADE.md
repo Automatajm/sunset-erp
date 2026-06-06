@@ -21,8 +21,8 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 | Metric | Value |
 |--------|-------|
 | Business modules total | 38 |
-| Specced (Done) | 13 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers` |
-| Pending | 25 |
+| Specced (Done) | 14 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations` |
+| Pending | 24 |
 
 ### ⚠️ Cascade violations already shipped (skipped prerequisites)
 These were specced **before** their own dependencies were specced. Their prerequisites
@@ -66,7 +66,7 @@ So **`categories`, `consumption-groups`** are the remaining highest-priority bac
 | ⬜ | journal-entries | JournalEntry, JournalEntryLine | chart-of-accounts |
 | ⬜ | budgets | Budget, BudgetLine | chart-of-accounts |
 | ⬜ | cash-flow | CashFlowProjection, CashFlowLine | chart-of-accounts |
-| ⬜ | warehouse-locations | WarehouseZone, WarehouseAisle, WarehouseRack, WarehouseLevel, WarehouseBin | warehouses |
+| ✅ spec-014 | warehouse-locations | WarehouseZone, WarehouseAisle, WarehouseRack, WarehouseLevel, WarehouseBin | warehouses |
 
 ### Tier 2 — master data
 | Status | Module | Owns (Prisma) | Depends on |
@@ -121,6 +121,6 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 5. ~~**categories**~~ ✅ spec-009 — Tier 1, prerequisite of items✅.
 6. ~~**customers**~~ ✅ spec-013 — Tier 0, prerequisite of sales-orders, ar-invoices.
 7. ~~**work-centers**~~ ✅ spec-010 — Tier 0, prerequisite of bom.
-8. **warehouse-locations** — Tier 1, prerequisite of stock-*. ← **next**
-9. **journal-entries** — Tier 1, prerequisite of production-orders, invoices.
+8. ~~**warehouse-locations**~~ ✅ spec-014 — Tier 1, prerequisite of stock-*.
+9. **journal-entries** — Tier 1, prerequisite of production-orders, invoices. ← **next**
 10. ~~**bom**~~ ✅ spec-011 — Tier 3, prerequisite of production cluster.
