@@ -1,6 +1,6 @@
 # spec-028 — Non-Destructive Seed (`pnpm seed` additive, wipe only on `seed:reset`)
 
-Status: **Implemented — pending review**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: tooling hardening (incident-driven)
 Module(s): backend tooling only — `prisma/seed.ts`, `prisma/seeds/01-02`, `package.json` scripts
@@ -123,3 +123,4 @@ cd backend
 |---|---|---|
 | 2026-06-07 | Spec drafted from the same-day incident (full DB wipe via `pnpm seed`); sub-seed idempotency audited: 03/04/05/06 already idempotent, 01/02 bare creates are the only additive blockers; noted `seed:reset` makes the truncate redundant (schema drop + auto-seed) | Draft — pending approval |
 | 2026-06-07 | Implemented option (a): `resetDatabase()`/`resetSequences()` deleted from seed.ts (contract comment added); 01/02 create→upsert on `code`; `seed:reset` unchanged (pre-existing `migrate reset --force` semantics, zero new risk — live scratch-DB check deferred, no scratch DB on this host). CLAUDE.md ⚠️ replaced with the additive contract. **Bonus fix:** `ar-invoices.e2e-spec` had a latent residue dependency exposed by clean DBs — `from-so` 404'd because SOs default to USD (`sales-orders.service:107`) and no USD→DOP rate existed except as exchange-rates-suite residue; beforeAll now ensures it. | `pnpm seed` ×2: zero errors, counts identical across all 71 tenant-scoped tables, API-created RFQ survived with same id; grep: no executable TRUNCATE/deleteMany in seed path; unit 578/578; e2e 403/403 on **3 consecutive clean-DB first runs** (one unidentified single-test failure occurred before the fixture fix and never recurred — suspected race with the dev backend's 15s drain worker sharing the DB, noted for observation) |
+| 2026-06-07 | Ship gates: compliance 100% (10/10 code-verifiable); unit 578/578; e2e 403/403 (4th consecutive clean run); nest build OK; lint = pre-existing tsconfig exclusion of prisma/+test/ paths (not new). Shipped to origin (a9dd4be); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
