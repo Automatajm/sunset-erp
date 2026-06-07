@@ -307,6 +307,25 @@ When a service needs data from another module:
 - When a generator uses `findFirst` + `orderBy` instead of `findMany` + reduce
   `Math.max`: always migrate to numeric max, never ask
 
+### Full autonomy within this repo (never ask for these)
+- Any bash command that only reads files or runs processes inside /home/juan/projects/sunset-erp/
+- Any python3 inline script that patches files inside the repo
+- git add, git commit, git push origin main — always approved
+- pnpm test, pnpm test:e2e, pnpm build, pnpm lint — always approved
+- npx eslint --fix on any file inside the repo
+- npx tsc --noEmit — always approved
+- prisma generate, prisma migrate dev — always approved
+- curl to localhost:3000 or localhost:3001 — always approved
+- kill $(lsof -t -i:3000) or kill $(lsof -t -i:3001) — always approved
+- Any node -e or node --eval command — always approved
+- sed -i on files inside the repo — always approved
+
+### Still requires explicit approval (these 4 only)
+- sudo commands of any kind
+- Installing new npm/pnpm packages (pnpm add, npm install)
+- Any command targeting files outside /home/juan/projects/sunset-erp/
+- Destructive Prisma migrations (DROP TABLE, DROP COLUMN)
+
 ### What still requires asking
 - Dropping a column or table (destructive schema change)
 - Changing a public API contract that has frontend consumers (check `frontend-sync` first)
