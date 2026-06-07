@@ -1,6 +1,6 @@
 # spec-031 — Automation Engine (Auto-JE Config + Review Queue)
 
-Status: **Implemented — pending ship**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: finance hardening (3 of 5 — opportunity-finder score 18, last of the 3 critical)
 Module(s): automation
@@ -185,3 +185,5 @@ changes. No schema changes.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec generated from code by spec-generator (opportunity-finder score 18: 3+ cross-tenant GL write leaks in approve/reject; Swagger + DTOs already complete; config/queue tables have no soft-delete by design) | Draft — pending review |
+| 2026-06-07 | Implemented + test-scaffolded: 5 cross-tenant GL/queue writes scoped (approve JE post + queue update; reject JE+lines hard-delete + queue update); @ApiParam module list refreshed. Unit 14/14, e2e 11/11. | Implemented |
+| 2026-06-07 | Ship gates: compliance 100% (0 id-only writes, 10 tenant-scoped where clauses); unit 14/14; full e2e 441/441 on clean run (intermittent notification-drain flake on 2 prior runs, non-reproducible on re-run); nest build OK; lint clean (src 0 prettier; test/ tsconfig exclusion pre-existing). Shipped to origin; marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
