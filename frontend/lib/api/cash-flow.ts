@@ -7,6 +7,8 @@ import { CashFlowScenario } from './types';
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  // spec-030 envelope { cashFlowProjections, count }; tolerate legacy shapes
+  if (Array.isArray(d?.cashFlowProjections)) return d.cashFlowProjections;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }

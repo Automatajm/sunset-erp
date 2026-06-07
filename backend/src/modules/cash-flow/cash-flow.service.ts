@@ -38,34 +38,42 @@ export class CashFlowService {
       );
     }
 
-    const projection = await this.prisma.cashFlowProjection.create({
-      data: {
-        tenantId,
-        projectionCode: createCashFlowProjectionDto.projectionCode,
-        projectionName: createCashFlowProjectionDto.projectionName,
-        startDate: new Date(createCashFlowProjectionDto.startDate),
-        endDate: new Date(createCashFlowProjectionDto.endDate),
-        scenario: createCashFlowProjectionDto.scenario || 'realistic',
-        description: createCashFlowProjectionDto.description,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-      include: {
-        cashFlowLines: {
-          include: {
-            account: {
-              select: {
-                accountNumber: true,
-                name: true,
+    try {
+      return await this.prisma.cashFlowProjection.create({
+        data: {
+          tenantId,
+          projectionCode: createCashFlowProjectionDto.projectionCode,
+          projectionName: createCashFlowProjectionDto.projectionName,
+          startDate: new Date(createCashFlowProjectionDto.startDate),
+          endDate: new Date(createCashFlowProjectionDto.endDate),
+          scenario: createCashFlowProjectionDto.scenario || 'realistic',
+          description: createCashFlowProjectionDto.description,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        include: {
+          cashFlowLines: {
+            include: {
+              account: {
+                select: {
+                  accountNumber: true,
+                  name: true,
+                },
               },
             },
+            orderBy: { lineDate: 'asc' },
           },
-          orderBy: { lineDate: 'asc' },
         },
-      },
-    });
-
-    return projection;
+      });
+    } catch (e) {
+      // @@unique([tenantId, projectionCode]) can race past the pre-check.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Projection code ${createCashFlowProjectionDto.projectionCode} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   async findAll(tenantId: string, scenario?: string) {
@@ -78,7 +86,7 @@ export class CashFlowService {
       where.scenario = scenario;
     }
 
-    const projections = await this.prisma.cashFlowProjection.findMany({
+    const cashFlowProjections = await this.prisma.cashFlowProjection.findMany({
       where,
       include: {
         cashFlowLines: {
@@ -96,7 +104,7 @@ export class CashFlowService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return projections;
+    return { cashFlowProjections, count: cashFlowProjections.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -167,27 +175,19 @@ export class CashFlowService {
       dataToUpdate.endDate = new Date(updateCashFlowProjectionDto.endDate);
     }
 
-    const updated = await this.prisma.cashFlowProjection.update({
-      where: { id },
+    await this.prisma.cashFlowProjection.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: dataToUpdate,
-      include: {
-        cashFlowLines: {
-          include: {
-            account: true,
-          },
-          orderBy: { lineDate: 'asc' },
-        },
-      },
     });
 
-    return updated;
+    return this.findOne(tenantId, id);
   }
 
   async remove(tenantId: string, userId: string, id: string) {
     const projection = await this.findOne(tenantId, id);
 
-    await this.prisma.cashFlowProjection.update({
-      where: { id },
+    await this.prisma.cashFlowProjection.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,
@@ -293,15 +293,15 @@ export class CashFlowService {
       dataToUpdate.accountId = updateData.accountId;
     }
 
-    const updated = await this.prisma.cashFlowLine.update({
-      where: { id: lineId },
+    await this.prisma.cashFlowLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
       data: dataToUpdate,
-      include: {
-        account: true,
-      },
     });
 
-    return updated;
+    return this.prisma.cashFlowLine.findFirst({
+      where: { id: lineId, tenantId, deletedAt: null },
+      include: { account: true },
+    });
   }
 
   async removeCashFlowLine(tenantId: string, userId: string, projectionId: string, lineId: string) {
@@ -320,8 +320,8 @@ export class CashFlowService {
       throw new NotFoundException('Cash flow line not found');
     }
 
-    await this.prisma.cashFlowLine.update({
-      where: { id: lineId },
+    await this.prisma.cashFlowLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,

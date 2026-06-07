@@ -1,5 +1,5 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MaxLength, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength, IsDateString, IsIn } from 'class-validator';
 
 export class CreateCashFlowProjectionDto {
   @ApiProperty({ example: 'CFP-2026-Q1', description: 'Projection code' })
@@ -28,9 +28,8 @@ export class CreateCashFlowProjectionDto {
     example: 'realistic',
     description: 'Scenario: optimistic, realistic, pessimistic',
   })
-  @IsString()
   @IsOptional()
-  @MaxLength(50)
+  @IsIn(['optimistic', 'realistic', 'pessimistic'])
   scenario?: string;
 
   @ApiProperty({ example: 'Q1 cash flow projection for planning purposes', required: false })

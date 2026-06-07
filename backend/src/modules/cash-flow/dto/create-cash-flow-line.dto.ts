@@ -5,6 +5,10 @@ import {
   IsNumber,
   IsOptional,
   IsDateString,
+  IsUUID,
+  IsIn,
+  Max,
+  Min,
   MaxLength,
 } from 'class-validator';
 
@@ -15,9 +19,7 @@ export class CreateCashFlowLineDto {
   lineDate: string;
 
   @ApiProperty({ example: 'inflow', description: 'Line type: inflow or outflow' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
+  @IsIn(['inflow', 'outflow'])
   lineType: string;
 
   @ApiProperty({ example: 'Sales Revenue', description: 'Category' })
@@ -29,6 +31,8 @@ export class CreateCashFlowLineDto {
   @ApiProperty({ example: 50000, description: 'Amount' })
   @IsNumber()
   @IsNotEmpty()
+  @Min(0)
+  @Max(999999999999999) // Decimal(18,2) capacity − 1 order of magnitude
   amount: number;
 
   @ApiProperty({ example: 'Projected sales collection', required: false })
@@ -37,7 +41,7 @@ export class CreateCashFlowLineDto {
   description?: string;
 
   @ApiProperty({ example: 'uuid-of-account', required: false })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   accountId?: string;
 }

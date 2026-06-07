@@ -24,6 +24,8 @@ import { CashFlowService } from './cash-flow.service';
 import { CreateCashFlowProjectionDto } from './dto/create-cash-flow-projection.dto';
 import { UpdateCashFlowProjectionDto } from './dto/update-cash-flow-projection.dto';
 import { CreateCashFlowLineDto } from './dto/create-cash-flow-line.dto';
+import { UpdateCashFlowLineDto } from './dto/update-cash-flow-line.dto';
+import { GenerateCashFlowDto } from './dto/generate-cash-flow.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -135,7 +137,7 @@ export class CashFlowController {
     @Request() req,
     @Param('id') id: string,
     @Param('lineId') lineId: string,
-    @Body() updateData: Partial<CreateCashFlowLineDto>,
+    @Body() updateData: UpdateCashFlowLineDto,
   ) {
     return this.cashFlowService.updateCashFlowLine(
       req.user.tenantId,
@@ -183,14 +185,7 @@ export class CashFlowController {
   async generateFromData(
     @Request() req,
     @Param('id') id: string,
-    @Body()
-    options: {
-      startDate?: string;
-      endDate?: string;
-      includeAR?: boolean;
-      includePO?: boolean;
-      includeBudget?: boolean;
-    } = {},
+    @Body() options: GenerateCashFlowDto,
   ) {
     return this.cashFlowService.generateFromData(req.user.tenantId, req.user.id, id, options);
   }
