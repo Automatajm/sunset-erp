@@ -1,6 +1,6 @@
 # spec-029 — Budgets (Annual Budgets + Lines + Budget-vs-Actual)
 
-Status: **Implemented — pending ship**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: finance hardening (1 of 5 — opportunity-finder score 29, highest of the unspecced finance modules)
 Module(s): budgets
@@ -235,3 +235,5 @@ worth the coupling churn in this spec) unless the reviewer says otherwise.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec generated from code by spec-generator (opportunity-finder score 29: 4 cross-tenant write leaks, 9 missing @ApiResponse, weak update-line DTO, bare-array list) | Draft — pending review |
+| 2026-06-07 | Implemented + test-scaffolded: 4 cross-tenant write leaks closed (updateMany + refetch), reclaim/MRP findFirst tenant-scoped, P2002→409, { budgets, count } envelope (+ frontend-sync), real UpdateBudgetLineDto, @Max/@Min/@IsUUID/@IsIn DTO caps, 9 @ApiResponse. Unit 19/19, e2e 14/14 (tenant-isolation verified). | Implemented |
+| 2026-06-07 | Ship gates: compliance 100% (10/10 code-verifiable); unit 19/19; full e2e 417/417 (one known intermittent flake on a prior run, green on re-run — notification-drain race); nest build OK; lint clean (10 prettier auto-fixed; test/ tsconfig exclusion is pre-existing repo debt). Shipped to origin (52c1470 + 0bc0664); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
