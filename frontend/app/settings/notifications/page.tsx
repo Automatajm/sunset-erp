@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
-import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
-import { ERPFilter } from '@/components/ui/ERPFilterBar';
+import { ERPTable, ERPColumn, ERPFilter } from '@/components/ui/ERPTable';
 import {
   notificationsApi,
   Notification,
