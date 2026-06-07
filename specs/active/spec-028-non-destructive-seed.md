@@ -1,0 +1,124 @@
+# spec-028 — Non-Destructive Seed (`pnpm seed` additive, wipe only on `seed:reset`)
+
+Status: **Draft**
+Owner: Axiom Systems
+Sprint: tooling hardening (incident-driven)
+Module(s): backend tooling only — `prisma/seed.ts`, `prisma/seeds/01-02`, `package.json` scripts
+Last updated: 2026-06-07
+
+## Problem
+
+**Incident 2026-06-07:** `pnpm seed` was run mid-session to "restore seed-owned
+data" and instead destroyed the entire database: `prisma/seed.ts` calls
+`resetDatabase()` — 32 `TRUNCATE … CASCADE` statements (`seed.ts:11-49`) — before
+re-seeding. CASCADE drags every referencing table, so even tables not listed
+(RFQs, AP/AR invoices, GRNs, notifications, count sessions) are wiped. All of
+BURGER's API-created demo enrichment (money-loop) was lost and every entity id
+in the database changed.
+
+The command's name and docs promise the opposite: CLAUDE.md documented
+`pnpm seed` as plain `prisma db seed` and reserved "DROPS data" for
+`seed:reset`. The sub-seeds are nearly all idempotent already (03–06 use
+upsert / check-and-create); the orchestrator's wipe is what makes the whole
+command destructive — and it is **redundant in the reset path**, because
+`seed:reset` = `prisma migrate reset --force`, which drops the schema and
+re-runs the seed on empty tables anyway.
+
+Residual hazard: `prisma db seed` is also auto-invoked by Prisma after
+`migrate reset` (and prompted after some `migrate dev` flows) — any such
+implicit invocation currently truncates production-like data.
+
+## Acceptance criteria
+
+### Additive seed
+- [ ] `prisma/seed.ts` no longer calls `resetDatabase()`/`resetSequences()` in
+      the `pnpm seed` path; no `TRUNCATE` statement is reachable from
+      `prisma db seed`.
+- [ ] `pnpm seed` run twice consecutively completes without errors and without
+      data loss: row counts in every business table are identical before/after
+      the second run (no duplicates, nothing deleted).
+- [ ] Rows created via the API after a seed (e.g. an RFQ in BURGER) survive a
+      subsequent `pnpm seed` unchanged — same id, same data.
+- [ ] `01-currencies.seed.ts` and `02-languages.seed.ts` converted from bare
+      `create` loops to `upsert` keyed on their natural unique key (`code`),
+      matching the pattern already used in 03/04/06. (These are the only two
+      sub-seeds that currently P2002 on a non-empty table.)
+- [ ] Sub-seeds 03–06 unchanged (already idempotent: 03/04/06 upsert,
+      05 check-and-create with its consistency contract).
+
+### Reset path
+- [ ] Full-wipe capability is preserved and EXPLICIT: `pnpm seed:reset` keeps
+      wiping everything. Implementation choice (either satisfies):
+      a) keep `seed:reset` = `prisma migrate reset --force` (schema drop +
+         migrations + auto-seed on empty DB — `resetDatabase()` becomes dead
+         code and is deleted), or
+      b) if a data-only wipe (no re-migration) is still wanted, move
+         `resetDatabase()` to a dedicated `prisma/reset-data.ts` invoked ONLY
+         by an explicit script (e.g. `seed:reset` chains it before the seed).
+      Either way: the truncate code must be unreachable from `pnpm seed` and
+      from Prisma's implicit seed hook.
+- [ ] `seed:reset` (whichever form) ends in the same final state as today:
+      empty DB → master data → DEMO + BURGER + exchange rates.
+
+### Docs
+- [ ] CLAUDE.md command block updated: remove the ⚠️ destructive warning from
+      `pnpm seed` (it becomes accurate-by-construction: "additive/idempotent"),
+      keep the full demo-restore sequence note (UOM catalog + money-loop remain
+      separate scripts).
+- [ ] `seed.ts` header comment states the contract: "additive and idempotent;
+      wiping lives in seed:reset only".
+
+## Out of scope
+
+- Merging `seed-uom.ts` or `seed-demo-moneyloop.ts` into the main seed (they
+  stay separate; money-loop is API-driven and needs a running backend).
+- Changing what the seed creates (no new data, no removed data).
+- e2e-residue cleanup (`scripts/clean-e2e-residue.sh` already covers it).
+- Auto-detecting "dirty" databases or interactive confirmation prompts — the
+  contract is simply: `seed` never deletes, `seed:reset` always does.
+
+## Data model
+
+No schema changes.
+
+## API contracts
+
+No API changes. Tooling only: `prisma/seed.ts`, `prisma/seeds/01-*.ts`,
+`prisma/seeds/02-*.ts`, `backend/package.json` scripts, optionally a new
+`prisma/reset-data.ts`.
+
+## Implementation notes
+
+| File | Change |
+|---|---|
+| `prisma/seed.ts` | Delete `resetDatabase()`/`resetSequences()` calls (and the functions, per option a); add contract comment |
+| `prisma/seeds/01-currencies.seed.ts` | `create` loop → `upsert` on `code` |
+| `prisma/seeds/02-languages.seed.ts` | `create` loop → `upsert` on `code` |
+| `backend/package.json` | `seed:reset` per chosen option (a = unchanged) |
+| `CLAUDE.md` | Update the seed command docs |
+
+Notes:
+- `prisma migrate reset` does NOT need the shadow DB (that constraint only
+  affects `migrate dev` — see the shadow-DB workaround in the pipeline notes),
+  so option (a) works under the current `sunset_user` grants. Verify once
+  during implementation; if reset fails on grants, fall back to option (b).
+- After this ships, re-verify the demo-restore sequence: on a healthy DB,
+  `pnpm seed` becomes a safe no-op top-up instead of a wipe.
+
+## Verification checklist
+
+```bash
+cd backend
+# 1. Baseline counts, then: pnpm seed && pnpm seed  → zero errors
+# 2. Diff counts across all business tables → identical (no dupes, no loss)
+# 3. Create an RFQ via API in BURGER → pnpm seed → RFQ still present, same id
+# 4. grep -rn "TRUNCATE" prisma/seed.ts prisma/seeds/  → no hits in the seed path
+# 5. pnpm seed:reset on a scratch DB → ends in today's exact post-reset state
+# 6. pnpm test && pnpm test:e2e  → green (suites must not depend on the wipe)
+```
+
+## Status log
+
+| Date | Action | Result |
+|---|---|---|
+| 2026-06-07 | Spec drafted from the same-day incident (full DB wipe via `pnpm seed`); sub-seed idempotency audited: 03/04/05/06 already idempotent, 01/02 bare creates are the only additive blockers; noted `seed:reset` makes the truncate redundant (schema drop + auto-seed) | Draft — pending approval |
