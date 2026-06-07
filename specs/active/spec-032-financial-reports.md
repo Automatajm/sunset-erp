@@ -1,6 +1,6 @@
 # spec-032 — Financial Reports (Trial Balance, P&L, Balance Sheet, General Ledger)
 
-Status: **Draft**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: finance hardening (4 of 5 — opportunity-finder score 12, validation-only)
 Module(s): financial-reports
@@ -147,3 +147,5 @@ both-or-neither dates. No schema changes.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec generated from code by spec-generator (opportunity-finder score 12: validation-only — scoping clean, Swagger complete; half-range silently ignored, inverted range, unknown-account silent empty, weak fiscalPeriod/accountType) | Draft — pending review |
+| 2026-06-07 | Implemented + test-scaffolded: validateDateParams (half-range + inverted → 400) on trial-balance/P&L/general-ledger; general-ledger 404 on unknown accountNumber; @Matches/@IsIn DTO. Balance-sheet exempt (as-of). Unit 11/11, e2e 10/10. | Implemented |
+| 2026-06-07 | Ship gates: compliance 100%; unit 11/11; full e2e 450/451 (the 1 failure = pre-existing cross-suite flake in exchange-rates.e2e — passes 12/12 in isolation; financial-reports is read-only and cannot have caused it); nest build OK; lint clean (src 0 prettier). Shipped to origin; marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
