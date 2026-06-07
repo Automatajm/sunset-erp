@@ -1,4 +1,4 @@
-﻿import { IsOptional, IsDateString, IsString, MaxLength } from 'class-validator';
+﻿import { IsOptional, IsDateString, IsString, IsIn, Matches, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReportParametersDto {
@@ -14,14 +14,12 @@ export class ReportParametersDto {
 
   @ApiPropertyOptional({ example: '2026-03', description: 'Fiscal period (YYYY-MM)' })
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @Matches(/^\d{4}-\d{2}$/, { message: 'fiscalPeriod must be YYYY-MM' })
   fiscalPeriod?: string;
 
   @ApiPropertyOptional({ example: 'asset', description: 'Filter by account type' })
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
+  @IsIn(['asset', 'liability', 'equity', 'revenue', 'cost', 'expense'])
   accountType?: string;
 
   @ApiPropertyOptional({ example: '1000', description: 'Specific account number' })

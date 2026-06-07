@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+﻿import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -7,7 +7,22 @@ import { Decimal } from '@prisma/client/runtime/library';
 export class FinancialReportsService {
   constructor(private prisma: PrismaService) {}
 
+  // spec-032 — a half-specified range is a client error, not "all time"; an
+  // inverted range is always a bug. Passing neither date stays valid (all-time).
+  private validateDateParams(params: ReportParametersDto) {
+    const { startDate, endDate } = params;
+    if (!!startDate !== !!endDate) {
+      throw new BadRequestException(
+        'Provide both startDate and endDate, or neither (use fiscalPeriod for a single period).',
+      );
+    }
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      throw new BadRequestException('startDate must be on or before endDate.');
+    }
+  }
+
   async getTrialBalance(tenantId: string, params: ReportParametersDto) {
+    this.validateDateParams(params);
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
     if (params.fiscalPeriod) {
       where.fiscalPeriod = params.fiscalPeriod;
@@ -67,6 +82,7 @@ export class FinancialReportsService {
   }
 
   async getProfitAndLoss(tenantId: string, params: ReportParametersDto) {
+    this.validateDateParams(params);
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
     if (params.fiscalPeriod) {
       where.fiscalPeriod = params.fiscalPeriod;
@@ -223,6 +239,8 @@ export class FinancialReportsService {
   }
 
   async getBalanceSheet(tenantId: string, params: ReportParametersDto) {
+    // Balance sheet is an as-of report keyed only on endDate — no range to
+    // cross-validate (startDate is not used here).
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
     if (params.endDate) {
       where.entryDate = { lte: new Date(params.endDate) };
@@ -340,6 +358,7 @@ export class FinancialReportsService {
   }
 
   async getGeneralLedger(tenantId: string, params: ReportParametersDto) {
+    this.validateDateParams(params);
     const where: any = { tenantId, deletedAt: null, status: 'posted' };
     if (params.fiscalPeriod) {
       where.fiscalPeriod = params.fiscalPeriod;
@@ -348,7 +367,17 @@ export class FinancialReportsService {
     }
 
     const accountWhere: any = {};
-    if (params.accountNumber) accountWhere.accountNumber = params.accountNumber;
+    if (params.accountNumber) {
+      // spec-032 — distinguish "wrong account number" from "no activity".
+      const account = await this.prisma.account.findFirst({
+        where: { tenantId, accountNumber: params.accountNumber, deletedAt: null },
+        select: { id: true },
+      });
+      if (!account) {
+        throw new NotFoundException(`Account ${params.accountNumber} not found`);
+      }
+      accountWhere.accountNumber = params.accountNumber;
+    }
 
     const lines = await this.prisma.journalEntryLine.findMany({
       where: { tenantId, deletedAt: null, journalEntry: where, account: accountWhere },
