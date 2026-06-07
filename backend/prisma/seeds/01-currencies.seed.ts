@@ -12,9 +12,14 @@ export async function seedCurrencies(prisma: PrismaClient) {
     { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$', decimalPlaces: 2 },
   ];
 
+  // spec-028 — additive seed: upsert on the natural key so re-runs are no-ops.
   for (const currency of currencies) {
-    await prisma.currency.create({ data: currency });
+    await prisma.currency.upsert({
+      where: { code: currency.code },
+      update: {},
+      create: currency,
+    });
   }
 
-  console.log(`   ✅ ${currencies.length} currencies created`);
+  console.log(`   ✅ ${currencies.length} currencies ensured`);
 }

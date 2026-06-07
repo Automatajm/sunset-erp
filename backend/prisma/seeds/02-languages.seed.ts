@@ -10,9 +10,14 @@ export async function seedLanguages(prisma: PrismaClient) {
     { code: 'fr-FR', name: 'French', nativeName: 'Français', isRtl: false },
   ];
 
+  // spec-028 — additive seed: upsert on the natural key so re-runs are no-ops.
   for (const language of languages) {
-    await prisma.language.create({ data: language });
+    await prisma.language.upsert({
+      where: { code: language.code },
+      update: {},
+      create: language,
+    });
   }
 
-  console.log(`   ✅ ${languages.length} languages created`);
+  console.log(`   ✅ ${languages.length} languages ensured`);
 }

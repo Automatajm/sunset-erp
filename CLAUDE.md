@@ -152,13 +152,12 @@ pnpm build                              # nest build → dist/
 pnpm lint                               # eslint --fix
 pnpm test                               # jest unit tests
 pnpm test path/to/file.spec.ts          # single test file
-pnpm seed                               # ⚠️ DESTRUCTIVE: seed.ts runs resetDatabase()
-                                        #    (TRUNCATE CASCADE on all tenants/data)
-                                        #    before re-seeding. NOT additive.
-                                        #    Full demo restore sequence:
-                                        #    pnpm seed && npx ts-node prisma/seed-uom.ts
-                                        #    && npx ts-node prisma/seed-demo-moneyloop.ts
-pnpm seed:reset                         # DROPS schema + migrations + re-seeds
+pnpm seed                               # additive + idempotent (spec-028): upserts only,
+                                        #    never deletes — safe on a populated DB.
+                                        #    Full demo enrichment (separate, in order):
+                                        #    npx ts-node prisma/seed-uom.ts
+                                        #    npx ts-node prisma/seed-demo-moneyloop.ts
+pnpm seed:reset                         # the ONLY wipe: DROPS schema + migrations + re-seeds
 
 npx prisma migrate dev --name <name>    # create + apply migration
 npx prisma migrate deploy               # apply in prod

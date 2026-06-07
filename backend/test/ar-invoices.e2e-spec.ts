@@ -110,6 +110,12 @@ describe('ArInvoices (e2e)', () => {
     await ensure(auth(request(server()).post('/api/exchange-rates')), {
       fromCurrency: 'GBP', toCurrency: 'DOP', rate: 75.5, rateDate: today,
     });
+    // USD→DOP too: SOs default to USD (sales-orders.service) and the from-so
+    // test freezes that rate — on a clean DB nothing else provides it (the
+    // suite used to pass only via exchange-rates-suite residue; spec-028).
+    await ensure(auth(request(server()).post('/api/exchange-rates')), {
+      fromCurrency: 'USD', toCurrency: 'DOP', rate: 60.0, rateDate: today,
+    });
   });
 
   afterAll(async () => {
