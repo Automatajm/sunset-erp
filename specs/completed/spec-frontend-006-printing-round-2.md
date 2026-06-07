@@ -1,6 +1,6 @@
 # spec-frontend-006 — Document Printing, Round 2 (RFQ, MO Traveler, Count Sheets)
 
-Status: **Implemented — pending visual verification**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: follow-up to spec-frontend-005 (printing infrastructure shipped e166f9d)
 Module(s): frontend only — rfqs, production-orders, stock-reconciliation pages
@@ -141,3 +141,4 @@ Notes:
 |---|---|---|
 | 2026-06-07 | Spec drafted (round-2 printing; API shapes verified live against BURGER tenant; confirmed zero backend changes needed — BOM components resolve to consumption groups by design) | Draft — pending approval |
 | 2026-06-07 | Implemented: 3 PRINT_DOCS entries (rfq / production-order / stock-count), `signatures` prop added to DocumentLayout (backwards-compatible default), PrintButton wired into RFQ drawer header + per-invited-supplier rows (`?rfqSupplierId=`), MO row actions, reconciliation session header. Phantom BOM components excluded from traveler. Test docs created in BURGER: RFQ-2026-0001 (2 suppliers), CC-2026-0001 (11 lines); MO traveler uses existing MO-2026-0003. | tsc clean; prod `pnpm build` PASSES; all 5 route variants + 3 wired pages dev-compile 200; +5 lint `any` matching file idiom (doesn't gate). Pending: browser visual check + ux-reviewer ≤ 2 |
+| 2026-06-07 | Visual verification by user (all three documents reviewed in browser, approved). Compliance audit: 100% (9/9 code-verifiable criteria, frontend-only — 0 backend files in diff; backend suite N/A, no frontend Jest harness by established state). One-click flow, friction ≤ 2. Shipped to origin (d8f97f1); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
