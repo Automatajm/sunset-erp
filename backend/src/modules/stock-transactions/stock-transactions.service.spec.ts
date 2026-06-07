@@ -8,6 +8,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { StockTransactionsService } from './stock-transactions.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UomService } from '../uom/uom.service';
 
 const TENANT_A = '11111111-1111-1111-1111-111111111111';
@@ -118,6 +119,10 @@ describe('StockTransactionsService', () => {
       providers: [
         StockTransactionsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NotificationsService,
+          useValue: { safeQueue: jest.fn(), safeQueueOnce: jest.fn() },
+        },
         { provide: UomService, useValue: uom },
       ],
     }).compile();

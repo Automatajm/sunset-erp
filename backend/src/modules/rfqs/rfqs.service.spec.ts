@@ -5,17 +5,13 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import {
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { RfqsService } from './rfqs.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service';
 
 const TENANT_A = '11111111-1111-1111-1111-111111111111';
-const TENANT_B = '22222222-2222-2222-2222-222222222222';
 const USER = '33333333-3333-3333-3333-333333333333';
 const SUP = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -76,6 +72,10 @@ describe('RfqsService', () => {
       providers: [
         RfqsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NotificationsService,
+          useValue: { safeQueue: jest.fn(), safeQueueOnce: jest.fn() },
+        },
         { provide: PurchaseOrdersService, useValue: poService },
       ],
     }).compile();
@@ -156,9 +156,9 @@ describe('RfqsService', () => {
       supplierId: SUP,
       status: 'awarded',
     });
-    await expect(
-      service.submitResponse(TENANT_A, USER, 'rfq-1', responseDto()),
-    ).rejects.toThrow(BadRequestException);
+    await expect(service.submitResponse(TENANT_A, USER, 'rfq-1', responseDto())).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('[GAP] submitResponse runs in a $transaction and its counts/writes carry tenantId', async () => {
@@ -166,9 +166,7 @@ describe('RfqsService', () => {
     await service.submitResponse(TENANT_A, USER, 'rfq-1', responseDto());
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(
-      prisma.rfqSupplier.count.mock.calls.some(
-        ([a]: [any]) => a?.where?.tenantId === TENANT_A,
-      ),
+      prisma.rfqSupplier.count.mock.calls.some(([a]: [any]) => a?.where?.tenantId === TENANT_A),
     ).toBe(true);
   });
 
@@ -191,7 +189,15 @@ describe('RfqsService', () => {
     unitPrice: 5,
     offeredQty: 10,
     leadTimeDays: 7,
-    rfqLine: { id: 'rl-1', rfqId: 'rfq-1', itemId: null, status: 'open', quantity: 10, uom: 'PCS', genericDescription: 'W' },
+    rfqLine: {
+      id: 'rl-1',
+      rfqId: 'rfq-1',
+      itemId: null,
+      status: 'open',
+      quantity: 10,
+      uom: 'PCS',
+      genericDescription: 'W',
+    },
     ...over,
   });
 
@@ -205,7 +211,11 @@ describe('RfqsService', () => {
       ...data,
       lines: [{ id: 'pol-1' }],
     }));
-    prisma.rfqSupplier.findFirst.mockResolvedValue({ id: 'rs-1', supplierId: SUP, status: 'responded' });
+    prisma.rfqSupplier.findFirst.mockResolvedValue({
+      id: 'rs-1',
+      supplierId: SUP,
+      status: 'responded',
+    });
   };
 
   it('[GAP] award validates rfqResponseLineId in-tenant AND in-RFQ (404 on foreign ids)', async () => {
@@ -219,7 +229,7 @@ describe('RfqsService', () => {
     expect(JSON.stringify(calls)).toContain(TENANT_A);
   });
 
-  it("[GAP] award checks the supplier with deletedAt: null", async () => {
+  it('[GAP] award checks the supplier with deletedAt: null', async () => {
     happyAwardMocks();
     await service.award(TENANT_A, USER, 'rfq-1', awardDto());
     expect(prisma.supplier.findFirst).toHaveBeenCalledWith(
@@ -263,9 +273,7 @@ describe('RfqsService', () => {
 
   it('[GAP] cancel on an awarded RFQ → 400 (terminal)', async () => {
     prisma.rfq.findFirst.mockResolvedValue(rfqRecord({ status: 'awarded' }));
-    await expect(service.cancel(TENANT_A, USER, 'rfq-1')).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(service.cancel(TENANT_A, USER, 'rfq-1')).rejects.toThrow(BadRequestException);
   });
 
   it('[GAP] update/cancel/remove writes are tenant-scoped at the write itself', async () => {

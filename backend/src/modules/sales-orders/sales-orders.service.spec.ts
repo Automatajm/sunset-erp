@@ -8,6 +8,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { SalesOrdersService } from './sales-orders.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const TENANT_A = '11111111-1111-1111-1111-111111111111';
 const TENANT_B = '22222222-2222-2222-2222-222222222222';
@@ -56,7 +57,14 @@ describe('SalesOrdersService', () => {
   beforeEach(async () => {
     prisma = { salesOrder: model(), customer: model(), item: model() };
     const mod = await Test.createTestingModule({
-      providers: [SalesOrdersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        SalesOrdersService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: NotificationsService,
+          useValue: { safeQueue: jest.fn(), safeQueueOnce: jest.fn() },
+        },
+      ],
     }).compile();
     service = mod.get(SalesOrdersService);
   });

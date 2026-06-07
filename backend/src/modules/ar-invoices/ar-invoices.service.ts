@@ -10,6 +10,7 @@ import { UpdateArInvoiceDto, ApplyPaymentDto } from './dto/update-ar-invoice.dto
 import { AutomationService } from '../automation/automation.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 import { CurrencyService } from '../currency/currency.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -19,7 +20,49 @@ export class ArInvoicesService {
     private automation: AutomationService,
     private stockService: StockTransactionsService,
     private currency: CurrencyService,
+    private notifications: NotificationsService,
   ) {}
+
+  // ── spec-022 — overdue scan (owned by AR; called by a daily worker). Queues
+  // one 'invoice_overdue' per invoice via safeQueueOnce (dedup on invoiceId).
+  async scanOverdue(): Promise<{ scanned: number; queued: number }> {
+    const today = new Date();
+    const overdue = await this.prisma.arInvoice.findMany({
+      where: {
+        deletedAt: null,
+        status: { in: ['sent', 'partial'] },
+        dueDate: { lt: today },
+      },
+      include: { customer: { select: { name: true, email: true } } },
+    });
+    let queued = 0;
+    for (const inv of overdue) {
+      const outstanding = Number(inv.totalAmount) - Number(inv.paidAmount);
+      if (outstanding <= 0) continue;
+      const email = inv.customer?.email;
+      if (!email) continue;
+      const daysOverdue = Math.floor(
+        (today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24),
+      );
+      this.notifications.safeQueueOnce(
+        inv.tenantId,
+        'invoice_overdue',
+        'invoiceId',
+        { email, name: inv.customer?.name },
+        {
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          customerName: inv.customer?.name,
+          outstanding: Math.round(outstanding * 100) / 100,
+          currency: (inv as any).currency ?? '',
+          dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+          daysOverdue,
+        },
+      );
+      queued++;
+    }
+    return { scanned: overdue.length, queued };
+  }
 
   async create(tenantId: string, userId: string, dto: CreateArInvoiceDto) {
     const customer = await this.prisma.customer.findFirst({

@@ -5,6 +5,7 @@
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 
@@ -20,7 +21,10 @@ const SO_TRANSITIONS: Record<string, string[]> = {
 
 @Injectable()
 export class SalesOrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async create(tenantId: string, userId: string, createSalesOrderDto: CreateSalesOrderDto) {
     // Verify customer exists and belongs to tenant
@@ -279,9 +283,27 @@ export class SalesOrdersService {
       },
     });
 
+    const updated = await this.findOne(tenantId, id);
+
+    // spec-022 — fire-and-forget: notify the customer on confirmation.
+    if (status === 'confirmed' && (updated as any).customer?.email) {
+      this.notifications.safeQueue(
+        tenantId,
+        'so_confirmed',
+        { email: (updated as any).customer.email, name: (updated as any).customer.name },
+        {
+          soNumber: updated.soNumber,
+          customerName: (updated as any).customer.name,
+          total: (updated as any).total,
+          currency: (updated as any).currency ?? '',
+        },
+        { createdBy: userId },
+      );
+    }
+
     return {
       message: `Sales Order ${so.soNumber} ${status}`,
-      salesOrder: await this.findOne(tenantId, id),
+      salesOrder: updated,
     };
   }
 

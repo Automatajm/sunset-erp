@@ -88,6 +88,7 @@ model Tenant {
   suppliers           Supplier[]
   items               Item[]
   exchangeRates       ExchangeRate[]
+  notifications       Notification[]
   warehouses          Warehouse[]
   stock               Stock[]
   stockMovements      StockMovement[]
@@ -1841,6 +1842,14 @@ model TenantSettings {
   // spec-021 — monetary base for the frozen-rate pattern (DR market default).
   // NOT Tenant.defaultCurrency (legacy, subscription-level).
   baseCurrency String @default("DOP") @map("base_currency") @db.VarChar(3)
+  // spec-022 — per-tenant email provider config. emailApiKey is NEVER serialized
+  // by any endpoint (stripped in the service response mapping).
+  emailProvider    String? @map("email_provider") @db.VarChar(20)
+  emailHost        String? @map("email_host") @db.VarChar(255)
+  emailPort        Int?    @map("email_port")
+  emailApiKey      String? @map("email_api_key") @db.Text
+  emailFromAddress String? @map("email_from_address") @db.VarChar(255)
+  emailFromName    String? @map("email_from_name") @db.VarChar(255)
   defaultUomSystem String @default("metric") @map("default_uom_system") @db.VarChar(20)
   volumeBaseUomId String? @map("volume_base_uom_id") @db.Uuid
   massBaseUomId   String? @map("mass_base_uom_id")   @db.Uuid
@@ -2798,3 +2807,29 @@ model ProductionPlanLine {
 //   mfg_production_plans    — new (PP-YYYY-NNNN, horizon, crpStatus hook)
 //   mfg_production_plan_lines — new (planned vs actual, SO source, GN signal)
 // Sprint 14 additions:
+
+// ============================================================================
+// spec-022 — Notifications (queue-first; the worker drains `pending` rows)
+// ============================================================================
+model Notification {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  type           String    @db.VarChar(50) // event key, e.g. 'so_confirmed'
+  channel        String    @default("email") @db.VarChar(20) // email | in_app
+  status         String    @default("pending") @db.VarChar(20) // pending | sent | failed | cancelled
+  recipientEmail String?   @map("recipient_email") @db.VarChar(255)
+  recipientName  String?   @map("recipient_name") @db.VarChar(255)
+  subject        String    @db.VarChar(500)
+  body           String    @db.Text
+  payload        Json?     @db.JsonB // triggering-entity snapshot for templating
+  retryCount     Int       @default(0) @map("retry_count")
+  lastError      String?   @map("last_error") @db.Text
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  createdBy      String?   @map("created_by") @db.Uuid
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@map("ntf_notifications")
+}

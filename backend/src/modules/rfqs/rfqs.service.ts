@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
 import { UpdateRfqDto } from './dto/update-rfq.dto';
 import { SubmitRfqResponseDto } from './dto/submit-rfq-response.dto';
@@ -27,6 +28,7 @@ export class RfqsService {
   constructor(
     private prisma: PrismaService,
     private purchaseOrders: PurchaseOrdersService,
+    private notifications: NotificationsService,
   ) {}
 
   private assertTransition(current: string, target: string) {
@@ -214,6 +216,31 @@ export class RfqsService {
       where: { id, tenantId, deletedAt: null },
       data: { status: 'sent', updatedBy: userId },
     });
+
+    // spec-022 — fire-and-forget: invite every supplier with an email on file.
+    const invited = await this.prisma.rfqSupplier.findMany({
+      where: { rfqId: id, tenantId },
+      include: { supplier: { select: { name: true, email: true, contactEmail: true } } },
+    });
+    const dueDate = (rfq as any).responseDeadline
+      ? new Date((rfq as any).responseDeadline).toISOString().split('T')[0]
+      : 'TBD';
+    for (const inv of invited) {
+      const email = inv.supplier?.contactEmail ?? inv.supplier?.email;
+      if (!email) continue;
+      this.notifications.safeQueue(
+        tenantId,
+        'rfq_sent',
+        { email, name: inv.supplier?.name },
+        {
+          rfqNumber: rfq.rfqNumber,
+          rfqTitle: (rfq as any).title,
+          supplierName: inv.supplier?.name,
+          dueDate,
+        },
+        { createdBy: userId },
+      );
+    }
 
     return {
       message: `RFQ ${rfq.rfqNumber} sent to ${(rfq as any).rfqSuppliers.length} suppliers`,

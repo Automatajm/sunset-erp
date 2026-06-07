@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
@@ -26,6 +27,7 @@ export class PurchaseOrdersService {
   constructor(
     private prisma: PrismaService,
     private stockTransactions: StockTransactionsService,
+    private notifications: NotificationsService,
   ) {}
 
   async create(tenantId: string, userId: string, createPurchaseOrderDto: CreatePurchaseOrderDto) {
@@ -66,8 +68,9 @@ export class PurchaseOrdersService {
       };
     });
 
+    let createdPo;
     try {
-      return await this.prisma.purchaseOrder.create({
+      createdPo = await this.prisma.purchaseOrder.create({
         data: {
           tenantId,
           poNumber,
@@ -108,6 +111,24 @@ export class PurchaseOrdersService {
       }
       throw e;
     }
+
+    // spec-022 — fire-and-forget: notify the supplier the PO was issued.
+    if (supplier.email) {
+      this.notifications.safeQueue(
+        tenantId,
+        'po_created',
+        { email: supplier.email, name: supplier.name },
+        {
+          poNumber,
+          supplierName: supplier.name,
+          total: Number(createdPo.total),
+          currency: createdPo.currency ?? '',
+        },
+        { createdBy: userId },
+      );
+    }
+
+    return createdPo;
   }
 
   async findAll(tenantId: string, status?: string) {

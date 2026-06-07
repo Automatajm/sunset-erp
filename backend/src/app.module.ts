@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
@@ -43,10 +44,12 @@ import { ProductionPlansModule } from './modules/production-plans/production-pla
 import { PurchaseRequisitionsModule } from './modules/purchase-requisitions/purchase-requisitions.module';
 import { GeneralNeedsModule } from './modules/general-needs/general-needs.module';
 import { RfqsModule } from './modules/rfqs/rfqs.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     CommonModule,
@@ -88,6 +91,7 @@ import { RfqsModule } from './modules/rfqs/rfqs.module';
     PurchaseRequisitionsModule,
     GeneralNeedsModule,
     RfqsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

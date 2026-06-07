@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { ArInvoicesService } from './ar-invoices.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AutomationService } from '../automation/automation.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 import { CurrencyService } from '../currency/currency.service';
@@ -68,6 +69,10 @@ describe('ArInvoicesService', () => {
       providers: [
         ArInvoicesService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NotificationsService,
+          useValue: { safeQueue: jest.fn(), safeQueueOnce: jest.fn() },
+        },
         { provide: AutomationService, useValue: automation },
         { provide: StockTransactionsService, useValue: stockService },
         { provide: CurrencyService, useValue: currency },

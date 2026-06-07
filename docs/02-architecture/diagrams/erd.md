@@ -1126,6 +1126,12 @@ erDiagram
     String id "🗝️"
     String tenant_id 
     String base_currency 
+    String email_provider "❓"
+    String email_host "❓"
+    Int email_port "❓"
+    String email_api_key "❓"
+    String email_from_address "❓"
+    String email_from_name "❓"
     String default_uom_system 
     String volume_base_uom_id "❓"
     String mass_base_uom_id "❓"
@@ -1678,6 +1684,26 @@ erDiagram
     String updated_by 
     }
   
+
+  "ntf_notifications" {
+    String id "🗝️"
+    String tenant_id 
+    String type 
+    String channel 
+    String status 
+    String recipient_email "❓"
+    String recipient_name "❓"
+    String subject 
+    String body 
+    Json payload "❓"
+    Int retry_count 
+    String last_error "❓"
+    DateTime sent_at "❓"
+    DateTime created_at 
+    DateTime updated_at 
+    String created_by "❓"
+    }
+  
     "saas_subscriptions" }o--|| saas_tenants : "tenant"
     "saas_subscriptions" }o--|| saas_subscription_plans : "plan"
     "saas_invoices" }o--|| saas_tenants : "tenant"
@@ -1892,4 +1918,5 @@ erDiagram
     "mfg_production_plan_lines" }o--|| in_items : "item"
     "mfg_production_plan_lines" }o--|o mfg_boms : "bom"
     "mfg_production_plan_lines" }o--|o so_sales_order_lines : "soLine"
+    "ntf_notifications" }o--|| saas_tenants : "tenant"
 ```

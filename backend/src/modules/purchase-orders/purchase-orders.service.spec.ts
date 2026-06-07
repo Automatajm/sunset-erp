@@ -5,13 +5,10 @@
 // expected to FAIL until that criterion is implemented (red → green).
 // ============================================================================
 import { Test } from '@nestjs/testing';
-import {
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
 
 const TENANT_A = '11111111-1111-1111-1111-111111111111';
@@ -84,6 +81,10 @@ describe('PurchaseOrdersService', () => {
       providers: [
         PurchaseOrdersService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NotificationsService,
+          useValue: { safeQueue: jest.fn(), safeQueueOnce: jest.fn() },
+        },
         { provide: StockTransactionsService, useValue: stx },
       ],
     }).compile();
@@ -98,9 +99,7 @@ describe('PurchaseOrdersService', () => {
   // ── create ──────────────────────────────────────────────────────────────────
   it('create validates supplier and items in-tenant (404 otherwise)', async () => {
     prisma.supplier.findFirst.mockResolvedValue(null);
-    await expect(service.create(TENANT_B, USER, createDto())).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(service.create(TENANT_B, USER, createDto())).rejects.toThrow(NotFoundException);
   });
 
   it('[GAP] generatePoNumber uses numeric max over findMany (not lexicographic findFirst)', async () => {
@@ -126,9 +125,7 @@ describe('PurchaseOrdersService', () => {
     prisma.purchaseOrder.create.mockRejectedValue(
       Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
     );
-    await expect(service.create(TENANT_A, USER, createDto())).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(service.create(TENANT_A, USER, createDto())).rejects.toThrow(ConflictException);
   });
 
   // ── reads / envelope ────────────────────────────────────────────────────────
@@ -152,9 +149,7 @@ describe('PurchaseOrdersService', () => {
     await service.update(TENANT_A, USER, 'po-1', { notes: 'X' } as never);
     await service.updateStatus(TENANT_A, USER, 'po-1', 'confirmed');
     await service.remove(TENANT_A, USER, 'po-1');
-    const scoped = writesOf(prisma.purchaseOrder).filter(
-      (c) => c?.where?.tenantId === TENANT_A,
-    );
+    const scoped = writesOf(prisma.purchaseOrder).filter((c) => c?.where?.tenantId === TENANT_A);
     expect(scoped.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -176,7 +171,10 @@ describe('PurchaseOrdersService', () => {
   // ── receive ([GAP] tx + shared SM generator + scoped writes) ────────────────
   const confirmedPo = () => poRecord({ status: 'confirmed' });
   const receiveDto = (qty = 50) =>
-    ({ warehouseId: WH, lines: [{ lineId: 'pol-1', receivedQuantity: qty, unitCost: 10 }] }) as never;
+    ({
+      warehouseId: WH,
+      lines: [{ lineId: 'pol-1', receivedQuantity: qty, unitCost: 10 }],
+    }) as never;
 
   const happyReceiveMocks = () => {
     prisma.purchaseOrder.findFirst.mockResolvedValue(confirmedPo());

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UomService } from '../uom/uom.service';
 import { CreateStockTransactionDto } from './dto/create-stock-transaction.dto';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -18,7 +19,52 @@ export class StockTransactionsService {
   constructor(
     private prisma: PrismaService,
     private uom: UomService,
+    private notifications: NotificationsService,
   ) {}
+
+  // ── spec-022 — reorder-point notification (fire-and-forget, post-commit) ──
+  // Recipient is the tenant ops inbox (TenantSettings.emailFromAddress) — there
+  // is no dedicated purchasing-manager field; documented in spec-022.
+  private async notifyIfBelowReorder(
+    tenantId: string,
+    userId: string,
+    itemIds: string[],
+    warehouseId: string,
+  ): Promise<void> {
+    if (itemIds.length === 0) return;
+    const settings = await this.prisma.tenantSettings.findFirst({
+      where: { tenantId },
+      select: { emailFromAddress: true, emailFromName: true },
+    });
+    const opsEmail = settings?.emailFromAddress;
+    if (!opsEmail) return; // no ops inbox configured — nothing to send
+
+    const stocks = await this.prisma.stock.findMany({
+      where: { tenantId, warehouseId, itemId: { in: itemIds } },
+      include: {
+        item: { select: { code: true, name: true, reorderPoint: true, reorderQuantity: true } },
+      },
+    });
+    for (const s of stocks) {
+      const reorderPoint = Number(s.item?.reorderPoint ?? 0);
+      if (reorderPoint <= 0) continue;
+      const onHand = Number(s.onHandQuantity);
+      if (onHand > reorderPoint) continue;
+      this.notifications.safeQueue(
+        tenantId,
+        'stock_below_reorder',
+        { email: opsEmail, name: settings?.emailFromName ?? 'Purchasing' },
+        {
+          itemCode: s.item?.code,
+          itemName: s.item?.name,
+          onHand,
+          reorderPoint,
+          reorderQuantity: Number(s.item?.reorderQuantity ?? 0),
+        },
+        { createdBy: userId },
+      );
+    }
+  }
 
   // ── Create manual stock adjustment ────────────────────────────────────────
 
@@ -432,6 +478,7 @@ export class StockTransactionsService {
     });
     if (!warehouse) return;
 
+    const decrementedItemIds: string[] = [];
     for (const line of arInvoice.lines) {
       if (!line.itemId || line.quantity <= 0) continue;
 
@@ -439,6 +486,7 @@ export class StockTransactionsService {
         where: { id: line.itemId, tenantId, deletedAt: null, isStockable: true },
       });
       if (!item) continue;
+      decrementedItemIds.push(line.itemId);
 
       const allQtys = await this.uom.calcAllQties(line.quantity, line.itemId, tenantId);
       const movementNumber = await this.generateMovementNumber(tenantId);
@@ -492,6 +540,11 @@ export class StockTransactionsService {
         }
       });
     }
+
+    // Post-commit reorder check (fire-and-forget — never fails the shipment).
+    await this.notifyIfBelowReorder(tenantId, userId, decrementedItemIds, warehouse.id).catch(
+      () => undefined,
+    );
   }
 
   // ── Ledger ─────────────────────────────────────────────────────────────────

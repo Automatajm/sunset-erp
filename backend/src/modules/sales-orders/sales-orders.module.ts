@@ -2,9 +2,10 @@
 import { SalesOrdersService } from './sales-orders.service';
 import { SalesOrdersController } from './sales-orders.controller';
 import { PrismaModule } from '../../database/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [NotificationsModule, PrismaModule],
   controllers: [SalesOrdersController],
   providers: [SalesOrdersService],
 })
