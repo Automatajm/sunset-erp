@@ -1,6 +1,6 @@
 # spec-030 — Cash Flow (Projections + Lines + Summary + Generate-from-Data)
 
-Status: **Implemented — pending ship**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: finance hardening (2 of 5 — opportunity-finder score 20)
 Module(s): cash-flow
@@ -209,3 +209,5 @@ spec-029.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec generated from code by spec-generator (opportunity-finder score 20: 4 cross-tenant write leaks, weak update-line/generate DTOs, bare-array list, missing field whitelists/caps) | Draft — pending review |
+| 2026-06-07 | Implemented + test-scaffolded: 4 cross-tenant write leaks closed (updateMany + refetch), P2002→409, { cashFlowProjections, count } envelope (+ frontend-sync extractList), real UpdateCashFlowLineDto + GenerateCashFlowDto, @Max/@IsIn/@IsUUID DTO caps. Unit 15/15, e2e 13/13 (tenant-isolation verified). | Implemented |
+| 2026-06-07 | Ship gates: compliance 100% (0 id-only writes, 4 updateMany, envelope, P2002); unit 15/15; full e2e 430/430 on two consecutive runs (one transient 20-fail run from shared-DB contention, green on re-run); nest build OK; lint clean (src 0 prettier; test/ tsconfig exclusion is pre-existing repo debt). Shipped to origin (067faa7); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
