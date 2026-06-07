@@ -1,6 +1,6 @@
 # spec-027 — Admin Cluster (Users / Roles / Tenants / Tenant Settings)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Platform  
 Sprint: Admin Tier 0 (cluster spec, per `specs/MODULE-CASCADE.md` — the four admin
 modules are one tightly-coupled unit: users↔roles↔tenants↔tenant-settings)  
@@ -306,3 +306,4 @@ pnpm test:e2e admin-cluster && pnpm build && cd ../frontend && pnpm build
 | 2026-06-06 | Spec generated from code by spec-generator (cluster: users/roles/tenants/tenant-settings; headline — tenant-settings unauthorized + two broken admin pages from missing envelopes) | Draft — pending review |
 | 2026-06-06 | Test scaffolds written (36 unit across 4 services / 17 cluster e2e, [GAP]-tagged) | Red as designed |
 | 2026-06-06 | All 22 gaps implemented: tenant-settings now PermissionsGuard + SETTINGS:VIEW/EDIT (auth gap closed, e2e proves 403 for a no-perm role); { users/roles/tenants, count } envelopes (fixed the two empty admin pages — controllers no longer double-wrap; frontend tenants page unwraps); baseCurrency reachable + catalog-validated (404); self-/last-admin deactivation guard (400, counts other ADMIN:USERS holders); roles update/remove + tenants create scoped/P2002→409; numeric-max tenant code; DTO @IsIn companySize + user status suspended; ~30 @ApiResponse; spec-001 cache fan-out preserved (unit-asserted) | Unit 36/36, e2e 17/17, build OK, lint clean |
+| 2026-06-06 | Shipped to origin (be2fa80); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
