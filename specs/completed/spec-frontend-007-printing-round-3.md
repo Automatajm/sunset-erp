@@ -1,6 +1,6 @@
 # spec-frontend-007 — Document Printing, Round 3 (PR, JE Voucher, AR Payment Receipt)
 
-Status: **Implemented — pending review**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: follow-up to spec-frontend-006 (printing round 2 shipped d8f97f1)
 Module(s): frontend only — purchase-requisitions, journal-entries, ar-invoices pages
@@ -152,3 +152,4 @@ Notes:
 |---|---|---|
 | 2026-06-07 | Spec drafted (round-3 printing; API shapes verified live against BURGER: PR getById includes lines+item+warehouse, JE includes lines+account, AR payments embedded in invoice — no standalone payment endpoint needed, receipt keys off `?paymentId=`) | Draft — pending approval |
 | 2026-06-07 | Implemented: 3 PRINT_DOCS entries (purchase-requisition / journal-entry / ar-receipt); ar-receipt guards missing/unknown `?paymentId=` with an explicit error state; JE voucher prints debit+credit totals; PR shows catalog-or-generic lines + computed line estimates. PrintButton wired: PR drawer header, JE row actions, per-payment "Receipt" buttons in the AR invoice payments list. Demo PR-2026-0001 created in BURGER (line DTO also needs `requiredDate` per line — discovered during creation). | tsc clean; prod `pnpm build` PASSES; 4 route variants (incl. no-paymentId error state) + 3 wired pages dev-compile 200 |
+| 2026-06-07 | Ship gates: compliance 100% (code-verifiable, file:line audited); frontend-only (0 backend files) — tsc clean, prod build PASS, 7 route/page variants dev-compile 200 incl. the no-paymentId error state; lint = file's established `any` idiom, no new error types. Shipped to origin (be04a7f); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%); browser eyeball of the three printouts left to the user |
