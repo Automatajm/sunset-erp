@@ -8,6 +8,7 @@ import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { itemsApi } from '@/lib/api/items';
 import { warehousesApi } from '@/lib/api/warehouses';
+import { PrintButton } from '@/components/print/PrintButton';
 import { Supplier, Item } from '@/lib/api/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,6 +149,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <StatusBadge status={po.status} />
+            <PrintButton doc="purchase-order" id={po.id} style={{ padding: '6px 12px' }} />
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
         </div>

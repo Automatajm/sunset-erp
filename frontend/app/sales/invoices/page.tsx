@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { arInvoicesApi, ArInvoice, ArKpis, ArAging, CreateArInvoiceDto } from '@/lib/api/ar-invoices';
 import { customersApi } from '@/lib/api/customers';
 import { itemsApi } from '@/lib/api/items';
+import { PrintButton } from '@/components/print/PrintButton';
 import { Customer, Item } from '@/lib/api/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
                 Void
               </button>
             )}
+            <PrintButton doc="ar-invoice" id={inv.id} label="" style={{ padding: '3px 7px' }} />
           </div>
         </td>
       </tr>

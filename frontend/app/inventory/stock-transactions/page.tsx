@@ -7,6 +7,7 @@ import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/compo
 import { itemsApi }                                    from '@/lib/api/items';
 import { warehousesApi }                               from '@/lib/api/warehouses';
 import { stockTransactionsApi }                        from '@/lib/api/stock-transactions';
+import { PrintButton }                                 from '@/components/print/PrintButton';
 import { CreateStockTransactionDto, Item, Warehouse }  from '@/lib/api/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -521,9 +522,12 @@ export default function StockTransactionsPage() {
             defaultPageSize={25}
             maxHeight="calc(100vh - 430px)"
             toolbarLeft={
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
-                {filtered.length} of {rows.length} movements
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {filtered.length} of {rows.length} movements
+                </span>
+                <PrintButton doc="stock-movements" id="report" label="Print report" style={{ padding: '5px 10px' }} />
+              </div>
             }
           />
         </div>

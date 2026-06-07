@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
 import { customersApi } from '@/lib/api/customers';
 import { itemsApi } from '@/lib/api/items';
+import { PrintButton } from '@/components/print/PrintButton';
 import { Customer, Item, SOStatus } from '@/lib/api/types';
 
 // ─── Real backend types ───────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ function SORow({ so, onStatusChange, actionBusy }: {
         <td><span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{so.currency ?? 'USD'}</span></td>
         <td><StatusBadge status={so.status} /></td>
         <td onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', gap: 5 }}>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
             {actions.map(action => (
               <button
                 key={action.next}
@@ -174,6 +175,7 @@ function SORow({ so, onStatusChange, actionBusy }: {
                 {busy ? '…' : action.label}
               </button>
             ))}
+            <PrintButton doc="sales-order" id={so.id} label="" style={{ padding: '4px 7px' }} />
           </div>
         </td>
       </tr>

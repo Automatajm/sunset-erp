@@ -17,6 +17,7 @@ import { supplierItemsApi } from '@/lib/api/supplier-items';
 import { SupplierItem } from '@/lib/api/types';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { DateSelection } from '@/components/ui/ERPDatePicker';
+import { PrintButton } from '@/components/print/PrintButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <StatusBadge status={grn.status} />
+            <PrintButton doc="goods-receipt" id={grn.id} style={{ padding:'6px 12px' }} />
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
         </div>
