@@ -152,8 +152,13 @@ pnpm build                              # nest build → dist/
 pnpm lint                               # eslint --fix
 pnpm test                               # jest unit tests
 pnpm test path/to/file.spec.ts          # single test file
-pnpm seed                               # prisma db seed
-pnpm seed:reset                         # DROPS data + re-seeds
+pnpm seed                               # ⚠️ DESTRUCTIVE: seed.ts runs resetDatabase()
+                                        #    (TRUNCATE CASCADE on all tenants/data)
+                                        #    before re-seeding. NOT additive.
+                                        #    Full demo restore sequence:
+                                        #    pnpm seed && npx ts-node prisma/seed-uom.ts
+                                        #    && npx ts-node prisma/seed-demo-moneyloop.ts
+pnpm seed:reset                         # DROPS schema + migrations + re-seeds
 
 npx prisma migrate dev --name <name>    # create + apply migration
 npx prisma migrate deploy               # apply in prod
