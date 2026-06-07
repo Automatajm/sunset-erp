@@ -1,6 +1,6 @@
 # spec-026 — AR Invoices (Accounts Receivable)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Finance  
 Sprint: AR/AP invoices (mirror of spec-025; second frozen-rate consumer)  
 Module(s): `ar-invoices` (injects `currency` per the frozen-rate gate; touches
@@ -318,3 +318,4 @@ pnpm build && cd ../frontend && pnpm build
 | 2026-06-06 | Spec generated from code by spec-generator (opportunity-finder score 74: 7 critical scoping, 6 correctness incl. dead COGS stub, 7 DTO/frozen-rate, 0 swagger) — mirror of spec-025 | Draft — pending review |
 | 2026-06-06 | Test scaffolds written (22 unit / 20 e2e, 22 tagged [GAP] red) | Red as designed |
 | 2026-06-06 | All 23 gaps implemented (mirror of spec-025): ar_frozen_rate additive migration (trio on ArInvoice + ArPayment in ONE migration), CurrencyService injected (from-so freezes the rate at the RETROACTIVE orderDate), dead calculateBomStandardCost removed (zero BOM queries in from-so, cogsAmount null), send() ships FIRST + aborts on failure, void-with-payments 409, Decimal money, JE/CoGS-account reads scoped, 5 writes → scoped updateMany, numeric-max generators ×3 + P2002→409, DTO caps/whitelists (paymentMethod superset incl. card) + query DTO, { arInvoices, count } + frontend getAll unwrap, aging/KPIs base sums | Unit 23/23, e2e 19/19 (retroactive frozen rate verified live) |
+| 2026-06-06 | Shipped to origin (09b397c); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
