@@ -1,6 +1,6 @@
 # spec-frontend-008 — Document Printing, Round 4 (BOM Recipe Card, Customer Statement)
 
-Status: **Implemented — pending visual verification**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: follow-up to spec-frontend-007 (printing round 3 shipped be04a7f)
 Module(s): frontend only — bom, customers/ar-invoices pages
@@ -139,3 +139,4 @@ Notes:
 |---|---|---|
 | 2026-06-07 | Spec drafted (round-4 printing; shapes verified live: bom getById includes components+groups+routings; ar-invoices ?customerId= filter works — BURGER customer probe returned 2 invoices) | Draft |
 | 2026-06-07 | Implemented: 2 PRINT_DOCS entries (bom / customer-statement). Recipe card: phantom excluded, routing section conditional. Statement: composed fetch (customer + invoices), non-void sorted ascending, per-currency totals AND per-currency aging blocks (Current/1-30/31-60/61-90/90+ computed from dueDate at render), explicit empty state. PrintButton wired: boms detail-panel tab bar ("Recipe Card"), customers row actions ("Statement"). `/manufacturing/boms` confirmed as the real surface (ERPShell nav target). | tsc clean; prod `pnpm build` PASSES; both print routes + 2 wired pages dev-compile 200 with live BURGER data |
+| 2026-06-07 | Visual verification by user (both documents reviewed in browser, approved). Ship gates: compliance 100% (file:line audited); frontend-only — tsc clean, prod build PASS, both routes + 2 pages dev-compile 200 with live data; lint = established `any` idiom, no new error types. Shipped to origin (4f2622f); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
