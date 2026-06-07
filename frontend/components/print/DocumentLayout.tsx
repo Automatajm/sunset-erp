@@ -66,7 +66,7 @@ function PrintToolbar() {
 
 // ── The document frame ─────────────────────────────────────────────────────────
 export function DocumentLayout({
-  title, number, date, status, party, meta, footerNote, terms, currency, children,
+  title, number, date, status, party, meta, footerNote, terms, currency, signatures, children,
 }: {
   title: string;
   number: string;
@@ -77,6 +77,7 @@ export function DocumentLayout({
   footerNote?: string | null;
   terms?: string | null;
   currency?: string;
+  signatures?: string[];   // spec-frontend-006 — per-document signature blocks
   children: React.ReactNode;
 }) {
   const { tenantName } = useAuth();
@@ -159,7 +160,7 @@ export function DocumentLayout({
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 40, marginTop: 36 }}>
-            {['Prepared by', 'Received by'].map((s) => (
+            {(signatures ?? ['Prepared by', 'Received by']).map((s) => (
               <div key={s} style={{ flex: 1 }}>
                 <div style={{ borderTop: '1px solid #333', paddingTop: 6, fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s}</div>
               </div>

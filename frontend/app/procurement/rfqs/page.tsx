@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { rfqsApi } from '@/lib/api/rfqs';
+import { PrintButton } from '@/components/print/PrintButton';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { itemsApi } from '@/lib/api/items';
 import { Supplier, Item } from '@/lib/api/types';
@@ -208,6 +209,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{rfq.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <PrintButton doc="rfq" id={rfq.id} label="" style={{ padding: '4px 7px' }} />
             <StatusBadge status={rfq.status} />
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
@@ -258,6 +260,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {rs.totalOfferedAmount && <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtAmt(rs.totalOfferedAmount)}</span>}
                             <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 10, background: `${scfg}18`, color: scfg, border: `0.5px solid ${scfg}30` }}>{rs.status}</span>
+                            <PrintButton doc="rfq" id={rfq.id} query={{ rfqSupplierId: rs.id }} label="" style={{ padding: '3px 6px' }} />
                           </div>
                         </div>
                       );

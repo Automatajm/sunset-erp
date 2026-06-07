@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter }              from 'next/navigation';
 import ERPShell        from '@/components/layout/ERPShell';
 import apiClient       from '@/lib/api/client';
+import { PrintButton } from '@/components/print/PrintButton';
 import AssignmentModal from './AssignmentModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -454,6 +455,9 @@ export default function StockReconciliationDetailPage() {
               {session.description}
             </span>
           )}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <PrintButton doc="stock-count" id={session.id} label="Count Sheet" style={{ padding: '5px 10px', fontSize: 11 }} />
+          </div>
         </div>
 
         {/* KPIs */}

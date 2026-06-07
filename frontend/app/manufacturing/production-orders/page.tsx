@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { productionOrdersApi } from '@/lib/api/production-orders';
+import { PrintButton } from '@/components/print/PrintButton';
 import { bomApi } from '@/lib/api/bom';
 import { ProductionOrderStatus, ProductionPriority } from '@/lib/api/types';
 
@@ -707,6 +708,7 @@ function MORow({ mo, boms, onStatusChange, actionBusy, onOpenLabor, onOpenDelive
                 Cancel
               </button>
             )}
+            <PrintButton doc="production-order" id={mo.id} label="" style={{ padding: '3px 7px' }} />
           </div>
         </td>
       </tr>
