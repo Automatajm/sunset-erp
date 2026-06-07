@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
-import { ERPTable, ERPColumn, ERPFilter } from '@/components/ui/ERPTable';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import {
+  ERPFilterBar, ERPFilter,
+  useERPFilters, applyERPFilters,
+} from '@/components/ui/ERPFilterBar';
 import {
   notificationsApi,
   Notification,
@@ -173,7 +177,7 @@ export default function NotificationsPage() {
     },
   ];
 
-  const filters: ERPFilter<Notification>[] = [
+  const filterDefs: ERPFilter<Notification>[] = useMemo(() => [
     {
       key: 'status', label: 'Status', type: 'multiselect',
       options: Object.entries(STATUS_CFG).map(([v, c]) => ({ value: v, label: c.label })),
@@ -189,7 +193,14 @@ export default function NotificationsPage() {
       options: [{ value: 'email', label: 'Email' }, { value: 'in_app', label: 'In-App' }],
       filterFn: (row, val) => (val as string[]).includes(row.channel),
     },
-  ];
+  ], []);
+
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+
+  const filtered = useMemo(
+    () => applyERPFilters(rows, filterDefs, filterVals),
+    [rows, filterDefs, filterVals],
+  );
 
   const KPIS = [
     { label: 'Pending', value: counts.pending, color: STATUS_CFG.pending.color, border: 'rgba(251,191,36,0.2)' },
@@ -238,13 +249,25 @@ export default function NotificationsPage() {
           ))}
         </div>
 
+        {/* Filter bar */}
+        <div style={{ marginBottom: 10 }}>
+          <ERPFilterBar
+            filters={filterDefs}
+            values={filterVals}
+            onChange={setFilterVal}
+            onReset={resetFilters}
+            activeCount={filterCount}
+          />
+        </div>
+
         <ERPTable<Notification>
           columns={columns}
-          data={rows}
+          data={filtered}
           rowKey={r => r.id}
-          filters={filters}
           loading={loading}
-          emptyMessage="No notifications yet — they appear as the business emits events (SO confirmed, PO created, invoice overdue…)."
+          emptyMessage={filterCount
+            ? 'No notifications match your filters.'
+            : 'No notifications yet — they appear as the business emits events (SO confirmed, PO created, invoice overdue…).'}
           exportFilename="notifications"
         />
       </div>
