@@ -1,5 +1,14 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsUUID, MaxLength, Max, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  MaxLength,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateBudgetLineDto {
   @ApiProperty({ example: 'uuid-of-account', description: 'Account UUID' })

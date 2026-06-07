@@ -63,16 +63,18 @@ describe('BudgetsService', () => {
         fiscalYear: '2026',
       } as any);
       expect(prisma.budget.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ tenantId: TENANT_A, status: 'draft' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ tenantId: TENANT_A, status: 'draft' }),
+        }),
       );
       expect(res).toEqual({ id: 'b1', budgetCode: 'B-2026' });
     });
 
     it('throws ConflictException on a live duplicate code', async () => {
       prisma.budget.findFirst.mockResolvedValue({ id: 'b1', deletedAt: null });
-      await expect(
-        service.create(TENANT_A, USER, { budgetCode: 'B-2026' } as any),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.create(TENANT_A, USER, { budgetCode: 'B-2026' } as any)).rejects.toThrow(
+        ConflictException,
+      );
       expect(prisma.budget.create).not.toHaveBeenCalled();
     });
 
@@ -91,9 +93,9 @@ describe('BudgetsService', () => {
     it('maps a P2002 race to ConflictException', async () => {
       prisma.budget.findFirst.mockResolvedValue(null);
       prisma.budget.create.mockRejectedValue({ code: 'P2002' });
-      await expect(
-        service.create(TENANT_A, USER, { budgetCode: 'B-2026' } as any),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.create(TENANT_A, USER, { budgetCode: 'B-2026' } as any)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -212,9 +214,9 @@ describe('BudgetsService', () => {
     it('throws NotFoundException for a line not in the tenant', async () => {
       prisma.budget.findFirst.mockResolvedValue({ id: 'b1', status: 'draft' });
       prisma.budgetLine.findFirst.mockResolvedValue(null);
-      await expect(
-        service.updateBudgetLine(TENANT_B, USER, 'b1', 'l1', {} as any),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.updateBudgetLine(TENANT_B, USER, 'b1', 'l1', {} as any)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -234,7 +236,12 @@ describe('BudgetsService', () => {
   describe('approveBudget', () => {
     it('approves a draft budget with lines, scoped by tenantId', async () => {
       prisma.budget.findFirst
-        .mockResolvedValueOnce({ id: 'b1', status: 'draft', budgetCode: 'B', budgetLines: [{ id: 'l1' }] })
+        .mockResolvedValueOnce({
+          id: 'b1',
+          status: 'draft',
+          budgetCode: 'B',
+          budgetLines: [{ id: 'l1' }],
+        })
         .mockResolvedValueOnce({ id: 'b1', status: 'approved', budgetCode: 'B' });
       prisma.budget.updateMany.mockResolvedValue({ count: 1 });
       const res = await service.approveBudget(TENANT_A, USER, 'b1');
@@ -249,12 +256,20 @@ describe('BudgetsService', () => {
 
     it('rejects approving a budget with no lines', async () => {
       prisma.budget.findFirst.mockResolvedValue({ id: 'b1', status: 'draft', budgetLines: [] });
-      await expect(service.approveBudget(TENANT_A, USER, 'b1')).rejects.toThrow(BadRequestException);
+      await expect(service.approveBudget(TENANT_A, USER, 'b1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('rejects re-approving an approved budget', async () => {
-      prisma.budget.findFirst.mockResolvedValue({ id: 'b1', status: 'approved', budgetLines: [{ id: 'l1' }] });
-      await expect(service.approveBudget(TENANT_A, USER, 'b1')).rejects.toThrow(BadRequestException);
+      prisma.budget.findFirst.mockResolvedValue({
+        id: 'b1',
+        status: 'approved',
+        budgetLines: [{ id: 'l1' }],
+      });
+      await expect(service.approveBudget(TENANT_A, USER, 'b1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -262,7 +277,11 @@ describe('BudgetsService', () => {
   describe('getBudgetVsActual', () => {
     it('aggregates posted JE lines scoped by tenantId and computes variance', async () => {
       prisma.budget.findFirst.mockResolvedValue({
-        id: 'b1', budgetCode: 'B', budgetName: 'N', fiscalYear: '2026', budgetLines: [],
+        id: 'b1',
+        budgetCode: 'B',
+        budgetName: 'N',
+        fiscalYear: '2026',
+        budgetLines: [],
       });
       prisma.budgetLine.findMany.mockResolvedValue([
         {
