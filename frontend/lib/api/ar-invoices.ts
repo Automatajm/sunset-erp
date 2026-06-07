@@ -104,7 +104,10 @@ export interface ApplyPaymentDto {
 
 export const arInvoicesApi = {
   getAll: (params?: { status?: string; customerId?: string; from?: string; to?: string }) =>
-    apiClient.get<ArInvoice[]>('/ar-invoices', { params }).then(r => r.data),
+    // spec-026 envelope { arInvoices, count }; tolerate legacy bare array
+    apiClient.get('/ar-invoices', { params }).then(r =>
+      (Array.isArray(r.data) ? r.data : (r.data?.arInvoices ?? [])) as ArInvoice[],
+    ),
 
   getById: (id: string) =>
     apiClient.get<ArInvoice>(`/ar-invoices/${id}`).then(r => r.data),

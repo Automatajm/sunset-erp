@@ -23,6 +23,7 @@ import {
 import { ArInvoicesService } from './ar-invoices.service';
 import { CreateArInvoiceDto } from './dto/create-ar-invoice.dto';
 import { UpdateArInvoiceDto, ApplyPaymentDto } from './dto/update-ar-invoice.dto';
+import { QueryArInvoicesDto } from './dto/query-ar-invoices.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -65,15 +66,15 @@ export class ArInvoicesController {
   @ApiQuery({ name: 'customerId', required: false, description: 'Filter by customer UUID' })
   @ApiQuery({ name: 'from', required: false, description: 'Invoice date from YYYY-MM-DD' })
   @ApiQuery({ name: 'to', required: false, description: 'Invoice date to YYYY-MM-DD' })
-  @ApiResponse({ status: 200, description: 'Invoice list' })
-  async findAll(
-    @Request() req,
-    @Query('status') status?: string,
-    @Query('customerId') customerId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.arInvoicesService.findAll(req.user.tenantId, { status, customerId, from, to });
+  @ApiResponse({ status: 200, description: '{ arInvoices: [...], count: n }' })
+  @ApiResponse({ status: 400, description: 'Query param outside the whitelist' })
+  async findAll(@Request() req, @Query() query: QueryArInvoicesDto) {
+    return this.arInvoicesService.findAll(req.user.tenantId, {
+      status: query.status,
+      customerId: query.customerId,
+      from: query.from,
+      to: query.to,
+    });
   }
 
   @Get('aging')
@@ -128,6 +129,7 @@ export class ArInvoicesController {
   @ApiParam({ name: 'id', description: 'Invoice UUID' })
   @ApiResponse({ status: 200, description: 'Voided' })
   @ApiResponse({ status: 400, description: 'Already voided or fully paid' })
+  @ApiResponse({ status: 409, description: 'Has applied payments — reverse payments first' })
   async void(@Request() req, @Param('id') id: string) {
     return this.arInvoicesService.void(req.user.tenantId, req.user.id, id);
   }

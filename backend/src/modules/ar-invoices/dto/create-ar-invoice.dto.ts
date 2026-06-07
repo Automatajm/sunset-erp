@@ -2,6 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsUUID,
+  ArrayMinSize,
+  Length,
+  Max,
   IsOptional,
   IsNumber,
   IsArray,
@@ -25,6 +28,7 @@ export class CreateArInvoiceLineDto {
   @ApiProperty({ example: 10 })
   @IsNumber()
   @Min(0.001)
+  @Max(99999999999) // Decimal(15,3) capacity − 1 order of magnitude
   quantity: number;
 
   @ApiPropertyOptional({ example: 'units' })
@@ -35,18 +39,21 @@ export class CreateArInvoiceLineDto {
   @ApiProperty({ example: 150.0 })
   @IsNumber()
   @Min(0)
+  @Max(9999999999) // Decimal(15,4) capacity − 1 order of magnitude
   unitPrice: number;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(100)
   discountPercent?: number;
 
   @ApiPropertyOptional({ example: 500.0, description: 'Cost of goods for CoGS JE' })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(999999999999) // Decimal(15,2) capacity − 1 order of magnitude
   cogsAmount?: number;
 
   @ApiPropertyOptional({ example: 'uuid-revenue-account' })
@@ -78,9 +85,13 @@ export class CreateArInvoiceDto {
   @IsDateString()
   dueDate: string;
 
-  @ApiPropertyOptional({ example: 'USD' })
+  @ApiPropertyOptional({
+    example: 'USD',
+    description: 'ISO 4217; defaults to the tenant base currency (catalog-validated)',
+  })
   @IsOptional()
   @IsString()
+  @Length(3, 3)
   currency?: string;
 
   @ApiPropertyOptional({ example: 'Net 30 payment terms apply' })
@@ -88,8 +99,9 @@ export class CreateArInvoiceDto {
   @IsString()
   notes?: string;
 
-  @ApiProperty({ type: [CreateArInvoiceLineDto] })
+  @ApiProperty({ type: [CreateArInvoiceLineDto], description: 'Invoice lines (min 1)' })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateArInvoiceLineDto)
   lines: CreateArInvoiceLineDto[];

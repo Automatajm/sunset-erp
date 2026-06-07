@@ -7,9 +7,10 @@ import { ArInvoicesController } from './ar-invoices.controller';
 import { PrismaModule } from '../../database/prisma.module';
 import { StockTransactionsModule } from '../stock-transactions/stock-transactions.module';
 import { AutomationModule } from '../automation/automation.module';
+import { CurrencyModule } from '../currency/currency.module';
 
 @Module({
-  imports: [PrismaModule, StockTransactionsModule, AutomationModule],
+  imports: [PrismaModule, StockTransactionsModule, AutomationModule, CurrencyModule],
   controllers: [ArInvoicesController],
   providers: [ArInvoicesService],
   exports: [ArInvoicesService],

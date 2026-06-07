@@ -1,5 +1,5 @@
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsDateString, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsIn, Min, Max } from 'class-validator';
 
 export class UpdateArInvoiceDto {
   @ApiPropertyOptional({ example: '2026-04-20' })
@@ -21,14 +21,15 @@ export class ApplyPaymentDto {
   @ApiProperty({ example: 1500.0, description: 'Payment amount — can be partial' })
   @IsNumber()
   @Min(0.01)
+  @Max(999999999999) // Decimal(15,2) capacity − 1 order of magnitude
   amount: number;
 
   @ApiPropertyOptional({
     example: 'transfer',
-    enum: ['cash', 'transfer', 'check', 'card'],
+    enum: ['wire', 'ach', 'check', 'transfer', 'cash', 'card'],
   })
   @IsOptional()
-  @IsString()
+  @IsIn(['wire', 'ach', 'check', 'transfer', 'cash', 'card'])
   paymentMethod?: string;
 
   @ApiPropertyOptional({ example: 'WIRE-2026-0312' })

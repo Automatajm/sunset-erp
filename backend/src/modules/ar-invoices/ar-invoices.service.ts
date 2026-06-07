@@ -1,9 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateArInvoiceDto } from './dto/create-ar-invoice.dto';
 import { UpdateArInvoiceDto, ApplyPaymentDto } from './dto/update-ar-invoice.dto';
 import { AutomationService } from '../automation/automation.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
+import { CurrencyService } from '../currency/currency.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class ArInvoicesService {
@@ -11,6 +18,7 @@ export class ArInvoicesService {
     private prisma: PrismaService,
     private automation: AutomationService,
     private stockService: StockTransactionsService,
+    private currency: CurrencyService,
   ) {}
 
   async create(tenantId: string, userId: string, dto: CreateArInvoiceDto) {
@@ -26,7 +34,24 @@ export class ArInvoicesService {
       if (!so) throw new NotFoundException('Sales Order not found');
     }
 
-    let subtotal = 0;
+    // Frozen-rate pattern (spec-021): default to the tenant base currency,
+    // freeze the rate at the invoice date — never recalculated afterwards.
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const invCurrency = dto.currency ?? baseCurrency;
+    const catalogCurrency = await this.prisma.currency.findFirst({
+      where: { code: invCurrency },
+    });
+    if (!catalogCurrency) throw new NotFoundException(`Currency ${invCurrency} not in the catalog`);
+    const invoiceDate = new Date(dto.invoiceDate);
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      invCurrency,
+      baseCurrency,
+      invoiceDate,
+    );
+
+    // Decimal-safe money math — no float drift
+    let subtotal = new Decimal(0);
     const linesData: any[] = [];
 
     for (let i = 0; i < dto.lines.length; i++) {
@@ -37,9 +62,10 @@ export class ArInvoicesService {
         });
         if (!item) throw new NotFoundException(`Item ${line.itemId} not found`);
       }
-      const discountAmt = (line.unitPrice * line.quantity * (line.discountPercent || 0)) / 100;
-      const lineTotal = line.unitPrice * line.quantity - discountAmt;
-      subtotal += lineTotal;
+      const gross = new Decimal(line.unitPrice).mul(line.quantity);
+      const discountAmt = gross.mul(line.discountPercent ?? 0).div(100);
+      const lineTotal = gross.sub(discountAmt).toDecimalPlaces(2);
+      subtotal = subtotal.add(lineTotal);
       linesData.push({
         tenantId,
         lineNumber: i + 1,
@@ -58,29 +84,38 @@ export class ArInvoicesService {
       });
     }
 
-    const invoiceNumber = await this.generateInvoiceNumber(tenantId, new Date(dto.invoiceDate));
+    const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
-    return this.prisma.arInvoice.create({
-      data: {
-        tenantId,
-        customerId: dto.customerId,
-        soId: dto.soId ?? null,
-        invoiceNumber,
-        invoiceDate: new Date(dto.invoiceDate),
-        dueDate: new Date(dto.dueDate),
-        status: 'draft',
-        subtotal,
-        taxAmount: 0,
-        totalAmount: subtotal,
-        paidAmount: 0,
-        currency: dto.currency ?? 'USD',
-        notes: dto.notes ?? null,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: { create: linesData },
-      },
-      include: this.defaultInclude(),
-    });
+    try {
+      return await this.prisma.arInvoice.create({
+        data: {
+          tenantId,
+          customerId: dto.customerId,
+          soId: dto.soId ?? null,
+          invoiceNumber,
+          invoiceDate,
+          dueDate: new Date(dto.dueDate),
+          status: 'draft',
+          subtotal,
+          taxAmount: 0,
+          totalAmount: subtotal,
+          paidAmount: 0,
+          currency: invCurrency,
+          exchangeRate,
+          amountBase: subtotal.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          notes: dto.notes ?? null,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: { create: linesData },
+        },
+        include: this.defaultInclude(),
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Invoice number collision — please retry the request');
+      throw e;
+    }
   }
 
   async createFromSalesOrder(tenantId: string, userId: string, soId: string) {
@@ -121,56 +156,71 @@ export class ArInvoicesService {
     const dueDate = new Date(so.orderDate);
     dueDate.setDate(dueDate.getDate() + 30);
 
-    // ── Calculate COGS from BOM standard cost per line ──────────────────────
-    const linesData: any[] = [];
-    for (let i = 0; i < so.lines.length; i++) {
-      const line = so.lines[i];
-      const cogsAmount = await this.calculateBomStandardCost(
-        tenantId,
-        line.itemId,
-        Number(line.orderedQuantity),
-      );
-      linesData.push({
-        tenantId,
-        lineNumber: i + 1,
-        itemId: line.itemId,
-        description: line.description ?? line.item?.name ?? null,
-        quantity: Number(line.orderedQuantity),
-        uom: line.uom,
-        unitPrice: Number(line.unitPrice),
-        discountPercent: Number(line.discountPercent),
-        lineTotal: Number(line.lineTotal),
-        cogsAmount,
-        revenueAccountId: null,
-        cogsAccountId: null,
-        createdBy: userId,
-        updatedBy: userId,
-      });
-    }
+    // spec-026: BOM standard costing was a dead stub (always returned null
+    // after burning two queries per line) — removed. cogsAmount stays null on
+    // from-SO lines; the manual cogsAmount path on POST / drives CoGS JE pairs.
+    const linesData: any[] = so.lines.map((line, i) => ({
+      tenantId,
+      lineNumber: i + 1,
+      itemId: line.itemId,
+      description: line.description ?? line.item?.name ?? null,
+      quantity: Number(line.orderedQuantity),
+      uom: line.uom,
+      unitPrice: Number(line.unitPrice),
+      discountPercent: Number(line.discountPercent),
+      lineTotal: Number(line.lineTotal),
+      cogsAmount: null,
+      revenueAccountId: null,
+      cogsAccountId: null,
+      createdBy: userId,
+      updatedBy: userId,
+    }));
 
     const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
-    return this.prisma.arInvoice.create({
-      data: {
-        tenantId,
-        customerId: so.customerId,
-        soId: so.id,
-        invoiceNumber,
-        invoiceDate,
-        dueDate,
-        status: 'draft',
-        subtotal: Number(so.subtotal),
-        taxAmount: Number(so.taxAmount),
-        totalAmount: Number(so.total),
-        paidAmount: 0,
-        currency: so.currency ?? 'USD',
-        notes: `Auto-generated from Sales Order ${so.soNumber}`,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: { create: linesData },
-      },
-      include: this.defaultInclude(),
-    });
+    // Frozen-rate pattern (spec-021): SO currency (or tenant base), rate frozen
+    // at the RETROACTIVE invoice date — historical SO invoicing picks the
+    // historically correct rate.
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const invCurrency = so.currency ?? baseCurrency;
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      invCurrency,
+      baseCurrency,
+      invoiceDate,
+    );
+    const totalAmount = new Decimal(so.total);
+
+    try {
+      return await this.prisma.arInvoice.create({
+        data: {
+          tenantId,
+          customerId: so.customerId,
+          soId: so.id,
+          invoiceNumber,
+          invoiceDate,
+          dueDate,
+          status: 'draft',
+          subtotal: Number(so.subtotal),
+          taxAmount: Number(so.taxAmount),
+          totalAmount,
+          paidAmount: 0,
+          currency: invCurrency,
+          exchangeRate,
+          amountBase: totalAmount.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          notes: `Auto-generated from Sales Order ${so.soNumber}`,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: { create: linesData },
+        },
+        include: this.defaultInclude(),
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Invoice number collision — please retry the request');
+      throw e;
+    }
   }
 
   async findAll(
@@ -185,7 +235,7 @@ export class ArInvoicesService {
       if (filters.from) where.invoiceDate.gte = new Date(filters.from);
       if (filters.to) where.invoiceDate.lte = new Date(filters.to);
     }
-    return this.prisma.arInvoice.findMany({
+    const arInvoices = await this.prisma.arInvoice.findMany({
       where,
       include: {
         customer: { select: { id: true, code: true, name: true } },
@@ -193,6 +243,7 @@ export class ArInvoicesService {
       },
       orderBy: { invoiceDate: 'desc' },
     });
+    return { arInvoices, count: arInvoices.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -209,15 +260,15 @@ export class ArInvoicesService {
     if (invoice.status !== 'draft') {
       throw new BadRequestException('Only draft invoices can be edited');
     }
-    return this.prisma.arInvoice.update({
-      where: { id },
+    await this.prisma.arInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
         updatedBy: userId,
       },
-      include: this.defaultInclude(),
     });
+    return this.findOne(tenantId, id);
   }
 
   async send(tenantId: string, userId: string, id: string) {
@@ -225,33 +276,38 @@ export class ArInvoicesService {
     if (invoice.status !== 'draft') {
       throw new BadRequestException(`Cannot send invoice in status "${invoice.status}"`);
     }
-    const je = await this.createInvoiceJe(tenantId, userId, invoice);
-
-    // ── Stock OUT — finished goods shipped ───────────────────────────────────
-    try {
-      await this.stockService.shipFromArInvoice(tenantId, userId, {
-        id: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        lines: invoice.lines.map((l: any) => ({
-          itemId: l.itemId,
-          quantity: Number(l.quantity),
-          uom: l.uom,
-          description: l.description,
-        })),
-      });
-    } catch (err) {
-      console.error('❌ shipFromArInvoice failed:', err.message);
+    // FG shipment FIRST and failures ABORT the send (spec-026, mirror of
+    // spec-025) — the ledger and inventory must never diverge silently.
+    // Invoices with no item lines skip the stock path entirely.
+    const itemLines = invoice.lines.filter((l: any) => l.itemId);
+    if (itemLines.length > 0) {
+      try {
+        await this.stockService.shipFromArInvoice(tenantId, userId, {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          lines: itemLines.map((l: any) => ({
+            itemId: l.itemId,
+            quantity: Number(l.quantity),
+            uom: l.uom,
+            description: l.description,
+          })),
+        });
+      } catch (err: any) {
+        throw new BadRequestException(`FG shipment failed - send aborted: ${err?.message ?? err}`);
+      }
     }
 
-    const updated = await this.prisma.arInvoice.update({
-      where: { id },
+    const je = await this.createInvoiceJe(tenantId, userId, invoice);
+
+    await this.prisma.arInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'sent',
         jeId: je?.id ?? null,
         updatedBy: userId,
       },
-      include: this.defaultInclude(),
     });
+    const updated = await this.findOne(tenantId, id);
     return {
       message: `Invoice ${invoice.invoiceNumber} sent`,
       invoice: updated,
@@ -264,12 +320,18 @@ export class ArInvoicesService {
     if (invoice.status === 'void') throw new BadRequestException('Invoice already voided');
     if (invoice.status === 'paid')
       throw new BadRequestException('Cannot void a fully paid invoice');
+    // spec-026: payments and their JEs would survive the void — block until a
+    // payment-reversal flow exists.
+    if (new Decimal(invoice.paidAmount).gt(0))
+      throw new ConflictException(
+        'Cannot void an invoice with applied payments — reverse payments first',
+      );
     if (invoice.jeId) await this.createReversalJe(tenantId, userId, invoice);
-    const updated = await this.prisma.arInvoice.update({
-      where: { id },
+    await this.prisma.arInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'void', updatedBy: userId },
-      include: this.defaultInclude(),
     });
+    const updated = await this.findOne(tenantId, id);
     return { message: `Invoice ${invoice.invoiceNumber} voided`, invoice: updated };
   }
 
@@ -280,34 +342,62 @@ export class ArInvoicesService {
         `Cannot apply payment to invoice in status "${invoice.status}"`,
       );
     }
-    const remaining = Number(invoice.totalAmount) - Number(invoice.paidAmount);
-    if (dto.amount > remaining + 0.001) {
+    // Decimal-safe — exact at 2dp, no float epsilons
+    const total = new Decimal(invoice.totalAmount);
+    const paid = new Decimal(invoice.paidAmount);
+    const amount = new Decimal(dto.amount);
+    const remaining = total.sub(paid);
+    if (amount.gt(remaining)) {
       throw new BadRequestException(
         `Payment $${dto.amount} exceeds outstanding balance $${remaining.toFixed(2)}`,
       );
     }
-    const paymentNumber = await this.generatePaymentNumber(tenantId, new Date(dto.paymentDate));
+
+    // Frozen-rate pattern (spec-021): the payment freezes its OWN rate at the
+    // payment date (may differ from the invoice rate).
+    const paymentDate = new Date(dto.paymentDate);
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const payCurrency = (invoice as any).currency ?? baseCurrency;
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      payCurrency,
+      baseCurrency,
+      paymentDate,
+    );
+
+    const paymentNumber = await this.generatePaymentNumber(tenantId, paymentDate);
     const je = await this.createPaymentJe(tenantId, userId, invoice, dto);
 
-    const payment = await this.prisma.arPayment.create({
-      data: {
-        tenantId,
-        invoiceId,
-        paymentNumber,
-        paymentDate: new Date(dto.paymentDate),
-        amount: dto.amount,
-        paymentMethod: dto.paymentMethod ?? null,
-        reference: dto.reference ?? null,
-        jeId: je?.id ?? null,
-        notes: dto.notes ?? null,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-    });
-    const newPaidAmount = Number(invoice.paidAmount) + dto.amount;
-    const newStatus = newPaidAmount >= Number(invoice.totalAmount) - 0.001 ? 'paid' : 'partial';
-    await this.prisma.arInvoice.update({
-      where: { id: invoiceId },
+    let payment;
+    try {
+      payment = await this.prisma.arPayment.create({
+        data: {
+          tenantId,
+          invoiceId,
+          paymentNumber,
+          paymentDate,
+          amount: dto.amount,
+          exchangeRate,
+          amountBase: amount.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          paymentMethod: dto.paymentMethod ?? null,
+          reference: dto.reference ?? null,
+          jeId: je?.id ?? null,
+          notes: dto.notes ?? null,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Payment number collision — please retry the request');
+      throw e;
+    }
+
+    const newPaidAmount = paid.add(amount);
+    const newStatus = newPaidAmount.gte(total) ? 'paid' : 'partial';
+    await this.prisma.arInvoice.updateMany({
+      where: { id: invoiceId, tenantId, deletedAt: null },
       data: { paidAmount: newPaidAmount, status: newStatus, updatedBy: userId },
     });
     return {
@@ -315,7 +405,7 @@ export class ArInvoicesService {
       payment,
       journalEntry: je,
       newStatus,
-      remaining: Math.max(0, Number(invoice.totalAmount) - newPaidAmount),
+      remaining: Decimal.max(0, total.sub(newPaidAmount)).toNumber(),
     };
   }
 
@@ -339,6 +429,8 @@ export class ArInvoicesService {
       const daysOverdue = Math.floor(
         (today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24),
       );
+      // Base-currency outstanding via the FROZEN rate (spec-021 pattern)
+      const rate = Number((inv as any).exchangeRate ?? 1);
       const row = {
         invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber,
@@ -348,6 +440,7 @@ export class ArInvoicesService {
         totalAmount: Number(inv.totalAmount),
         paidAmount: Number(inv.paidAmount),
         outstanding,
+        outstandingBase: Math.round(outstanding * rate * 100) / 100,
         daysOverdue,
       };
       if (daysOverdue <= 0) buckets.current.push(row);
@@ -357,21 +450,24 @@ export class ArInvoicesService {
     }
 
     const sum = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstanding, 0);
+    const sumBase = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstandingBase, 0);
+    const bucket = (arr: any[]) => ({
+      count: arr.length,
+      amount: sum(arr),
+      amountBase: Math.round(sumBase(arr) * 100) / 100,
+    });
+    const all = [...buckets.current, ...buckets.days30, ...buckets.days60, ...buckets.days90plus];
     return {
       asOf: today,
       summary: {
-        current: { count: buckets.current.length, amount: sum(buckets.current) },
-        days1to30: { count: buckets.days30.length, amount: sum(buckets.days30) },
-        days31to60: { count: buckets.days60.length, amount: sum(buckets.days60) },
-        days90plus: { count: buckets.days90plus.length, amount: sum(buckets.days90plus) },
+        current: bucket(buckets.current),
+        days1to30: bucket(buckets.days30),
+        days31to60: bucket(buckets.days60),
+        days90plus: bucket(buckets.days90plus),
         total: {
           count: invoices.length,
-          amount: sum([
-            ...buckets.current,
-            ...buckets.days30,
-            ...buckets.days60,
-            ...buckets.days90plus,
-          ]),
+          amount: sum(all),
+          amountBase: Math.round(sumBase(all) * 100) / 100,
         },
       },
       detail: {
@@ -386,21 +482,32 @@ export class ArInvoicesService {
   async getKpis(tenantId: string) {
     const invoices = await this.prisma.arInvoice.findMany({
       where: { tenantId, deletedAt: null, status: { not: 'void' } },
-      select: { status: true, totalAmount: true, paidAmount: true, dueDate: true },
+      select: {
+        status: true,
+        totalAmount: true,
+        paidAmount: true,
+        dueDate: true,
+        exchangeRate: true,
+      },
     });
     const today = new Date();
     let totalInvoiced = 0,
       totalCollected = 0,
       totalPending = 0,
-      totalOverdue = 0;
+      totalOverdue = 0,
+      invoicedBase = 0,
+      pendingBase = 0;
     for (const inv of invoices) {
       const total = Number(inv.totalAmount);
       const paid = Number(inv.paidAmount);
+      const rate = Number(inv.exchangeRate ?? 1);
       const outstanding = total - paid;
       totalInvoiced += total;
+      invoicedBase += total * rate;
       totalCollected += paid;
       if (outstanding > 0) {
         totalPending += outstanding;
+        pendingBase += outstanding * rate;
         if (new Date(inv.dueDate) < today) totalOverdue += outstanding;
       }
     }
@@ -410,6 +517,8 @@ export class ArInvoicesService {
       pending: totalPending,
       overdue: totalOverdue,
       collectionRate: totalInvoiced > 0 ? (totalCollected / totalInvoiced) * 100 : 0,
+      invoicedBase: Math.round(invoicedBase * 100) / 100,
+      pendingBase: Math.round(pendingBase * 100) / 100,
     };
   }
 
@@ -418,8 +527,8 @@ export class ArInvoicesService {
     if (invoice.status !== 'draft') {
       throw new BadRequestException('Only draft invoices can be deleted');
     }
-    await this.prisma.arInvoice.update({
-      where: { id },
+    await this.prisma.arInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Invoice deleted', id };
@@ -479,7 +588,9 @@ export class ArInvoicesService {
     for (const line of invoice.lines) {
       if (!line.cogsAmount || Number(line.cogsAmount) === 0) continue;
       const cogsAcct = line.cogsAccountId
-        ? await this.prisma.account.findFirst({ where: { id: line.cogsAccountId, tenantId } })
+        ? await this.prisma.account.findFirst({
+            where: { id: line.cogsAccountId, tenantId, deletedAt: null },
+          })
         : await this.prisma.account.findFirst({
             where: { tenantId, accountNumber: '5.1.01', deletedAt: null },
           });
@@ -591,7 +702,7 @@ export class ArInvoicesService {
 
   private async createReversalJe(tenantId: string, userId: string, invoice: any) {
     const original = await this.prisma.journalEntry.findFirst({
-      where: { id: invoice.jeId },
+      where: { id: invoice.jeId, tenantId },
       include: { lines: true },
     });
     if (!original) return;
@@ -642,72 +753,42 @@ export class ArInvoicesService {
 
   // ── Number generators — date-aware ──────────────────────────────────────────
 
-  /**
-   * Calculate standard cost for an item from its active BOM.
-   * Returns: Σ (component.quantityPer × component.item.standardCost) × quantity
-   * Returns null if no BOM or no standardCost on components.
-   */
-  private async calculateBomStandardCost(
-    tenantId: string,
-    itemId: string,
-    quantity: number,
-  ): Promise<number | null> {
-    const bom = await this.prisma.bom.findFirst({
-      where: { tenantId, parentItemId: itemId, isActive: true, deletedAt: null },
-    });
-
-    if (!bom) return null;
-
-    const components = await this.prisma.bomComponent.findMany({
-      where: { bomId: bom.id, deletedAt: null },
-      include: { consumptionGroup: { select: { name: true, code: true } } },
-    });
-
-    if (components.length === 0) return null;
-
-    const hasAllCosts = components.every((c) => false);
-    if (!hasAllCosts) return null;
-
-    const unitCost = components.reduce((sum, comp) => {
-      return sum;
+  // Numeric max — string orderBy breaks past -9999. Deliberately spans
+  // soft-deleted rows (spec-012 exception); unique constraints backstop races
+  // via P2002 → 409.
+  private numericMax(rows: Array<Record<string, any>>, field: string): number {
+    return rows.reduce((m, r) => {
+      const n = parseInt(String(r[field]).split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
     }, 0);
-
-    return Math.round(unitCost * quantity * 100) / 100;
   }
 
   private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `INV-${(date ?? new Date()).getFullYear()}`;
-    const last = await this.prisma.arInvoice.findFirst({
+    const rows = await this.prisma.arInvoice.findMany({
       where: { tenantId, invoiceNumber: { startsWith: prefix } },
-      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    return `${prefix}-${(parseInt(last.invoiceNumber.split('-')[2]) + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'invoiceNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private async generatePaymentNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `PAY-${(date ?? new Date()).getFullYear()}`;
-    const last = await this.prisma.arPayment.findFirst({
+    const rows = await this.prisma.arPayment.findMany({
       where: { tenantId, paymentNumber: { startsWith: prefix } },
-      orderBy: { paymentNumber: 'desc' },
+      select: { paymentNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    return `${prefix}-${(parseInt(last.paymentNumber.split('-')[2]) + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'paymentNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const prefix = `JE-${year}${month}`;
-    const last = await this.prisma.journalEntry.findFirst({
+    const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    const rows = await this.prisma.journalEntry.findMany({
       where: { tenantId, entryNumber: { startsWith: prefix } },
-      orderBy: { entryNumber: 'desc' },
+      select: { entryNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.entryNumber.split('-');
-    const n = parseInt(parts[parts.length - 1]);
-    return `${prefix}-${(n + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'entryNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private toFiscalPeriod(date: Date): string {
