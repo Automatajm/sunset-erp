@@ -120,12 +120,20 @@ const SCENARIO = {
   ],
   accounts: [
     { number: '1.1.01', name: 'Caja y Bancos',           type: 'asset' },
-    { number: '1.2.01', name: 'Cuentas por Cobrar',      type: 'asset' },
-    { number: '1.3.01', name: 'Inventario Materia Prima', type: 'asset' },
+    // Account numbers the posting engine resolves by code (AP/AR/GRN/MO JEs):
+    // cash 1.1.02, AR 1.1.03, raw-material inv 1.1.04, finished-goods inv 1.1.05.
+    { number: '1.1.02', name: 'Banco Operativo',         type: 'asset' },
+    { number: '1.1.03', name: 'Cuentas por Cobrar',      type: 'asset' },
+    { number: '1.1.04', name: 'Inventario Materia Prima', type: 'asset' },
+    { number: '1.1.05', name: 'Inventario Producto Terminado', type: 'asset' },
+    { number: '1.2.01', name: 'Cuentas por Cobrar (Largo Plazo)', type: 'asset' },
+    { number: '1.3.01', name: 'Inventario General',      type: 'asset' },
     { number: '2.1.01', name: 'Cuentas por Pagar',       type: 'liability' },
     { number: '3.1.01', name: 'Capital Social',          type: 'equity' },
     { number: '4.1.01', name: 'Ventas de Producto',      type: 'revenue' },
     { number: '5.1.01', name: 'Costo de Ventas',         type: 'expense' },
+    { number: '5.2.01', name: 'Variación de Precio de Compra', type: 'expense' },
+    { number: '6.2.07', name: 'Pérdidas de Producción (Merma)', type: 'expense' },
   ],
   // Per-month per-SO unit allocation (4 SOs/month, integer chunks per SKU,
   // each chunk sums to the SKU's monthly volume — see assertions).
@@ -759,7 +767,9 @@ export async function seedDemoBurgerBorinquen(prisma: PrismaClient) {
           currency: s.tenant.currency,
           subtotal,
           total: subtotal,
-          status: 'approved',
+          // 'confirmed' is the receivable/invoiceable PO state (the workflow
+          // state machine has no 'approved' status — that left POs in a dead end).
+          status: 'confirmed',
           ...audit,
           lines: { create: lines },
         },

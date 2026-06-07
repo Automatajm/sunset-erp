@@ -85,6 +85,18 @@ export class ArInvoicesController {
     return this.arInvoicesService.getAging(req.user.tenantId);
   }
 
+  @Post('scan-overdue')
+  @RequirePermissions('AR:APPROVE')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Manually run the overdue scan — queues invoice_overdue notifications (also runs every 6h)',
+  })
+  @ApiResponse({ status: 200, description: '{ scanned, queued }' })
+  async scanOverdue() {
+    return this.arInvoicesService.scanOverdue();
+  }
+
   @Get('kpis')
   @RequirePermissions('AR:VIEW')
   @ApiOperation({ summary: 'AR KPIs — Invoiced / Collected / Pending / Overdue / Collection Rate' })
