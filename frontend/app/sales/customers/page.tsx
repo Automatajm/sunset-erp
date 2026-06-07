@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { customersApi } from '@/lib/api/customers';
+import { PrintButton } from '@/components/print/PrintButton';
 import { Customer, CreateCustomerDto, CreditStatus } from '@/lib/api/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -508,6 +509,7 @@ export default function CustomersPage() {
                         <div className="cust-actions">
                           <button className="cust-btn-edit" onClick={() => { setEditing(c); setModalOpen(true); }}>Edit</button>
                           <button className="cust-btn-del"  onClick={() => setDeleting(c)}>Delete</button>
+                          <PrintButton doc="customer-statement" id={c.id} label="Statement" style={{ padding: '3px 9px', fontSize: 11 }} />
                         </div>
                       </td>
                     </tr>

@@ -4,6 +4,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { bomApi } from '@/lib/api/bom';
+import { PrintButton } from '@/components/print/PrintButton';
 import { itemsApi } from '@/lib/api/items';
 import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
 import { tenantSettingsApi } from '@/lib/api/tenant-settings';
@@ -202,6 +203,9 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
         <button style={TAB(tab === 'routing', '#60a5fa')} onClick={() => setTab('routing')}>
           ⚙ Routing ({routingSteps.length || bom._count?.routings || 0})
         </button>
+        <div style={{ marginLeft: 'auto' }}>
+          <PrintButton doc="bom" id={bom.id} label="Recipe Card" style={{ padding: '4px 10px', fontSize: 11 }} />
+        </div>
       </div>
 
       {tab === 'components' && (

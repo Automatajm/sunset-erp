@@ -18,6 +18,8 @@ import { rfqsApi } from '@/lib/api/rfqs';
 import { productionOrdersApi } from '@/lib/api/production-orders';
 import { purchaseRequisitionsApi } from '@/lib/api/purchase-requisitions';
 import { journalEntriesApi } from '@/lib/api/journal-entries';
+import { bomApi } from '@/lib/api/bom';
+import { customersApi } from '@/lib/api/customers';
 import apiClient from '@/lib/api/client';
 
 const lineFrom = (l: any, qtyKey: string, priceKey?: string): DocLine => ({
@@ -529,6 +531,211 @@ export const PRINT_DOCS: Record<string, PrintDoc> = {
               </tr>
             </tbody>
           </table>
+        </DocumentLayout>
+      );
+    },
+  },
+
+  // ── spec-frontend-008 — round 4 ─────────────────────────────────────────────
+
+  bom: {
+    title: 'BOM Recipe Card',
+    fetch: (id) => bomApi.getById(id),
+    render: (bom: any) => {
+      const components = (bom.components ?? []).filter((c: any) => !c.isPhantom);
+      const routings = (bom.routings ?? []).filter((r: any) => r.isActive !== false);
+      return (
+        <DocumentLayout
+          title="BOM Recipe Card" number={bom.bomNumber} date={bom.effectiveFrom ?? bom.createdAt}
+          status={bom.isActive ? 'active' : 'inactive'}
+          party={{
+            label: 'Product',
+            name: bom.parentItem ? `${bom.parentItem.code ?? ''} — ${bom.parentItem.name ?? ''}` : '—',
+            lines: [
+              bom.effectiveFrom ? `Effective from: ${fmtD(bom.effectiveFrom)}` : null,
+              bom.effectiveTo ? `Effective to: ${fmtD(bom.effectiveTo)}` : null,
+            ],
+          }}
+          meta={[
+            { label: 'Components', value: components.length },
+            { label: 'Routing Steps', value: routings.length },
+          ]}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#888', margin: '0 0 6px' }}>Components (per unit)</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ ...TH, width: 32 }}>#</th>
+                <th style={TH}>Component</th>
+                <th style={THR}>Qty Per Unit</th>
+                <th style={{ ...TH, width: 70 }}>UOM</th>
+                <th style={THR}>Scrap %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {components.map((c: any, i: number) => (
+                <tr key={c.id ?? i}>
+                  <td style={TD}>{c.lineNumber ?? i + 1}</td>
+                  <td style={TD}>
+                    {c.consumptionGroup?.code && <span style={{ fontWeight: 600, color: '#111' }}>{c.consumptionGroup.code}</span>}
+                    {c.consumptionGroup?.code ? ' — ' : ''}{c.consumptionGroup?.name ?? '—'}
+                  </td>
+                  <td style={TDR}>{fmtQ(c.quantityPer)}</td>
+                  <td style={TD}>{c.uom ?? '—'}</td>
+                  <td style={TDR}>{fmtQ(c.scrapPercent, 2)}</td>
+                </tr>
+              ))}
+              {components.length === 0 && (
+                <tr><td style={{ ...TD, textAlign: 'center', color: '#999' }} colSpan={5}>No components</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          {routings.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#888', margin: '18px 0 6px' }}>Routing</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...TH, width: 44 }}>Step</th>
+                    <th style={TH}>Description</th>
+                    <th style={THR}>Setup (h)</th>
+                    <th style={THR}>Run / Unit (h)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {routings.map((r: any, i: number) => (
+                    <tr key={r.id ?? i}>
+                      <td style={TD}>{r.stepNumber ?? i + 1}</td>
+                      <td style={TD}>{r.description ?? '—'}{r.notes && <div style={{ fontSize: 10, color: '#777' }}>{r.notes}</div>}</td>
+                      <td style={TDR}>{fmtQ(r.setupTime)}</td>
+                      <td style={TDR}>{fmtQ(r.runTimePerUnit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </DocumentLayout>
+      );
+    },
+  },
+
+  'customer-statement': {
+    title: 'Customer Statement',
+    fetch: async (id) => {
+      // :id is the CUSTOMER — compose the header + their AR invoices.
+      const [customer, invoices] = await Promise.all([
+        customersApi.getById(id),
+        arInvoicesApi.getAll({ customerId: id }),
+      ]);
+      return { customer, invoices };
+    },
+    render: ({ customer, invoices }: any) => {
+      const rows = (invoices ?? [])
+        .filter((i: any) => i.status !== 'void')
+        .sort((a: any, b: any) => String(a.invoiceDate).localeCompare(String(b.invoiceDate)));
+      const money2 = (v: unknown) => Number(v ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const balanceOf = (i: any) => Number(i.totalAmount ?? 0) - Number(i.paidAmount ?? 0);
+
+      // spec-021 discipline: never silently sum across currencies — one
+      // totals/aging block per currency (single-currency customers get one).
+      const byCurrency: Record<string, any[]> = {};
+      for (const i of rows) (byCurrency[i.currency ?? '—'] ??= []).push(i);
+
+      const aging = (list: any[]) => {
+        const buckets = { Current: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 } as Record<string, number>;
+        const now = new Date();
+        for (const i of list) {
+          const bal = balanceOf(i);
+          if (bal <= 0) continue;
+          const days = i.dueDate ? Math.floor((now.getTime() - new Date(i.dueDate).getTime()) / 86400000) : 0;
+          const key = days <= 0 ? 'Current' : days <= 30 ? '1-30' : days <= 60 ? '31-60' : days <= 90 ? '61-90' : '90+';
+          buckets[key] += bal;
+        }
+        return buckets;
+      };
+
+      return (
+        <DocumentLayout
+          title="Customer Statement" number={customer.code ?? '—'} date={new Date().toISOString()}
+          party={{ label: 'Customer', name: customer.name ?? '—', lines: [customer.code, customer.email] }}
+          meta={[
+            { label: 'Open Invoices', value: rows.filter((i: any) => balanceOf(i) > 0).length },
+            { label: 'Total Invoices', value: rows.length },
+          ]}
+          footerNote="This statement reflects invoices recorded as of the date above."
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={TH}>Invoice</th>
+                <th style={TH}>Date</th>
+                <th style={TH}>Due</th>
+                <th style={{ ...TH, width: 70 }}>Status</th>
+                <th style={{ ...TH, width: 44 }}>Ccy</th>
+                <th style={THR}>Total</th>
+                <th style={THR}>Paid</th>
+                <th style={THR}>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((i: any) => (
+                <tr key={i.id}>
+                  <td style={{ ...TD, fontWeight: 600, color: '#111' }}>{i.invoiceNumber}</td>
+                  <td style={TD}>{fmtD(i.invoiceDate)}</td>
+                  <td style={TD}>{fmtD(i.dueDate)}</td>
+                  <td style={TD}>{i.status}</td>
+                  <td style={TD}>{i.currency ?? '—'}</td>
+                  <td style={TDR}>{money2(i.totalAmount)}</td>
+                  <td style={TDR}>{money2(i.paidAmount)}</td>
+                  <td style={{ ...TDR, fontWeight: 600 }}>{money2(balanceOf(i))}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td style={{ ...TD, textAlign: 'center', color: '#999' }} colSpan={8}>No invoices for this customer</td></tr>
+              )}
+            </tbody>
+            {rows.length > 0 && (
+              <tfoot>
+                {Object.entries(byCurrency).map(([ccy, list]) => (
+                  <tr key={ccy}>
+                    <td colSpan={4} />
+                    <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{ccy}</td>
+                    <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + Number(i.totalAmount ?? 0), 0))}</td>
+                    <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + Number(i.paidAmount ?? 0), 0))}</td>
+                    <td style={{ ...TDR, fontWeight: 700, color: '#c2410c', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + balanceOf(i), 0))}</td>
+                  </tr>
+                ))}
+              </tfoot>
+            )}
+          </table>
+
+          {rows.some((i: any) => balanceOf(i) > 0) && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#888', margin: '18px 0 6px' }}>Aging (days past due)</div>
+              {Object.entries(byCurrency).map(([ccy, list]) => {
+                const b = aging(list);
+                if (Object.values(b).every(v => v === 0)) return null;
+                return (
+                  <table key={ccy} style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...TH, width: 44 }}>{ccy}</th>
+                        {Object.keys(b).map(k => <th key={k} style={THR}>{k}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={TD} />
+                        {Object.values(b).map((v, i) => <td key={i} style={{ ...TDR, fontWeight: i > 1 ? 600 : 400 }}>{money2(v)}</td>)}
+                      </tr>
+                    </tbody>
+                  </table>
+                );
+              })}
+            </>
+          )}
         </DocumentLayout>
       );
     },
