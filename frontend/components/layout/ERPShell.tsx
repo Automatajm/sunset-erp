@@ -115,6 +115,7 @@ const NAV: NavItem[] = [
       { label: 'System Config', items: [
         { label: 'General Settings', href: '/settings/general',          permission: 'ADMIN:SETTINGS' },
         { label: 'Units of Measure', href: '/settings/uom',              permission: 'ADMIN:SETTINGS' },
+        { label: 'Notifications',    href: '/settings/notifications',    permission: 'SETTINGS:VIEW' },
         { label: 'Fiscal Calendar',  href: '/accounting/fiscal-periods', permission: 'ADMIN:SETTINGS' },
         { label: 'JE Automation',    href: '/accounting/automation',      permission: 'ADMIN:SETTINGS' },
       ]},
