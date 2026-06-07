@@ -1,6 +1,6 @@
 # spec-022 — Notifications Infrastructure
 
-Status: **Draft**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: planned infrastructure (implement AFTER invoices — triggers need those modules)
 Module(s): notifications (new), tenant-settings; event hooks in sales-orders, purchase-orders, rfqs, ar-invoices/ap-invoices, stock-transactions
@@ -152,3 +152,4 @@ approval per CLAUDE.md.
 |---|---|---|
 | 2026-06-06 | Spec drafted (planned infrastructure) | Draft |
 | 2026-06-06 | Implemented: Notification model + migration; TenantSettings email config; NotificationsModule (queue/safeQueue/safeQueueOnce, drain state machine with exp backoff + 3-retry cap, retry/cancel/list/drain, LogMailTransport); 15s drain worker + 6h overdue scan worker; 5 triggers wired (SO confirm, PO create, RFQ send, stock<reorder, AR overdue) — all fire-and-forget; apiKey never serialized | Unit 15/15, e2e 9/9; regression SO/PO/RFQ/AR e2e green (43); build + lint clean |
+| 2026-06-06 | Shipped to origin (17049c0); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
