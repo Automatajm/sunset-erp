@@ -1,6 +1,6 @@
 # spec-frontend-005 — Document Printing (PDF)
 
-Status: **Draft**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: planned infrastructure (implement AFTER invoices and notifications)
 Module(s): frontend only — purchase-orders, sales-orders, ar-invoices, ap-invoices, goods-receipts, stock-transactions pages
@@ -130,3 +130,4 @@ invoices and notifications are complete.**
 |---|---|---|
 | 2026-06-06 | Spec drafted | Draft |
 | 2026-06-07 | Implemented: DocumentLayout + LinesTable + 6-doc registry + print route (Suspense) + PrintButton wired into all 6 surfaces. HTML/print-CSS, zero new deps. | All 6 routes dev-compile 200; new print route lint-clean; one-click flow (friction ≤ 2, no config screens). Prod `pnpm build` deferred to host — capped 4.8GB VM had only ~1.1GB free with dev servers up (documented OOM risk); dev-compile (turbopack) exercised every route. |
+| 2026-06-07 | Shipped to origin (e166f9d); marked Complete and moved to specs/completed/ | All acceptance criteria met; prod build to be run host-side |
