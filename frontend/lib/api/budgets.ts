@@ -13,7 +13,9 @@ import {
 export const budgetsApi = {
   getAll: async (params?: { fiscalYear?: string; status?: BudgetStatus }): Promise<Budget[]> => {
     const res = await apiClient.get('/budgets', { params });
-    return res.data;
+    // spec-029 envelope { budgets, count }; tolerate legacy bare array
+    const d = res.data;
+    return Array.isArray(d) ? d : (d?.budgets ?? []);
   },
   getById: async (id: string): Promise<Budget> => {
     const res = await apiClient.get(`/budgets/${id}`);

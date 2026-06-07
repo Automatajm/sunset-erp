@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class GenerateBudgetFromSoDto {
   @ApiProperty({
@@ -10,6 +10,7 @@ export class GenerateBudgetFromSoDto {
   })
   @IsArray()
   @IsString({ each: true })
+  @IsIn(['draft', 'confirmed', 'shipped', 'delivered'], { each: true })
   soStatuses: string[];
 
   @ApiPropertyOptional({

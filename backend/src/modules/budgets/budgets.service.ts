@@ -27,27 +27,37 @@ export class BudgetsService {
 
     if (existing) {
       if (existing.deletedAt) {
-        // Was soft-deleted — permanently delete to free the code
-        await this.prisma.budgetLine.deleteMany({ where: { budgetId: existing.id } });
-        await this.prisma.budget.delete({ where: { id: existing.id } });
+        // Was soft-deleted — permanently delete to free the code (tenant-scoped)
+        await this.prisma.budgetLine.deleteMany({ where: { budgetId: existing.id, tenantId } });
+        await this.prisma.budget.deleteMany({ where: { id: existing.id, tenantId } });
       } else {
         throw new ConflictException(`Budget code ${createBudgetDto.budgetCode} already exists`);
       }
     }
 
-    return this.prisma.budget.create({
-      data: {
-        tenantId,
-        budgetCode: createBudgetDto.budgetCode,
-        budgetName: createBudgetDto.budgetName,
-        fiscalYear: createBudgetDto.fiscalYear,
-        description: createBudgetDto.description,
-        status: 'draft',
-        createdBy: userId,
-        updatedBy: userId,
-      },
-      include: { budgetLines: { include: { account: true } } },
-    });
+    try {
+      return await this.prisma.budget.create({
+        data: {
+          tenantId,
+          budgetCode: createBudgetDto.budgetCode,
+          budgetName: createBudgetDto.budgetName,
+          fiscalYear: createBudgetDto.fiscalYear,
+          description: createBudgetDto.description,
+          status: 'draft',
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        include: { budgetLines: { include: { account: true } } },
+      });
+    } catch (e) {
+      // @@unique([tenantId, budgetCode]) can race past the pre-check.
+      if ((e as { code?: string })?.code === 'P2002') {
+        throw new ConflictException(
+          `Budget code ${createBudgetDto.budgetCode} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 
   async findAll(tenantId: string, fiscalYear?: string, status?: string) {
@@ -55,7 +65,7 @@ export class BudgetsService {
     if (fiscalYear) where.fiscalYear = fiscalYear;
     if (status) where.status = status;
 
-    return this.prisma.budget.findMany({
+    const budgets = await this.prisma.budget.findMany({
       where,
       include: {
         budgetLines: {
@@ -64,6 +74,7 @@ export class BudgetsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return { budgets, count: budgets.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -97,18 +108,18 @@ export class BudgetsService {
         throw new ConflictException(`Budget code ${updateBudgetDto.budgetCode} already exists`);
     }
 
-    return this.prisma.budget.update({
-      where: { id },
+    await this.prisma.budget.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { ...updateBudgetDto, updatedBy: userId },
-      include: { budgetLines: { include: { account: true } } },
     });
+    return this.findOne(tenantId, id);
   }
 
   async remove(tenantId: string, userId: string, id: string) {
     const budget = await this.findOne(tenantId, id);
     if (budget.status !== 'draft') throw new BadRequestException('Can only delete draft budgets');
-    await this.prisma.budget.update({
-      where: { id },
+    await this.prisma.budget.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: `Budget ${budget.budgetCode} deleted successfully` };
@@ -177,13 +188,16 @@ export class BudgetsService {
     });
     if (!line) throw new NotFoundException('Budget line not found');
 
-    return this.prisma.budgetLine.update({
-      where: { id: lineId },
+    await this.prisma.budgetLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
       data: {
         budgetAmount: updateData.budgetAmount ? new Decimal(updateData.budgetAmount) : undefined,
         notes: updateData.notes,
         updatedBy: userId,
       },
+    });
+    return this.prisma.budgetLine.findFirst({
+      where: { id: lineId, tenantId, deletedAt: null },
       include: { account: true },
     });
   }
@@ -198,8 +212,8 @@ export class BudgetsService {
     });
     if (!line) throw new NotFoundException('Budget line not found');
 
-    await this.prisma.budgetLine.update({
-      where: { id: lineId },
+    await this.prisma.budgetLine.updateMany({
+      where: { id: lineId, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Budget line deleted successfully' };
@@ -215,12 +229,15 @@ export class BudgetsService {
     if (budget.budgetLines.length === 0)
       throw new BadRequestException('Cannot approve budget with no lines');
 
-    const approved = await this.prisma.budget.update({
-      where: { id },
+    await this.prisma.budget.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'approved', approvedAt: new Date(), approvedBy: userId, updatedBy: userId },
+    });
+    const approved = await this.prisma.budget.findFirst({
+      where: { id, tenantId, deletedAt: null },
       include: { budgetLines: { include: { account: true } } },
     });
-    return { message: `Budget ${approved.budgetCode} approved successfully`, budget: approved };
+    return { message: `Budget ${budget.budgetCode} approved successfully`, budget: approved };
   }
 
   // ============================================================================
@@ -479,6 +496,7 @@ export class BudgetsService {
       const existing = await this.prisma.budgetLine.findFirst({
         where: {
           budgetId,
+          tenantId,
           accountId: entry.accountId,
           fiscalPeriod: entry.fiscalPeriod,
           deletedAt: null,
@@ -487,8 +505,8 @@ export class BudgetsService {
 
       if (existing) {
         if (dto.overwrite) {
-          await this.prisma.budgetLine.update({
-            where: { id: existing.id },
+          await this.prisma.budgetLine.updateMany({
+            where: { id: existing.id, tenantId, deletedAt: null },
             data: { budgetAmount: new Decimal(entry.amount), updatedBy: userId },
           });
           linesGenerated++;
