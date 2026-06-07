@@ -1,6 +1,6 @@
 # spec-025 — AP Invoices (Accounts Payable)
 
-Status: **Draft**  
+Status: **Complete**  
 Owner: Finance  
 Sprint: AR/AP invoices (first consumer of spec-021 multi-currency)  
 Module(s): `ap-invoices` (injects `currency` per the frozen-rate gate; touches
@@ -412,3 +412,4 @@ pnpm build && cd ../frontend && pnpm build
 | 2026-06-06 | Spec generated from code by spec-generator (opportunity-finder score 98: 10 critical scoping, 7 correctness, 7 DTO/frozen-rate, 6 swagger) | Draft — pending review |
 | 2026-06-06 | Test scaffolds written (23 unit / 20 e2e, 23 tagged [GAP] red) | Red as designed |
 | 2026-06-06 | All 26 gaps implemented: frozen-rate adoption (ap_frozen_rate + ap_payment_frozen_rate additive migrations; CurrencyService injected; currency defaults to tenant base, catalog-validated; invoice + payment each freeze their own rate), Decimal-safe money (epsilons removed), post() aborts on stock failure (stock runs FIRST, before the JE — service-only invoices skip the stock path), void-with-payments 409, poLine + JE reads scoped, 9 writes → scoped updateMany, numeric-max generators ×3 + P2002→409, DTO caps/whitelists + LinkGrnDto + query DTO, { apInvoices, count } envelope + frontend extractList, aging/KPIs base-currency sums, 6 @ApiResponse | Unit 23/23, e2e 20/20 (frozen rate verified live: later rates do not move amountBase) |
+| 2026-06-06 | Shipped to origin (00f914c); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
