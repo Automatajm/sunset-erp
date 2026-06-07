@@ -16,6 +16,8 @@ import { goodsReceiptsApi } from '@/lib/api/goods-receipts';
 import { stockTransactionsApi } from '@/lib/api/stock-transactions';
 import { rfqsApi } from '@/lib/api/rfqs';
 import { productionOrdersApi } from '@/lib/api/production-orders';
+import { purchaseRequisitionsApi } from '@/lib/api/purchase-requisitions';
+import { journalEntriesApi } from '@/lib/api/journal-entries';
 import apiClient from '@/lib/api/client';
 
 const lineFrom = (l: any, qtyKey: string, priceKey?: string): DocLine => ({
@@ -334,6 +336,197 @@ export const PRINT_DOCS: Record<string, PrintDoc> = {
               {components.length === 0 && (
                 <tr><td style={{ ...TD, textAlign: 'center', color: '#999' }} colSpan={8}>No components on BOM</td></tr>
               )}
+            </tbody>
+          </table>
+        </DocumentLayout>
+      );
+    },
+  },
+
+  // ── spec-frontend-007 — round 3 ─────────────────────────────────────────────
+
+  'purchase-requisition': {
+    title: 'Purchase Requisition',
+    fetch: (id) => purchaseRequisitionsApi.getById(id),
+    render: (pr) => (
+      <DocumentLayout
+        title="Purchase Requisition" number={pr.prNumber} date={pr.requiredDate} status={pr.status}
+        party={{ label: 'Request', name: pr.title ?? '—', lines: [pr.departmentId ? `Department: ${pr.departmentId}` : null, pr.source ? `Source: ${pr.source}` : null] }}
+        meta={[
+          { label: 'Required Date', value: fmtD(pr.requiredDate) },
+          { label: 'Priority', value: pr.priority ?? '—' },
+          { label: 'Estimated Amount', value: pr.estimatedAmount != null ? Number(pr.estimatedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—' },
+        ]}
+        footerNote={[
+          pr.justification ? `Justification: ${pr.justification}` : null,
+          pr.status === 'rejected' && pr.rejectionReason ? `Rejection reason: ${pr.rejectionReason}` : null,
+        ].filter(Boolean).join(' — ') || null}
+        signatures={['Requested by', 'Approved by']}
+      >
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ ...TH, width: 32 }}>#</th>
+              <th style={TH}>Item</th>
+              <th style={THR}>Qty</th>
+              <th style={{ ...TH, width: 60 }}>UOM</th>
+              <th style={THR}>Unit Est.</th>
+              <th style={THR}>Line Est.</th>
+              <th style={{ ...TH, width: 90 }}>Warehouse</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(pr.lines ?? []).map((l: any, i: number) => {
+              const lineEst = l.unitEstimate != null ? Number(l.quantity) * Number(l.unitEstimate) : null;
+              return (
+                <tr key={l.id ?? i}>
+                  <td style={TD}>{l.lineNumber ?? i + 1}</td>
+                  <td style={TD}>
+                    {l.item?.code
+                      ? <><span style={{ fontWeight: 600, color: '#111' }}>{l.item.code}</span> — {l.item.name}</>
+                      : <>{l.genericDescription ?? '—'}{l.itemStatus && l.itemStatus !== 'catalog' ? <span style={{ fontSize: 9, color: '#888' }}> ({l.itemStatus})</span> : null}</>}
+                  </td>
+                  <td style={TDR}>{fmtQ(l.quantity)}</td>
+                  <td style={TD}>{l.uom ?? '—'}</td>
+                  <td style={TDR}>{l.unitEstimate != null ? Number(l.unitEstimate).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+                  <td style={TDR}>{lineEst != null ? lineEst.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+                  <td style={TD}>{l.warehouse?.code ?? '—'}</td>
+                </tr>
+              );
+            })}
+            {(pr.lines ?? []).length === 0 && (
+              <tr><td style={{ ...TD, textAlign: 'center', color: '#999' }} colSpan={7}>No line items</td></tr>
+            )}
+          </tbody>
+        </table>
+      </DocumentLayout>
+    ),
+  },
+
+  'journal-entry': {
+    title: 'Journal Entry Voucher',
+    fetch: (id) => journalEntriesApi.getById(id),
+    render: (je: any) => {
+      const lines: any[] = je.lines ?? [];
+      const totDebit = lines.reduce((s, l) => s + Number(l.debitAmount ?? 0), 0);
+      const totCredit = lines.reduce((s, l) => s + Number(l.creditAmount ?? 0), 0);
+      const money2 = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fiscal = typeof je.fiscalPeriod === 'string' ? je.fiscalPeriod : je.fiscalPeriod?.name ?? null;
+      return (
+        <DocumentLayout
+          title="Journal Entry Voucher" number={je.entryNumber} date={je.entryDate} status={je.status}
+          party={{ label: 'Description', name: je.description ?? '—', lines: [je.reference ? `Ref: ${je.reference}` : null] }}
+          meta={[
+            { label: 'Entry Date', value: fmtD(je.entryDate) },
+            { label: 'Posting Date', value: fmtD(je.postingDate) },
+            { label: 'Journal Type', value: je.journalType ?? '—' },
+            ...(fiscal ? [{ label: 'Fiscal Period', value: fiscal }] : []),
+          ]}
+          signatures={['Prepared by', 'Approved by']}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ ...TH, width: 32 }}>#</th>
+                <th style={{ ...TH, width: 90 }}>Account</th>
+                <th style={TH}>Account Name / Description</th>
+                <th style={{ ...THR, width: 100 }}>Debit</th>
+                <th style={{ ...THR, width: 100 }}>Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((l: any, i: number) => {
+                const fx = l.currency && Number(l.exchangeRate ?? 1) !== 1;
+                return (
+                  <tr key={l.id ?? i}>
+                    <td style={TD}>{l.lineNumber ?? i + 1}</td>
+                    <td style={{ ...TD, fontWeight: 600, color: '#111', whiteSpace: 'nowrap' }}>{l.account?.accountNumber ?? '—'}</td>
+                    <td style={TD}>
+                      {l.account?.name ?? '—'}
+                      {l.description && <div style={{ fontSize: 10, color: '#777' }}>{l.description}</div>}
+                      {fx && <div style={{ fontSize: 9, color: '#999' }}>{l.currency} @ {Number(l.exchangeRate)}</div>}
+                    </td>
+                    <td style={TDR}>{Number(l.debitAmount ?? 0) !== 0 ? money2(Number(l.debitAmount)) : ''}</td>
+                    <td style={TDR}>{Number(l.creditAmount ?? 0) !== 0 ? money2(Number(l.creditAmount)) : ''}</td>
+                  </tr>
+                );
+              })}
+              {lines.length === 0 && (
+                <tr><td style={{ ...TD, textAlign: 'center', color: '#999' }} colSpan={5}>No lines</td></tr>
+              )}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2} />
+                <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333', textAlign: 'right' }}>Totals</td>
+                <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(totDebit)}</td>
+                <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(totCredit)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </DocumentLayout>
+      );
+    },
+  },
+
+  'ar-receipt': {
+    title: 'Payment Receipt',
+    fetch: (id) => arInvoicesApi.getById(id),
+    render: (inv: any, q) => {
+      // :id is the INVOICE; ?paymentId= selects the embedded payment (there is
+      // no standalone payment endpoint). Missing/unknown id → explicit error.
+      const payment = (inv.payments ?? []).find((p: any) => p.id === q.get('paymentId'));
+      if (!payment) {
+        return (
+          <div style={{ padding: 40, textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#111' }}>Payment not found</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+              This receipt route needs a valid <code>?paymentId=</code> belonging to invoice {inv.invoiceNumber}.
+            </div>
+          </div>
+        );
+      }
+      const balanceDue = Number(inv.totalAmount ?? 0) - Number(inv.paidAmount ?? 0);
+      const crossCurrency = inv.currency && payment.baseCurrency && inv.currency !== payment.baseCurrency;
+      const money2 = (v: unknown) => Number(v ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return (
+        <DocumentLayout
+          title="Payment Receipt" number={payment.paymentNumber} date={payment.paymentDate} status="received"
+          currency={inv.currency}
+          party={{ label: 'Received From', name: inv.customer?.name ?? '—', lines: [inv.customer?.code, inv.customer?.email] }}
+          meta={[
+            { label: 'Payment Date', value: fmtD(payment.paymentDate) },
+            { label: 'Method', value: payment.paymentMethod ?? '—' },
+            { label: 'Invoice', value: inv.invoiceNumber },
+            ...(payment.reference ? [{ label: 'Reference', value: payment.reference }] : []),
+          ]}
+          footerNote={payment.notes}
+          signatures={['Received by', 'Customer']}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ ...TD, color: '#888' }}>Amount received</td>
+                <td style={{ ...TDR, fontSize: 16, fontWeight: 700, color: '#c2410c' }}>{inv.currency ? inv.currency + ' ' : ''}{money2(payment.amount)}</td>
+              </tr>
+              {crossCurrency && (
+                <tr>
+                  <td style={{ ...TD, color: '#888' }}>Equivalent ({payment.baseCurrency}, rate {Number(payment.exchangeRate)})</td>
+                  <td style={TDR}>{payment.baseCurrency} {money2(payment.amountBase)}</td>
+                </tr>
+              )}
+              <tr>
+                <td style={{ ...TD, color: '#888' }}>Invoice total</td>
+                <td style={TDR}>{money2(inv.totalAmount)}</td>
+              </tr>
+              <tr>
+                <td style={{ ...TD, color: '#888' }}>Paid to date</td>
+                <td style={TDR}>{money2(inv.paidAmount)}</td>
+              </tr>
+              <tr>
+                <td style={{ ...TD, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>Balance due</td>
+                <td style={{ ...TDR, fontWeight: 700, color: balanceDue > 0 ? '#111' : '#1a7f37', borderTop: '1.5px solid #333' }}>{money2(balanceDue)}</td>
+              </tr>
             </tbody>
           </table>
         </DocumentLayout>

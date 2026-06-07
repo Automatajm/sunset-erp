@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { journalEntriesApi } from '@/lib/api/journal-entries';
+import { PrintButton } from '@/components/print/PrintButton';
 import { chartOfAccountsApi } from '@/lib/api/chart-of-accounts';
 import {
   JournalEntry, CreateJournalEntryDto, CreateJournalEntryLineDto,
@@ -156,6 +157,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                 }}
               >{busy ? '…' : 'Unpost'}</button>
             )}
+            <PrintButton doc="journal-entry" id={entry.id} label="" style={{ padding: '4px 8px' }} />
           </div>
         </td>
       </tr>

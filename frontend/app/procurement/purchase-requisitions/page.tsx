@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { purchaseRequisitionsApi } from '@/lib/api/purchase-requisitions';
+import { PrintButton } from '@/components/print/PrintButton';
 import { itemsApi } from '@/lib/api/items';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { warehousesApi } from '@/lib/api/warehouses';
@@ -186,6 +187,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{pr.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <PrintButton doc="purchase-requisition" id={pr.id} label="" style={{ padding: '4px 7px' }} />
             <PriorityBadge priority={pr.priority} />
             <StatusBadge status={pr.status} />
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>

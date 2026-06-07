@@ -232,6 +232,7 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
                           <span style={{ color: 'rgba(255,255,255,0.4)' }}>{fmtDate(p.paymentDate)}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{p.paymentMethod ?? '—'}</span>
                           {p.reference && <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11 }}>{p.reference}</span>}
+                          <PrintButton doc="ar-receipt" id={detail.id} query={{ paymentId: p.id }} label="Receipt" style={{ padding: '2px 8px', fontSize: 10 }} />
                         </div>
                       ))}
                     </div>

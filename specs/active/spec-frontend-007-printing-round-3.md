@@ -1,6 +1,6 @@
 # spec-frontend-007 — Document Printing, Round 3 (PR, JE Voucher, AR Payment Receipt)
 
-Status: **Draft**
+Status: **Implemented — pending review**
 Owner: Axiom Systems
 Sprint: follow-up to spec-frontend-006 (printing round 2 shipped d8f97f1)
 Module(s): frontend only — purchase-requisitions, journal-entries, ar-invoices pages
@@ -151,3 +151,4 @@ Notes:
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec drafted (round-3 printing; API shapes verified live against BURGER: PR getById includes lines+item+warehouse, JE includes lines+account, AR payments embedded in invoice — no standalone payment endpoint needed, receipt keys off `?paymentId=`) | Draft — pending approval |
+| 2026-06-07 | Implemented: 3 PRINT_DOCS entries (purchase-requisition / journal-entry / ar-receipt); ar-receipt guards missing/unknown `?paymentId=` with an explicit error state; JE voucher prints debit+credit totals; PR shows catalog-or-generic lines + computed line estimates. PrintButton wired: PR drawer header, JE row actions, per-payment "Receipt" buttons in the AR invoice payments list. Demo PR-2026-0001 created in BURGER (line DTO also needs `requiredDate` per line — discovered during creation). | tsc clean; prod `pnpm build` PASSES; 4 route variants (incl. no-paymentId error state) + 3 wired pages dev-compile 200 |
