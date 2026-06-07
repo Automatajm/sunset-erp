@@ -1028,6 +1028,9 @@ erDiagram
     String je_id "❓"
     String grn_id "❓"
     String currency 
+    Decimal exchange_rate 
+    Decimal amount_base 
+    String base_currency 
     String notes "❓"
     DateTime created_at 
     DateTime updated_at 
@@ -1072,6 +1075,9 @@ erDiagram
     String payment_number 
     DateTime payment_date 
     Decimal amount 
+    Decimal exchange_rate 
+    Decimal amount_base 
+    String base_currency 
     String payment_method "❓"
     String reference "❓"
     String je_id "❓"

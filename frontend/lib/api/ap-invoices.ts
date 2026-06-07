@@ -6,6 +6,8 @@ import apiClient from './client';
 function extractList(data: unknown) {
   if (Array.isArray(data)) return data;
   const d = data as Record<string, unknown>;
+  // spec-025 envelope
+  if (d?.apInvoices && Array.isArray(d.apInvoices)) return d.apInvoices;
   if (d?.value && Array.isArray(d.value)) return d.value;
   return [];
 }

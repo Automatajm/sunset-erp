@@ -1,12 +1,18 @@
 // ============================================================================
 // FILE: backend/src/modules/ap-invoices/ap-invoices.service.ts
 // ============================================================================
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateApInvoiceDto } from './dto/create-ap-invoice.dto';
 import { UpdateApInvoiceDto, ApplyApPaymentDto } from './dto/update-ap-invoice.dto';
 import { AutomationService } from '../automation/automation.service';
 import { StockTransactionsService } from '../stock-transactions/stock-transactions.service';
+import { CurrencyService } from '../currency/currency.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -15,6 +21,7 @@ export class ApInvoicesService {
     private prisma: PrismaService,
     private automation: AutomationService,
     private stockService: StockTransactionsService,
+    private currency: CurrencyService,
   ) {}
 
   // ============================================================================
@@ -33,7 +40,24 @@ export class ApInvoicesService {
       if (!po) throw new NotFoundException('Purchase Order not found');
     }
 
-    let subtotal = 0;
+    // Frozen-rate pattern (spec-021): default to the tenant base currency,
+    // freeze the rate at the invoice date — never recalculated afterwards.
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const invCurrency = dto.currency ?? baseCurrency;
+    const catalogCurrency = await this.prisma.currency.findFirst({
+      where: { code: invCurrency },
+    });
+    if (!catalogCurrency) throw new NotFoundException(`Currency ${invCurrency} not in the catalog`);
+    const invoiceDate = new Date(dto.invoiceDate);
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      invCurrency,
+      baseCurrency,
+      invoiceDate,
+    );
+
+    // Decimal-safe money math — no float drift
+    let subtotal = new Decimal(0);
     const linesData: any[] = [];
 
     for (let i = 0; i < dto.lines.length; i++) {
@@ -46,21 +70,24 @@ export class ApInvoicesService {
         if (!item) throw new NotFoundException(`Item ${line.itemId} not found`);
       }
 
-      let originalPoPrice: number | null = null;
+      let originalPoPrice: Decimal | null = null;
       if (line.poLineId) {
         const poLine = await this.prisma.purchaseOrderLine.findFirst({
-          where: { id: line.poLineId },
+          where: { id: line.poLineId, tenantId, deletedAt: null },
         });
         if (!poLine) throw new NotFoundException(`PO line ${line.poLineId} not found`);
-        originalPoPrice = Number(poLine.unitPrice);
+        originalPoPrice = new Decimal(poLine.unitPrice);
       }
 
-      const discountAmt = (line.unitPrice * line.quantity * (line.discountPercent || 0)) / 100;
-      const lineTotal = line.unitPrice * line.quantity - discountAmt;
+      const gross = new Decimal(line.unitPrice).mul(line.quantity);
+      const discountAmt = gross.mul(line.discountPercent ?? 0).div(100);
+      const lineTotal = gross.sub(discountAmt).toDecimalPlaces(2);
       const priceVariance =
-        originalPoPrice !== null ? (line.unitPrice - originalPoPrice) * line.quantity : null;
+        originalPoPrice !== null
+          ? new Decimal(line.unitPrice).sub(originalPoPrice).mul(line.quantity).toDecimalPlaces(2)
+          : null;
 
-      subtotal += lineTotal;
+      subtotal = subtotal.add(lineTotal);
 
       linesData.push({
         tenantId,
@@ -82,30 +109,39 @@ export class ApInvoicesService {
       });
     }
 
-    const invoiceNumber = await this.generateInvoiceNumber(tenantId, new Date(dto.invoiceDate));
+    const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
-    return this.prisma.apInvoice.create({
-      data: {
-        tenantId,
-        supplierId: dto.supplierId,
-        poId: dto.poId ?? null,
-        invoiceNumber,
-        supplierRef: dto.supplierRef ?? null,
-        invoiceDate: new Date(dto.invoiceDate),
-        dueDate: new Date(dto.dueDate),
-        status: 'draft',
-        subtotal,
-        taxAmount: 0,
-        totalAmount: subtotal,
-        paidAmount: 0,
-        currency: dto.currency ?? 'USD',
-        notes: dto.notes ?? null,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: { create: linesData },
-      },
-      include: this.defaultInclude(),
-    });
+    try {
+      return await this.prisma.apInvoice.create({
+        data: {
+          tenantId,
+          supplierId: dto.supplierId,
+          poId: dto.poId ?? null,
+          invoiceNumber,
+          supplierRef: dto.supplierRef ?? null,
+          invoiceDate,
+          dueDate: new Date(dto.dueDate),
+          status: 'draft',
+          subtotal,
+          taxAmount: 0,
+          totalAmount: subtotal,
+          paidAmount: 0,
+          currency: invCurrency,
+          exchangeRate,
+          amountBase: subtotal.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          notes: dto.notes ?? null,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: { create: linesData },
+        },
+        include: this.defaultInclude(),
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Invoice number collision — please retry the request');
+      throw e;
+    }
   }
 
   // ============================================================================
@@ -162,28 +198,49 @@ export class ApInvoicesService {
 
     const invoiceNumber = await this.generateInvoiceNumber(tenantId, invoiceDate);
 
-    return this.prisma.apInvoice.create({
-      data: {
-        tenantId,
-        supplierId: po.supplierId,
-        poId: po.id,
-        invoiceNumber,
-        supplierRef: null,
-        invoiceDate,
-        dueDate,
-        status: 'draft',
-        subtotal: Number(po.subtotal),
-        taxAmount: Number(po.taxAmount),
-        totalAmount: Number(po.total),
-        paidAmount: 0,
-        currency: po.currency ?? 'USD',
-        notes: `Auto-generated from Purchase Order ${po.poNumber}`,
-        createdBy: userId,
-        updatedBy: userId,
-        lines: { create: linesData },
-      },
-      include: this.defaultInclude(),
-    });
+    // Frozen-rate pattern (spec-021): PO currency (or tenant base), rate frozen
+    // at the invoice creation date.
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const invCurrency = po.currency ?? baseCurrency;
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      invCurrency,
+      baseCurrency,
+      invoiceDate,
+    );
+    const totalAmount = new Decimal(po.total);
+
+    try {
+      return await this.prisma.apInvoice.create({
+        data: {
+          tenantId,
+          supplierId: po.supplierId,
+          poId: po.id,
+          invoiceNumber,
+          supplierRef: null,
+          invoiceDate,
+          dueDate,
+          status: 'draft',
+          subtotal: Number(po.subtotal),
+          taxAmount: Number(po.taxAmount),
+          totalAmount,
+          paidAmount: 0,
+          currency: invCurrency,
+          exchangeRate,
+          amountBase: totalAmount.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          notes: `Auto-generated from Purchase Order ${po.poNumber}`,
+          createdBy: userId,
+          updatedBy: userId,
+          lines: { create: linesData },
+        },
+        include: this.defaultInclude(),
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Invoice number collision — please retry the request');
+      throw e;
+    }
   }
 
   // ============================================================================
@@ -201,7 +258,7 @@ export class ApInvoicesService {
       if (filters.from) where.invoiceDate.gte = new Date(filters.from);
       if (filters.to) where.invoiceDate.lte = new Date(filters.to);
     }
-    return this.prisma.apInvoice.findMany({
+    const apInvoices = await this.prisma.apInvoice.findMany({
       where,
       include: {
         supplier: { select: { id: true, code: true, name: true } },
@@ -211,6 +268,7 @@ export class ApInvoicesService {
       },
       orderBy: { invoiceDate: 'desc' },
     });
+    return { apInvoices, count: apInvoices.length };
   }
 
   // ============================================================================
@@ -233,16 +291,16 @@ export class ApInvoicesService {
     if (invoice.status !== 'draft') {
       throw new BadRequestException('Only draft AP invoices can be edited');
     }
-    return this.prisma.apInvoice.update({
-      where: { id },
+    await this.prisma.apInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
         ...(dto.supplierRef !== undefined && { supplierRef: dto.supplierRef }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
         updatedBy: userId,
       },
-      include: this.defaultInclude(),
     });
+    return this.findOne(tenantId, id);
   }
 
   // ============================================================================
@@ -259,29 +317,37 @@ export class ApInvoicesService {
       await this.validateThreeWayMatch(tenantId, invoice);
     }
 
-    const je = await this.createInvoiceJe(tenantId, userId, invoice);
-
-    try {
-      await this.stockService.receiveFromApInvoice(tenantId, userId, {
-        id: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        lines: invoice.lines.map((l: any) => ({
-          itemId: l.itemId,
-          quantity: Number(l.quantity),
-          uom: l.uom,
-          unitPrice: Number(l.unitPrice),
-          description: l.description,
-        })),
-      });
-    } catch (err) {
-      console.error('❌ receiveFromApInvoice failed:', err.message);
+    // Stock receipt FIRST and failures ABORT the post (spec-025) — the ledger
+    // and inventory must never diverge silently. Service-only invoices (no
+    // item lines) skip the stock path entirely.
+    const itemLines = invoice.lines.filter((l: any) => l.itemId);
+    if (itemLines.length > 0) {
+      try {
+        await this.stockService.receiveFromApInvoice(tenantId, userId, {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          lines: itemLines.map((l: any) => ({
+            itemId: l.itemId,
+            quantity: Number(l.quantity),
+            uom: l.uom,
+            unitPrice: Number(l.unitPrice),
+            description: l.description,
+          })),
+        });
+      } catch (err: any) {
+        throw new BadRequestException(
+          `Stock receipt failed — post aborted: ${err?.message ?? err}`,
+        );
+      }
     }
 
-    const updated = await this.prisma.apInvoice.update({
-      where: { id },
+    const je = await this.createInvoiceJe(tenantId, userId, invoice);
+
+    await this.prisma.apInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'posted', jeId: je?.id ?? null, updatedBy: userId },
-      include: this.defaultInclude(),
     });
+    const updated = await this.findOne(tenantId, id);
 
     return {
       message: `AP Invoice ${invoice.invoiceNumber} posted`,
@@ -298,14 +364,20 @@ export class ApInvoicesService {
     if (invoice.status === 'void') throw new BadRequestException('Invoice already voided');
     if (invoice.status === 'paid')
       throw new BadRequestException('Cannot void a fully paid AP invoice');
+    // spec-025: payments and their JEs would survive the void — block until a
+    // payment-reversal flow exists.
+    if (new Decimal(invoice.paidAmount).gt(0))
+      throw new ConflictException(
+        'Cannot void an AP invoice with applied payments — reverse payments first',
+      );
 
     if (invoice.jeId) await this.createReversalJe(tenantId, userId, invoice);
 
-    const updated = await this.prisma.apInvoice.update({
-      where: { id },
+    await this.prisma.apInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { status: 'void', updatedBy: userId },
-      include: this.defaultInclude(),
     });
+    const updated = await this.findOne(tenantId, id);
 
     return { message: `AP Invoice ${invoice.invoiceNumber} voided`, invoice: updated };
   }
@@ -322,37 +394,63 @@ export class ApInvoicesService {
       );
     }
 
-    const remaining = Number(invoice.totalAmount) - Number(invoice.paidAmount);
-    if (dto.amount > remaining + 0.001) {
+    // Decimal-safe — exact at 2dp, no float epsilons
+    const total = new Decimal(invoice.totalAmount);
+    const paid = new Decimal(invoice.paidAmount);
+    const amount = new Decimal(dto.amount);
+    const remaining = total.sub(paid);
+    if (amount.gt(remaining)) {
       throw new BadRequestException(
         `Payment $${dto.amount} exceeds outstanding balance $${remaining.toFixed(2)}`,
       );
     }
 
-    const paymentNumber = await this.generatePaymentNumber(tenantId, new Date(dto.paymentDate));
+    // Frozen-rate pattern (spec-021): the payment freezes its OWN rate at the
+    // payment date (may differ from the invoice rate).
+    const paymentDate = new Date(dto.paymentDate);
+    const baseCurrency = await this.currency.getBaseCurrency(tenantId);
+    const payCurrency = (invoice as any).currency ?? baseCurrency;
+    const exchangeRate = await this.currency.getRate(
+      tenantId,
+      payCurrency,
+      baseCurrency,
+      paymentDate,
+    );
+
+    const paymentNumber = await this.generatePaymentNumber(tenantId, paymentDate);
     const je = await this.createPaymentJe(tenantId, userId, invoice, dto);
 
-    const payment = await this.prisma.apPayment.create({
-      data: {
-        tenantId,
-        invoiceId,
-        paymentNumber,
-        paymentDate: new Date(dto.paymentDate),
-        amount: dto.amount,
-        paymentMethod: dto.paymentMethod ?? null,
-        reference: dto.reference ?? null,
-        jeId: je?.id ?? null,
-        notes: dto.notes ?? null,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-    });
+    let payment;
+    try {
+      payment = await this.prisma.apPayment.create({
+        data: {
+          tenantId,
+          invoiceId,
+          paymentNumber,
+          paymentDate,
+          amount: dto.amount,
+          exchangeRate,
+          amountBase: amount.mul(exchangeRate).toDecimalPlaces(2),
+          baseCurrency,
+          paymentMethod: dto.paymentMethod ?? null,
+          reference: dto.reference ?? null,
+          jeId: je?.id ?? null,
+          notes: dto.notes ?? null,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002')
+        throw new ConflictException('Payment number collision — please retry the request');
+      throw e;
+    }
 
-    const newPaidAmount = Number(invoice.paidAmount) + dto.amount;
-    const newStatus = newPaidAmount >= Number(invoice.totalAmount) - 0.001 ? 'paid' : 'partial';
+    const newPaidAmount = paid.add(amount);
+    const newStatus = newPaidAmount.gte(total) ? 'paid' : 'partial';
 
-    await this.prisma.apInvoice.update({
-      where: { id: invoiceId },
+    await this.prisma.apInvoice.updateMany({
+      where: { id: invoiceId, tenantId, deletedAt: null },
       data: { paidAmount: newPaidAmount, status: newStatus, updatedBy: userId },
     });
 
@@ -361,7 +459,7 @@ export class ApInvoicesService {
       payment,
       journalEntry: je,
       newStatus,
-      remaining: Math.max(0, Number(invoice.totalAmount) - newPaidAmount),
+      remaining: Decimal.max(0, total.sub(newPaidAmount)).toNumber(),
     };
   }
 
@@ -388,6 +486,8 @@ export class ApInvoicesService {
       const daysPastDue = Math.floor(
         (today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24),
       );
+      // Base-currency outstanding via the FROZEN rate (spec-021 pattern)
+      const rate = Number((inv as any).exchangeRate ?? 1);
       const row = {
         invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber,
@@ -398,6 +498,7 @@ export class ApInvoicesService {
         totalAmount: Number(inv.totalAmount),
         paidAmount: Number(inv.paidAmount),
         outstanding,
+        outstandingBase: Math.round(outstanding * rate * 100) / 100,
         daysPastDue,
       };
       if (daysPastDue <= 0) buckets.current.push(row);
@@ -407,21 +508,24 @@ export class ApInvoicesService {
     }
 
     const sum = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstanding, 0);
+    const sumBase = (arr: any[]) => arr.reduce((acc, r) => acc + r.outstandingBase, 0);
+    const bucket = (arr: any[]) => ({
+      count: arr.length,
+      amount: sum(arr),
+      amountBase: Math.round(sumBase(arr) * 100) / 100,
+    });
+    const all = [...buckets.current, ...buckets.days30, ...buckets.days60, ...buckets.days90plus];
     return {
       asOf: today,
       summary: {
-        current: { count: buckets.current.length, amount: sum(buckets.current) },
-        days1to30: { count: buckets.days30.length, amount: sum(buckets.days30) },
-        days31to60: { count: buckets.days60.length, amount: sum(buckets.days60) },
-        days90plus: { count: buckets.days90plus.length, amount: sum(buckets.days90plus) },
+        current: bucket(buckets.current),
+        days1to30: bucket(buckets.days30),
+        days31to60: bucket(buckets.days60),
+        days90plus: bucket(buckets.days90plus),
         total: {
           count: invoices.length,
-          amount: sum([
-            ...buckets.current,
-            ...buckets.days30,
-            ...buckets.days60,
-            ...buckets.days90plus,
-          ]),
+          amount: sum(all),
+          amountBase: Math.round(sumBase(all) * 100) / 100,
         },
       },
       detail: {
@@ -439,23 +543,34 @@ export class ApInvoicesService {
   async getKpis(tenantId: string) {
     const invoices = await this.prisma.apInvoice.findMany({
       where: { tenantId, deletedAt: null, status: { not: 'void' } },
-      select: { status: true, totalAmount: true, paidAmount: true, dueDate: true },
+      select: {
+        status: true,
+        totalAmount: true,
+        paidAmount: true,
+        dueDate: true,
+        exchangeRate: true,
+      },
     });
 
     const today = new Date();
     let totalInvoiced = 0,
       totalPaid = 0,
       totalPending = 0,
-      totalOverdue = 0;
+      totalOverdue = 0,
+      totalInvoicedBase = 0,
+      totalPendingBase = 0;
 
     for (const inv of invoices) {
       const total = Number(inv.totalAmount);
       const paid = Number(inv.paidAmount);
+      const rate = Number(inv.exchangeRate ?? 1);
       const outstanding = total - paid;
       totalInvoiced += total;
+      totalInvoicedBase += total * rate;
       totalPaid += paid;
       if (outstanding > 0) {
         totalPending += outstanding;
+        totalPendingBase += outstanding * rate;
         if (new Date(inv.dueDate) < today) totalOverdue += outstanding;
       }
     }
@@ -466,6 +581,8 @@ export class ApInvoicesService {
       totalPending,
       totalOverdue,
       paymentRate: totalInvoiced > 0 ? (totalPaid / totalInvoiced) * 100 : 0,
+      totalInvoicedBase: Math.round(totalInvoicedBase * 100) / 100,
+      totalPendingBase: Math.round(totalPendingBase * 100) / 100,
     };
   }
 
@@ -477,8 +594,8 @@ export class ApInvoicesService {
     if (invoice.status !== 'draft') {
       throw new BadRequestException('Only draft AP invoices can be deleted');
     }
-    await this.prisma.apInvoice.update({
-      where: { id },
+    await this.prisma.apInvoice.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'AP Invoice deleted', id };
@@ -504,29 +621,29 @@ export class ApInvoicesService {
       throw new BadRequestException('GRN and AP Invoice are linked to different Purchase Orders');
     }
 
-    // Auto-match lines by poLineId
+    // Auto-match lines by poLineId (tenant-scoped writes)
     const lineUpdates: Promise<any>[] = [];
     for (const invoiceLine of (invoice as any).lines) {
       if (!invoiceLine.poLineId) continue;
       const matchingGrnLine = grn.lines.find((gl: any) => gl.poLineId === invoiceLine.poLineId);
       if (matchingGrnLine) {
         lineUpdates.push(
-          this.prisma.apInvoiceLine.update({
-            where: { id: invoiceLine.id },
+          this.prisma.apInvoiceLine.updateMany({
+            where: { id: invoiceLine.id, tenantId, deletedAt: null },
             data: { grnLineId: matchingGrnLine.id, updatedBy: userId },
           }),
         );
       }
     }
 
-    const [updated] = await Promise.all([
-      this.prisma.apInvoice.update({
-        where: { id: invoiceId },
+    await Promise.all([
+      this.prisma.apInvoice.updateMany({
+        where: { id: invoiceId, tenantId, deletedAt: null },
         data: { grnId, updatedBy: userId },
-        include: this.defaultInclude(),
       }),
       ...lineUpdates,
     ]);
+    const updated = await this.findOne(tenantId, invoiceId);
 
     return {
       message: `GRN ${grn.grnNumber} linked to invoice ${invoice.invoiceNumber}`,
@@ -545,15 +662,15 @@ export class ApInvoicesService {
     }
 
     await this.prisma.apInvoiceLine.updateMany({
-      where: { invoiceId, deletedAt: null },
+      where: { invoiceId, tenantId, deletedAt: null },
       data: { grnLineId: null },
     });
 
-    const updated = await this.prisma.apInvoice.update({
-      where: { id: invoiceId },
+    await this.prisma.apInvoice.updateMany({
+      where: { id: invoiceId, tenantId, deletedAt: null },
       data: { grnId: null, updatedBy: userId },
-      include: this.defaultInclude(),
     });
+    const updated = await this.findOne(tenantId, invoiceId);
 
     return { message: 'GRN unlinked from invoice', invoice: updated };
   }
@@ -852,7 +969,7 @@ export class ApInvoicesService {
 
   private async createReversalJe(tenantId: string, userId: string, invoice: any) {
     const original = await this.prisma.journalEntry.findFirst({
-      where: { id: invoice.jeId },
+      where: { id: invoice.jeId, tenantId },
       include: { lines: true },
     });
     if (!original) return;
@@ -909,38 +1026,42 @@ export class ApInvoicesService {
     };
   }
 
+  // Numeric max — string orderBy breaks past -9999. Deliberately spans
+  // soft-deleted rows (spec-012 exception); unique constraints backstop races
+  // via P2002 → 409.
+  private numericMax(rows: Array<Record<string, any>>, field: string): number {
+    return rows.reduce((m, r) => {
+      const n = parseInt(String(r[field]).split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+  }
+
   private async generateInvoiceNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APINV-${(date ?? new Date()).getFullYear()}`;
-    const last = await this.prisma.apInvoice.findFirst({
+    const rows = await this.prisma.apInvoice.findMany({
       where: { tenantId, invoiceNumber: { startsWith: prefix } },
-      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.invoiceNumber.split('-');
-    return `${prefix}-${(parseInt(parts[parts.length - 1]) + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'invoiceNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private async generatePaymentNumber(tenantId: string, date?: Date): Promise<string> {
     const prefix = `APPAY-${(date ?? new Date()).getFullYear()}`;
-    const last = await this.prisma.apPayment.findFirst({
+    const rows = await this.prisma.apPayment.findMany({
       where: { tenantId, paymentNumber: { startsWith: prefix } },
-      orderBy: { paymentNumber: 'desc' },
+      select: { paymentNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.paymentNumber.split('-');
-    return `${prefix}-${(parseInt(parts[parts.length - 1]) + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'paymentNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private async generateJeNumber(tenantId: string): Promise<string> {
     const now = new Date();
     const prefix = `JE-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const last = await this.prisma.journalEntry.findFirst({
+    const rows = await this.prisma.journalEntry.findMany({
       where: { tenantId, entryNumber: { startsWith: prefix } },
-      orderBy: { entryNumber: 'desc' },
+      select: { entryNumber: true },
     });
-    if (!last) return `${prefix}-0001`;
-    const parts = last.entryNumber.split('-');
-    return `${prefix}-${(parseInt(parts[parts.length - 1]) + 1).toString().padStart(4, '0')}`;
+    return `${prefix}-${(this.numericMax(rows, 'entryNumber') + 1).toString().padStart(4, '0')}`;
   }
 
   private toFiscalPeriod(date: Date): string {

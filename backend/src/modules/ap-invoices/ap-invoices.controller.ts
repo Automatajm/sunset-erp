@@ -27,6 +27,7 @@ import {
 import { ApInvoicesService } from './ap-invoices.service';
 import { CreateApInvoiceDto } from './dto/create-ap-invoice.dto';
 import { UpdateApInvoiceDto, ApplyApPaymentDto } from './dto/update-ap-invoice.dto';
+import { QueryApInvoicesDto, LinkGrnDto } from './dto/query-ap-invoices.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -72,20 +73,22 @@ export class ApInvoicesController {
   @ApiQuery({ name: 'supplierId', required: false, description: 'Filter by supplier UUID' })
   @ApiQuery({ name: 'from', required: false, description: 'Invoice date from YYYY-MM-DD' })
   @ApiQuery({ name: 'to', required: false, description: 'Invoice date to YYYY-MM-DD' })
-  async findAll(
-    @Request() req,
-    @Query('status') status?: string,
-    @Query('supplierId') supplierId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.apInvoicesService.findAll(req.user.tenantId, { status, supplierId, from, to });
+  @ApiResponse({ status: 200, description: '{ apInvoices: [...], count: n }' })
+  @ApiResponse({ status: 400, description: 'Query param outside the whitelist' })
+  async findAll(@Request() req, @Query() query: QueryApInvoicesDto) {
+    return this.apInvoicesService.findAll(req.user.tenantId, {
+      status: query.status,
+      supplierId: query.supplierId,
+      from: query.from,
+      to: query.to,
+    });
   }
 
   // ── GET /ap-invoices/aging ────────────────────────────────────────────────
   @Get('aging')
   @RequirePermissions('AP:VIEW')
   @ApiOperation({ summary: 'AP Aging Report — Current / 1-30 / 31-60 / 90+ days past due' })
+  @ApiResponse({ status: 200, description: 'Buckets with amount + amountBase sums' })
   async getAging(@Request() req) {
     return this.apInvoicesService.getAging(req.user.tenantId);
   }
@@ -94,6 +97,7 @@ export class ApInvoicesController {
   @Get('kpis')
   @RequirePermissions('AP:VIEW')
   @ApiOperation({ summary: 'AP KPIs — Total Invoiced / Paid / Pending / Overdue / Payment Rate' })
+  @ApiResponse({ status: 200, description: 'KPI object incl. totalInvoicedBase/totalPendingBase' })
   async getKpis(@Request() req) {
     return this.apInvoicesService.getKpis(req.user.tenantId);
   }
@@ -103,6 +107,8 @@ export class ApInvoicesController {
   @RequirePermissions('AP:VIEW')
   @ApiOperation({ summary: 'Get AP invoice by ID with lines and payments' })
   @ApiParam({ name: 'id', description: 'AP Invoice UUID' })
+  @ApiResponse({ status: 200, description: 'Invoice detail with lines and payments' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.apInvoicesService.findOne(req.user.tenantId, id);
   }
@@ -148,6 +154,9 @@ export class ApInvoicesController {
   @RequirePermissions('AP:APPROVE')
   @ApiOperation({ summary: 'Void AP invoice → reversal JE if already posted' })
   @ApiParam({ name: 'id', description: 'AP Invoice UUID' })
+  @ApiResponse({ status: 200, description: 'Voided; reversal JE posted when applicable' })
+  @ApiResponse({ status: 400, description: 'Already void or fully paid' })
+  @ApiResponse({ status: 409, description: 'Has applied payments — reverse payments first' })
   async void(@Request() req, @Param('id') id: string) {
     return this.apInvoicesService.void(req.user.tenantId, req.user.id, id);
   }
@@ -178,8 +187,8 @@ export class ApInvoicesController {
     },
   })
   @ApiResponse({ status: 200, description: 'GRN linked, matched line count returned' })
-  async linkGrn(@Request() req, @Param('id') id: string, @Body('grnId') grnId: string) {
-    return this.apInvoicesService.linkGrn(req.user.tenantId, req.user.id, id, grnId);
+  async linkGrn(@Request() req, @Param('id') id: string, @Body() dto: LinkGrnDto) {
+    return this.apInvoicesService.linkGrn(req.user.tenantId, req.user.id, id, dto.grnId);
   }
 
   // ── POST /ap-invoices/:id/unlink-grn ──────────────────────────────────────
@@ -199,6 +208,8 @@ export class ApInvoicesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete AP invoice — draft only (soft delete)' })
   @ApiParam({ name: 'id', description: 'AP Invoice UUID' })
+  @ApiResponse({ status: 200, description: 'Soft-deleted' })
+  @ApiResponse({ status: 400, description: 'Not in draft status' })
   async remove(@Request() req, @Param('id') id: string) {
     return this.apInvoicesService.remove(req.user.tenantId, req.user.id, id);
   }

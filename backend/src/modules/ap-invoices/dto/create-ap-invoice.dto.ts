@@ -5,9 +5,12 @@ import {
   IsOptional,
   IsNumber,
   IsArray,
+  ArrayMinSize,
   ValidateNested,
   IsDateString,
+  Length,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -30,6 +33,7 @@ export class CreateApInvoiceLineDto {
   @ApiProperty({ example: 50 })
   @IsNumber()
   @Min(0.001)
+  @Max(99999999999) // Decimal(15,3) capacity − 1 order of magnitude
   quantity: number;
 
   @ApiPropertyOptional({ example: 'sheets' })
@@ -40,12 +44,14 @@ export class CreateApInvoiceLineDto {
   @ApiProperty({ example: 28.5 })
   @IsNumber()
   @Min(0)
+  @Max(9999999999) // Decimal(15,4) capacity − 1 order of magnitude
   unitPrice: number;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(100)
   discountPercent?: number;
 
   @ApiPropertyOptional({ example: 'uuid-inventory-account' })
@@ -82,9 +88,13 @@ export class CreateApInvoiceDto {
   @IsString()
   supplierRef?: string;
 
-  @ApiPropertyOptional({ example: 'USD' })
+  @ApiPropertyOptional({
+    example: 'USD',
+    description: 'ISO 4217; defaults to the tenant base currency (catalog-validated)',
+  })
   @IsOptional()
   @IsString()
+  @Length(3, 3)
   currency?: string;
 
   @ApiPropertyOptional()
@@ -92,8 +102,9 @@ export class CreateApInvoiceDto {
   @IsString()
   notes?: string;
 
-  @ApiProperty({ type: [CreateApInvoiceLineDto] })
+  @ApiProperty({ type: [CreateApInvoiceLineDto], description: 'Invoice lines (min 1)' })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateApInvoiceLineDto)
   lines: CreateApInvoiceLineDto[];
