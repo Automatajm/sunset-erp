@@ -20,8 +20,8 @@ export class UpdateUserDto {
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ enum: ['active', 'inactive'] })
+  @ApiPropertyOptional({ enum: ['active', 'inactive', 'suspended'] })
   @IsOptional()
-  @IsIn(['active', 'inactive'])
+  @IsIn(['active', 'inactive', 'suspended'])
   status?: string;
 }

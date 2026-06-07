@@ -8,7 +8,10 @@ export class UpdateTenantDto {
   @ApiPropertyOptional() @IsOptional() @IsString() taxId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(2, 2) country?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() industry?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() companySize?: string;
+  @ApiPropertyOptional({ enum: ['1-10', '11-50', '50-200', '200-500', '500+'] })
+  @IsOptional()
+  @IsIn(['1-10', '11-50', '50-200', '200-500', '500+'])
+  companySize?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(3, 3) defaultCurrency?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() defaultLanguage?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() timezone?: string;

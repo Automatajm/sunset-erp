@@ -1,5 +1,5 @@
 // --- tenant-settings/dto/update-tenant-settings.dto.ts ---
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTenantSettingsDto {
@@ -7,6 +7,15 @@ export class UpdateTenantSettingsDto {
   @IsOptional()
   @IsString()
   defaultUomSystem?: string;
+
+  @ApiPropertyOptional({
+    example: 'DOP',
+    description: 'ISO 4217 monetary base currency (spec-021; catalog-validated)',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(3, 3)
+  baseCurrency?: string;
 
   @ApiPropertyOptional({ description: 'Volume system UOM ID (e.g. LTR)' })
   @IsOptional()

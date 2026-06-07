@@ -38,7 +38,7 @@ export class CreateTenantDto {
 
   @ApiPropertyOptional({ example: '50-200', enum: ['1-10', '11-50', '50-200', '200-500', '500+'] })
   @IsOptional()
-  @IsString()
+  @IsIn(['1-10', '11-50', '50-200', '200-500', '500+'])
   companySize?: string;
 
   @ApiPropertyOptional({ example: 'USD' })

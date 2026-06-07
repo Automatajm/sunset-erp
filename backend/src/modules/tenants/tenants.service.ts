@@ -14,7 +14,7 @@ export class TenantsService {
       include: { _count: { select: { userTenants: true } } },
       orderBy: { name: 'asc' },
     });
-    return tenants.map((t) => ({
+    const mapped = tenants.map((t) => ({
       id: t.id,
       code: t.code,
       name: t.name,
@@ -31,6 +31,7 @@ export class TenantsService {
       createdAt: t.createdAt,
       userCount: t._count.userTenants,
     }));
+    return { tenants: mapped, count: mapped.length };
   }
 
   // ── Get single tenant with users ──────────────────────────────────────────
@@ -110,16 +111,16 @@ export class TenantsService {
       .replace(/[^A-Z]/g, '')
       .slice(0, 4)
       .padEnd(4, 'X');
-    // Find highest existing code with this prefix
-    const last = await this.prisma.tenant.findFirst({
+    // Numeric max over the prefix — string orderBy breaks past -9999.
+    const rows = await this.prisma.tenant.findMany({
       where: { code: { startsWith: base + '-' } },
-      orderBy: { code: 'desc' },
+      select: { code: true },
     });
-    if (!last) return `${base}-0001`;
-    const parts = last.code.split('-');
-    const num = parseInt(parts[parts.length - 1], 10);
-    const next = isNaN(num) ? 1 : num + 1;
-    return `${base}-${next.toString().padStart(4, '0')}`;
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.code.split('-').pop() ?? '', 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `${base}-${(max + 1).toString().padStart(4, '0')}`;
   }
 
   // ── Create tenant ──────────────────────────────────────────────────────────
@@ -146,23 +147,30 @@ export class TenantsService {
     });
     if (existing) throw new ConflictException(`Tenant code "${code}" already exists`);
 
-    const tenant = await this.prisma.tenant.create({
-      data: {
-        code,
-        name: dto.name,
-        country: dto.country,
-        legalName: dto.legalName,
-        taxId: dto.taxId,
-        industry: dto.industry,
-        companySize: dto.companySize,
-        defaultCurrency: dto.defaultCurrency ?? 'USD',
-        defaultLanguage: dto.defaultLanguage ?? 'en-US',
-        timezone: dto.timezone ?? 'UTC',
-        subscriptionPlan: dto.subscriptionPlan ?? 'free',
-        subscriptionStatus: 'active',
-        status: dto.status ?? 'active',
-      },
-    });
+    let tenant;
+    try {
+      tenant = await this.prisma.tenant.create({
+        data: {
+          code,
+          name: dto.name,
+          country: dto.country,
+          legalName: dto.legalName,
+          taxId: dto.taxId,
+          industry: dto.industry,
+          companySize: dto.companySize,
+          defaultCurrency: dto.defaultCurrency ?? 'USD',
+          defaultLanguage: dto.defaultLanguage ?? 'en-US',
+          timezone: dto.timezone ?? 'UTC',
+          subscriptionPlan: dto.subscriptionPlan ?? 'free',
+          subscriptionStatus: 'active',
+          status: dto.status ?? 'active',
+        },
+      });
+    } catch (e: any) {
+      // Concurrent create can race the pre-check on the global `code` unique.
+      if (e?.code === 'P2002') throw new ConflictException(`Tenant code "${code}" already exists`);
+      throw e;
+    }
 
     return this.findOne(tenant.id);
   }

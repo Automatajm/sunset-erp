@@ -298,7 +298,8 @@ export default function TenantsPage() {
     setLoading(true);
     try {
       const res = await apiClient.get('/tenants');
-      setTenants(res.data);
+      // spec-027 envelope { tenants, count }; tolerate legacy bare array
+      setTenants(Array.isArray(res.data) ? res.data : (res.data?.tenants ?? []));
     } catch { setTenants([]); }
     finally { setLoading(false); }
   }, []);

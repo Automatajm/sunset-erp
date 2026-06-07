@@ -31,7 +31,7 @@ export class RolesService {
       orderBy: { name: 'asc' },
     });
 
-    return roles.map((r) => ({
+    const mapped = roles.map((r) => ({
       id: r.id,
       code: r.code,
       name: r.name,
@@ -46,6 +46,7 @@ export class RolesService {
         module: rp.permission.module,
       })),
     }));
+    return { roles: mapped, count: mapped.length };
   }
 
   // ── Get all available permissions ─────────────────────────────────────────
@@ -82,17 +83,25 @@ export class RolesService {
     });
     if (existing) throw new ConflictException(`Role code "${dto.code}" already exists`);
 
-    const role = await this.prisma.role.create({
-      data: {
-        tenantId,
-        code: dto.code.toUpperCase(),
-        name: dto.name,
-        description: dto.description,
-        isSystem: false,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-    });
+    let role;
+    try {
+      role = await this.prisma.role.create({
+        data: {
+          tenantId,
+          code: dto.code.toUpperCase(),
+          name: dto.name,
+          description: dto.description,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (e: any) {
+      // Concurrent create can race the pre-check on @@unique([tenantId, code]).
+      if (e?.code === 'P2002')
+        throw new ConflictException(`Role code "${dto.code}" already exists`);
+      throw e;
+    }
 
     if (dto.permissionIds?.length) {
       await this.setPermissions(role.id, dto.permissionIds);
@@ -147,7 +156,10 @@ export class RolesService {
     if (!role) throw new NotFoundException('Role not found');
     if (role.isSystem) throw new BadRequestException('Cannot edit system roles');
 
-    await this.prisma.role.update({ where: { id }, data: { ...dto, updatedBy: userId } });
+    await this.prisma.role.updateMany({
+      where: { id, tenantId, deletedAt: null },
+      data: { ...dto, updatedBy: userId },
+    });
     return this.findOne(tenantId, id);
   }
 
@@ -207,8 +219,8 @@ export class RolesService {
       );
     }
 
-    await this.prisma.role.update({
-      where: { id },
+    await this.prisma.role.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: { deletedAt: new Date(), deletedBy: userId },
     });
     return { message: 'Role deleted', id };

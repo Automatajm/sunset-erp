@@ -44,7 +44,7 @@ export class UsersService {
       orderBy: { user: { firstName: 'asc' } },
     });
 
-    return userTenants.map((ut) => ({
+    const users = userTenants.map((ut) => ({
       id: ut.user.id,
       email: ut.user.email,
       firstName: ut.user.firstName,
@@ -61,6 +61,7 @@ export class UsersService {
         name: r.role.name,
       })),
     }));
+    return { users, count: users.length };
   }
 
   // ── Get single user ───────────────────────────────────────────────────────
@@ -190,12 +191,46 @@ export class UsersService {
 
   // ── Activate / Deactivate ─────────────────────────────────────────────────
 
-  async setActive(tenantId: string, userId: string, isActive: boolean) {
+  async setActive(tenantId: string, userId: string, isActive: boolean, actingUserId?: string) {
     const ut = await this.prisma.userTenant.findFirst({ where: { tenantId, userId } });
     if (!ut) throw new NotFoundException('User not found in this tenant');
 
-    await this.prisma.userTenant.update({
-      where: { id: ut.id },
+    // spec-027 lock-out guards (deactivation only)
+    if (!isActive) {
+      if (actingUserId && userId === actingUserId) {
+        throw new BadRequestException('You cannot deactivate your own account');
+      }
+      // Block deactivating the last active member holding an ADMIN:USERS role —
+      // it would lock everyone out of user administration for this tenant.
+      const activeAdmins = await this.prisma.userTenant.count({
+        where: {
+          tenantId,
+          isActive: true,
+          userId: { not: userId },
+          user: {
+            deletedAt: null,
+            status: 'active',
+            userRoles: {
+              some: {
+                tenantId,
+                role: {
+                  deletedAt: null,
+                  rolePermissions: { some: { permission: { code: 'ADMIN:USERS' } } },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (activeAdmins === 0) {
+        throw new BadRequestException(
+          'Cannot deactivate the last active administrator of this tenant',
+        );
+      }
+    }
+
+    await this.prisma.userTenant.updateMany({
+      where: { tenantId, userId },
       data: { isActive },
     });
 

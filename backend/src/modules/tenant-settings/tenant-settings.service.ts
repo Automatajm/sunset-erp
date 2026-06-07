@@ -1,5 +1,5 @@
 // --- tenant-settings/tenant-settings.service.ts ---
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 
@@ -30,6 +30,14 @@ export class TenantSettingsService {
 
   async update(tenantId: string, userId: string, dto: UpdateTenantSettingsDto) {
     await this.getOrCreate(tenantId);
+    // spec-027: baseCurrency must exist in the catalog before it becomes the
+    // monetary base for the frozen-rate pattern (spec-021).
+    if (dto.baseCurrency) {
+      const currency = await this.prisma.currency.findFirst({
+        where: { code: dto.baseCurrency },
+      });
+      if (!currency) throw new NotFoundException(`Currency ${dto.baseCurrency} not in the catalog`);
+    }
     return this.prisma.tenantSettings.update({
       where: { tenantId },
       data: { ...dto, updatedBy: userId },
