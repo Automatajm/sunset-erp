@@ -214,12 +214,12 @@ export class AutomationService {
     if (!item) throw new NotFoundException(`Queue item ${queueId} not found`);
     if (item.status !== 'pending') throw new BadRequestException(`Item is already ${item.status}`);
 
-    await this.prisma.journalEntry.update({
-      where: { id: item.jeId },
+    await this.prisma.journalEntry.updateMany({
+      where: { id: item.jeId, tenantId },
       data: { status: 'posted', updatedBy: userId },
     });
-    await this.prisma.autoJeQueue.update({
-      where: { id: queueId },
+    await this.prisma.autoJeQueue.updateMany({
+      where: { id: queueId, tenantId },
       data: {
         status: 'approved',
         reviewedBy: userId,
@@ -248,10 +248,12 @@ export class AutomationService {
     if (!item) throw new NotFoundException(`Queue item ${queueId} not found`);
     if (item.status !== 'pending') throw new BadRequestException(`Item is already ${item.status}`);
 
-    await this.prisma.journalEntryLine.deleteMany({ where: { journalEntryId: item.jeId } });
-    await this.prisma.journalEntry.delete({ where: { id: item.jeId } });
-    await this.prisma.autoJeQueue.update({
-      where: { id: queueId },
+    await this.prisma.journalEntryLine.deleteMany({
+      where: { journalEntryId: item.jeId, tenantId },
+    });
+    await this.prisma.journalEntry.deleteMany({ where: { id: item.jeId, tenantId } });
+    await this.prisma.autoJeQueue.updateMany({
+      where: { id: queueId, tenantId },
       data: {
         status: 'rejected',
         reviewedBy: userId,

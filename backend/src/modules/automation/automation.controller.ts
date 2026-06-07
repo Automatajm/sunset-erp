@@ -48,7 +48,7 @@ export class AutomationController {
   @ApiParam({
     name: 'module',
     description:
-      'ar_invoice | ar_payment | ar_reversal | fg_delivery | production_variance | po_receipt | mo_issue',
+      'ar_invoice | ar_payment | ar_reversal | ap_invoice | ap_payment | ap_reversal | fg_delivery | production_variance | po_receipt | mo_issue',
   })
   @ApiResponse({ status: 200, description: 'Config updated' })
   async updateConfig(
