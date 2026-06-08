@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback, useMemo, useRef, useImperativeHandle,
 import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ModalShell } from '@/components/ui/modal';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { itemsApi } from '@/lib/api/items';
 import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
@@ -520,7 +521,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     : categories;
 
   const effectiveInitial = editMode ?? initial;
-  if (!open) return null;
+  // ModalShell controls visibility via `open`; the component stays mounted so the
+  // reset-on-open effect runs (spec-frontend-002 adoption).
 
   const anyInit  = effectiveInitial as any;
   const supCount = anyInit?.supplierItems?.length ?? 0;
@@ -571,13 +573,24 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-uom-info{background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.6}
       `}</style>
 
-      <div className="im-overlay">
-        <div className="im-box">
-          <div className="im-hdr">
-            <span className="im-title">{effectiveInitial ? `Edit — ${effectiveInitial.code}` : 'New Item'}</span>
-            <button className="im-close" type="button" onClick={onClose}>×</button>
-          </div>
-
+      <ModalShell
+        open={open}
+        onClose={onClose}
+        title={effectiveInitial ? `Edit — ${effectiveInitial.code}` : 'New Item'}
+        width={620}
+        footer={
+          <>
+            <button type="button" className="im-btn-cancel" onClick={onClose}>
+              {tab === 'suppliers' ? 'Close' : 'Cancel'}
+            </button>
+            {tab !== 'suppliers' && (
+              <button type="submit" form="item-form" className="im-btn-save" disabled={submitting}>
+                {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
+              </button>
+            )}
+          </>
+        }
+      >
           <div className="im-tabs">
             {TABS.map(t => (
               <button key={t.key} type="button"
@@ -588,8 +601,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
             ))}
           </div>
 
-          <div className="im-scroll">
-            <form onSubmit={handleSubmit}>
+            <form id="item-form" onSubmit={handleSubmit}>
               <div className="im-body">
                 {error && <div className="im-error">{error}</div>}
 
@@ -788,20 +800,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                 )}
               </div>
 
-              <div className="im-ftr">
-                <button type="button" className="im-btn-cancel" onClick={onClose}>
-                  {tab === 'suppliers' ? 'Close' : 'Cancel'}
-                </button>
-                {tab !== 'suppliers' && (
-                  <button type="submit" className="im-btn-save" disabled={submitting}>
-                    {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Item'}
-                  </button>
-                )}
-              </div>
             </form>
-          </div>
-        </div>
-      </div>
+      </ModalShell>
     </>
   );
 }
