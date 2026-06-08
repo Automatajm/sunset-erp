@@ -7,6 +7,8 @@ import {
   ERPFilterBar, ERPFilter,
   useERPFilters, applyERPFilters,
 } from '@/components/ui/ERPFilterBar';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { asErrorResponse, ErrorResponse } from '@/lib/api/errors';
 import {
   notificationsApi,
   Notification,
@@ -67,6 +69,7 @@ const fmtDate = (s: string | null) =>
 export default function NotificationsPage() {
   const [rows, setRows] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<ErrorResponse | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [drainMsg, setDrainMsg] = useState('');
@@ -75,9 +78,11 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       setRows(await notificationsApi.getAll());
-      setError('');
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Failed to load notifications');
+      setLoadError(null);
+    } catch (e) {
+      // spec-frontend-002 §5 — render an in-place ErrorState from the normalized
+      // error instead of a banner string for the initial-load failure.
+      setLoadError(asErrorResponse(e));
     } finally {
       setLoading(false);
     }
@@ -249,27 +254,34 @@ export default function NotificationsPage() {
           ))}
         </div>
 
-        {/* Filter bar */}
-        <div style={{ marginBottom: 10 }}>
-          <ERPFilterBar
-            filters={filterDefs}
-            values={filterVals}
-            onChange={setFilterVal}
-            onReset={resetFilters}
-            activeCount={filterCount}
-          />
-        </div>
+        {/* spec-frontend-002 §5 — in-place error state on load failure */}
+        {loadError && !loading ? (
+          <ErrorState error={loadError} onRetry={load} />
+        ) : (
+          <>
+            {/* Filter bar */}
+            <div style={{ marginBottom: 10 }}>
+              <ERPFilterBar
+                filters={filterDefs}
+                values={filterVals}
+                onChange={setFilterVal}
+                onReset={resetFilters}
+                activeCount={filterCount}
+              />
+            </div>
 
-        <ERPTable<Notification>
-          columns={columns}
-          data={filtered}
-          rowKey={r => r.id}
-          loading={loading}
-          emptyMessage={filterCount
-            ? 'No notifications match your filters.'
-            : 'No notifications yet — they appear as the business emits events (SO confirmed, PO created, invoice overdue…).'}
-          exportFilename="notifications"
-        />
+            <ERPTable<Notification>
+              columns={columns}
+              data={filtered}
+              rowKey={r => r.id}
+              loading={loading}
+              emptyMessage={filterCount
+                ? 'No notifications match your filters.'
+                : 'No notifications yet — they appear as the business emits events (SO confirmed, PO created, invoice overdue…).'}
+              exportFilename="notifications"
+            />
+          </>
+        )}
       </div>
     </ERPShell>
   );

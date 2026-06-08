@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { getAccessToken, setAccessToken, clearAccessToken } from './token-store';
+import { normalizeError } from './errors';
 
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -84,6 +85,13 @@ apiClient.interceptors.response.use(
       clearAccessToken();
       redirectToLogin();
     }
+
+    // spec-frontend-002 §5 — attach one normalized error shape so components
+    // branch on `status` and never parse raw axios errors. The original axios
+    // error is still rejected, so existing `e.response?.data?.message` readers
+    // keep working during migration.
+    (error as AxiosError & { normalized?: ReturnType<typeof normalizeError> }).normalized =
+      normalizeError(error);
 
     return Promise.reject(error);
   },
