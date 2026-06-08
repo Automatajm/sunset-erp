@@ -9,6 +9,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Accountants and accounts-payable staff who record, match, post, and pay supplier invoices.
+- **What business problem does it solve?** It closes the procurement money loop — capturing what suppliers bill, three-way matching invoices against purchase orders and goods receipts, posting them to the general ledger, paying them, and tracking what the business owes and when it's due.
+- **What can the business NOT do without this module?** It cannot manage what it owes suppliers — no invoice matching to catch overbilling, no aging of payables, no controlled payment, and no record of liabilities in the books.
+
+## Business value
+
+Accounts payable is how the business pays the right amount, to the right supplier, at the right time. Without it, invoices are paid (or missed) with no check against what was actually ordered and received, so the company overpays on price discrepancies and duplicate bills slip through. Liabilities and due dates aren't tracked, so cash is mismanaged and supplier relationships suffer from late or wrong payments. Matching and aging turn payables into a controlled, auditable process that protects cash and the general ledger alike.
+
+---
+
 ## Problem
 
 AP Invoices closes the procurement money loop: invoices are created manually or

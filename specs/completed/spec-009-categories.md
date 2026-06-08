@@ -8,6 +8,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Inventory managers (with accounting oversight) who classify items into specific groups and link those groups to the right financial accounts.
+- **What business problem does it solve?** It is the second level of item classification (`MacroCategory → Category → Item`) and, critically, carries the GL account mapping — which inventory account a receipt posts to and which cost-of-goods account a shipment posts to — that drives automated journal entries.
+- **What can the business NOT do without this module?** Connect physical inventory to the books automatically. Without categories there is no detailed grouping of items and, more importantly, no link telling the system which accounts inventory movements should hit.
+
+## Business value
+
+Categories are the bridge between the warehouse and the accountant. Beyond neatly grouping products, each category tells the system which financial accounts to use when goods are received or sold — so the books update themselves instead of relying on someone to hand-code every entry. Without that mapping, every inventory movement would need manual accounting, which is slow and error-prone, and the link between "stock moved" and "money recorded" would break. With it, receiving and shipping automatically produce correct journal entries, keeping inventory value and the general ledger in sync.
+
+---
+
 ## Problem
 
 Categories are the second level of the inventory classification

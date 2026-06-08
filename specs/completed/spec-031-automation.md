@@ -6,6 +6,16 @@ Sprint: finance hardening (3 of 5 — opportunity-finder score 18, last of the 3
 Module(s): automation
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Accountants and finance reviewers who decide which accounting events post automatically and which need human sign-off before hitting the ledger.
+- **What business problem does it solve?** It centralizes the policy for auto-generated journal entries — per accounting event, choose post-immediately, draft-and-queue-for-review, or no-auto-entry — and provides a review queue where draft entries are approved or rejected before they reach the general ledger.
+- **What can the business NOT do without this module?** Without it, every operational event (invoices, payments, goods receipts, production) would require manual journal entries, or auto-postings would hit the ledger with no review gate or per-tenant control.
+
+## Business value
+
+This is what lets operations and accounting stay in sync without an army of bookkeepers: routine events post their own journal entries automatically, while higher-risk entries wait in a review queue for an accountant's approval. The business gets the speed of automation where it is safe and a human control point where it matters, instead of choosing between slow manual entry and uncontrolled auto-posting. Because it is the single gateway every module calls to emit a journal entry, it keeps the ledger consistent and auditable across the whole ERP.
+
 ## Problem
 
 The automation module governs auto-generated journal entries: a per-module

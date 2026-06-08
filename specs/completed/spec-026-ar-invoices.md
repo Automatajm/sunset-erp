@@ -9,6 +9,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Accountants and accounts-receivable staff who bill customers and collect what's owed.
+- **What business problem does it solve?** It closes the sales money loop — turning sales orders into customer invoices, posting revenue (and cost of goods) to the general ledger, shipping finished goods out of stock, collecting payments, and aging what customers owe.
+- **What can the business NOT do without this module?** It cannot bill customers or track receivables — no invoices, no revenue recognition, no record of who owes what, and no way to chase overdue accounts.
+
+## Business value
+
+Accounts receivable is how the business gets paid. Without it, sales are made but never properly invoiced, revenue never lands in the books correctly, and there is no aging report to show which customers are late. Cash collection becomes guesswork, overdue balances pile up unnoticed, and the company finances its customers by accident. Structured invoicing, revenue posting, and aging turn completed sales into collected cash — the lifeblood of the operation.
+
+---
+
 ## Problem
 
 AR Invoices closes the sales money loop: invoices are created manually or from a

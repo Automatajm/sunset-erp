@@ -6,6 +6,16 @@ Sprint: finance hardening (2 of 5 — opportunity-finder score 20)
 Module(s): cash-flow
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Finance and treasury staff who forecast liquidity and decide when the business can pay suppliers, make purchases, or take on commitments.
+- **What business problem does it solve?** It projects future cash inflows and outflows over a date range, auto-populated from AR invoices, purchase orders, and budget lines, and produces a monthly summary with running balance so the business can see when cash will be tight or flush.
+- **What can the business NOT do without this module?** Without it, the business cannot anticipate cash shortfalls or surpluses — it discovers a liquidity crunch only when a payment bounces, with no forward view to plan around it.
+
+## Business value
+
+Cash-flow visibility is the difference between making payroll and missing it: a profitable company can still fail if money goes out before it comes in. This module projects the timing of receipts and payments and shows the running balance month by month, so treasury can spot a shortfall weeks ahead and arrange financing, delay a purchase, or chase a receivable in time. Pulling projections automatically from AR, POs, and budgets means the forecast reflects real commitments rather than manual guesses that go stale the day they are made.
+
 ## Problem
 
 The cash-flow module manages cash-flow projections (`ac_cash_flow_projections`),

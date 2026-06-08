@@ -8,6 +8,30 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Warehouse and inventory staff who record receipts and issues,
+  plus managers and finance who rely on its valuation, planning, and analysis reports — and
+  the invoice modules that post movements automatically.
+- **What business problem does it solve?** It is the inventory engine: an immutable
+  movement ledger plus current stock position with weighted-average costing, so every
+  quantity on hand and every inventory value in the system is accurate and traceable.
+- **What can the business NOT do without this module?** It cannot know how much of anything
+  is in stock, what inventory is worth, what the cost of goods sold is, or what needs
+  reordering — and invoices would have no way to move or value stock.
+
+## Business value
+
+This is the module every inventory and costing number in the system trusts. Without it the
+business does not know what it has, what it is worth, or what to buy next — so it
+stocks-out, over-orders, and mis-states the balance sheet. The hard guard against negative
+stock and the weighted-average cost math matter because a single bad movement quietly
+corrupts every downstream report — valuation, COGS, planning, ABC, aging — and from then on
+the numbers lie. Keeping the ledger immutable (corrections are new movements) preserves a
+defensible audit trail of every physical change to inventory.
+
+---
+
 ## Problem
 
 `stock-transactions` is the inventory engine: it owns `StockMovement` (the immutable

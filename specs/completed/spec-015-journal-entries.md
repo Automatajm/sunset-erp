@@ -8,6 +8,30 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Accountants and finance staff who record financial
+  transactions into the general ledger, plus the system itself, which auto-posts entries
+  from invoices and production.
+- **What business problem does it solve?** It is the double-entry general-ledger write
+  path — balanced debit/credit entries with a draft-then-posted lifecycle, system-assigned
+  numbers, and validation against the chart of accounts — so every financial event lands in
+  the books correctly.
+- **What can the business NOT do without this module?** It cannot keep books, produce a
+  trial balance or financial statements, or let any other module (AR, AP, production) post
+  its financial impact — there is no ledger to write to.
+
+## Business value
+
+The journal is where the business's financial reality is recorded; without it there are no
+books, no statements, and no audit trail. The cent-exact balance check is essential because
+an entry that is even a penny off is, by definition, wrong accounting — and wrong books mean
+wrong taxes, wrong decisions, and failed audits. The draft-then-posted lifecycle protects
+already-recorded history from silent edits, and because invoices and production postings all
+flow through here, this module is the financial foundation the rest of the system trusts.
+
+---
+
 ## Problem
 
 `journal-entries` is the general-ledger write path: double-entry journal entries with a

@@ -6,6 +6,16 @@ Sprint: planned infrastructure (implement AFTER invoices — triggers need those
 Module(s): notifications (new), tenant-settings; event hooks in sales-orders, purchase-orders, rfqs, ar-invoices/ap-invoices, stock-transactions
 Last updated: 2026-06-06
 
+## Purpose
+
+- **Who uses this module?** The system itself (it emits messages automatically on business events) and operators/managers who monitor, retry, or cancel outbound notifications.
+- **What business problem does it solve?** It makes the ERP communicate outward — turning key business events (order confirmed, PO issued, RFQ sent, invoice overdue, stock below reorder point) into emails automatically, without anyone having to remember to send them.
+- **What can the business NOT do without this module?** It cannot proactively inform customers, suppliers, or staff of anything — every event stays trapped in the database until someone happens to log in and look.
+
+## Business value
+
+Without notifications, the business is silent: suppliers don't learn an order is waiting, customers aren't told their order is confirmed, overdue invoices go unchased, and stock quietly runs out before anyone notices. People compensate with manual emails and reminders, which are slow, easy to forget, and inconsistent. By queuing messages on the events that matter and sending them in the background, the system carries the communication chain so nothing falls through the cracks — and a mail failure never blocks or breaks the underlying business transaction.
+
 ## Problem
 
 Nothing in Sunset ERP communicates outward. A confirmed sales order, a generated PO,

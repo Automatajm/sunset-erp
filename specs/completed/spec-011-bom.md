@@ -8,6 +8,31 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Manufacturing engineers and product/recipe owners who define
+  what a finished product is made of and the steps to build it.
+- **What business problem does it solve?** It records each product's recipe (component
+  consumption groups with quantity-per and scrap) and its routing (which work centers, with
+  setup and run times), turning a product into a precise, repeatable build definition that
+  drives material requirements and labor estimates.
+- **What can the business NOT do without this module?** It cannot calculate how much
+  material a production run needs, estimate labor cost and time, plan purchasing against
+  production, or auto-generate budgets — there is no link between a finished good and the
+  inputs and work required to make it.
+
+## Business value
+
+The BOM is the single source of truth for what it takes to make a product. Without it,
+nobody can answer "how much of each ingredient do we need to make N units?" or "what will
+the labor cost be?" — so purchasing over- or under-buys, production guesses, and costing is
+unreliable. Filtering out soft-deleted components and validating re-parenting matters
+because a wrong recipe directly produces wrong purchase quantities and wrong cost, which is
+real money lost on every run. It is the backbone the whole production and demo-seed chain
+is built on.
+
+---
+
 ## Problem
 
 BOMs are the technical heart of manufacturing: each BOM ties a finished item to its

@@ -8,6 +8,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Procurement officers and buyers who source materials, plus the MRP/planning function that generates demand for them.
+- **What business problem does it solve?** It runs the entire buy-side workflow — capturing demand (manually, via MRP, or from manufacturing orders), turning it into requisitions, sending RFQs to suppliers, comparing and awarding quotes, and issuing purchase orders whose receipt feeds inventory.
+- **What can the business NOT do without this module?** It cannot procure materials in a controlled, auditable way — no requisition approvals, no competitive quoting, no purchase orders, and no link from a need to the goods that arrive.
+
+## Business value
+
+Without procurement, buying happens ad hoc with no demand signal, no supplier comparison, and no paper trail. The business overpays because it never quotes competitively, buys the wrong quantities because demand is never aggregated, and loses control over commitments and spend. This cluster turns scattered purchasing into a disciplined pipeline — need to requisition to quote to order to receipt — so materials arrive on time, at the best price, and tied to a documented reason.
+
+---
+
 ## Problem
 
 The procurement cluster is the buy-side spine: demand enters as **general needs**

@@ -12,6 +12,18 @@ Last updated: 2026-05-31
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Inventory and catalog managers (with input from procurement and production) who define every product, raw material, and service the business tracks.
+- **What business problem does it solve?** It is the master catalog of "everything the company makes, buys, stores, or sells" — each item carries its units of measure, valuation method, and barcode, and is referenced by stock, purchasing, sales, BOMs, receiving, and planning.
+- **What can the business NOT do without this module?** Track or transact anything physical. Without an item catalog there is nothing to put on a purchase order, count in a warehouse, build into a recipe, or sell on an invoice.
+
+## Business value
+
+Items are the dictionary the whole operation shares — every product, ingredient, and part has one agreed name, code, and unit. Without it, the warehouse, purchasing, production, and sales would each describe the same thing differently, making it impossible to know how much stock you have, what it cost, or what it is worth. That breaks inventory counts, costing, and order accuracy across the board. With a single clean catalog, a barcode scan, a purchase order line, a recipe ingredient, and a sales invoice all refer to the exact same item, so the numbers add up everywhere.
+
+---
+
 ## Problem
 
 The `items` module is the inventory master-data CRUD for the `in_items` catalog — the central

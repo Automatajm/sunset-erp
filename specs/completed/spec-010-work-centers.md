@@ -8,6 +8,29 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Manufacturing/production engineers and plant supervisors who
+  define the shop floor — the machine, labor, assembly, and quality stations where work
+  actually happens.
+- **What business problem does it solve?** It models manufacturing capacity as named
+  stations with capacity-per-hour, efficiency, and hourly cost, giving every BOM routing
+  step a real place to run and a real cost to charge.
+- **What can the business NOT do without this module?** It cannot build routings, estimate
+  the labor hours or cost of making a product, or schedule production — there would be no
+  stations for manufacturing operations to point at.
+
+## Business value
+
+Work centers are where "how we make it" becomes a number the business can plan and price.
+Without them there is no way to say how long an operation takes, what it costs per hour, or
+how much a station can produce — so labor estimates, product costing, and capacity
+planning all collapse. Routings would have no anchor, making BOMs incomplete and the whole
+manufacturing-to-cost chain unworkable. The delete guard also prevents quietly removing a
+station that live routings still depend on, which would otherwise orphan production steps.
+
+---
+
 ## Problem
 
 Work centers model manufacturing capacity (machine/labor/assembly/quality stations with

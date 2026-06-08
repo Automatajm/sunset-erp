@@ -8,6 +8,30 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Warehouse staff who physically count stock (counters) and the
+  supervisors who assign counts, review variances, and approve and post the adjustments.
+- **What business problem does it solve?** It runs the cycle-count workflow: snapshot
+  system stock for a warehouse, let counters enter what is physically there, compute signed
+  variances, and on approval post adjustment movements that bring recorded stock back in
+  line with reality.
+- **What can the business NOT do without this module?** It cannot reconcile what the system
+  says it has against what is actually on the shelf, cannot correct drift from shrinkage or
+  error, and cannot keep inventory records trustworthy over time.
+
+## Business value
+
+System stock and real stock always drift — through shrinkage, miscounts, and unrecorded
+moves — and this module is how the business catches and corrects that drift in a controlled,
+auditable way. Without it, inventory records slowly diverge from reality until valuation,
+planning, and order promises are all based on numbers that are simply wrong. The
+count-assignment, approval, and posting steps turn counting into an accountable process
+rather than ad-hoc edits, and posting through the hardened movement ledger means every
+correction is recorded as a real, traceable adjustment rather than a silent change.
+
+---
+
 ## Problem
 
 `stock-reconciliation` owns the physical-count workflow: a session snapshots current

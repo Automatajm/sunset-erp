@@ -6,6 +6,16 @@ Sprint: finance hardening (4 of 5 — opportunity-finder score 12, validation-on
 Module(s): financial-reports
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Accountants, controllers, and business owners who need the standard financial statements to understand the company's position and performance.
+- **What business problem does it solve?** It produces the four core accounting reports — Trial Balance, Profit & Loss, Balance Sheet, and General Ledger — by aggregating posted journal entries for any date range or fiscal period, on demand and in real time.
+- **What can the business NOT do without this module?** Without it, the business cannot see its own P&L, balance sheet, or trial balance — it cannot tell whether it is profitable, what it owns and owes, or whether the books balance, and cannot produce statements for tax, audit, or lenders.
+
+## Business value
+
+These reports are the company's financial truth: whether the business made money, what it is worth, and whether the ledger is internally consistent. Without them, owners are flying blind on profitability and accountants cannot close the books, file taxes, or satisfy an auditor or lender. Generating them live from posted entries means the numbers are always current and reconcile to the underlying ledger, removing the slow, error-prone spreadsheet exports that statements otherwise require.
+
 ## Problem
 
 The financial-reports module produces four read-only reports by aggregating

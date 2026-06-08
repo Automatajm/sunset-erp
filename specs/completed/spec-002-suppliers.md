@@ -12,6 +12,18 @@ Last updated: 2026-05-31
 
 ---
 
+## Purpose
+
+- **Who uses this module?** The procurement officer (and buyers/AP staff) who maintain the company's list of vendors and their contact, payment, and banking details.
+- **What business problem does it solve?** It is the single, trusted record of every supplier the business buys from — used downstream to raise purchase orders, request quotes, receive goods, pay invoices, and feed the MRP planning engine.
+- **What can the business NOT do without this module?** Purchase anything in a controlled way. Without a supplier master there is nobody to order from, no place to store payment terms or bank details, and no shared vendor list across purchasing, receiving, and accounts payable.
+
+## Business value
+
+Suppliers are the address book that the entire buying side of the business runs on. Without one clean, shared list, every department keeps its own version of "who we buy from," payment terms get re-typed and mistyped, and bank details for paying vendors live in spreadsheets and inboxes. That means duplicate vendors, payments sent to the wrong account, and no reliable way to see total spend per supplier. With it, every purchase order, goods receipt, and bill points back to one accurate vendor record, so procurement, the warehouse, and accounting all speak about the same supplier.
+
+---
+
 ## Problem
 
 The `suppliers` module is the procurement master-data CRUD for vendor records (`po_suppliers`)

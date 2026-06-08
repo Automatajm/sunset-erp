@@ -8,6 +8,30 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Everyone, indirectly — it is a cross-cutting platform policy
+  that runs on behalf of every user who creates a record, so no role ever has to invent a
+  code.
+- **What business problem does it solve?** It makes every business record code (suppliers,
+  items, customers, BOMs, categories, work centers, warehouses) auto-generated and
+  immutable in a consistent `PREFIX-YYYY-NNNN` style, removing a manual, error-prone field
+  from every create form.
+- **What can the business NOT do without this module?** It cannot guarantee unique,
+  consistent, collision-free record codes — users would type their own, producing
+  duplicates, gaps, and inconsistent formats that break lookups and reporting.
+
+## Business value
+
+Codes are bookkeeping, not judgment — every code a person has to type is a chance to create
+a duplicate, a typo, or an inconsistent format that later breaks a search or a report. By
+generating and locking codes automatically, the system removes that friction from every
+create screen and guarantees clean, sortable, unique identifiers across the whole platform.
+This embodies the product philosophy directly: the machine absorbs the complexity so the
+user never decides something the system can decide for them.
+
+---
+
 ## Problem
 
 User-facing record codes are governed by three coexisting policies (audit 2026-06-04):

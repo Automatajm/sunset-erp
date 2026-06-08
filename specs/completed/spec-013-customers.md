@@ -8,6 +8,28 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Sales and credit/collections staff who set up the companies
+  the business sells to and manage their credit terms.
+- **What business problem does it solve?** It is the master record for every customer —
+  contact and tax details plus credit limit, credit status, and payment terms — that every
+  sales order and AR invoice attaches to.
+- **What can the business NOT do without this module?** It cannot raise a sales order or an
+  AR invoice (both require a customer), track who owes money, or enforce credit limits —
+  the entire sales and receivables side has nothing to point at.
+
+## Business value
+
+Customers are the anchor of the whole revenue side: no customer record means no sales
+order, no invoice, and no way to track receivables. The credit-limit and credit-status
+fields are what let the business decide whether to accept an order or hold a risky one, so
+without them the company sells blind to credit risk. The delete guard protects against
+removing a customer that still has live orders, which would orphan those orders and corrupt
+the sales ledger.
+
+---
+
 ## Problem
 
 Customers anchor the sales side: `SalesOrder` and `ArInvoice` hold FKs into

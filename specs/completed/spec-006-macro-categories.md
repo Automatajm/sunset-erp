@@ -8,6 +8,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Inventory managers (and anyone reviewing reports or filtering the catalog) who organize products into broad top-level groups.
+- **What business problem does it solve?** It provides the highest level of item classification (`MacroCategory → Category → Item`) so the whole catalog rolls up into a handful of meaningful groups for filtering, reporting, and navigation.
+- **What can the business NOT do without this module?** Make sense of a large catalog. Without macro categories, items have no top-level grouping, so the items page, BOM builder, and procurement filters lose their highest-level pivot and reports can't summarize by major product family.
+
+## Business value
+
+Macro categories are the big buckets that keep a growing catalog from becoming an unsearchable list. Without them, finding and reporting on products means scrolling through everything one item at a time, and managers can't answer simple questions like "how much do we spend across all raw materials" versus "all finished goods." They are the top shelf labels in the warehouse of information — small to maintain, but they make every list, filter, and summary above them usable.
+
+---
+
 ## Problem
 
 Macro categories are the top level of the two-tier inventory classification

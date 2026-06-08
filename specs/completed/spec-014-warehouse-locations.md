@@ -8,6 +8,29 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Warehouse managers and clerks who lay out the physical storage
+  map — the zones, aisles, racks, levels, and bins where stock physically sits.
+- **What business problem does it solve?** It models the five-level storage hierarchy
+  (Warehouse → Zone → Aisle → Rack → Level → Bin) with a system-generated location code at
+  each tier, so every unit of stock can be addressed to an exact physical spot.
+- **What can the business NOT do without this module?** It cannot tell anyone where to put
+  or find stock, cannot do bin-level counts or movements, and cannot give stock
+  transactions and reconciliations a real location to reference.
+
+## Business value
+
+This module turns "the warehouse" into an addressable map: without it, stock is just a
+number with no place, so pickers wander, counts are imprecise, and putaway is guesswork.
+Accurate location codes are what make picking fast, counting reliable, and space usable —
+the difference between a warehouse that runs smoothly and one where people hunt for
+inventory. Because stock movements and cycle counts all reference these locations, getting
+the hierarchy and its cascading codes right keeps every downstream inventory operation
+honest.
+
+---
+
 ## Problem
 
 `warehouse-locations` owns the five-level physical storage hierarchy every stock

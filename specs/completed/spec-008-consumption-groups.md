@@ -8,6 +8,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Production planners and manufacturing/inventory staff who define which raw materials are interchangeable for recipes and planning.
+- **What business problem does it solve?** It groups interchangeable items (e.g. several brands of "Ground Beef 80/20") so that recipes (BOMs) and material planning can consume a *group* and net demand against the combined stock of all member items, rather than locking to one specific product.
+- **What can the business NOT do without this module?** Plan materials flexibly. Without consumption groups, every recipe is tied to one exact item, so a substitute supplier's product looks like a shortage even when equivalent stock is on hand.
+
+## Business value
+
+Consumption groups let the business treat "good enough is good enough" as a first-class rule. In the real world, two brands of the same ground beef are interchangeable on the line — but a rigid system would see them as different items and either block production or over-order. By grouping equivalents, recipes pull from whatever qualifying stock exists and the planning engine only flags a true shortage. The result is fewer false stockouts, less unnecessary purchasing, and production plans that match how the floor actually works.
+
+---
+
 ## Problem
 
 Consumption groups aggregate interchangeable items for MRP: a group (e.g. "Ground Beef

@@ -13,6 +13,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** The system itself (internal/foundation service) — inventory and finance staff see its results indirectly, but other modules (receiving, costing, stock, supplier items) are the real consumers of its conversion math.
+- **What business problem does it solve?** It defines every unit of measure and converts cleanly between them — so a case of 24 bought from a supplier, the kilograms stored in the warehouse, and the grams consumed in a recipe all reconcile, and it computes weighted-average cost and financial value on the right unit.
+- **What can the business NOT do without this module?** Trust any quantity or cost. Without reliable unit conversion, buying in cases, storing in kilos, and consuming in grams would not add up, and inventory valuation would be wrong.
+
+## Business value
+
+Units of measure are the silent translator behind every quantity and every price. A business buys in one unit (cases, drums), stores in another (kilos, liters), and uses in a third (grams, milliliters) — without one trusted conversion engine, those numbers quietly drift apart and the inventory value on the books stops matching reality. That means wrong costs, wrong margins, and stock figures nobody believes. Because this engine also calculates the cost of goods after each delivery, an error here ripples straight into profit reporting. Getting it right once, centrally, means every other module can quote, cost, and count without re-doing the math.
+
+---
+
 ## Problem
 
 The `uom` module is the **units-of-measure catalog and conversion engine** that underpins every

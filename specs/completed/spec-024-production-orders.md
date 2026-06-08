@@ -10,6 +10,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Production-floor supervisors and operators who execute and track manufacturing orders.
+- **What business problem does it solve?** It runs a manufacturing order through its lifecycle — releasing it, recording actual labor and material consumed, delivering finished goods, and posting the resulting accounting and variance (merma/surplus) entries.
+- **What can the business NOT do without this module?** It cannot actually execute production or capture what a build really cost — no record of labor/material actuals, no finished-goods output, and no visibility into waste versus plan.
+
+## Business value
+
+This is where the factory's plan becomes real output, so without it the shop floor flies blind. There is no way to know whether a job consumed more material or labor than expected, no automatic accounting for finished goods or scrap, and no data to improve costing or reduce waste. Variances (merma and surplus) go unrecorded, so losses hide in averages and margins erode unseen. Capturing execution turns manufacturing from a black box into a measured, costed process the business can trust and tighten over time.
+
+---
+
 ## Problem
 
 Production Orders (MO) is the execution heart of manufacturing: an MO is created

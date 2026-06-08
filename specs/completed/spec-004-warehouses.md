@@ -12,6 +12,18 @@ Last updated: 2026-05-31
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Warehouse managers and clerks who set up the physical storage locations and their internal layout (zones, aisles, racks, levels, bins).
+- **What business problem does it solve?** It defines where inventory physically lives — every stock balance and stock movement is tied to a warehouse, and the location tree lets staff store and find goods down to the exact bin, including via the mobile count scanner.
+- **What can the business NOT do without this module?** Know where anything is. Without warehouses there is nowhere to record that stock exists, no way to separate one storage site from another, and no bin-level placement for picking or counting.
+
+## Business value
+
+Warehouses are the map of the business's physical storage. Without them, you can know you own 500 units of something but not where those units are sitting — which site, which shelf, which bin. That turns every pick and every stock count into a hunt, slows fulfilment, and makes capacity and occupancy invisible (you can't see which locations are full or empty). With a structured warehouse and location layout, staff can place goods, scan bins, and find stock quickly, and managers can see how full each site is at a glance.
+
+---
+
 ## Problem
 
 The `warehouses` module is the master-data CRUD for the `in_warehouses` catalog and the entry

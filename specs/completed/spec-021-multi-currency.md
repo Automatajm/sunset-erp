@@ -6,6 +6,16 @@ Sprint: planned infrastructure (implement BEFORE procurement invoices)
 Module(s): currency (new), tenant-settings, cross-cutting pattern for sales-orders, purchase-orders, ar-invoices, ap-invoices, journal-entries
 Last updated: 2026-06-06
 
+## Purpose
+
+- **Who uses this module?** Accountants and finance staff who set exchange rates and report across currencies — and, indirectly, every monetary module (sales/purchase orders, AR/AP invoices, journal entries) that records a transaction.
+- **What business problem does it solve?** It gives the tenant one consistent way to handle foreign currency: a managed rate table and a frozen-rate pattern so every transaction records its original amount, the rate at the moment it happened, and the equivalent in the company's base currency.
+- **What can the business NOT do without this module?** It cannot reliably report finances across currencies — totals mixing USD and DOP would be meaningless, and historical figures would silently shift every time a rate changes.
+
+## Business value
+
+For a business operating in the Dominican Republic (base currency DOP) that still buys and sells in other currencies, this is the foundation of trustworthy financial reporting. Without it, a USD purchase and a DOP sale cannot be added together honestly, and yesterday's reported revenue changes the moment today's rate moves — making the books unreliable. By freezing the rate at the instant of each transaction, the system keeps history stable and lets finance roll everything up into one base currency. It is the prerequisite that every invoice and money-handling module depends on.
+
 ## Problem
 
 Sunset ERP targets the Dominican Republic market (Burger Borinquen demo operates in DOP)

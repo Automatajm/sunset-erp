@@ -8,6 +8,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Warehouse and receiving staff who record what physically arrives against a purchase order (or as a manual receipt).
+- **What business problem does it solve?** It is the gate through which purchased goods enter inventory — recording quantities received, valuing them (weighted-average cost), updating stock, advancing the purchase order's received status, and supporting cancellation/reversal.
+- **What can the business NOT do without this module?** It cannot bring purchased stock into the system accurately — there would be no record of what arrived, no inventory valuation, and no basis for matching supplier invoices.
+
+## Business value
+
+Goods receipt is where money turns into inventory, so getting it right matters everywhere downstream. Without it, stock counts drift from reality, the cost of inventory is unknown, and there's no trustworthy record of how much of an order actually showed up. That breaks inventory valuation, makes the cost of goods wrong, and removes the foundation for three-way matching that catches supplier overbilling. Accurate receiving keeps the warehouse honest, the books valued correctly, and the procurement chain auditable.
+
+---
+
 ## Problem
 
 Goods Receipts (GRN) is the gate through which all purchased inventory enters the

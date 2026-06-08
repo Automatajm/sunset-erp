@@ -8,6 +8,18 @@ Last updated: 2026-05-31
 
 ---
 
+## Purpose
+
+- **Who uses this module?** The system itself (internal/foundation service) — every other module and every logged-in user passes through it, but tenant admins also rely on it to log in, manage roles, and assign permissions.
+- **What business problem does it solve?** It keeps each customer's data private and lets the business control exactly who can see and do what — issuing secure logins, identifying which company (tenant) a user belongs to, and enforcing a single, consistent permission check on every action.
+- **What can the business NOT do without this module?** Run the product at all. Without it there is no login, no separation between customers, and no way to stop one user (or one company) from seeing another's data.
+
+## Business value
+
+This is the locked front door and the security guard for the whole platform. Without it, anyone could log in as anyone, one customer could read another customer's books, and there would be no way to limit a junior clerk from, say, deleting accounts. A failure here is not a feature gap — it is a data breach and the end of customer trust. Because every other part of the system stands on this foundation, keeping it boring, stable, and correct is what makes the entire ERP safe to sell to multiple companies at once.
+
+---
+
 ## Problem
 
 Sunset ERP is a multi-tenant SaaS ERP. Every one of the 40+ business modules

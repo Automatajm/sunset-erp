@@ -6,6 +6,16 @@ Sprint: tooling hardening (incident-driven)
 Module(s): backend tooling only — `prisma/seed.ts`, `prisma/seeds/01-02`, `package.json` scripts
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Developers and operators who run `pnpm seed` to set up or top up demo/dev databases — and the system itself (Prisma auto-invokes `db seed` after some migration flows).
+- **What business problem does it solve?** It makes the standard seed command additive and idempotent so that running it on a populated database tops up master/demo data without ever wiping live or API-created records; full destruction is reserved for the explicit `seed:reset`.
+- **What can the business NOT do without this module?** Without it, the routine "restore seed data" command silently destroys the entire database (every tenant's transactional data and demo enrichment), and there is no safe way to refresh master data on a non-empty database.
+
+## Business value
+
+A single mistyped or auto-triggered seed used to erase everything — exactly what happened in the 2026-06-07 incident, which wiped all of BURGER's demo money-loop data and reshuffled every entity id. Making the seed additive turns a high-stakes, irreversible operation into a safe, repeatable no-op top-up, so demos, dev environments, and any production-like data survive routine maintenance. It removes a class of accidental data-loss that cost real rework time and could destroy a client demo minutes before it starts.
+
 ## Problem
 
 **Incident 2026-06-07:** `pnpm seed` was run mid-session to "restore seed-owned

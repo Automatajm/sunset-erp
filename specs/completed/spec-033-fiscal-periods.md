@@ -6,6 +6,16 @@ Sprint: finance hardening (5 of 5 — opportunity-finder score 3, cleanest of th
 Module(s): fiscal-periods
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Accountants and finance controllers who run the monthly/quarterly close and control which accounting periods accept new entries.
+- **What business problem does it solve?** It manages accounting periods with an open → closed → locked state machine (plus reopen/unlock), designates the current period, and guards against closing a period with unposted entries or deleting one that has any — so the books can be closed cleanly and protected from after-the-fact changes.
+- **What can the business NOT do without this module?** Without it, there is no period close — entries could be posted or altered in any prior month at any time, so the business could never finalize a period or trust that a closed month's numbers will not change underneath it.
+
+## Business value
+
+Closing a period is how a business says "these numbers are final" — and that finality is what tax filings, audits, and reporting depend on. This module enforces the close: it blocks closing a month while entries are still unposted, and once closed (or locked) it stops anyone from quietly rewriting history. Without it, every prior period stays editable forever, so reported figures can drift after the fact and the business loses the audit trail and trust that financial controls exist.
+
 ## Problem
 
 The fiscal-periods module manages accounting periods (`ac_fiscal_periods`) and a

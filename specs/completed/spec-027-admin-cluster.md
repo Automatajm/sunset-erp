@@ -10,6 +10,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Tenant administrators who manage users, roles and permissions, tenant records, and company-wide settings.
+- **What business problem does it solve?** It governs who can do what and how the tenant is configured — user membership and role assignment, RBAC roles and permissions, the tenant registry, and core settings like base currency and base units of measure.
+- **What can the business NOT do without this module?** It cannot onboard or control users, define what each role may access, or set the foundational settings (currency base, UOM) that every other module relies on.
+
+## Business value
+
+This is the control room beneath everything else: a defect or gap here is a security or data-integrity problem across the whole system. Without proper administration, anyone could read or change sensitive settings, accounts couldn't be granted the right access, and the company-wide defaults that finance and inventory depend on couldn't be managed safely. It keeps access locked to the right people and the tenant's foundational configuration correct — so the rest of the ERP can be trusted to behave.
+
+---
+
 ## Problem
 
 The admin Tier 0 modules govern who can do what: `users` (per-tenant membership +

@@ -8,6 +8,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** The accountant (and finance/bookkeeping staff) who set up and maintain the company's list of financial accounts.
+- **What business problem does it solve?** It is the backbone of the accounting system — the structured list of assets, liabilities, equity, revenue, and expense accounts that every journal entry, budget, cash-flow line, and AR/AP invoice posts into.
+- **What can the business NOT do without this module?** Keep books at all. Without a chart of accounts there is nowhere to record money moving in or out, no way to produce financial statements, and no foundation for budgets or invoicing.
+
+## Business value
+
+The chart of accounts is the filing system for all the company's money. Every sale, purchase, payment, and adjustment has to land in the right account, and this is the master list of those accounts. Without it, there is no general ledger, no balance sheet, no profit-and-loss — the business literally cannot tell whether it is making money. Because budgets, cash flow, and every invoice point back into these accounts, getting the structure right and protecting the core "system" accounts from accidental edits or deletion keeps the entire financial picture trustworthy.
+
+---
+
 ## Problem
 
 The chart of accounts is the root of the accounting domain: `journal-entries`, `budgets`,

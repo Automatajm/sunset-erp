@@ -6,6 +6,16 @@ Sprint: security hardening (cross-cutting: auth backend + frontend apiClient/ERP
 Module(s): auth (backend), frontend apiClient, AuthContext, ERPShell, app/layout.tsx
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** The system itself, on behalf of every authenticated user — it is cross-cutting auth infrastructure (backend auth + frontend session handling) that runs invisibly behind every logged-in session.
+- **What business problem does it solve?** It hardens session security: sliding tokens with silent refresh so users are not bounced to login mid-task, an inactivity timeout with warning, login-first behavior (no implicit "remember me"), and storing tokens out of the reach of injected scripts (memory + httpOnly cookie instead of localStorage).
+- **What can the business NOT do without this module?** Without it, access tokens sit in localStorage where any injected script can steal them, abandoned tabs stay logged in indefinitely, and reopened browsers silently resume sessions — leaving the platform unable to credibly claim it protects tenant data against session hijacking.
+
+## Business value
+
+For a multi-tenant SaaS holding clients' financial data, session security is table stakes for trust and often for the contract itself. Tokens left in localStorage are one cross-site script away from being stolen, an unattended terminal stays open all day, and a shared computer keeps the last user logged in — each a path to a tenant-data breach. This module closes those gaps while making the experience smoother: sessions slide and refresh silently so users stop getting kicked to login mid-task, and idle sessions time out safely. The result is fewer support complaints about dropped sessions and a security posture the business can stand behind in front of clients and auditors.
+
 ## Problem
 
 Current session handling is minimal and has real security gaps (audited

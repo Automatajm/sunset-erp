@@ -8,6 +8,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Sales/order-entry staff who capture customer demand and production planners/manufacturing managers who turn that demand into a build schedule.
+- **What business problem does it solve?** It connects what customers ordered to what the factory must make — capturing sales orders, planning production against them (auto-resolving the right BOM), and spinning up the manufacturing orders that actually get built.
+- **What can the business NOT do without this module?** It cannot translate customer demand into a concrete, BOM-backed production schedule, nor trace which manufacturing orders exist to satisfy which sale.
+
+## Business value
+
+Without this cluster the link between selling and making is broken: planners have no structured way to decide what to produce, in what quantity, or by when, so scheduling falls back to spreadsheets and guesswork. Customer commitments and shop-floor capacity drift apart, leading to over- or under-production, missed promise dates, and no visibility into planned-versus-actual output. It is the backbone that keeps the sales promise and the factory plan in sync.
+
+---
+
 ## Problem
 
 The production cluster is the demand→supply spine: `sales-orders` captures customer

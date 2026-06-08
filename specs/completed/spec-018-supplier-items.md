@@ -8,6 +8,30 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Procurement and purchasing staff who maintain the sourcing
+  catalog — which suppliers sell which items, at what price and terms.
+- **What business problem does it solve?** It links suppliers to items with last price,
+  minimum order quantity, lead time, and pack size, enforces that a supplier's purchase
+  unit matches the item's, and tracks the preferred supplier per item (mirrored onto the
+  item's default supplier).
+- **What can the business NOT do without this module?** It cannot know who to buy each item
+  from, at what price, or with what lead time — so purchase orders, RFQs, and demand
+  planning have no sourcing data to work from.
+
+## Business value
+
+This module answers the buyer's first question on every item: who do we buy this from, and
+on what terms? Without it, purchasing has no price, no lead time, and no minimum-order
+information, so every order becomes a manual research task and demand planning has nothing to
+plan against. The preferred-supplier logic ensures each item has one clear default source,
+and the strict purchase-unit rule prevents a class of costly errors where the same item is
+ordered in mismatched units. It is the sourcing foundation the entire procurement cluster is
+built on.
+
+---
+
 ## Problem
 
 `supplier-items` owns the supplier↔item sourcing catalog: which suppliers sell which

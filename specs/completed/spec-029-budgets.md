@@ -6,6 +6,16 @@ Sprint: finance hardening (1 of 5 — opportunity-finder score 29, highest of th
 Module(s): budgets
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Finance controllers and managers who set annual budgets and track spending against plan; MRP/operations users who auto-generate budget lines from the sales pipeline.
+- **What business problem does it solve?** It lets a company set annual budgets per account and period, route them through an approval flow, and compare planned amounts against posted actuals (budget-vs-actual variance) so overspend and underspend are visible.
+- **What can the business NOT do without this module?** Without it, the business cannot formally plan its yearly finances, cannot lock an approved budget, and cannot measure actual results against a target — financial control becomes guesswork against last-period totals.
+
+## Business value
+
+Budgets are the backbone of financial discipline: without a budget-vs-actual view, overspending is only discovered after the money is gone and there is no early signal that a department or account is off plan. This module turns scattered spreadsheets into an approved, audited annual plan and surfaces variances against real posted activity, so leadership can correct course mid-year instead of at year-end. Auto-generating budget lines from sales orders also means the plan stays tied to actual demand rather than stale assumptions.
+
 ## Problem
 
 The budgets module manages annual budgets (`ac_budgets`), their per-account /
