@@ -75,14 +75,14 @@ export class FiscalPeriodsService {
       where.status = status;
     }
 
-    const periods = await this.prisma.fiscalPeriod.findMany({
+    const fiscalPeriods = await this.prisma.fiscalPeriod.findMany({
       where,
       orderBy: {
         startDate: 'asc',
       },
     });
 
-    return periods;
+    return { fiscalPeriods, count: fiscalPeriods.length };
   }
 
   async findOne(tenantId: string, id: string) {
@@ -173,12 +173,12 @@ export class FiscalPeriodsService {
     if (updateFiscalPeriodDto.isCurrent !== undefined)
       updateData.isCurrent = updateFiscalPeriodDto.isCurrent;
 
-    const period = await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: updateData,
     });
 
-    return period;
+    return this.findOne(tenantId, id);
   }
 
   async closePeriod(tenantId: string, userId: string, id: string) {
@@ -204,8 +204,8 @@ export class FiscalPeriodsService {
       );
     }
 
-    const updated = await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'closed',
         closedAt: new Date(),
@@ -216,7 +216,7 @@ export class FiscalPeriodsService {
 
     return {
       message: `Fiscal period ${period.periodCode} closed successfully`,
-      fiscalPeriod: updated,
+      fiscalPeriod: await this.findOne(tenantId, id),
     };
   }
 
@@ -231,8 +231,8 @@ export class FiscalPeriodsService {
       throw new BadRequestException('Only closed periods can be reopened');
     }
 
-    const updated = await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'open',
         closedAt: null,
@@ -243,7 +243,7 @@ export class FiscalPeriodsService {
 
     return {
       message: `Fiscal period ${period.periodCode} reopened successfully`,
-      fiscalPeriod: updated,
+      fiscalPeriod: await this.findOne(tenantId, id),
     };
   }
 
@@ -254,8 +254,8 @@ export class FiscalPeriodsService {
       throw new BadRequestException('Only closed periods can be locked');
     }
 
-    const updated = await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'locked',
         updatedBy: userId,
@@ -264,7 +264,7 @@ export class FiscalPeriodsService {
 
     return {
       message: `Fiscal period ${period.periodCode} locked successfully`,
-      fiscalPeriod: updated,
+      fiscalPeriod: await this.findOne(tenantId, id),
     };
   }
 
@@ -275,8 +275,8 @@ export class FiscalPeriodsService {
       throw new BadRequestException('Only locked periods can be unlocked');
     }
 
-    const updated = await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         status: 'closed',
         updatedBy: userId,
@@ -285,7 +285,7 @@ export class FiscalPeriodsService {
 
     return {
       message: `Fiscal period ${period.periodCode} unlocked successfully`,
-      fiscalPeriod: updated,
+      fiscalPeriod: await this.findOne(tenantId, id),
     };
   }
 
@@ -311,8 +311,8 @@ export class FiscalPeriodsService {
       );
     }
 
-    await this.prisma.fiscalPeriod.update({
-      where: { id },
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { id, tenantId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         deletedBy: userId,

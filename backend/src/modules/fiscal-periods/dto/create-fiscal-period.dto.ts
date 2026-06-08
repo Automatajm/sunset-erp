@@ -1,4 +1,4 @@
-﻿import { IsString, IsDateString, IsBoolean, IsOptional, MaxLength } from 'class-validator';
+﻿import { IsString, IsDateString, IsBoolean, IsOptional, IsIn, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateFiscalPeriodDto {
@@ -33,8 +33,7 @@ export class CreateFiscalPeriodDto {
 
   @ApiPropertyOptional({ default: 'open', description: 'Period status: open, closed, locked' })
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @IsIn(['open', 'closed', 'locked'])
   status?: string;
 
   @ApiPropertyOptional({ default: false, description: 'Is current period' })

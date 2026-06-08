@@ -12,6 +12,8 @@ import {
 function extractList(data: unknown): FiscalPeriod[] {
   if (Array.isArray(data)) return data as FiscalPeriod[];
   const d = data as Record<string, unknown>;
+  // spec-033 envelope { fiscalPeriods, count }; tolerate legacy shapes
+  if (Array.isArray(d?.fiscalPeriods)) return d.fiscalPeriods as FiscalPeriod[];
   if (d?.value && Array.isArray(d.value)) return d.value as FiscalPeriod[];
   return [];
 }
