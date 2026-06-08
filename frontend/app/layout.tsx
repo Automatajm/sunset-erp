@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import AuthGate from "@/components/auth/AuthGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,9 @@ export default function RootLayout({
     <html lang="en" className="dark h-full" suppressHydrationWarning>
       <body className={`${inter.className} h-full`} suppressHydrationWarning>
         <AuthProvider>
-          {children}
+          <AuthGate>
+            {children}
+          </AuthGate>
         </AuthProvider>
       </body>
     </html>

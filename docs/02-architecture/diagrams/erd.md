@@ -115,6 +115,19 @@ erDiagram
     }
   
 
+  "auth_refresh_tokens" {
+    String id "🗝️"
+    String tenant_id "❓"
+    String user_id 
+    String token_hash 
+    DateTime expires_at 
+    DateTime revoked_at "❓"
+    String user_agent "❓"
+    String ip "❓"
+    DateTime created_at 
+    }
+  
+
   "auth_user_tenants" {
     String id "🗝️"
     String user_id 
@@ -1709,6 +1722,7 @@ erDiagram
     "saas_invoices" }o--|| saas_tenants : "tenant"
     "saas_invoices" }o--|o saas_subscriptions : "subscription"
     "saas_usage_records" }o--|| saas_tenants : "tenant"
+    "auth_refresh_tokens" }o--|| auth_users : "user"
     "auth_user_tenants" }o--|| auth_users : "user"
     "auth_user_tenants" }o--|| saas_tenants : "tenant"
     "auth_roles" }o--|| saas_tenants : "tenant"

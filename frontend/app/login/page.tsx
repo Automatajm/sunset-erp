@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import apiClient from '@/lib/api/client';
+import { setAccessToken } from '@/lib/api/token-store';
 
 interface TenantOption { id: string; code: string; name: string; industry?: string; }
 
@@ -41,6 +42,13 @@ export default function LoginPage() {
     t.code.toLowerCase().includes(tenantQ.toLowerCase())
   );
 
+  // spec-034 — return to the originally-requested page after login (?next=), or /
+  const nextPath = () => {
+    if (typeof window === 'undefined') return '/';
+    const n = new URLSearchParams(window.location.search).get('next');
+    return n && n.startsWith('/') && !n.startsWith('//') ? n : '/';
+  };
+
   const handleCredentials = async () => {
     if (!email || !password) { setError('Email and password are required.'); return; }
     setLoading(true); setError('');
@@ -52,11 +60,11 @@ export default function LoginPage() {
         setTenants(data.tenants);
         setStep('tenant');
       } else {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // spec-034 — access token to memory only; tenant name (display) persists.
+        setAccessToken(data.access_token);
         if (data.tenant?.name) localStorage.setItem('tenant_name', data.tenant.name);
         await checkAuth();
-        router.push('/');
+        router.push(nextPath());
       }
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Invalid email or password.');
@@ -72,11 +80,11 @@ export default function LoginPage() {
         { headers: { Authorization: `Bearer ${tempToken}` } }
       );
       const data = res.data;
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // spec-034 — access token to memory only; tenant name (display) persists.
+      setAccessToken(data.access_token);
       localStorage.setItem('tenant_name', tenantSel.name);
       await checkAuth();
-      router.push('/');
+      router.push(nextPath());
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Failed to select company.');
     } finally { setLoading(false); }

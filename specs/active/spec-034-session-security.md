@@ -1,6 +1,6 @@
 # spec-034 — Session Security (Sliding Tokens, Inactivity Timeout, Login-First, Secure Storage)
 
-Status: **Draft**
+Status: **Implemented — pending ship**
 Owner: Axiom Systems
 Sprint: security hardening (cross-cutting: auth backend + frontend apiClient/ERPShell/layout)
 Module(s): auth (backend), frontend apiClient, AuthContext, ERPShell, app/layout.tsx

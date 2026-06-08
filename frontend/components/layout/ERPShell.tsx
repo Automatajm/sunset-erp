@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
+import InactivityGuard from '@/components/auth/InactivityGuard';
 
 // ─── Permission-aware nav structure ──────────────────────────────────────────
 
@@ -488,6 +489,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
   return (
     <>
+      <InactivityGuard />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

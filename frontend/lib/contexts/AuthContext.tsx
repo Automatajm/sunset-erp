@@ -1,9 +1,13 @@
 "use client";
 // FILE: frontend/lib/contexts/AuthContext.tsx
+// spec-034 — access token in memory only; session restored on load via a silent
+// refresh (the apiClient interceptor refreshes the httpOnly cookie when the
+// first call 401s). No token is ever read from or written to localStorage.
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../api/types';
 import { authApi } from '../api/auth';
+import { setAccessToken, clearAccessToken, broadcastLogout } from '../api/token-store';
 
 interface AuthContextType {
   user:            User | null;
@@ -17,6 +21,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// tenant_name is non-sensitive display text (not a credential); spec-034 allows
+// persisting display data for first-paint UX as long as it is NOT the token.
+const TENANT_NAME_KEY = 'tenant_name';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,       setUser]       = useState<User | null>(null);
   const [tenantName, setTenantName] = useState<string>('');
@@ -26,24 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) { setIsLoading(false); return; }
-
-      // 1 — Restore immediately from localStorage to avoid flash on navigation
-      const savedUser   = localStorage.getItem('user');
-      const savedTenant = localStorage.getItem('tenant_name');
-      if (savedUser)   setUser(JSON.parse(savedUser));
+      // First-paint tenant name (display only) for no flash; cleared on logout.
+      const savedTenant = typeof window !== 'undefined' ? localStorage.getItem(TENANT_NAME_KEY) : null;
       if (savedTenant) setTenantName(savedTenant);
 
-      // 2 — Validate token + get fresh user with role from backend
+      // No token in memory yet → getProfile 401 → the apiClient interceptor
+      // silently refreshes the httpOnly cookie and retries. If the 8h refresh
+      // window is alive the session resumes; otherwise this throws.
       const profile   = await authApi.getProfile();
-      // getProfile returns { message, user: req.user, tenantId }
-      // req.user is now the full enriched object from jwt.strategy.ts
       const freshUser = profile.user ?? profile;
       setUser(freshUser);
-      localStorage.setItem('user', JSON.stringify(freshUser));
     } catch {
-      logout();
+      // Not authenticated — leave user null. Route protection redirects to login.
+      setUser(null);
+      clearAccessToken();
     } finally {
       setIsLoading(false);
     }
@@ -52,19 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
+      // Multi-tenant accounts must pick a tenant first (handled by the login
+      // page); only a tenant-scoped token is kept here.
+      if (response.requiresTenantSelection) return;
 
-      // Save token
-      localStorage.setItem('access_token', response.access_token);
-
-      // Save user — backend now returns firstName/lastName in login response
-      const userData = response.user;
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-
-      // Save tenant name
+      setAccessToken(response.access_token);
+      setUser(response.user);
       if (response.tenant?.name) {
-        localStorage.setItem('tenant_name', response.tenant.name);
         setTenantName(response.tenant.name);
+        localStorage.setItem(TENANT_NAME_KEY, response.tenant.name);
       }
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Login failed');
@@ -72,9 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tenant_name');
+    // Best-effort server-side revoke; clear local state regardless.
+    authApi.logout().catch(() => {});
+    clearAccessToken();
+    localStorage.removeItem(TENANT_NAME_KEY);
+    broadcastLogout(); // sign other tabs out too
     setUser(null);
     setTenantName('');
     if (typeof window !== 'undefined') window.location.href = '/login';

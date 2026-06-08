@@ -11,6 +11,13 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SelectTenantDto } from './dto/select-tenant.dto';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+
+// spec-034 — refresh token: 8h, opaque random value, stored only as a SHA-256
+// hash so a DB leak cannot reconstruct live tokens. The raw value lives only in
+// the client's httpOnly cookie.
+export const REFRESH_TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const hashToken = (raw: string) => crypto.createHash('sha256').update(raw).digest('hex');
 
 @Injectable()
 export class AuthService {
@@ -19,6 +26,71 @@ export class AuthService {
     private jwtService: JwtService,
     private cache: CacheService,
   ) {}
+
+  // ── spec-034 refresh-token lifecycle ────────────────────────────────────────
+  // Issues a new opaque refresh token, persists its hash, returns the raw value
+  // (caller sets it as an httpOnly cookie). Returns { raw, expiresAt }.
+  async issueRefreshToken(
+    userId: string,
+    tenantId: string | null,
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<{ raw: string; expiresAt: Date }> {
+    const raw = crypto.randomBytes(48).toString('hex');
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tenantId,
+        tokenHash: hashToken(raw),
+        expiresAt,
+        userAgent: meta?.userAgent?.slice(0, 255) ?? null,
+        ip: meta?.ip?.slice(0, 64) ?? null,
+      },
+    });
+    return { raw, expiresAt };
+  }
+
+  // Validates a raw refresh token, rotates it (revoke old + issue new), and mints
+  // a fresh access token. Throws Unauthorized if missing/expired/revoked.
+  async refresh(
+    raw: string | undefined,
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<{ accessToken: string; refresh: { raw: string; expiresAt: Date } }> {
+    if (!raw) throw new UnauthorizedException('No refresh token');
+
+    const row = await this.prisma.refreshToken.findFirst({
+      where: { tokenHash: hashToken(raw), revokedAt: null },
+      include: { user: true },
+    });
+    if (!row || row.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token invalid or expired');
+    }
+    if (!row.user || row.user.status !== 'active') {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    // Rotate: revoke the presented token, issue a new one (refresh-token rotation).
+    await this.prisma.refreshToken.update({
+      where: { id: row.id },
+      data: { revokedAt: new Date() },
+    });
+    const next = await this.issueRefreshToken(row.userId, row.tenantId, meta);
+
+    const payload: Record<string, unknown> = { sub: row.userId, email: row.user.email };
+    if (row.tenantId) payload.tenantId = row.tenantId;
+    const accessToken = this.jwtService.sign(payload);
+
+    return { accessToken, refresh: next };
+  }
+
+  // Revokes a refresh token (logout / inactivity). Idempotent.
+  async revokeRefreshToken(raw: string | undefined): Promise<void> {
+    if (!raw) return;
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenHash: hashToken(raw), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
 
   async register(registerDto: RegisterDto) {
     const existingUser = await this.prisma.user.findUnique({

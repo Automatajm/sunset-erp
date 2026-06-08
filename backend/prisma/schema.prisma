@@ -252,6 +252,7 @@ model User {
   deletedAt DateTime? @map("deleted_at")
   userTenants UserTenant[]
   userRoles   UserRole[]
+  refreshTokens RefreshToken[]
   suppliersCreated      Supplier[]      @relation("SupplierCreatedBy")
   suppliersUpdated      Supplier[]      @relation("SupplierUpdatedBy")
   itemsCreated          Item[]          @relation("ItemCreatedBy")
@@ -261,6 +262,25 @@ model User {
   salesOrdersCreated    SalesOrder[]    @relation("SalesOrderCreatedBy")
   salesOrdersUpdated    SalesOrder[]    @relation("SalesOrderUpdatedBy")
   @@map("auth_users")
+}
+
+// spec-034 — sliding-session refresh tokens (8h), stored hashed for revocation.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @map("token_hash") @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?   @map("user_agent") @db.VarChar(255)
+  ip         String?   @db.VarChar(64)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("auth_refresh_tokens")
 }
 
 model UserTenant {

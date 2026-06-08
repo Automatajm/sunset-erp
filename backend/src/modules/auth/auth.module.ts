@@ -24,6 +24,6 @@ import { PrismaModule } from '../../database/prisma.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule], // JwtModule exported for the sliding-token interceptor
 })
 export class AuthModule {}

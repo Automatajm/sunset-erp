@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter }                       from 'next/navigation';
 import apiClient                                      from '@/lib/api/client';
+import { getAccessToken }                             from '@/lib/api/token-store';
 import dynamic                                        from 'next/dynamic';
 
 const BarcodeScanner = dynamic(() => import('./BarcodeScanner'), { ssr: false });
@@ -11,7 +12,8 @@ const BarcodeScanner = dynamic(() => import('./BarcodeScanner'), { ssr: false })
 
 function getTokenUserId(): string | null {
   try {
-    const token = localStorage.getItem('access_token');
+    // spec-034 — access token lives in memory, not localStorage.
+    const token = getAccessToken();
     if (!token) return null;
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.sub ?? payload.userId ?? payload.id ?? null;
