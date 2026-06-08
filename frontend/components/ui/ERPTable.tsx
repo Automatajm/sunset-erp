@@ -67,6 +67,16 @@ export interface ERPTableProps<T> {
   filters?: ERPFilter<T>[];
   /** External filter values (controlled from outside, e.g. stats card clicks) */
   externalFilters?: Record<string, ERPFilterValue>;
+  /** spec-frontend-002 — debounce (ms) for the global search. Default 250. */
+  searchDebounceMs?: number;
+  /** spec-frontend-002 — show "Page N of M" in the footer. Default true. */
+  showPageOfM?: boolean;
+  /** spec-frontend-002 — render the rows-per-page selector in the footer. Default true. */
+  showRowsPerPage?: boolean;
+  /** spec-frontend-002 — footer pinned, body scrolls internally. Default true. */
+  stickyFooter?: boolean;
+  /** spec-frontend-002 — container claims available height so the body (not page) scrolls. Default true. */
+  fillHeight?: boolean;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -358,6 +368,10 @@ export function ERPTable<T>({
   maxHeight = 'calc(100vh - 340px)',
   filters: filterDefs = [],
   externalFilters = {},
+  searchDebounceMs = 250,
+  showPageOfM = true,
+  showRowsPerPage = true,
+  fillHeight = true,
 }: ERPTableProps<T>) {
 
   const [sortKey,    setSortKey]    = useState<string | null>(null);
@@ -365,7 +379,8 @@ export function ERPTable<T>({
   const [page,       setPage]       = useState(1);
   const [pageSize,   setPageSize]   = useState(defaultPageSize);
   const [filterVals, setFilterVals] = useState<Record<string, ERPFilterValue>>({});
-  const [search,     setSearch]     = useState('');
+  const [searchInput, setSearchInput] = useState(''); // immediate (bound to input)
+  const [search,      setSearch]      = useState(''); // debounced (used for filtering)
 
   // Merge external filters (from stats cards) with internal filter bar values
   const activeFilters = useMemo(() => ({ ...filterVals, ...externalFilters }), [filterVals, externalFilters]);
@@ -430,22 +445,31 @@ export function ERPTable<T>({
     setPage(1);
   }, []);
 
+  // spec-frontend-002 — debounced search: the input stays responsive (searchInput)
+  // while filtering is deferred (search). Clearing is immediate.
   const handleSearch = useCallback((val: string) => {
-    setSearch(val);
-    setPage(1);
+    setSearchInput(val);
+    if (val === '') { setSearch(''); setPage(1); }
   }, []);
 
-  // Search across all columns
+  useEffect(() => {
+    if (searchInput === '') return; // immediate-clear handled above
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, searchDebounceMs);
+    return () => clearTimeout(t);
+  }, [searchInput, searchDebounceMs]);
+
+  // Search across all columns — composes on top of the filtered set so search +
+  // filters work together and export reflects filtered + searched (spec §2).
   const searched = useMemo(() => {
-    if (!search.trim()) return data;
+    if (!search.trim()) return filtered;
     const q = search.toLowerCase();
-    return data.filter(row =>
+    return filtered.filter(row =>
       columns.some(col => {
         const val = col.value ? col.value(row) : (row as any)[col.key];
         return val !== null && val !== undefined && String(val).toLowerCase().includes(q);
       })
     );
-  }, [data, search, columns]);
+  }, [filtered, search, columns]);
 
   const sorted = useMemo(() => {
     if (!sortKey || !sortDir) return searched;
@@ -581,20 +605,20 @@ export function ERPTable<T>({
               <line x1="8.5" y1="8.5" x2="12" y2="12"/>
             </svg>
             <input
-              value={search}
+              value={searchInput}
               onChange={e => handleSearch(e.target.value)}
               placeholder="Search all columns…"
               style={{
                 width: '100%', padding: '5px 28px 5px 28px',
                 background: 'rgba(255,255,255,0.04)',
-                border: `0.5px solid ${search ? 'rgba(251,146,60,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                border: `0.5px solid ${searchInput ? 'rgba(251,146,60,0.35)' : 'rgba(255,255,255,0.09)'}`,
                 borderRadius: 6, fontSize: 12,
                 fontFamily: "'IBM Plex Sans',sans-serif",
                 color: '#e2dfd8', outline: 'none',
                 transition: 'border-color 0.15s',
               }}
             />
-            {search && (
+            {searchInput && (
               <button
                 onClick={() => handleSearch('')}
                 style={{
@@ -615,10 +639,6 @@ export function ERPTable<T>({
           {toolbarLeft}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Rows:</span>
-          <select style={S.select} value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
-            {pageSizes.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
           <ExportDropdown
             onCSV={() => exportCSV(columns, sorted, exportFilename)}
             onXLSX={() => exportXLSX(columns, sorted, exportFilename)}
@@ -637,8 +657,8 @@ export function ERPTable<T>({
         />
       )}
 
-      {/* ── Single table with sticky thead ── */}
-      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: maxHeight === '100%' ? undefined : maxHeight, flex: 1, minHeight: 0 }}>
+      {/* ── Single table with sticky thead — body scrolls so the footer never shifts ── */}
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: maxHeight === '100%' ? undefined : maxHeight, flex: fillHeight ? 1 : undefined, minHeight: fillHeight ? 0 : undefined }}>
         <table style={{ ...S.table, tableLayout: 'auto' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
@@ -691,9 +711,24 @@ export function ERPTable<T>({
 
       {/* ── Footer / Pagination ── */}
       <div style={S.footer}>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
-          {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+            {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
+          </span>
+          {showPageOfM && (
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+              Page {safePage} of {totalPages}
+            </span>
+          )}
+          {showRowsPerPage && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Rows:</span>
+              <select style={S.select} value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
+                {pageSizes.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </span>
+          )}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {/* First + Prev */}
