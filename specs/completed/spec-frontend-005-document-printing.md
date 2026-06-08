@@ -6,6 +6,16 @@ Sprint: planned infrastructure (implement AFTER invoices and notifications)
 Module(s): frontend only — purchase-orders, sales-orders, ar-invoices, ap-invoices, goods-receipts, stock-transactions pages
 Last updated: 2026-06-06
 
+## Purpose
+
+- **Who uses this module?** End users of the ERP across every department — buyers handing a PO to a supplier, salespeople sending order confirmations, accountants issuing invoices, and warehouse staff signing goods receipts — plus frontend developers, who reuse the shared `DocumentLayout` / `PrintButton` / `PRINT_DOCS` infrastructure this spec establishes.
+- **What business problem does it solve?** It turns on-screen records into printable, shareable, signable paper (and browser-native PDF) for the six core commercial documents, eliminating the screenshot-and-crop workaround that operators were forced into for the most routine output of the system.
+- **What can the business NOT do without this module?** It cannot hand a purchase order to a supplier, mail an invoice to a customer, or produce a signed receiving document at the warehouse door — there is no paper trail and no document to send, sign, or file.
+
+## Business value
+
+Without printing, the ERP holds all the data but cannot produce the documents the business actually exchanges with suppliers, customers, and the warehouse floor. Staff resort to screenshotting tables — slow, unprofessional, and error-prone — for every order, invoice, and receipt. Deals stall when a supplier needs a formal PO, collections slip when a customer never receives an invoice, and receiving disputes go unresolved because nothing was signed. This capability removes that friction with one click from any detail page, making the most common daily outputs instant and presentable.
+
 ## Problem
 
 An ERP that cannot print is not an ERP. Today no page in `frontend/app/` can produce

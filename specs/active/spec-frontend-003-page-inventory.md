@@ -15,6 +15,18 @@ Last updated: 2026-06-06
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Frontend developers and the team planning the spec-frontend-002 rollout — it is the audit matrix and prioritized roadmap that tells them which of the 49 pages need which new primitives, and in what order. ERP end users are the indirect beneficiaries as the highest-friction pages get fixed first.
+- **What business problem does it solve?** It converts the abstract "improve the frontend" goal into a concrete, evidence-based plan: a per-page inventory of table type, missing modals, data-path health, priority, and friction score, plus a P0–P4 implementation order so effort lands where it matters most.
+- **What can the business NOT do without this module?** It cannot roll out spec-frontend-002 in a rational order — work would be guesswork, the one genuinely broken page and the 17 unguarded destructive actions could be missed, and high-traffic, high-friction pages might be fixed last instead of first.
+
+## Business value
+
+Without this audit, improving 49 pages is undirected effort — easy wins and dangerous gaps look the same from a distance. The inventory surfaces what actually matters: one page silently broken on a 200 response, 17 destructive actions with no confirmation guard, raw backend errors relayed to users on 10+ pages, and design-system violations across the app. By scoring every page on priority and friction and sequencing the work P0–P4, it ensures scarce frontend time fixes the broken and most-used surfaces first, reducing the risk of costly mistakes (an accidental void, ship, or delete) and accelerating real adoption gains.
+
+---
+
 ## Method
 
 Audit of 2026-06-06 across all 49 `page.tsx` files under `frontend/app/`. For each page:

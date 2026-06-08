@@ -15,6 +15,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Frontend developers building and maintaining every data-heavy page, and through them every ERP end user across ~21+ pages — anyone filtering, paging, exporting, or acting on a table, confirming a destructive action, or filling a form dialog.
+- **What business problem does it solve?** It hardens the shared table, filter, and modal primitives — debounced search, a non-shifting footer, a collapsible filter panel, and a consistent `ConfirmModal`/`FormModal`/`DetailModal` system with absorbed (not relayed) error states — so every page composes the same well-behaved building blocks instead of reinventing them.
+- **What can the business NOT do without this module?** It cannot guarantee consistent, safe data interaction across pages — destructive actions stay unguarded (native `window.confirm` or none), each page hand-wires its own divergent dialogs and error handling, and operators face shifting footers, laggy search, and raw backend errors.
+
+## Business value
+
+Inconsistent and incomplete data components are an adoption and reliability risk on the surfaces operators use all day. Unguarded destructive actions (the audit found 17) mean a stray click can void an invoice or delete a BOM with no confirmation; raw backend errors and shifting table footers make the system feel unprofessional and slow people down. Every page reinventing modals and filters multiplies bugs and maintenance cost. A single set of hardened primitives — guarded confirmations, debounced search, stable pagination, and absorbed error states — makes the whole frontend safer, faster to use, and far cheaper to extend.
+
+---
+
 ## Problem
 
 The frontend already has three home-grown data primitives — `ERPTable`, `ERPTreeTable`,

@@ -6,6 +6,16 @@ Sprint: follow-up to spec-frontend-005 (printing infrastructure shipped e166f9d)
 Module(s): frontend only — rfqs, production-orders, stock-reconciliation pages
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Shop-floor and procurement operators — buyers sending quote requests to suppliers, production supervisors running a job off a traveler, and inventory counters working a physical stock count with a clipboard — building on the printing infrastructure frontend developers shipped in spec-frontend-005.
+- **What business problem does it solve?** It adds the three operational paper documents that exist in every real plant — the RFQ, the production-order traveler, and the stock count sheet — so these workflows leave the screen and become the physical instruments the work actually requires.
+- **What can the business NOT do without this module?** It cannot send a formal quote request to suppliers, give the floor a printed run sheet with a component-issue list, or hand a counter a proper blind count sheet — these processes fall back to screenshots, memory, or hand-copied notes.
+
+## Business value
+
+These three documents are the ones a plant runs on paper every day. Without the RFQ printout, sourcing reverts to the same screenshot friction the PO already fixed, and quotes go out looking improvised. Without the traveler, the production floor works from memory or hand-copied notes, inviting wrong quantities and missed components. Without a blind count sheet, counters read expected numbers off a phone at the rack — defeating the entire point of a physical count and corrupting the variance data. Generating each as one-click, light-on-white paper makes these routine operations reliable and audit-ready.
+
 ## Problem
 
 spec-frontend-005 shipped the printing infrastructure (`DocumentLayout`,

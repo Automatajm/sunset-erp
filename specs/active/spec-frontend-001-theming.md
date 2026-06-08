@@ -18,6 +18,18 @@ Last updated: 2026-06-04
 
 ---
 
+## Purpose
+
+- **Who uses this module?** Frontend developers, who get a single semantic-token layer to change colors instead of hunting thousands of inline literals — and, indirectly, every ERP end user, who benefits from visual consistency and a future light theme.
+- **What business problem does it solve?** It replaces ~2,313 hardcoded color literals scattered across 74% of the frontend with a central token system, making theme changes, brand-color adjustments, and an accessible light mode possible from one place rather than impossible.
+- **What can the business NOT do without this module?** It cannot offer a light theme, cannot guarantee WCAG-AA contrast, and cannot change its color identity without a manual, error-prone find-and-replace across dozens of files where the same hex serves several different meanings.
+
+## Business value
+
+Today the frontend looks like it supports theming but does not — colors are baked into every component as raw literals, so there is no switch to flip. That makes a light theme (a common client and accessibility expectation), a brand-color change, or a per-tenant palette effectively impossible without a multi-week refactor, and it leaves accessibility contrast unverifiable. Centralizing colors into semantic tokens turns these from "rebuild the UI" jobs into one-place edits, while a hard non-regression guarantee keeps the current dark theme pixel-identical so nothing breaks for existing users.
+
+---
+
 ## Problem
 
 The frontend is described as "dark-only" and the config *looks* like it has a theming layer —

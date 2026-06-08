@@ -6,6 +6,16 @@ Sprint: follow-up to spec-frontend-006 (printing round 2 shipped d8f97f1)
 Module(s): frontend only — purchase-requisitions, journal-entries, ar-invoices pages
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** The people who own the approval and accounting paper trail — requesters and approvers signing off purchase requisitions, accountants archiving and producing journal-entry vouchers for auditors, and front-desk/AR staff handing a payment receipt to a customer — on the printing infrastructure from rounds 1–2.
+- **What business problem does it solve?** It produces the three documents that exist as signed, filed paper in Dominican Republic operations — the PR approval instrument, the comprobante de diario, and the customer AR payment receipt — none of which could previously leave the dark-mode web screen.
+- **What can the business NOT do without this module?** It cannot run an ink-signed purchase-approval flow, give auditors the printed accounting vouchers they ask for, or hand a paying customer a receipt across the counter.
+
+## Business value
+
+This round closes the approval and accounting paper gap. Without a printable purchase requisition, organizations that require a physical signature flow — very common in DR — have no instrument to route for approval, so spending controls break down. Without the journal-entry voucher, accountants cannot produce the signed comprobantes that auditors expect, creating compliance and audit-readiness exposure. Without an AR payment receipt, a customer who just paid walks away with nothing, undermining trust and complicating collections disputes. Each is one click from its detail page, turning recorded data into the signed paper these processes legally and practically depend on.
+
 ## Problem
 
 Rounds 1–2 covered the commercial documents (PO/SO/AR/AP/GRN/stock report) and

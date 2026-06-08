@@ -6,6 +6,16 @@ Sprint: follow-up to spec-frontend-007 (printing round 3 shipped be04a7f)
 Module(s): frontend only — bom, customers/ar-invoices pages
 Last updated: 2026-06-07
 
+## Purpose
+
+- **Who uses this module?** Production-floor staff working from a posted recipe card per product, and AR/collections staff sending an estado de cuenta to customers — completing the printing backlog built on rounds 1–3.
+- **What business problem does it solve?** It delivers the final two documents — the BOM recipe card (the standing per-product reference posted at the work station) and the customer statement (every open invoice with aging buckets and total due) — so both the make-side reference and the collect-side statement leave the screen.
+- **What can the business NOT do without this module?** It cannot post a printed recipe at the station for consistent production, and it cannot hand or email customers the statement that DR collections actually run on.
+
+## Business value
+
+These two documents serve the make side and the collect side of the operation. Without a recipe card posted at the work station, production consistency depends on someone opening a web page — a food plant needs the standing per-unit reference visible at the line. Without a customer statement, collections have no estado de cuenta to send, so chasing overdue balances becomes ad-hoc and slower, directly affecting cash flow; the per-currency totals and aging buckets give the customer (and the collector) an unambiguous picture of what is owed and how late. One click from the BOM and customer pages turns existing data into the reference and collection instruments these teams rely on.
+
 ## Problem
 
 The last two documents from the printing backlog (rounds 2–3 out-of-scope
