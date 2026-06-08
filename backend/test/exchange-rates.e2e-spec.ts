@@ -15,7 +15,6 @@ import { AppModule } from '../src/app.module';
 const ER = '/api/exchange-rates';
 // A fixed past date keeps the [tenant, pair, date] unique key out of the demo
 // seed's way; re-runs hit the 409 path deliberately, so use a per-run date.
-const day = (n: number) => `2020-01-${String(n).padStart(2, '0')}`;
 
 describe('ExchangeRates (e2e)', () => {
   let app: INestApplication;
@@ -52,8 +51,17 @@ describe('ExchangeRates (e2e)', () => {
 
     token = await login('admin@demo.com');
     tokenB = await login('tenant2admin@demo.com');
-    // 1-28: a stable per-run day inside January 2020
-    runDay = day(1 + (Math.floor(performance.now()) % 28));
+    // A per-run date over a WIDE space (~100y × 12m × 28d ≈ 33.6k) so that
+    // TENANT2 rates accumulated by prior runs (clean-e2e-residue.sh does not
+    // wipe TENANT2) cannot collide with this run's runDay. The old 28-day
+    // window (2020-01-NN) filled up and made the isolation test fail
+    // deterministically.
+    const t = Math.floor(performance.now());
+    const yr = 1950 + (t % 100);
+    const mo = 1 + (Math.floor(t / 100) % 12);
+    const dy = 1 + (Math.floor(t / 1200) % 28);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    runDay = `${yr}-${pad(mo)}-${pad(dy)}`;
   });
 
   afterAll(async () => {

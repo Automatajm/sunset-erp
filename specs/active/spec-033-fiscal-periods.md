@@ -1,6 +1,6 @@
 # spec-033 — Fiscal Periods (Period Master + Open/Closed/Locked State Machine)
 
-Status: **Implemented — pending ship**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: finance hardening (5 of 5 — opportunity-finder score 3, cleanest of the five)
 Module(s): fiscal-periods
@@ -153,3 +153,5 @@ Reads `JournalEntry` (count guards for close/delete), tenant-scoped.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec generated from code by spec-generator (opportunity-finder score 3: status missing @IsIn; id-only state-machine writes; bare-array list. State machine + scoping otherwise gold-standard) | Draft — pending review |
+| 2026-06-07 | Implemented + test-scaffolded: status @IsIn whitelist; 6 writes tenant-scoped (update + 4 transitions + remove); { fiscalPeriods, count } envelope + frontend-sync. Unit 17/17, e2e 11/11. | Implemented |
+| 2026-06-07 | Ship gates: compliance 100%; unit 17/17; full e2e 462/462 GREEN (the recurring exchange-rates flake was root-caused this run — its isolation test accumulated TENANT2 rates in a 28-day window that clean-e2e-residue.sh does not wipe; widened runDay to a ~33.6k-value date space, fixed in the same push). nest build OK; lint clean. Shipped to origin; marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
