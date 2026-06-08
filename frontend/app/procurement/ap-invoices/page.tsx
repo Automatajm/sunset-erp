@@ -18,6 +18,7 @@ import { goodsReceiptsApi, GoodsReceipt } from '@/lib/api/goods-receipts';
 import apiClient from '@/lib/api/client';
 import { DateSelection } from '@/components/ui/ERPDatePicker';
 import { PrintButton } from '@/components/print/PrintButton';
+import { FormModal } from '@/components/ui/modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -471,9 +472,9 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
   const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (Number(form.amount) <= 0) { setError('Amount must be > 0.'); return; }
+  const isValid = Number(form.amount) > 0;
+  const handleSubmit = async () => {
+    if (!isValid) { setError('Amount must be > 0.'); return; }
     setBusy(true); setError('');
     try { await apInvoicesApi.applyPayment(inv.id, { paymentDate: form.paymentDate, amount: Number(form.amount), paymentMethod: form.paymentMethod || undefined, reference: form.reference || undefined, notes: form.notes || undefined }); onSaved(); }
     catch (err: any) { setError(err?.response?.data?.message || 'Payment failed.'); }
@@ -481,19 +482,19 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
   };
 
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:14, width:'100%', maxWidth:460, boxShadow:'0 24px 60px rgba(0,0,0,0.7)', position:'relative' }}>
-        <div style={{ position:'absolute', top:0, left:30, right:30, height:1, background:'linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent)' }} />
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)' }}>
-          <div>
-            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>Apply Payment</div>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:2 }}>{inv.invoiceNumber} · Outstanding: {fmtAmt(outstanding)}</div>
-          </div>
-          <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+    <FormModal
+      open
+      onClose={onClose}
+      title="Apply Payment"
+      description={`${inv.invoiceNumber} · Outstanding: ${fmtAmt(outstanding)}`}
+      submitLabel={`Pay ${fmtAmt(form.amount)}`}
+      submitting={busy}
+      isValid={isValid}
+      error={error}
+      width={460}
+      onSubmit={handleSubmit}
+    >
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Payment Date</label><input type="date" style={INP} value={form.paymentDate} onChange={set('paymentDate')} /></div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Amount ($)</label><input type="number" min="0.01" step="0.01" style={INP} value={form.amount} onChange={set('amount')} /></div>
@@ -509,15 +510,7 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Notes</label><input style={INP} placeholder="Payment notes" value={form.notes} onChange={set('notes')} /></div>
           </div>
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-            <button type="submit" disabled={busy} style={{ background:'linear-gradient(135deg,#15803d,#16a34a,#22c55e)', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', opacity:busy?0.5:1 }}>
-              {busy ? 'Processing…' : `Pay ${fmtAmt(form.amount)}`}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </FormModal>
   );
 }
 
