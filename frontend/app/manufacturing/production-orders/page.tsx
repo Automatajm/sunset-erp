@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { productionOrdersApi } from '@/lib/api/production-orders';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { bomApi } from '@/lib/api/bom';
 import { ProductionOrderStatus, ProductionPriority } from '@/lib/api/types';
 
@@ -809,6 +810,12 @@ export default function ProductionOrdersPage() {
     finally { setActionBusy(null); }
   };
 
+  // spec-frontend-002 adoption — only the destructive 'cancelled' transition is
+  // guarded; forward transitions (released→in_progress→completed) stay direct.
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const onStatusChange = (id: string, status: string) =>
+    status === 'cancelled' ? setConfirmCancelId(id) : handleStatusChange(id, status);
+
   const counts = Object.keys(PO_STATUS).reduce((acc, s) => ({ ...acc, [s]: list.filter(o => o.status === s).length }), {} as Record<string, number>);
 
   return (
@@ -874,7 +881,7 @@ export default function ProductionOrdersPage() {
                   </thead>
                   <tbody>
                     {filtered.map(mo => (
-                      <MORow key={mo.id} mo={mo} boms={boms} onStatusChange={handleStatusChange} actionBusy={actionBusy} onOpenLabor={setLaborMo} onOpenDeliver={setDeliverMo} onRefresh={fetchOrders} />
+                      <MORow key={mo.id} mo={mo} boms={boms} onStatusChange={onStatusChange} actionBusy={actionBusy} onOpenLabor={setLaborMo} onOpenDeliver={setDeliverMo} onRefresh={fetchOrders} />
                     ))}
                   </tbody>
                 </table>
@@ -887,6 +894,17 @@ export default function ProductionOrdersPage() {
       {modalOpen  && <MOModal    boms={boms} onClose={() => setModalOpen(false)}  onSaved={fetchOrders} />}
       {laborMo    && <LaborModal mo={laborMo}   onClose={() => setLaborMo(null)}   onSaved={fetchOrders} />}
       {deliverMo  && <DeliverModal mo={deliverMo} onClose={() => setDeliverMo(null)} onSaved={fetchOrders} />}
+
+      <ConfirmModal
+        open={!!confirmCancelId}
+        onClose={() => setConfirmCancelId(null)}
+        title="Cancel production order?"
+        description="This cancels the manufacturing order. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel MO"
+        cancelLabel="Keep MO"
+        onConfirm={async () => { if (confirmCancelId) await handleStatusChange(confirmCancelId, 'cancelled'); }}
+      />
     </ERPShell>
   );
 }

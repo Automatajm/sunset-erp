@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { journalEntriesApi } from '@/lib/api/journal-entries';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { chartOfAccountsApi } from '@/lib/api/chart-of-accounts';
 import {
   JournalEntry, CreateJournalEntryDto, CreateJournalEntryLineDto,
@@ -508,6 +509,10 @@ export default function JournalEntriesPage() {
   const [statusFilter, setStatusFilter] = useState<EntryStatus | ''>('');
   const [modalOpen,  setModalOpen]  = useState(false);
   const [deleting,   setDeleting]   = useState<JournalEntry | null>(null);
+  // spec-frontend-002 adoption — guard post/unpost with a ConfirmModal.
+  const [confirmAction, setConfirmAction] = useState<
+    { run: () => Promise<void>; title: string; description: string; variant: 'default' | 'destructive'; label: string } | null
+  >(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
@@ -672,8 +677,8 @@ export default function JournalEntriesPage() {
                     <EntryRow
                       key={entry.id}
                       entry={entry}
-                      onPost={handlePost}
-                      onUnpost={handleUnpost}
+                      onPost={(id) => setConfirmAction({ run: () => handlePost(id), title: 'Post journal entry?', description: 'Posting locks the entry into the general ledger.', variant: 'default', label: 'Post' })}
+                      onUnpost={(id) => setConfirmAction({ run: () => handleUnpost(id), title: 'Unpost journal entry?', description: 'This returns the entry to draft and reverses its ledger effect.', variant: 'destructive', label: 'Unpost' })}
                       onDelete={setDeleting}
                       actionBusy={actionBusy}
                     />
@@ -703,6 +708,16 @@ export default function JournalEntriesPage() {
           busy={deleteBusy}
         />
       )}
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title ?? ''}
+        description={confirmAction?.description}
+        variant={confirmAction?.variant}
+        confirmLabel={confirmAction?.label}
+        onConfirm={async () => { if (confirmAction) await confirmAction.run(); }}
+      />
     </ERPShell>
   );
 }

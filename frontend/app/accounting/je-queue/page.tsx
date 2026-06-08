@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { automationApi } from '@/lib/api/automation';
+import { ConfirmModal } from '@/components/ui/modal';
 
 interface JeQueueItem {
   id: string; eventType: string; sourceType: string; sourceRef?: string;
@@ -114,6 +115,9 @@ export default function JeQueuePage() {
     } finally { setApproving(null); }
   };
 
+  // spec-frontend-002 adoption — approving posts the JE to the ledger; guard it.
+  const [confirmItem, setConfirmItem] = useState<JeQueueItem | null>(null);
+
   return (
     <ERPShell breadcrumbs={['Home', 'Financial', 'JE Review Queue']} title="JE Review Queue">
       <style>{`
@@ -213,7 +217,7 @@ export default function JeQueuePage() {
                             <td onClick={e => e.stopPropagation()}>
                               {item.status === 'pending' && (
                                 <div style={{ display:'flex', gap:4 }}>
-                                  <button onClick={() => handleApprove(item)} disabled={isBusy}
+                                  <button onClick={() => setConfirmItem(item)} disabled={isBusy}
                                     style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#4ade80', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:isBusy?0.5:1 }}>
                                     {isBusy ? '…' : '✓ Approve'}
                                   </button>
@@ -286,6 +290,15 @@ export default function JeQueuePage() {
       </div>
 
       {rejectItem && <RejectModal item={rejectItem} onClose={() => setRejectItem(null)} onRejected={fetchData} />}
+
+      <ConfirmModal
+        open={!!confirmItem}
+        onClose={() => setConfirmItem(null)}
+        title={confirmItem ? `Approve JE ${confirmItem.journalEntry.entryNumber}?` : ''}
+        description="Approving posts this journal entry to the general ledger."
+        confirmLabel="Approve & post"
+        onConfirm={async () => { if (confirmItem) await handleApprove(confirmItem); }}
+      />
     </ERPShell>
   );
 }
