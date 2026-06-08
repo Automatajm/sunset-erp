@@ -18,22 +18,52 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 
 ## Coverage summary
 
+_Recounted 2026-06-08 against `backend/src/modules/` (39 dirs) and
+`specs/completed/` (34 numbered backend specs + 5 frontend specs)._
+
 | Metric | Value |
 |--------|-------|
-| Business modules total | 38 |
-| Specced (Done) | 20 — `auth`, `suppliers`, `items`, `warehouses`, `uom`, `macro-categories`, `chart-of-accounts`, `consumption-groups`, `categories`, `work-centers`, `bom`, spec-012 (auto-codes, cross-cutting), `customers`, `warehouse-locations`, `journal-entries`, `stock-transactions`, `stock-reconciliation`, `supplier-items`, `sales-orders` + `production-plans` (spec-019, production cluster) |
-| Pending | 18 |
+| Business modules total | 39 |
+| **Specced (Done)** | **38** |
+| **Pending** | **1 — `bulk-import`** |
 
-### ⚠️ Cascade violations already shipped (skipped prerequisites)
-These were specced **before** their own dependencies were specced. Their prerequisites
-must be back-filled to restore cascade integrity:
+**38 covered backend modules** (module → covering spec):
+`auth` (001, +034 session), `suppliers` (002), `items` (003), `warehouses` (004),
+`uom` (005), `macro-categories` (006), `chart-of-accounts` (007),
+`consumption-groups` (008), `categories` (009), `work-centers` (010), `bom` (011),
+`customers` (013), `warehouse-locations` (014), `journal-entries` (015),
+`stock-transactions` (016), `stock-reconciliation` (017), `supplier-items` (018),
+`sales-orders` + `production-plans` (019 production cluster),
+`purchase-orders` + `rfqs` + `purchase-requisitions` + `general-needs`
+(020 procurement cluster), `currency` + `tenant-settings` (021 multi-currency),
+`notifications` (022), `goods-receipts` (023), `production-orders` (024),
+`ap-invoices` (025), `ar-invoices` (026),
+`users` + `roles` + `tenants` (+`tenant-settings`) (027 admin cluster),
+`budgets` (029), `cash-flow` (030), `automation` (031), `financial-reports` (032),
+`fiscal-periods` (033).
+Cross-cutting (not a single module): `auto-codes` (012), `non-destructive-seed`
+(028, tooling).
 
-- `items` (spec-003) depends on → `uom` ✅ (spec-005), `categories` ✅ (spec-009), `consumption-groups` ✅ (spec-008) — **cascade integrity restored**
-- `suppliers` (spec-002) depends on → `items` ✅ (ok)
-- `warehouses` (spec-004) depends on → nothing (ok)
+**Frontend specs** (separate series, not in the 39-module backend count):
+frontend-002 (data components ✅), frontend-005/006/007/008 (document printing
+✅); frontend-001 (theming) and frontend-003 (page inventory) remain in
+`specs/active/`.
 
-So **`categories`, `consumption-groups`** are the remaining highest-priority back-fills
-(`uom` back-filled by spec-005; `categories` unblocked — `chart-of-accounts` ✅ spec-007).
+### ⚠️ The one genuinely unspecced backend module
+- **`bulk-import`** (`backend/src/modules/bulk-import/` — controller + service +
+  dto, ~2.4k LOC). It is *referenced* by several specs only as a frontend
+  consumer of their envelopes (007/010/011/013) and as an `auto-codes` exception
+  (012), but it has **no dedicated spec** of its own. It does CSV/Excel
+  import/export with preview + dry-run across multiple entities. Candidate for
+  the next `/new-spec bulk-import` (opportunity-finder first — it generates codes
+  and writes many tenant-owned tables, so tenant-scoping + validation are the
+  likely findings).
+
+### Cascade integrity — resolved
+All prior "specced before its dependency" violations are closed: `uom` (005),
+`categories` (009), `consumption-groups` (008), `chart-of-accounts` (007) are all
+Done, so `items`/`suppliers`/`bom` rest on specced foundations. No outstanding
+back-fills.
 
 ---
 
