@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { SlidingTokenInterceptor } from './common/interceptors/sliding-token.interceptor';
 import { PrismaModule } from './database/prisma.module';
 import { RedisModule } from './database/redis.module';
 import { CommonModule } from './common/common.module';
@@ -96,10 +94,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    // spec-034 — sliding access token on every authenticated 2xx response
-    { provide: APP_INTERCEPTOR, useClass: SlidingTokenInterceptor },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}

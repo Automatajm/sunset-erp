@@ -38,10 +38,11 @@ This spec makes sessions sliding, secure, and login-first.
 - [ ] A **refresh token** with **8-hour** expiry is issued at login and
       `select-tenant`, stored as an **httpOnly, Secure, SameSite=Strict cookie**
       set by the backend (never returned in the JSON body, never readable by JS).
-- [ ] Every authenticated API response that returns 2xx issues a **fresh access
-      token** (sliding window) — returned via a response header
-      (e.g. `X-Access-Token`) that the frontend apiClient swaps into memory; the
-      refresh-token cookie is rolled only when it nears expiry (rotation).
+- [ ] The access token lives its full **15 minutes**; renewal happens ONLY via
+      `POST /api/auth/refresh` when a request 401s. (AMENDED 2026-06-07: the
+      original per-response sliding `X-Access-Token` header was removed as
+      unnecessary noise — a new JWT on every 2xx is wasteful. The refresh cookie
+      rotates on each `/auth/refresh` call.)
 - [ ] Frontend `apiClient` intercepts **401**, calls `POST /api/auth/refresh`
       once (cookie sent automatically), and on success **retries the original
       request exactly once** with the new access token; concurrent 401s share a
@@ -105,8 +106,8 @@ This spec makes sessions sliding, secure, and login-first.
 ### Non-functional
 - [ ] No access token ever written to `localStorage`/`sessionStorage` (grep-clean).
 - [ ] Refresh-token raw value never stored server-side (hash only) nor logged.
-- [ ] The sliding-token header does not leak across tenants (token carries the
-      tenant claim already, per current JWT payload).
+- [ ] Refreshed access tokens carry the correct tenant claim (the refresh row
+      stores `tenantId`, copied into the new JWT payload).
 - [ ] ux-reviewer pass on the warning modal + login-redirect flow (friction ≤ 2;
       the happy path must feel like the session never drops within 8h of use).
 
@@ -174,10 +175,11 @@ model RefreshToken {
 // Idempotent: 200 even if already logged out. Revokes the RefreshToken row.
 ```
 
-### Every authenticated 2xx response  (sliding window)
+### Access-token renewal  (AMENDED — no sliding header)
 ```jsonc
-// Response header: X-Access-Token: <new 15m JWT>   (frontend swaps into memory)
-// Implemented via a NestJS interceptor on guarded routes.
+// The access token is renewed ONLY by POST /api/auth/refresh, which the frontend
+// calls on a 401. No per-response X-Access-Token header (removed 2026-06-07 as
+// unnecessary noise). The 15m token simply lives out its lifetime between refreshes.
 ```
 
 ## Implementation notes
@@ -187,8 +189,7 @@ model RefreshToken {
 | `backend/prisma/schema.prisma` | + `RefreshToken` model (additive migration) |
 | `backend/src/modules/auth/auth.controller.ts` | + `refresh`, `logout`; set/clear cookie on login/select-tenant |
 | `backend/src/modules/auth/auth.service.ts` | issue/rotate/validate/revoke refresh tokens (hash on store) |
-| `backend/src/common/interceptors/sliding-token.interceptor.ts` | NEW — emit `X-Access-Token` on 2xx for guarded routes |
-| `frontend/lib/api/client.ts` | in-memory access token; 401 → single-flight refresh + one retry; swap `X-Access-Token` |
+| `frontend/lib/api/client.ts` | in-memory access token; 401 → single-flight refresh + one retry |
 | `frontend/lib/contexts/AuthContext.tsx` | drop localStorage token/user/tenant; memory + silent-refresh-on-load |
 | `frontend/components/layout/ERPShell.tsx` | inactivity timer + 2-min warning modal + cross-tab `storage` sync |
 | `frontend/app/layout.tsx` (or an AuthGate) | route protection: no in-memory token + failed silent refresh → `/login?next=` |
@@ -220,3 +221,4 @@ envelope.
 | 2026-06-07 | Spec drafted (spec-only, no implementation). Current-state audit: access TTL already 15m (auth.module:19); NO refresh endpoint / RefreshToken model / logout; tokens in localStorage (client.ts, AuthContext) = XSS exposure + implicit remember-me. Spec defines sliding tokens (15m access + 8h httpOnly refresh, sliding header + single-flight 401 retry), inactivity timeout (15m → 2-min warning → logout, cross-tab), login-first (no localStorage restore, ?next= redirect), memory/httpOnly storage, and backend refresh/logout/RefreshToken. | Draft — pending approval; implementation deferred |
 | 2026-06-07 | Implemented (backend + frontend, one rollout): RefreshToken model + additive migration; /auth/refresh + /auth/logout + httpOnly SameSite=Strict 8h refresh cookie on login/select-tenant; SlidingTokenInterceptor (X-Access-Token on every authed 2xx); frontend in-memory token store, withCredentials apiClient with single-flight 401 refresh+retry, AuthContext silent-refresh-on-load, AuthGate route protection (?next=, cross-tab logout), InactivityGuard (15m→2-min warning→logout, cross-tab). No new deps (manual cookie parse + crypto). Live curl-verified: cookie set httpOnly, sliding header present, refresh 200, no-cookie/garbage/post-logout refresh 401, rotation revokes old. | Implemented |
 | 2026-06-07 | Ship gates: 8 unit (refresh lifecycle) + 8 e2e (auth-session) green; full e2e 470/470 across 31 suites (every suite logs in — auth contract intact); backend + frontend prod builds green; lint clean on new files (pre-existing passwordHash/any idioms excluded). Shipped to origin; marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
+| 2026-06-07 | AMENDED — removed the SlidingTokenInterceptor (X-Access-Token on every 2xx was unnecessary noise). Access token now lives its full 15m; renewal happens ONLY via POST /auth/refresh on a 401. Deleted sliding-token.interceptor.ts + its app.module registration + JwtModule re-export; apiClient no longer swaps the header; auth-session e2e now asserts the header is ABSENT. Full e2e 470/470; live-verified no X-Access-Token header. | Amended — shipped |

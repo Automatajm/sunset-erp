@@ -59,14 +59,11 @@ const redirectToLogin = () => {
   window.location.href = `/login?next=${next}`;
 };
 
-// ── Response: slide the access token; on 401 refresh-and-retry once ──────────
+// ── Response: on 401 refresh-and-retry once ─────────────────────────────────
+// The access token lives its full 15m; renewal happens ONLY via /auth/refresh
+// when a request 401s (spec-034 amendment — no per-response sliding token).
 apiClient.interceptors.response.use(
-  (response) => {
-    // Sliding window: the backend returns a fresh token on every authed 2xx.
-    const sliding = response.headers?.['x-access-token'];
-    if (sliding) setAccessToken(sliding as string);
-    return response;
-  },
+  (response) => response,
   async (error: AxiosError) => {
     const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
     const status = error.response?.status;

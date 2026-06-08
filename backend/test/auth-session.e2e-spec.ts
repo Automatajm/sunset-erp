@@ -50,15 +50,14 @@ describe('Auth Session (e2e) — spec-034', () => {
     expect(cookie!.toLowerCase()).toContain('samesite=strict');
   });
 
-  it('an authenticated 2xx response carries a fresh X-Access-Token (sliding)', async () => {
+  it('an authenticated 2xx response does NOT carry an X-Access-Token (no sliding; spec-034 amendment)', async () => {
     const login = await loginDemo();
     const token = login.body.access_token;
     const r = await request(server())
       .get('/api/financial-reports/trial-balance')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(r.headers['x-access-token']).toBeTruthy();
-    expect(r.headers['x-access-token']).not.toBe(''); // a real signed token
+    expect(r.headers['x-access-token']).toBeUndefined();
   });
 
   it('POST /api/auth/refresh with the cookie → 200 + a new access token', async () => {
