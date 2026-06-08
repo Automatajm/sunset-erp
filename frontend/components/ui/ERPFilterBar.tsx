@@ -128,11 +128,43 @@ interface ERPFilterBarProps<T> {
   onChange:    (key: string, value: ERPFilterValue) => void;
   onReset:     () => void;
   activeCount: number;
+  /** spec-frontend-002 — allow collapse/expand of the panel. Default true. */
+  collapsible?: boolean;
+  /** spec-frontend-002 — initial collapsed state. Default: collapsed when activeCount===0. */
+  defaultCollapsed?: boolean;
+  /** spec-frontend-002 — clear a single filter (falls back to onChange(key, null)). */
+  onClearFilter?: (key: string) => void;
+}
+
+// Human-readable value for a collapsed badge: "label: value" or "label (N)".
+function badgeText(f: ERPFilter, val: ERPFilterValue): string | null {
+  if (val === null || val === undefined || val === '' || (Array.isArray(val) && !val.length)) return null;
+  if (f.type === 'multiselect') return `${f.label} (${(val as string[]).length})`;
+  if (f.type === 'boolean')     return f.label;
+  if (f.type === 'daterange')   return `${f.label}: set`;
+  if (f.type === 'select' || f.type === 'searchselect') {
+    const opt = f.options?.find(o => o.value === String(val));
+    return `${f.label}: ${opt?.label ?? String(val)}`;
+  }
+  return `${f.label}: ${String(val)}`;
 }
 
 export function ERPFilterBar<T>({
   filters, values, onChange, onReset, activeCount,
+  collapsible = true,
+  defaultCollapsed,
+  onClearFilter,
 }: ERPFilterBarProps<T>) {
+
+  // Collapsed by default when no filter is active (spec §1). Persists per-page
+  // within the session as component state (not localStorage).
+  const [collapsed, setCollapsed] = useState<boolean>(
+    defaultCollapsed ?? activeCount === 0,
+  );
+  const clearOne = useCallback(
+    (key: string) => (onClearFilter ? onClearFilter(key) : onChange(key, null)),
+    [onClearFilter, onChange],
+  );
 
   const SEL: React.CSSProperties = {
     background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)',
@@ -149,8 +181,69 @@ export function ERPFilterBar<T>({
     marginBottom: 5,
   };
 
+  const showControls = !collapsible || !collapsed;
+
+  const BADGE: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 10px',
+    borderRadius: 20, fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
+    color: '#fb923c', background: 'rgba(251,146,60,0.1)',
+    border: '0.5px solid rgba(251,146,60,0.25)', cursor: 'pointer',
+  };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+      {/* ── Header: toggle + (collapsed) badges + Clear all ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {collapsible && (
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed(c => !c)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+              borderRadius: 6, fontSize: 11, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif",
+              cursor: 'pointer', color: 'rgba(255,255,255,0.6)',
+              background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)', transition: 'transform 0.15s' }}><path d="M4 2l4 4-4 4" /></svg>
+            Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+          </button>
+        )}
+
+        {collapsible && collapsed && filters.map(f => {
+          const t = badgeText(f, values[f.key]);
+          if (!t) return null;
+          return (
+            <span key={f.key} style={BADGE} onClick={() => setCollapsed(false)} title="Click to edit filters">
+              {t}
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); clearOne(f.key); }}
+                style={{ background: 'rgba(251,146,60,0.15)', border: 'none', borderRadius: '50%', width: 15, height: 15, cursor: 'pointer', color: '#fb923c', fontSize: 10, lineHeight: 1, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >×</button>
+            </span>
+          );
+        })}
+
+        {activeCount > 0 && (
+          <button type="button"
+            onClick={onReset}
+            style={{
+              padding: '6px 12px', borderRadius: 6, fontSize: 11,
+              fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
+              color: '#f87171', background: 'rgba(239,68,68,0.08)',
+              border: '0.5px solid rgba(239,68,68,0.2)', whiteSpace: 'nowrap',
+            }}
+          >Clear all ({activeCount})</button>
+        )}
+      </div>
+
+      {/* ── Controls (only when expanded) ── */}
+      {showControls && (
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
       {filters.map(f => {
         const val = values[f.key];
 
@@ -272,18 +365,7 @@ export function ERPFilterBar<T>({
 
         return null;
       })}
-
-      {activeCount > 0 && (
-        <button type="button"
-          style={{
-            padding: '6px 12px', borderRadius: 6, fontSize: 11,
-            fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-            color: '#f87171', background: 'rgba(239,68,68,0.08)',
-            border: '0.5px solid rgba(239,68,68,0.2)',
-            transition: 'all 0.15s', whiteSpace: 'nowrap', alignSelf: 'flex-end',
-          }}
-          onClick={onReset}
-        >↺ Clear ({activeCount})</button>
+      </div>
       )}
     </div>
   );
