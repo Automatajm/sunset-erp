@@ -3,8 +3,8 @@
 Status: **Active**  
 Owner: Frontend / Design System  
 Sprint: TBD  
-Module(s): `frontend/app/**` — all 49 pages  
-Last updated: 2026-06-06  
+Module(s): `frontend/app/**` — all 51 pages  
+Last updated: 2026-06-07  
 
 > Companion to [`spec-frontend-002-data-components`](./spec-frontend-002-data-components.md):
 > that spec builds the primitives (collapsible FilterBar, fixed-footer DataTable, TreeTable
@@ -110,21 +110,23 @@ Audit of 2026-06-06 across all 49 `page.tsx` files under `frontend/app/`. For ea
 | AR Invoices | /sales/invoices | custom table + expand | FormModal (has 2), DetailModal (has inline), ConfirmModal MISSING (void/send unguarded) | working | high | 5 |
 | Sales Orders | /sales/sales-orders | custom table + expand | FormModal (has), DetailModal (has inline), ConfirmModal MISSING (ship/deliver unguarded — create stock movements) | working | high | 5 |
 
-### Settings (6)
+### Settings (7)
 | Page | Route | Table Type | Modals Needed | State | Priority | Friction |
 |---|---|---|---|---|---|---|
 | Bulk Import/Export | /settings/bulk-import | custom table (preview + dry-run) | FormModal (has 2 raw dialogs) | working | medium | 6 |
 | General Settings | /settings/general | none (SearchSelect rows) | ConfirmModal (has WarningModal) | working | low | 3 |
+| Notifications | /settings/notifications | **ERPTable+FilterBar** | none (Retry/Cancel/Drain are low-risk, reversible) | working | low | 3 |
 | Roles & Permissions | /settings/roles | custom table (card grid) | FormModal (has), ConfirmModal MISSING (delete = window.confirm) | working | low | 6 |
 | Tenants | /settings/tenants | custom table (master-detail) | FormModal (has 2), ConfirmModal MISSING (remove-user / unset-default unguarded) | working | low | 6 |
 | UOM Catalog | /settings/uom | custom table (2 tables) | none (read-only catalog) | working | low | 4 |
 | Users | /settings/users | custom table (grid rows) | FormModal (has 2), ConfirmModal MISSING (deactivate unguarded) | working | low | 5 |
 
-### Root (2)
+### Root & Output (3)
 | Page | Route | Table Type | Modals Needed | State | Priority | Friction |
 |---|---|---|---|---|---|---|
 | Dashboard | / | none (KPI tables + charts) | none | working | high | 4 |
 | Login | /login | none | none | working | high | 1 |
+| Print/PDF output | /print/[doc]/[id] | none (light-on-white document renderer, **outside ERPShell**, Suspense) | none (output route, reached via `PrintButton` `window.open`) | working | medium | 1 |
 
 ---
 
@@ -132,14 +134,15 @@ Audit of 2026-06-06 across all 49 `page.tsx` files under `frontend/app/`. For ea
 
 | Dimension | Count |
 |---|---|
-| Pages total | 49 |
-| **State**: working / broken / empty / unknown | 49 / 0 / 0 / 0 *(P0 fixed)* |
-| **Table type**: ERPTable(+FilterBar) / ERPTreeTable / custom table / none | 17 / 4 / 22 / 6 |
-| **Priority**: high / medium / low | 19 / 13 / 17 |
-| **Friction**: 6+ (needs redesign attention) / 3–5 / 0–2 | 15 / 26 / 8 |
+| Pages total | 51 *(+2 since 2026-06-06: /settings/notifications, /print/[doc]/[id])* |
+| **State**: working / broken / empty / unknown | 51 / 0 / 0 / 0 |
+| **Table type**: ERPTable(+FilterBar) / ERPTreeTable / custom table / none | 18 / 4 / 22 / 7 |
+| **Priority**: high / medium / low | 19 / 14 / 18 |
+| **Friction**: 6+ (needs redesign attention) / 3–5 / 0–2 | 15 / 27 / 9 |
 | Pages needing **ConfirmModal** (unguarded destructive action today) | 17 |
 | Pages with raw one-off **FormModal** compositions | 24 |
 | Pages with **DetailModal** patterns (drawers/inline expands) | 13 |
+| Pages with a wired **PrintButton** (capability added since audit) | 13 |
 
 ### The one broken page (fix before anything else)
 **/inventory/consumption-groups** — `lib/api/consumption-groups.ts:8` returns bare
@@ -175,6 +178,65 @@ suppliers/items envelope incident the `frontend-sync` skill documents.
 6. **Accounting + sales + settings use zero ERP primitives** (22 hand-rolled tables) —
    the largest migration surface for spec-frontend-002's DataTable, but most are
    working; migrate opportunistically when each page gets its modal work.
+
+---
+
+## Re-audit delta (2026-06-07) — post specs 029–034
+
+Re-traced after budgets/cash-flow/automation/financial-reports/fiscal-periods
+(029–033) and session-security (034) shipped. **No page regressed to broken**;
+all 51 are working. Changes since the 2026-06-06 audit:
+
+**New pages (+2)**
+- **/settings/notifications** — notification center (Settings → Notifications).
+  Notably it is a **reference implementation of the spec-frontend-002 target
+  stack**: `ERPTable` + `ERPFilterBar` + `useERPFilters`/`applyERPFilters` + stat
+  cards, no raw `<table>`. Retry/Cancel/Drain actions are reversible/low-risk so
+  no ConfirmModal is owed. Use it as the worked example when migrating other
+  pages. (One trap already hit + fixed here: `ERPFilter` must come from
+  `ERPFilterBar`, never `ERPTable` — see commit fb28179.)
+- **/print/[doc]/[id]** — light-on-white PDF/print renderer (14 documents via the
+  `PRINT_DOCS` registry), rendered **outside `ERPShell`**, Suspense-wrapped,
+  reached via `PrintButton` `window.open`. Output route, not a data page.
+
+**029/030/033 envelopes — frontend-sync already done (no broken pages)**
+- `budgetsApi.getAll` (`{budgets,count}`), `cashFlowApi` extractList
+  (`{cashFlowProjections,count}`), `fiscalPeriodsApi` extractList
+  (`{fiscalPeriods,count}`) were all made envelope-tolerant in the same specs.
+  Verified still correct. automation + financial-reports added no envelope.
+
+**034 session-security — cross-cutting, affects every page**
+- **`AuthGate` now wraps the whole app** (`app/layout.tsx`): any non-`/login`
+  route with no session redirects to `/login?next=` (+ cross-tab logout). This is
+  the route-protection the matrix previously lacked — now global.
+- **`InactivityGuard` renders inside `ERPShell`** — a 15-min idle → 2-min-warning
+  → logout modal. **This is an already-shipped bespoke modal**; when spec-002's
+  modal system lands it must align with (or absorb) it, not duplicate/conflict.
+- **Access token is now per-tab memory** (not localStorage). Consequence for the
+  print route: a `window.open` tab starts with an empty token and bootstraps auth
+  via the httpOnly refresh-cookie silent-refresh on its first 401. Works today;
+  flag for live verification when QAing print.
+- **`PrintButton` wired into 13 surfaces** (PO/SO/AR/AP/GRN/RFQ/PR/JE/MO/count/
+  BOM/customer/stock-tx) — a new capability since the audit; slightly lowers
+  friction on those pages (no behavioral regression).
+
+**32 financial-reports — new 400 paths** (`/accounting/reports`): half-specified
+ranges, inverted ranges, malformed `fiscalPeriod`, and unknown `accountNumber`
+now return 400/404. The reports page sends valid both-or-neither ranges so it is
+unaffected in normal use, but it **relays raw errors** (finding #2) — reinforces
+the "absorb errors" criterion for spec-002.
+
+### Additional inputs to spec-frontend-002's acceptance criteria
+7. **The modal system must reconcile with the shipped `InactivityGuard`** — the
+   global session-warning modal is the first production modal; spec-002's
+   `ConfirmModal`/`FormModal`/`DetailModal` should share its overlay/z-index/style
+   conventions so the app has one modal language, not two.
+8. **`/settings/notifications` is the canonical migration target** — every
+   hand-rolled table should end up looking like it (ERPTable + ERPFilterBar +
+   the filter hooks). Cite it in the spec as the reference.
+9. **Print is now a first-class output path** — pages with a `PrintButton` should
+   keep it working through any table/modal refactor (don't break the row→print
+   action wiring); the print route itself stays outside `ERPShell` by design.
 
 ---
 
@@ -226,3 +288,4 @@ batches. Friction in parentheses.
 |---|---|---|
 | 2026-06-06 | Full 49-page audit (6 parallel auditors, data paths traced page→lib/api→backend, ux-reviewer friction rubric applied per page) | 48 working, 1 broken (consumption-groups envelope); 17 unguarded destructive actions; 22 hand-rolled tables; 4 TreeTable pages; roadmap P0–P4 established |
 | 2026-06-06 | P0 fixed (`lib/api/consumption-groups.ts` envelope unwrap) + full frontend-sync sweep of all 19 envelope contracts: every other getter/direct consumer verified compatible; the stale getter also affected the consumption-group dropdowns in items, bom and boms modals (4 consumers repaired by the one fix) | frontend build green |
+| 2026-06-07 | Re-audit after specs 029–034. 49→**51 pages** (+/settings/notifications, +/print/[doc]/[id]). All 51 working — no regressions. 029/030/033 envelope getters verified tolerant (frontend-sync already done); 0 stale localStorage token reads (034 clean); AuthGate (global route protection) + InactivityGuard (global session modal) confirmed wired; PrintButton on 13 surfaces. New inputs #7–#9 added for spec-frontend-002 (reconcile modal system with InactivityGuard; /settings/notifications as canonical migration target; keep print wiring intact). Roadmap P0–P4 unchanged and still valid. | Doc-only refresh; matrix + aggregates + findings updated |
