@@ -58,6 +58,14 @@ export interface ERPTreeTableProps<T> {
   toolbarLeft?: React.ReactNode;
   filters?: ERPTreeFilter<T>[];
   externalFilters?: Record<string, ERPTreeFilterValue>;
+  /** spec-frontend-002 — debounce (ms) for the global search. Default 250. */
+  searchDebounceMs?: number;
+  /** spec-frontend-002 — show "Page N of M" in the footer. Default true. */
+  showPageOfM?: boolean;
+  /** spec-frontend-002 — render the rows-per-page selector in the footer. Default true. */
+  showRowsPerPage?: boolean;
+  /** spec-frontend-002 — expand all expandable rows initially. Default false. */
+  defaultExpandedAll?: boolean;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -195,6 +203,10 @@ export function ERPTreeTable<T>({
   toolbarLeft,
   filters: filterDefs = [],
   externalFilters = {},
+  searchDebounceMs = 250,
+  showPageOfM = true,
+  showRowsPerPage = true,
+  defaultExpandedAll = false,
 }: ERPTreeTableProps<T>) {
 
   const [sortKey,    setSortKey]    = useState<string | null>(null);
@@ -202,8 +214,20 @@ export function ERPTreeTable<T>({
   const [page,       setPage]       = useState(1);
   const [pageSize,   setPageSize]   = useState(defaultPageSize);
   const [filterVals, setFilterVals] = useState<Record<string, ERPTreeFilterValue>>({});
-  const [search,     setSearch]     = useState('');
+  const [searchInput, setSearchInput] = useState(''); // immediate (bound to input)
+  const [search,      setSearch]      = useState(''); // debounced (used for filtering)
   const [expanded,   setExpanded]   = useState<Set<string>>(new Set());
+
+  // spec-frontend-002 — debounced search (input responsive, filtering deferred).
+  const handleSearch = useCallback((val: string) => {
+    setSearchInput(val);
+    if (val === '') { setSearch(''); setPage(1); }
+  }, []);
+  useEffect(() => {
+    if (searchInput === '') return;
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, searchDebounceMs);
+    return () => clearTimeout(t);
+  }, [searchInput, searchDebounceMs]);
 
   // ── Filter ────────────────────────────────────────────────────────────────
   const activeFilters = useMemo(() => ({ ...filterVals, ...externalFilters }), [filterVals, externalFilters]);
@@ -282,6 +306,24 @@ export function ERPTreeTable<T>({
   // ── Expand ────────────────────────────────────────────────────────────────
   const toggleExpand = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // Ids of every expandable row across the full (filtered+searched+sorted) set.
+  const expandableIds = useMemo(
+    () => (canExpand ? sorted.filter(canExpand).map(rowKey) : []),
+    [sorted, canExpand, rowKey],
+  );
+  const allExpanded = expandableIds.length > 0 && expandableIds.every(id => expanded.has(id));
+  const expandAll = () => setExpanded(new Set(expandableIds));
+  const collapseAll = () => setExpanded(new Set());
+
+  // defaultExpandedAll: expand everything once, after data first arrives.
+  const didInitExpand = useRef(false);
+  useEffect(() => {
+    if (defaultExpandedAll && !didInitExpand.current && expandableIds.length > 0) {
+      didInitExpand.current = true;
+      setExpanded(new Set(expandableIds));
+    }
+  }, [defaultExpandedAll, expandableIds]);
+
   // ── Styles ────────────────────────────────────────────────────────────────
   const TH = (col: ERPTreeColumn<T>): React.CSSProperties => ({
     padding:'9px 14px', fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase',
@@ -308,15 +350,22 @@ export function ERPTreeTable<T>({
         <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
           <div style={{ position:'relative', flex:1, maxWidth:360 }}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.4" strokeLinecap="round" style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><circle cx="5.5" cy="5.5" r="4"/><line x1="8.5" y1="8.5" x2="12" y2="12"/></svg>
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search all columns…" style={{ width:'100%', padding:'5px 28px 5px 28px', background:'rgba(255,255,255,0.04)', border:`0.5px solid ${search?'rgba(251,146,60,0.35)':'rgba(255,255,255,0.09)'}`, borderRadius:6, fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', outline:'none', transition:'border-color 0.15s' }} />
-            {search && <button onClick={() => { setSearch(''); setPage(1); }} style={{ position:'absolute', right:7, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'50%', width:15, height:15, cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>}
+            <input value={searchInput} onChange={e => handleSearch(e.target.value)} placeholder="Search all columns…" style={{ width:'100%', padding:'5px 28px 5px 28px', background:'rgba(255,255,255,0.04)', border:`0.5px solid ${searchInput?'rgba(251,146,60,0.35)':'rgba(255,255,255,0.09)'}`, borderRadius:6, fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', outline:'none', transition:'border-color 0.15s' }} />
+            {searchInput && <button onClick={() => handleSearch('')} style={{ position:'absolute', right:7, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'50%', width:15, height:15, cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>}
           </div>
           {search && <span style={{ fontSize:11, color:'rgba(251,146,60,0.7)', whiteSpace:'nowrap', fontFamily:"'IBM Plex Mono',monospace" }}>{searched.length} of {filtered.length}</span>}
           {toolbarLeft}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>Rows:</span>
-          <select style={SEL} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>{pageSizes.map(n => <option key={n} value={n}>{n}</option>)}</select>
+          {canExpand && expandableIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => (allExpanded ? collapseAll() : expandAll())}
+              style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.55)', cursor:'pointer' }}
+            >
+              {allExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
+          )}
           <ExportDropdown onCSV={() => doExportCSV(columns, sorted, exportFilename)} onXLSX={() => doExportXLSX(columns, sorted, exportFilename)} />
         </div>
       </div>
@@ -393,9 +442,22 @@ export function ERPTreeTable<T>({
 
       {/* Footer */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderTop:'0.5px solid rgba(255,255,255,0.06)', flexShrink:0, flexWrap:'wrap', gap:8 }}>
-        <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontFamily:"'IBM Plex Mono',monospace" }}>
-          {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
-        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontFamily:"'IBM Plex Mono',monospace" }}>
+            {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
+          </span>
+          {showPageOfM && (
+            <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontFamily:"'IBM Plex Mono',monospace" }}>
+              Page {safePage} of {totalPages}
+            </span>
+          )}
+          {showRowsPerPage && (
+            <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>Rows:</span>
+              <select style={SEL} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>{pageSizes.map(n => <option key={n} value={n}>{n}</option>)}</select>
+            </span>
+          )}
+        </div>
         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
           <button style={PAG(false, safePage===1)} disabled={safePage===1} onClick={() => setPage(1)}>«</button>
           <button style={PAG(false, safePage===1)} disabled={safePage===1} onClick={() => setPage(p=>p-1)}><IconChevron dir="left" /></button>
