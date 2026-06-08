@@ -1,6 +1,6 @@
 # spec-034 — Session Security (Sliding Tokens, Inactivity Timeout, Login-First, Secure Storage)
 
-Status: **Implemented — pending ship**
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: security hardening (cross-cutting: auth backend + frontend apiClient/ERPShell/layout)
 Module(s): auth (backend), frontend apiClient, AuthContext, ERPShell, app/layout.tsx
@@ -218,3 +218,5 @@ envelope.
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-07 | Spec drafted (spec-only, no implementation). Current-state audit: access TTL already 15m (auth.module:19); NO refresh endpoint / RefreshToken model / logout; tokens in localStorage (client.ts, AuthContext) = XSS exposure + implicit remember-me. Spec defines sliding tokens (15m access + 8h httpOnly refresh, sliding header + single-flight 401 retry), inactivity timeout (15m → 2-min warning → logout, cross-tab), login-first (no localStorage restore, ?next= redirect), memory/httpOnly storage, and backend refresh/logout/RefreshToken. | Draft — pending approval; implementation deferred |
+| 2026-06-07 | Implemented (backend + frontend, one rollout): RefreshToken model + additive migration; /auth/refresh + /auth/logout + httpOnly SameSite=Strict 8h refresh cookie on login/select-tenant; SlidingTokenInterceptor (X-Access-Token on every authed 2xx); frontend in-memory token store, withCredentials apiClient with single-flight 401 refresh+retry, AuthContext silent-refresh-on-load, AuthGate route protection (?next=, cross-tab logout), InactivityGuard (15m→2-min warning→logout, cross-tab). No new deps (manual cookie parse + crypto). Live curl-verified: cookie set httpOnly, sliding header present, refresh 200, no-cookie/garbage/post-logout refresh 401, rotation revokes old. | Implemented |
+| 2026-06-07 | Ship gates: 8 unit (refresh lifecycle) + 8 e2e (auth-session) green; full e2e 470/470 across 31 suites (every suite logs in — auth contract intact); backend + frontend prod builds green; lint clean on new files (pre-existing passwordHash/any idioms excluded). Shipped to origin; marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
