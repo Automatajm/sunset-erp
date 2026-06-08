@@ -18,6 +18,7 @@ import { SupplierItem } from '@/lib/api/types';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { DateSelection } from '@/components/ui/ERPDatePicker';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,8 +103,8 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
 }) {
   const [detail,     setDetail]     = useState<GoodsReceipt | null>(null);
   const [loading,    setLoading]    = useState(true);
-  const [cancelBusy, setCancelBusy] = useState(false);
   const [error,      setError]      = useState('');
+  const cancelModal = useModal();
 
   useEffect(() => {
     goodsReceiptsApi.getById(grn.id)
@@ -112,12 +113,12 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
       .finally(() => setLoading(false));
   }, [grn.id]);
 
-  const handleCancel = async () => {
-    if (!confirm(`Cancel GRN ${grn.grnNumber}? This will reverse all stock movements.`)) return;
-    setCancelBusy(true);
-    try { await goodsReceiptsApi.cancel(grn.id); onAction(); onClose(); }
-    catch (err: any) { setError(err?.response?.data?.message || 'Cancel failed.'); }
-    finally { setCancelBusy(false); }
+  // spec-frontend-002 adoption — ConfirmModal replaces the native confirm().
+  // Throwing propagates to ConfirmModal, which keeps open + shows the error.
+  const doCancel = async () => {
+    await goodsReceiptsApi.cancel(grn.id);
+    onAction();
+    onClose();
   };
 
   return (
@@ -222,15 +223,26 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
 
             {detail.status === 'posted' && (
               <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-                <button onClick={handleCancel} disabled={cancelBusy}
-                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif", opacity:cancelBusy?0.5:1 }}>
-                  {cancelBusy ? 'Cancelling…' : 'Cancel GRN'}
+                <button onClick={cancelModal.openModal}
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                  Cancel GRN
                 </button>
               </div>
             )}
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={cancelModal.open}
+        onClose={cancelModal.closeModal}
+        title={`Cancel GRN ${grn.grnNumber}?`}
+        description="This reverses all stock movements created by this goods receipt. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel GRN"
+        cancelLabel="Keep GRN"
+        onConfirm={doCancel}
+      />
     </div>
   );
 }

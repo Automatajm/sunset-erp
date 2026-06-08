@@ -9,6 +9,7 @@ import { suppliersApi } from '@/lib/api/suppliers';
 import { itemsApi } from '@/lib/api/items';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { Supplier, Item } from '@/lib/api/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -84,7 +85,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
   const [recvQtys,    setRecvQtys]    = useState<Record<string, string>>({});
   const [recvBusy,    setRecvBusy]    = useState(false);
   const [recvError,   setRecvError]   = useState('');
-  const [actionBusy,  setActionBusy]  = useState(false);
+  const [actionBusy]  = useState(false); // ConfirmModal owns the pending state now
 
   useEffect(() => {
     (async () => {
@@ -104,14 +105,15 @@ function PODetailDrawer({ po, onClose, onAction }: {
     })();
   }, [po.id]);
 
-  const handleStatus = async (status: string) => {
-    setActionBusy(true);
-    try {
-      await purchaseOrdersApi.updateStatus(po.id, status as any);
-      onAction(); onClose();
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to update status');
-    } finally { setActionBusy(false); }
+  // spec-frontend-002 adoption — status transitions are now guarded by a
+  // ConfirmModal. doStatus throws on error so ConfirmModal surfaces it inline.
+  const [confirmStatus, setConfirmStatus] = useState<
+    { status: string; title: string; description: string; variant: 'default' | 'destructive'; label: string } | null
+  >(null);
+
+  const doStatus = async (status: string) => {
+    await purchaseOrdersApi.updateStatus(po.id, status as any);
+    onAction(); onClose();
   };
 
   const handleReceive = async () => {
@@ -312,19 +314,19 @@ function PODetailDrawer({ po, onClose, onAction }: {
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canConfirm && (
-                <button onClick={() => handleStatus('confirmed')} disabled={actionBusy}
+                <button onClick={() => setConfirmStatus({ status: 'confirmed', title: `Confirm PO ${po.poNumber}?`, description: 'This issues the purchase order to the supplier.', variant: 'default', label: 'Confirm PO' })} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: '#60a5fa', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Confirm PO
                 </button>
               )}
               {detail?.status === 'received' && (
-                <button onClick={() => handleStatus('closed')} disabled={actionBusy}
+                <button onClick={() => setConfirmStatus({ status: 'closed', title: `Close PO ${po.poNumber}?`, description: 'This marks the purchase order complete.', variant: 'default', label: 'Close PO' })} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', border: '0.5px solid rgba(167,139,250,0.25)', color: '#a78bfa', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Close PO
                 </button>
               )}
               {canCancel && (
-                <button onClick={() => handleStatus('cancelled')} disabled={actionBusy}
+                <button onClick={() => setConfirmStatus({ status: 'cancelled', title: `Cancel PO ${po.poNumber}?`, description: 'This cancels the purchase order. It cannot be undone.', variant: 'destructive', label: 'Cancel PO' })} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel PO
                 </button>
@@ -333,6 +335,16 @@ function PODetailDrawer({ po, onClose, onAction }: {
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={!!confirmStatus}
+        onClose={() => setConfirmStatus(null)}
+        title={confirmStatus?.title ?? ''}
+        description={confirmStatus?.description}
+        variant={confirmStatus?.variant}
+        confirmLabel={confirmStatus?.label}
+        onConfirm={async () => { if (confirmStatus) await doStatus(confirmStatus.status); }}
+      />
     </div>
   );
 }

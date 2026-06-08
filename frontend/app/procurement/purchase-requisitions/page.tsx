@@ -6,6 +6,7 @@ import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { purchaseRequisitionsApi } from '@/lib/api/purchase-requisitions';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { itemsApi } from '@/lib/api/items';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { warehousesApi } from '@/lib/api/warehouses';
@@ -135,6 +136,16 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to update status');
     } finally { setActionBusy(false); }
+  };
+
+  // spec-frontend-002 adoption — approve/cancel guarded by a ConfirmModal.
+  // doStatus throws so ConfirmModal surfaces the error inline and stays open.
+  const [confirmStatus, setConfirmStatus] = useState<
+    { status: string; title: string; description: string; variant: 'default' | 'destructive'; label: string } | null
+  >(null);
+  const doStatus = async (status: string) => {
+    await purchaseRequisitionsApi.updateStatus(pr.id, status);
+    onAction(); onClose();
   };
 
   const toggleLine = (lineId: string) =>
@@ -399,7 +410,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                 </button>
               )}
               {canApprove && (
-                <button onClick={() => handleStatus('approved')} disabled={actionBusy}
+                <button onClick={() => setConfirmStatus({ status: 'approved', title: `Approve PR ${pr.prNumber}?`, description: 'This approves the requisition for procurement.', variant: 'default', label: 'Approve' })} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Approve
                 </button>
@@ -411,7 +422,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                 </button>
               )}
               {canCancel && (
-                <button onClick={() => handleStatus('cancelled')} disabled={actionBusy}
+                <button onClick={() => setConfirmStatus({ status: 'cancelled', title: `Cancel PR ${pr.prNumber}?`, description: 'This cancels the requisition. It cannot be undone.', variant: 'destructive', label: 'Cancel PR' })} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(107,114,128,0.08)', border: '0.5px solid rgba(107,114,128,0.2)', color: '#9ca3af', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel PR
                 </button>
@@ -420,6 +431,16 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={!!confirmStatus}
+        onClose={() => setConfirmStatus(null)}
+        title={confirmStatus?.title ?? ''}
+        description={confirmStatus?.description}
+        variant={confirmStatus?.variant}
+        confirmLabel={confirmStatus?.label}
+        onConfirm={async () => { if (confirmStatus) await doStatus(confirmStatus.status); }}
+      />
     </div>
   );
 }
