@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell                                        from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn }                         from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
+import { FormModal }                                   from '@/components/ui/modal';
 import { itemsApi }                                    from '@/lib/api/items';
 import { warehousesApi }                               from '@/lib/api/warehouses';
 import { stockTransactionsApi }                        from '@/lib/api/stock-transactions';
@@ -108,11 +109,10 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
     if (open) { setForm(EMPTY_FORM); setError(''); }
   }, [open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.itemId)      { setError('Item is required.');      return; }
-    if (!form.warehouseId) { setError('Warehouse is required.'); return; }
-    if (!form.quantity || form.quantity === 0) { setError('Quantity must be non-zero.'); return; }
+  const isValid = !!form.itemId && !!form.warehouseId && !!form.quantity && form.quantity !== 0;
+
+  const handleSubmit = async () => {
+    if (!isValid) return;
     setBusy(true); setError('');
     try {
       await stockTransactionsApi.create(form);
@@ -121,8 +121,6 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
       setError(err?.response?.data?.message || 'Operation failed.');
     } finally { setBusy(false); }
   };
-
-  if (!open) return null;
 
   const I: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
@@ -144,19 +142,19 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
   const selectedItem = items.find(i => i.id === form.itemId);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)', pointerEvents: 'none' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 12px', flexShrink: 0, borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8', fontFamily: "'IBM Plex Sans', sans-serif" }}>Manual Stock Adjustment</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>For PO receipts, use the <span style={{ color: '#60a5fa' }}>Goods Receipts</span> module</div>
-          </div>
-          <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-        </div>
-        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+    <FormModal
+      open={open}
+      onClose={onClose}
+      title="Manual Stock Adjustment"
+      description="For PO receipts, use the Goods Receipts module."
+      submitLabel="Post Transaction"
+      submitting={busy}
+      isValid={isValid}
+      error={error}
+      width={520}
+      onSubmit={handleSubmit}
+    >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={L}>Transaction Type *</label>
@@ -197,8 +195,9 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
                 <input style={I} type="number" step="0.001" placeholder="100" value={form.quantity || ''} onChange={e => setForm(f => ({ ...f, quantity: e.target.value === '' ? 0 : Number(e.target.value) }))} required />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={L}>UOM *</label>
-                <input style={I} placeholder="PCS" value={form.uom} onChange={e => setForm(f => ({ ...f, uom: e.target.value }))} required />
+                <label style={L}>UOM</label>
+                {/* spec-frontend-002 — derived from the item, not free-text. */}
+                <input style={{ ...I, opacity: 0.6, cursor: 'not-allowed' }} value={form.uom} readOnly title="Set from the selected item's base UOM" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={L}>Unit Cost</label>
@@ -214,7 +213,15 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={L}>Reference Type</label>
-                <input style={I} placeholder="purchase_order" value={form.referenceType} onChange={e => setForm(f => ({ ...f, referenceType: e.target.value }))} />
+                {/* spec-frontend-002 — whitelisted select, not free-text. */}
+                <select style={{ ...I, cursor: 'pointer' }} value={form.referenceType} onChange={e => setForm(f => ({ ...f, referenceType: e.target.value }))}>
+                  <option value="">— None —</option>
+                  <option value="purchase_order">Purchase Order</option>
+                  <option value="sales_order">Sales Order</option>
+                  <option value="production_order">Production Order</option>
+                  <option value="adjustment">Adjustment</option>
+                  <option value="transfer">Transfer</option>
+                </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={L}>Reference ID</label>
@@ -237,15 +244,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
               <textarea style={{ ...I, resize: 'vertical', minHeight: 56 } as React.CSSProperties} placeholder="Reason for adjustment, cycle count discrepancy, etc." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans', sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans', sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>
-              {busy ? 'Posting…' : 'Post Transaction'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </FormModal>
   );
 }
 
