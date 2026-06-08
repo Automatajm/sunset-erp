@@ -1,10 +1,10 @@
 # spec-frontend-002 — Data Components (Filter Panel, DataTable, TreeTable, Modal System)
 
-Status: **Active**  
+Status: **Complete**  
 Owner: Frontend / Design System  
 Sprint: TBD  
 Module(s): `frontend` — `components/ui/` primitives + ~21 consumer pages  
-Last updated: 2026-06-04  
+Last updated: 2026-06-07  
 
 > Independent of [`spec-frontend-001-theming`](./spec-frontend-001-theming.md). That spec
 > tokenizes colors; this one reworks data-display behavior. They touch the same files but do
@@ -373,4 +373,5 @@ pnpm build && pnpm lint
 |------|--------|------|
 | 2026-06-04 | Active | Spec authored from live audit of `ERPTable` (732 L), `ERPFilterBar` (289 L), `ERPTreeTable` (413 L), `dialog.tsx`/`alert-dialog.tsx`. Build-vs-improve matrix recorded. Independent of spec-frontend-001. |
 | 2026-06-04 | Active | Added §5 "Error states & developer feedback": in-place error variants (401/403, 404, 5xx), dev-only technical panel with copy-to-clipboard, and apiClient-level `ErrorResponse` normalization. Contracts + files-involved updated accordingly. |
+| 2026-06-07 | Complete | §5 error states shipped (`ab64757`): `lib/api/errors.ts` (ErrorResponse + normalizeError/asErrorResponse/variantForStatus); apiClient interceptor attaches `error.normalized` after the spec-034 401-refresh flow (raw error still rejected for back-compat); `components/ui/ErrorState.tsx` with unauthorized/not-found/server-error variants + retry + DEV-only technical panel (copy-to-clipboard) — verified ABSENT from the prod bundle (NODE_ENV dead-code elimination, not CSS-hidden); wired into /settings/notifications as the reference. All of spec-frontend-002 (§1–§5) now shipped; build green; no new deps. Page-by-page adoption of the modal/ConfirmModal + ErrorState across the P1–P4 roadmap (spec-frontend-003) remains as separate follow-up work. |
 | 2026-06-07 | Active | Implemented the recommended sequence, one commit per step. **Step 1** modal system (`components/ui/modal/`: ModalShell on @radix-ui/react-dialog, ConfirmModal/FormModal/DetailModal + useModal) sharing ONE style language (`modal/styles.ts`) with the InactivityGuard (refactored to import it); AssignmentModal refactored onto FormModal (393→326 L) as proof of reuse (`b6b5952`). **Step 2** ERPTable hardening: debounced search (`searchDebounceMs` 250, responsive input/deferred filter), footer `Page N of M` + rows-per-page selector, non-shifting footer by default (`fillHeight`), + bug fix so search composes on the filtered set and export reflects filtered+searched (`e2cdda5`). **Step 3** ERPTreeTable parity (debounce, Page N of M, rows-per-page, expand-all/collapse-all, `defaultExpandedAll`) (`aef2b7a`). **Step 4** ERPFilterBar collapsible + active-filter badges (header toggle w/ aria-expanded, per-badge clear, Clear all) (`ab25e6e`). No new deps (package.json unchanged); prod build green after every step; 13 PrintButton surfaces intact; all consumers keep working. **§5 (error states / ErrorState / apiClient ErrorResponse normalization) NOT in the recommended sequence — deferred to a follow-up.** Spec stays Active until §5 lands. |
