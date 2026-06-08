@@ -5,6 +5,7 @@ import { useParams, useRouter }              from 'next/navigation';
 import ERPShell        from '@/components/layout/ERPShell';
 import apiClient       from '@/lib/api/client';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 import AssignmentModal from './AssignmentModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -344,6 +345,7 @@ export default function StockReconciliationDetailPage() {
   const [error,         setError]         = useState('');
   const [showApprove,   setShowApprove]   = useState(false);
   const [showAssign,    setShowAssign]    = useState(false);
+  const cancelModal = useModal(); // spec-frontend-002 adoption — replaces window.confirm
   const [filterStatus,  setFilterStatus]  = useState('all');
 
   const fetchSession = useCallback(async () => {
@@ -536,7 +538,7 @@ export default function StockReconciliationDetailPage() {
 
           {!['posted', 'cancelled'].includes(session.status) && (
             <button className="srd-btn" disabled={actionLoading}
-              onClick={() => { if (confirm('Cancel this session?')) doAction('cancel'); }}
+              onClick={cancelModal.openModal}
               style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
               Cancel
             </button>
@@ -602,6 +604,20 @@ export default function StockReconciliationDetailPage() {
           onSaved={() => fetchSession()}
         />
       )}
+
+      <ConfirmModal
+        open={cancelModal.open}
+        onClose={cancelModal.closeModal}
+        title={`Cancel count session ${session.sessionNumber}?`}
+        description="This cancels the reconciliation session. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel session"
+        cancelLabel="Keep session"
+        onConfirm={async () => {
+          await apiClient.patch(`/stock-reconciliation/${id}/cancel`, {});
+          await fetchSession();
+        }}
+      />
     </ERPShell>
   );
 }
