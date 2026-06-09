@@ -151,6 +151,12 @@ const SCENARIO = {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
+// Fixed base date — every derived date is relative to this so re-running the
+// seed produces byte-identical rows (idempotency). NEVER use new Date() here.
+const SEED_TODAY = new Date('2026-06-09');
+const addDays = (base: Date, days: number) =>
+  new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
 function deriveScenario() {
   const s = SCENARIO;
   const monthlyUnits = s.volume.unitsPerDay * s.volume.workingDaysPerMonth; // 4,550
@@ -541,9 +547,36 @@ export async function seedDemoBurgerBorinquen(prisma: PrismaClient) {
     });
     supplierId[sup.key] = row.id;
   }
+  // Commercial terms (v2) per ingredient — deterministic, keyed by code.
+  // MOST items get a comfortable ~6-month validity; a few expire SOON so the
+  // frontend expiry-alerts tab has data. All dates derived from SEED_TODAY.
+  // expireInDays: undefined → comfortable (~6 months); a number → days-from-today.
+  const COMMERCIAL: Record<
+    string,
+    { incoterm: string; paymentTerms: string; quality: number; expireInDays?: number }
+  > = {
+    'RM-BEEF-8020': { incoterm: 'DAP', paymentTerms: 'Net 15', quality: 4.6 },
+    'RM-BACON':     { incoterm: 'DAP', paymentTerms: 'Net 15', quality: 4.2, expireInDays: 10 },
+    'RM-BUN-85':    { incoterm: 'DAP', paymentTerms: 'Net 15', quality: 4.8 },
+    'RM-CHEDDAR':   { incoterm: 'FOB', paymentTerms: 'Net 30', quality: 4.5 },
+    'RM-LETTUCE':   { incoterm: 'EXW', paymentTerms: 'COD',    quality: 3.8, expireInDays: 25 },
+    'RM-TOMATO':    { incoterm: 'EXW', paymentTerms: 'COD',    quality: 3.9 },
+    'RM-ONION':     { incoterm: 'EXW', paymentTerms: 'COD',    quality: 4.0 },
+    'RM-PICKLES':   { incoterm: 'FOB', paymentTerms: 'Net 30', quality: 4.1 },
+    'RM-MAYOKET':   { incoterm: 'FOB', paymentTerms: 'Net 30', quality: 4.3 },
+    'RM-BBQ':       { incoterm: 'FOB', paymentTerms: 'Net 30', quality: 4.4 },
+    'PK-WRAPPER':   { incoterm: 'FOB', paymentTerms: 'Net 30', quality: 3.6, expireInDays: 23 },
+  };
+
   let priceRows = 0;
+  const supplierItemRow: Record<string, { id: string; lastPrice: number; validFrom: Date }> = {};
   for (const ing of s.ingredients) {
-    await prisma.supplierItem.upsert({
+    const c = COMMERCIAL[ing.code];
+    // Validity window: opened 30 days ago; closes either soon (alert) or ~6mo out.
+    const priceValidFrom = addDays(SEED_TODAY, -30);
+    const priceValidUntil =
+      c.expireInDays !== undefined ? addDays(SEED_TODAY, c.expireInDays) : addDays(SEED_TODAY, 180);
+    const row = await prisma.supplierItem.upsert({
       where: {
         tenantId_supplierId_itemId: {
           tenantId: T,
@@ -551,7 +584,16 @@ export async function seedDemoBurgerBorinquen(prisma: PrismaClient) {
           itemId: itemId[ing.code],
         },
       },
-      update: { lastPrice: ing.pricePerKgOrUnit },
+      update: {
+        lastPrice: ing.pricePerKgOrUnit,
+        currency: 'USD',
+        incoterm: c.incoterm,
+        paymentTerms: c.paymentTerms,
+        priceValidFrom,
+        priceValidUntil,
+        priceAlertDays: 30,
+        qualityRating: c.quality,
+      },
       create: {
         tenantId: T,
         supplierId: supplierId[ing.supplier],
@@ -565,12 +607,68 @@ export async function seedDemoBurgerBorinquen(prisma: PrismaClient) {
         moq: ing.moq,
         isPreferred: true,
         isActive: true,
+        // ── v2 commercial terms ──
+        currency: 'USD',
+        incoterm: c.incoterm,
+        paymentTerms: c.paymentTerms,
+        priceValidFrom,
+        priceValidUntil,
+        priceAlertDays: 30,
+        qualityRating: c.quality,
         ...audit,
       },
     });
+    supplierItemRow[ing.code] = {
+      id: row.id,
+      lastPrice: ing.pricePerKgOrUnit,
+      validFrom: priceValidFrom,
+    };
     priceRows++;
   }
-  console.log(`   ✅ ${s.suppliers.length} suppliers, ${priceRows} supplier-item prices`);
+  console.log(`   ✅ ${s.suppliers.length} suppliers, ${priceRows} supplier-item prices (v2 terms)`);
+
+  // — Supplier-item price history: grn (oldest) → rfq → manual (current) —
+  // No @@unique on this table, so guard with findFirst before create to stay
+  // idempotent (re-running must NOT accumulate duplicates). Dates from SEED_TODAY.
+  let historyRows = 0;
+  for (const ing of s.ingredients) {
+    const si = supplierItemRow[ing.code];
+    const current = si.lastPrice;
+    // Coherent ascending-ish evolution ending at the current lastPrice.
+    const grnPrice = round2(current * 0.9); // 9 months ago, slightly lower
+    const rfqPrice = round2(current * 0.96); // 5 months ago, mid
+    const points = [
+      { source: 'grn', price: grnPrice, validFrom: addDays(SEED_TODAY, -270), createdAt: addDays(SEED_TODAY, -270) },
+      { source: 'rfq', price: rfqPrice, validFrom: addDays(SEED_TODAY, -150), createdAt: addDays(SEED_TODAY, -150) },
+      { source: 'manual', price: current, validFrom: si.validFrom, createdAt: si.validFrom },
+    ];
+    for (const p of points) {
+      const exists = await prisma.supplierItemPriceHistory.findFirst({
+        where: {
+          tenantId: T,
+          supplierItemId: si.id,
+          validFrom: p.validFrom,
+          source: p.source,
+        },
+      });
+      if (exists) continue;
+      await prisma.supplierItemPriceHistory.create({
+        data: {
+          tenantId: T,
+          supplierItemId: si.id,
+          price: p.price,
+          currency: 'USD',
+          validFrom: p.validFrom,
+          source: p.source,
+          notes: `Demo seed — ${p.source} price point`,
+          createdAt: p.createdAt,
+          createdBy: U,
+        },
+      });
+      historyRows++;
+    }
+  }
+  console.log(`   ✅ supplier-item price history: ${historyRows} rows created (3/supplier-item, idempotent)`);
 
   // — Work centers + BOMs (recipe + routing) —
   const wcId: Record<string, string> = {};
@@ -778,6 +876,74 @@ export async function seedDemoBurgerBorinquen(prisma: PrismaClient) {
     }
   }
   console.log(`   ✅ Purchase orders Y1: ${poCreated} created (60 expected on first run)`);
+
+  // — Supplier scores: one annual score per supplier, derived from this seed's
+  // own PO data and the qualityRating set on its supplier-items. Idempotent
+  // upsert on @@unique([tenantId, supplierId, itemId, periodCode]) with
+  // itemId = null (overall) and periodCode = the seed year. —
+  const periodCode = String(Y);
+  let scoreRows = 0;
+  for (const sup of s.suppliers) {
+    const supIngs = (ingBySupplier.get(sup.key) ?? []) as typeof s.ingredients;
+    // Each supplier gets one PO per month → 12 POs/year.
+    const poCount = s.volume.months;
+    // Quality from the avg qualityRating of this supplier's items (0–5 → 0–100).
+    const avgQuality5 =
+      supIngs.reduce((a, i) => a + COMMERCIAL[i.code].quality, 0) / Math.max(supIngs.length, 1);
+    const qualityScore = round2((avgQuality5 / 5) * 100);
+    // On-time / completeness derived deterministically from lead time + quality.
+    const avgLeadDays = round2(
+      supIngs.reduce((a, i) => a + i.leadDays, 0) / Math.max(supIngs.length, 1),
+    );
+    // Longer lead times → marginally fewer on-time receipts (coherent, bounded).
+    const onTimeCount = Math.max(0, poCount - Math.min(poCount, Math.round(avgLeadDays / 2)));
+    const completeCount = poCount; // demo POs all fully received
+    const grnCount = poCount;
+    const deliveryScore = round2((onTimeCount / poCount) * 100);
+    const leadTimeScore = round2(Math.max(0, 100 - avgLeadDays * 8)); // shorter = better
+    // Price competitiveness: cheaper average basket scores higher (bounded band).
+    const avgPrice = round2(
+      supIngs.reduce((a, i) => a + i.pricePerKgOrUnit, 0) / Math.max(supIngs.length, 1),
+    );
+    const priceScore = round2(Math.min(100, Math.max(60, 95 - avgPrice / 20)));
+    const totalScore = round2(
+      priceScore * 0.25 + deliveryScore * 0.3 + qualityScore * 0.3 + leadTimeScore * 0.15,
+    );
+    // Prisma rejects null inside a compound-unique `where` for upsert, so guard
+    // with findFirst (itemId: null) then update-or-create — still idempotent.
+    const scoreData = {
+      priceScore,
+      deliveryScore,
+      qualityScore,
+      leadTimeScore,
+      totalScore,
+      poCount,
+      grnCount,
+      onTimeCount,
+      completeCount,
+      avgPrice,
+      avgLeadDays,
+    };
+    const existingScore = await prisma.supplierScore.findFirst({
+      where: { tenantId: T, supplierId: supplierId[sup.key], itemId: null, periodCode },
+    });
+    if (existingScore) {
+      await prisma.supplierScore.update({ where: { id: existingScore.id }, data: scoreData });
+    } else {
+      await prisma.supplierScore.create({
+        data: {
+          tenantId: T,
+          supplierId: supplierId[sup.key],
+          itemId: null,
+          periodCode,
+          periodType: 'annual',
+          ...scoreData,
+        },
+      });
+    }
+    scoreRows++;
+  }
+  console.log(`   ✅ supplier scores: ${scoreRows} annual scores (period ${periodCode}, idempotent upsert)`);
 
   // — Journal entries: 3 per month (sales / COGS / purchases), all balanced —
   const monthlyRevenue = round2(d.monthlyRevenue);
