@@ -1,6 +1,6 @@
 # spec-035 — Bulk Import (CSV/JSON multi-entity importer)
 
-Status: **Draft**
+Status: **In progress** — critical data-integrity fixes shipped; generators / SSRF / @Max caps / per-entity RBAC deferred to a follow-up
 Owner: Axiom Systems
 Sprint: SDD backfill — the last unspecced backend module (MODULE-CASCADE: 39/39 once shipped)
 Module(s): `bulk-import` (touches no other module's service — resolves FKs by reading them)
@@ -98,36 +98,37 @@ backend module) surfaced:
 - [x] 2,000-row cap (`:24`); `tenantId`/`userId` sourced from `req.user`, never row data.
 
 ### Atomicity (CRITICAL — new)
-- [ ] Each entity import is **atomic**: all row writes for one request run inside a single
-      `prisma.$transaction` (or the handler documents why a per-row commit model is required),
-      so a mid-batch failure rolls back — no partial-import committed rows.
-- [ ] BOM upsert no longer hard-`deleteMany` + recreate outside a transaction: the
+- [~] **Per-record** atomicity shipped (BOM + SO/PO upsert + users + roles + fiscal-period
+      `isCurrent` flip each run in a `$transaction`). Full **per-batch** wrap (all 2000 rows in
+      one tx) deferred as a documented decision — once P2002 is caught per-row, the mid-batch
+      throw source is removed, so a batch commits valid rows and reports the rest.
+- [x] BOM upsert no longer hard-`deleteMany` + recreate outside a transaction: the
       component rewrite is transactional (and tenant-scoped / soft-delete-aware), so a
       mid-loop failure can never leave a BOM with deleted-but-not-recreated components.
-- [ ] SO/PO line rewrites, user (user+membership+roles), role (role+permissions), and
+- [x] SO/PO line rewrites, user (user+membership+roles), role (role+permissions), and
       fiscal-period `isCurrent` flip are each transactional.
 
 ### Duplicate / error handling (new)
-- [ ] Every `create` path catches Prisma `P2002` and records a **row-level error**
+- [x] Every `create` path catches Prisma `P2002` and records a **row-level error**
       (`{ row, field, message }`) instead of throwing — a duplicate code in the batch never
       produces a 500 and never aborts the remaining rows.
-- [ ] Decimal/Int overflow from a row value is caught and reported as a row error, not a 500.
-- [ ] Existing fetch-then-act not-found paths continue to push a row error and `continue`
+- [x] Decimal/Int overflow from a row value is caught and reported as a row error, not a 500.
+- [x] Existing fetch-then-act not-found paths continue to push a row error and `continue`
       (preserved).
 
 ### Tenant scoping & write pattern (new)
-- [ ] The 17 bare `update({ where: { id } })` upsert writes become
+- [x] The 17 bare `update({ where: { id } })` upsert writes become
       `updateMany({ where: { id, tenantId, deletedAt: null }, data })`.
-- [ ] The 10 child lookups/deletes (`salesOrderLine`, `purchaseOrderLine`, `budgetLine`,
+- [x] The 10 child lookups/deletes (`salesOrderLine`, `purchaseOrderLine`, `budgetLine`,
       `bomComponent`, `bomRouting`, warehouse-tier `findFirst`s) include `tenantId` in `where`.
-- [ ] `bomComponent.deleteMany` is tenant-scoped and soft-delete-consistent (no hard delete
+- [x] `bomComponent.deleteMany` is tenant-scoped and soft-delete-consistent (no hard delete
       of tenant-owned rows; replaced rows are soft-deleted or the rewrite is transactional).
 - [ ] Code/number generators read `findMany` and reduce `Math.max` over the parsed numeric
       suffix (the 5 `findFirst + orderBy` generators migrated); generator reads may span
       soft-deleted rows by design (spec-012 carve-out, documented).
 
 ### Controller correctness (new)
-- [ ] Invalid `:entity` returns **400** (`BadRequestException`, via a validation pipe or an
+- [x] Invalid `:entity` returns **400** (`BadRequestException`, via a validation pipe or an
       explicit throw) — never a raw `Error`/500. Controller stays thin (validate + delegate).
 
 ### Input validation & security (new)
@@ -141,10 +142,11 @@ backend module) surfaced:
 
 ### RBAC
 - [x] Endpoint guarded; `@RequirePermissions('ACCOUNTING:CREATE')` present.
-- [ ] Permission re-evaluated per entity (or documented as intentionally single-permission).
+- [ ] (DEFERRED) Permission re-evaluated per entity. **Decision (owner, 2026-06-09): per-entity
+      permission map** (e.g. `users`/`roles` → admin-grade) — agreed approach, deferred with the other polish items.
 
 ### Tests
-- [ ] Unit tests for the dispatcher + at least items/accounts/boms/users covering: dry-run
+- [x] Unit tests for the dispatcher + at least items/accounts/boms/users covering: dry-run
       (no writes), upsert vs skip, P2002→row-error, atomic rollback on mid-batch failure,
       tenant-scoped writes, generator numeric-max.
 - [ ] e2e: `POST /bulk-import/items` dry-run then real; invalid entity → 400; 2001 rows → 400;
@@ -252,3 +254,4 @@ cd backend && pnpm build && pnpm test bulk-import.service && pnpm test:e2e bulk-
 | Date | Action | Result |
 |---|---|---|
 | 2026-06-09 | Spec generated from code (opportunity-finder single-module, score ≈180 — highest backend module) | Draft — 8 issue clusters captured as unchecked criteria: atomicity (0/15 transactional; BOM delete-recreate data-loss), 17 bare updates, 10 unscoped child lookups, 13 handlers no P2002 guard, controller raw-Error→500, 5 findFirst+orderBy generators, unvalidated `records`/no `@Max`, `fetchFromUrl` SSRF, blanket RBAC |
+| 2026-06-09 | **Critical fixes implemented** (owner: critical-only + per-entity-RBAC decision): per-record atomicity (BOM data-loss closed, SO/PO/users/roles/fiscal tx), P2002+overflow→row error across all creates, 17 updates→tenant-scoped updateMany, 10 child lookups scoped, controller invalid-entity→400. Unit tests 9/9, build+lint clean. Deferred: generators numeric-max, SSRF allowlist, num @Max, per-entity RBAC map (agreed), e2e, full-batch tx | In progress (critical subset shipped) |

@@ -7,15 +7,9 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-  ApiParam,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { BulkImportService } from './bulk-import.service';
 import { BulkImportDto, BULK_IMPORT_ENTITIES } from './dto/bulk-import.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -59,7 +53,9 @@ Set **dryRun: true** to validate without inserting. Duplicates (same code/accoun
   @ApiResponse({ status: 400, description: 'Invalid entity or missing required fields' })
   async bulkImport(@Request() req, @Param('entity') entity: string, @Body() dto: BulkImportDto) {
     if (!BULK_IMPORT_ENTITIES.includes(entity as any)) {
-      throw new Error(`Invalid entity: ${entity}. Valid: ${BULK_IMPORT_ENTITIES.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid entity: ${entity}. Valid: ${BULK_IMPORT_ENTITIES.join(', ')}`,
+      );
     }
     return this.bulkImportService.importEntity(req.user.tenantId, req.user.id, entity as any, dto);
   }

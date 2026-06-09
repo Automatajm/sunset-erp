@@ -90,6 +90,32 @@ export class BulkImportService {
     return String(val).trim();
   }
 
+  // ── Row-level error helper — push a per-record error and keep the batch going ─
+  private rowError(
+    errors: BulkImportError[],
+    row: number,
+    field: string,
+    message: string,
+    value?: any,
+  ): void {
+    errors.push({ row, field, message, value });
+  }
+
+  // ── Translate a single-row write failure into a row error (P2002 → duplicate) ─
+  private writeError(
+    errors: BulkImportError[],
+    row: number,
+    field: string,
+    e: any,
+    value?: any,
+  ): void {
+    if (e?.code === 'P2002') {
+      this.rowError(errors, row, field, `Duplicate ${field} — already exists`, value);
+    } else {
+      this.rowError(errors, row, field, e?.message ?? 'Write failed', value);
+    }
+  }
+
   private str(record: Record<string, any>, field: string): string | undefined {
     const val = record[field];
     if (val === undefined || val === null || String(val).trim() === '') return undefined;
@@ -189,8 +215,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.item.update({
-              where: { id: existing.id },
+            await this.prisma.item.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name: name!,
                 itemType: itemType!,
@@ -219,31 +245,36 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.item.create({
-          data: {
-            tenantId,
-            code: code!,
-            name: name!,
-            itemType: itemType!,
-            baseUom: baseUom!,
-            description: this.str(r, 'description'),
-            isStockable: this.bool(r, 'isStockable', true),
-            isPurchasable: this.bool(r, 'isPurchasable', true),
-            isSaleable: this.bool(r, 'isSaleable', true),
-            isManufacturable: this.bool(r, 'isManufacturable', false),
-            isLotTracked: this.bool(r, 'isLotTracked', false),
-            isSerialTracked: this.bool(r, 'isSerialTracked', false),
-            valuationMethod: this.str(r, 'valuationMethod') ?? 'average',
-            standardCost: this.num(r, 'standardCost'),
-            leadTimeDays: this.num(r, 'leadTimeDays') ?? 0,
-            safetyStock: this.num(r, 'safetyStock') ?? 0,
-            reorderPoint: this.num(r, 'reorderPoint') ?? 0,
-            reorderQuantity: this.num(r, 'reorderQuantity') ?? 0,
-            isActive: true,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.item.create({
+            data: {
+              tenantId,
+              code: code!,
+              name: name!,
+              itemType: itemType!,
+              baseUom: baseUom!,
+              description: this.str(r, 'description'),
+              isStockable: this.bool(r, 'isStockable', true),
+              isPurchasable: this.bool(r, 'isPurchasable', true),
+              isSaleable: this.bool(r, 'isSaleable', true),
+              isManufacturable: this.bool(r, 'isManufacturable', false),
+              isLotTracked: this.bool(r, 'isLotTracked', false),
+              isSerialTracked: this.bool(r, 'isSerialTracked', false),
+              valuationMethod: this.str(r, 'valuationMethod') ?? 'average',
+              standardCost: this.num(r, 'standardCost'),
+              leadTimeDays: this.num(r, 'leadTimeDays') ?? 0,
+              safetyStock: this.num(r, 'safetyStock') ?? 0,
+              reorderPoint: this.num(r, 'reorderPoint') ?? 0,
+              reorderQuantity: this.num(r, 'reorderQuantity') ?? 0,
+              isActive: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'code', e, code);
+          continue;
+        }
       }
       inserted++;
     }
@@ -291,8 +322,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.customer.update({
-              where: { id: existing.id },
+            await this.prisma.customer.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name,
                 legalName: this.str(r, 'legalName') ?? existing.legalName ?? undefined,
@@ -316,25 +347,30 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.customer.create({
-          data: {
-            tenantId,
-            code: code!,
-            name: name!,
-            legalName: this.str(r, 'legalName'),
-            taxId: this.str(r, 'taxId'),
-            phone: this.str(r, 'phone'),
-            email: this.str(r, 'email'),
-            website: this.str(r, 'website'),
-            creditLimit: this.num(r, 'creditLimit') ?? 0,
-            paymentTerms: this.str(r, 'paymentTerms'),
-            currency: this.str(r, 'currency'),
-            notes: this.str(r, 'notes'),
-            isActive: true,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.customer.create({
+            data: {
+              tenantId,
+              code: code!,
+              name: name!,
+              legalName: this.str(r, 'legalName'),
+              taxId: this.str(r, 'taxId'),
+              phone: this.str(r, 'phone'),
+              email: this.str(r, 'email'),
+              website: this.str(r, 'website'),
+              creditLimit: this.num(r, 'creditLimit') ?? 0,
+              paymentTerms: this.str(r, 'paymentTerms'),
+              currency: this.str(r, 'currency'),
+              notes: this.str(r, 'notes'),
+              isActive: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'code', e, code);
+          continue;
+        }
       }
       inserted++;
     }
@@ -382,8 +418,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.supplier.update({
-              where: { id: existing.id },
+            await this.prisma.supplier.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name,
                 legalName: this.str(r, 'legalName') ?? existing.legalName ?? undefined,
@@ -408,26 +444,31 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.supplier.create({
-          data: {
-            tenantId,
-            code: code!,
-            name: name!,
-            legalName: this.str(r, 'legalName'),
-            taxId: this.str(r, 'taxId'),
-            phone: this.str(r, 'phone'),
-            email: this.str(r, 'email'),
-            website: this.str(r, 'website'),
-            paymentTerms: this.str(r, 'paymentTerms'),
-            currency: this.str(r, 'currency'),
-            creditLimit: this.num(r, 'creditLimit'),
-            category: this.str(r, 'category'),
-            notes: this.str(r, 'notes'),
-            isActive: true,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.supplier.create({
+            data: {
+              tenantId,
+              code: code!,
+              name: name!,
+              legalName: this.str(r, 'legalName'),
+              taxId: this.str(r, 'taxId'),
+              phone: this.str(r, 'phone'),
+              email: this.str(r, 'email'),
+              website: this.str(r, 'website'),
+              paymentTerms: this.str(r, 'paymentTerms'),
+              currency: this.str(r, 'currency'),
+              creditLimit: this.num(r, 'creditLimit'),
+              category: this.str(r, 'category'),
+              notes: this.str(r, 'notes'),
+              isActive: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'code', e, code);
+          continue;
+        }
       }
       inserted++;
     }
@@ -499,8 +540,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.warehouse.update({
-              where: { id: existing.id },
+            await this.prisma.warehouse.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name,
                 warehouseType,
@@ -525,19 +566,24 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.warehouse.create({
-          data: {
-            tenantId,
-            code,
-            name: name!,
-            warehouseType,
-            address: this.str(r, 'address'),
-            isActive: this.bool(r, 'isActive', true),
-            locationTrackingEnabled: this.bool(r, 'locationTrackingEnabled', false),
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.warehouse.create({
+            data: {
+              tenantId,
+              code,
+              name: name!,
+              warehouseType,
+              address: this.str(r, 'address'),
+              isActive: this.bool(r, 'isActive', true),
+              locationTrackingEnabled: this.bool(r, 'locationTrackingEnabled', false),
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'code', e, code);
+          continue;
+        }
       }
       inserted++;
     }
@@ -586,8 +632,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.workCenter.update({
-              where: { id: existing.id },
+            await this.prisma.workCenter.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name,
                 workCenterType: workCenterType!,
@@ -608,20 +654,25 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.workCenter.create({
-          data: {
-            tenantId,
-            code: code!,
-            name: name!,
-            workCenterType: workCenterType!,
-            capacityPerHour: this.num(r, 'capacityPerHour'),
-            efficiencyPercent: this.num(r, 'efficiencyPercent') ?? 100,
-            costPerHour: this.num(r, 'costPerHour'),
-            isActive: true,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.workCenter.create({
+            data: {
+              tenantId,
+              code: code!,
+              name: name!,
+              workCenterType: workCenterType!,
+              capacityPerHour: this.num(r, 'capacityPerHour'),
+              efficiencyPercent: this.num(r, 'efficiencyPercent') ?? 100,
+              costPerHour: this.num(r, 'costPerHour'),
+              isActive: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'code', e, code);
+          continue;
+        }
       }
       inserted++;
     }
@@ -670,8 +721,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.account.update({
-              where: { id: existing.id },
+            await this.prisma.account.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 name,
                 accountType: accountType!,
@@ -697,22 +748,27 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.account.create({
-          data: {
-            tenantId,
-            accountNumber: accountNumber!,
-            name: name!,
-            accountType: accountType!,
-            accountCategory: this.str(r, 'accountCategory'),
-            currency: this.str(r, 'currency'),
-            isSystem: this.bool(r, 'isSystem', false),
-            allowManualPosting: this.bool(r, 'allowManualPosting', true),
-            requireReconciliation: this.bool(r, 'requireReconciliation', false),
-            isActive: true,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.account.create({
+            data: {
+              tenantId,
+              accountNumber: accountNumber!,
+              name: name!,
+              accountType: accountType!,
+              accountCategory: this.str(r, 'accountCategory'),
+              currency: this.str(r, 'currency'),
+              isSystem: this.bool(r, 'isSystem', false),
+              allowManualPosting: this.bool(r, 'allowManualPosting', true),
+              requireReconciliation: this.bool(r, 'requireReconciliation', false),
+              isActive: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'accountNumber', e, accountNumber);
+          continue;
+        }
       }
       inserted++;
     }
@@ -752,9 +808,9 @@ export class BulkImportService {
       const rowErrors: BulkImportError[] = [];
       const customerCode = this.req(row, r, 'customerCode', rowErrors);
       const orderDate = this.req(row, r, 'orderDate', rowErrors);
-      const itemCode = this.req(row, r, 'itemCode', rowErrors);
-      const qty = this.req(row, r, 'qty', rowErrors);
-      const unitPrice = this.req(row, r, 'unitPrice', rowErrors);
+      this.req(row, r, 'itemCode', rowErrors);
+      this.req(row, r, 'qty', rowErrors);
+      this.req(row, r, 'unitPrice', rowErrors);
       if (rowErrors.length > 0) {
         errors.push(...rowErrors);
         continue;
@@ -771,7 +827,7 @@ export class BulkImportService {
     }
 
     // ── Process each group as one Sales Order ───────────────────────────────
-    for (const [key, rows] of groups) {
+    for (const [, rows] of groups) {
       const first = rows[0];
       const row = first._row;
       const customerCode = String(first.customerCode).trim();
@@ -853,25 +909,32 @@ export class BulkImportService {
       if (existingSo) {
         if (upsert) {
           if (!dryRun) {
-            // Add new lines to existing SO
-            for (const line of lines) {
-              const lastLine = await this.prisma.salesOrderLine.findFirst({
-                where: { salesOrderId: existingSo.id, deletedAt: null },
-                orderBy: { lineNumber: 'desc' },
+            // Add new lines to existing SO — atomic per record
+            try {
+              await this.prisma.$transaction(async (tx) => {
+                for (const line of lines) {
+                  const lastLine = await tx.salesOrderLine.findFirst({
+                    where: { tenantId, salesOrderId: existingSo.id, deletedAt: null },
+                    orderBy: { lineNumber: 'desc' },
+                  });
+                  const nextLine = (lastLine?.lineNumber ?? 0) + 1;
+                  await tx.salesOrderLine.create({
+                    data: { ...line, salesOrderId: existingSo.id, lineNumber: nextLine },
+                  });
+                }
+                await tx.salesOrder.updateMany({
+                  where: { id: existingSo.id, tenantId, deletedAt: null },
+                  data: {
+                    subtotal: { increment: subtotal },
+                    total: { increment: subtotal },
+                    updatedBy: userId,
+                  },
+                });
               });
-              const nextLine = (lastLine?.lineNumber ?? 0) + 1;
-              await this.prisma.salesOrderLine.create({
-                data: { ...line, salesOrderId: existingSo.id, lineNumber: nextLine },
-              });
+            } catch (e: any) {
+              this.writeError(errors, row, 'customerCode', e, customerCode);
+              continue;
             }
-            await this.prisma.salesOrder.update({
-              where: { id: existingSo.id },
-              data: {
-                subtotal: { increment: subtotal },
-                total: { increment: subtotal },
-                updatedBy: userId,
-              },
-            });
           }
           updated++;
         } else {
@@ -893,29 +956,34 @@ export class BulkImportService {
           : '0001';
         const soNumber = `${prefix}-${nextNum}`;
 
-        await this.prisma.salesOrder.create({
-          data: {
-            tenantId,
-            soNumber,
-            customerId: customer.id,
-            orderDate: new Date(orderDateStr),
-            promisedDate: this.str(first, 'promisedDate')
-              ? new Date(this.str(first, 'promisedDate')!)
-              : null,
-            paymentTerms: this.str(first, 'paymentTerms'),
-            currency: this.str(first, 'currency') ?? 'USD',
-            exchangeRate: 1,
-            subtotal,
-            discountAmount: 0,
-            taxAmount: 0,
-            total: subtotal,
-            status: 'draft',
-            notes: this.str(first, 'notes'),
-            createdBy: userId,
-            updatedBy: userId,
-            lines: { create: lines },
-          },
-        });
+        try {
+          await this.prisma.salesOrder.create({
+            data: {
+              tenantId,
+              soNumber,
+              customerId: customer.id,
+              orderDate: new Date(orderDateStr),
+              promisedDate: this.str(first, 'promisedDate')
+                ? new Date(this.str(first, 'promisedDate')!)
+                : null,
+              paymentTerms: this.str(first, 'paymentTerms'),
+              currency: this.str(first, 'currency') ?? 'USD',
+              exchangeRate: 1,
+              subtotal,
+              discountAmount: 0,
+              taxAmount: 0,
+              total: subtotal,
+              status: 'draft',
+              notes: this.str(first, 'notes'),
+              createdBy: userId,
+              updatedBy: userId,
+              lines: { create: lines },
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'soNumber', e, soNumber);
+          continue;
+        }
       }
       inserted++;
     }
@@ -973,7 +1041,7 @@ export class BulkImportService {
       groups.get(key)!.push({ ...r, _row: row, _parsedDate: parsedPoDate });
     }
 
-    for (const [key, rows] of groups) {
+    for (const [, rows] of groups) {
       const first = rows[0];
       const row = first._row;
       const supplierCode = String(first.supplierCode).trim();
@@ -1051,27 +1119,34 @@ export class BulkImportService {
       if (existingPo) {
         if (upsert) {
           if (!dryRun) {
-            for (const line of lines) {
-              const lastLine = await this.prisma.purchaseOrderLine.findFirst({
-                where: { purchaseOrderId: existingPo.id, deletedAt: null },
-                orderBy: { lineNumber: 'desc' },
+            try {
+              await this.prisma.$transaction(async (tx) => {
+                for (const line of lines) {
+                  const lastLine = await tx.purchaseOrderLine.findFirst({
+                    where: { tenantId, purchaseOrderId: existingPo.id, deletedAt: null },
+                    orderBy: { lineNumber: 'desc' },
+                  });
+                  await tx.purchaseOrderLine.create({
+                    data: {
+                      ...line,
+                      purchaseOrderId: existingPo.id,
+                      lineNumber: (lastLine?.lineNumber ?? 0) + 1,
+                    },
+                  });
+                }
+                await tx.purchaseOrder.updateMany({
+                  where: { id: existingPo.id, tenantId, deletedAt: null },
+                  data: {
+                    subtotal: { increment: subtotal },
+                    total: { increment: subtotal },
+                    updatedBy: userId,
+                  },
+                });
               });
-              await this.prisma.purchaseOrderLine.create({
-                data: {
-                  ...line,
-                  purchaseOrderId: existingPo.id,
-                  lineNumber: (lastLine?.lineNumber ?? 0) + 1,
-                },
-              });
+            } catch (e: any) {
+              this.writeError(errors, row, 'supplierCode', e, supplierCode);
+              continue;
             }
-            await this.prisma.purchaseOrder.update({
-              where: { id: existingPo.id },
-              data: {
-                subtotal: { increment: subtotal },
-                total: { increment: subtotal },
-                updatedBy: userId,
-              },
-            });
           }
           updated++;
         } else {
@@ -1092,30 +1167,35 @@ export class BulkImportService {
           : '0001';
         const poNumber = `${prefix}-${nextNum}`;
 
-        await this.prisma.purchaseOrder.create({
-          data: {
-            tenantId,
-            poNumber,
-            supplierId: supplier.id,
-            poDate: new Date(poDateStr),
-            expectedDate: this.str(first, 'expectedDate')
-              ? new Date(this.str(first, 'expectedDate')!)
-              : null,
-            deliveryAddress: this.str(first, 'deliveryAddress'),
-            paymentTerms: this.str(first, 'paymentTerms'),
-            currency: this.str(first, 'currency') ?? 'USD',
-            exchangeRate: 1,
-            subtotal,
-            discountAmount: 0,
-            taxAmount: 0,
-            total: subtotal,
-            status: 'draft',
-            notes: this.str(first, 'notes'),
-            createdBy: userId,
-            updatedBy: userId,
-            lines: { create: lines },
-          },
-        });
+        try {
+          await this.prisma.purchaseOrder.create({
+            data: {
+              tenantId,
+              poNumber,
+              supplierId: supplier.id,
+              poDate: new Date(poDateStr),
+              expectedDate: this.str(first, 'expectedDate')
+                ? new Date(this.str(first, 'expectedDate')!)
+                : null,
+              deliveryAddress: this.str(first, 'deliveryAddress'),
+              paymentTerms: this.str(first, 'paymentTerms'),
+              currency: this.str(first, 'currency') ?? 'USD',
+              exchangeRate: 1,
+              subtotal,
+              discountAmount: 0,
+              taxAmount: 0,
+              total: subtotal,
+              status: 'draft',
+              notes: this.str(first, 'notes'),
+              createdBy: userId,
+              updatedBy: userId,
+              lines: { create: lines },
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'poNumber', e, poNumber);
+          continue;
+        }
       }
       inserted++;
     }
@@ -1190,6 +1270,7 @@ export class BulkImportService {
       // Check existing line
       const existing = await this.prisma.budgetLine.findFirst({
         where: {
+          tenantId,
           budgetId: budget.id,
           accountId: account.id,
           fiscalPeriod: fiscalPeriod!,
@@ -1200,8 +1281,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.budgetLine.update({
-              where: { id: existing.id },
+            await this.prisma.budgetLine.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 budgetAmount: Number(amount),
                 notes: this.str(r, 'notes') ?? existing.notes ?? undefined,
@@ -1217,18 +1298,23 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.budgetLine.create({
-          data: {
-            tenantId,
-            budgetId: budget.id,
-            accountId: account.id,
-            fiscalPeriod: fiscalPeriod!,
-            budgetAmount: Number(amount),
-            notes: this.str(r, 'notes'),
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.budgetLine.create({
+            data: {
+              tenantId,
+              budgetId: budget.id,
+              accountId: account.id,
+              fiscalPeriod: fiscalPeriod!,
+              budgetAmount: Number(amount),
+              notes: this.str(r, 'notes'),
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'fiscalPeriod', e, fiscalPeriod);
+          continue;
+        }
       }
       inserted++;
     }
@@ -1281,8 +1367,8 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.fiscalPeriod.update({
-              where: { id: existing.id },
+            await this.prisma.fiscalPeriod.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 periodName: periodName!,
                 startDate: new Date(startDate!),
@@ -1304,27 +1390,34 @@ export class BulkImportService {
 
       if (!dryRun) {
         const isCurrent = this.bool(r, 'isCurrent', false);
-        if (isCurrent) {
-          await this.prisma.fiscalPeriod.updateMany({
-            where: { tenantId, isCurrent: true, deletedAt: null },
-            data: { isCurrent: false },
+        try {
+          await this.prisma.$transaction(async (tx) => {
+            if (isCurrent) {
+              await tx.fiscalPeriod.updateMany({
+                where: { tenantId, isCurrent: true, deletedAt: null },
+                data: { isCurrent: false },
+              });
+            }
+            await tx.fiscalPeriod.create({
+              data: {
+                tenantId,
+                periodCode: periodCode!,
+                periodName: periodName!,
+                startDate: new Date(startDate!),
+                endDate: new Date(endDate!),
+                fiscalYear: fiscalYear!,
+                fiscalQuarter: this.str(r, 'fiscalQuarter'),
+                status: this.str(r, 'status') ?? 'open',
+                isCurrent,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
           });
+        } catch (e: any) {
+          this.writeError(errors, row, 'periodCode', e, periodCode);
+          continue;
         }
-        await this.prisma.fiscalPeriod.create({
-          data: {
-            tenantId,
-            periodCode: periodCode!,
-            periodName: periodName!,
-            startDate: new Date(startDate!),
-            endDate: new Date(endDate!),
-            fiscalYear: fiscalYear!,
-            fiscalQuarter: this.str(r, 'fiscalQuarter'),
-            status: this.str(r, 'status') ?? 'open',
-            isCurrent,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
       }
       inserted++;
     }
@@ -1399,8 +1492,10 @@ export class BulkImportService {
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            // Delete existing components and recreate
-            await this.prisma.bomComponent.deleteMany({ where: { bomId: existing.id } });
+            // Resolve component items up front so a bad component code does not
+            // wipe the BOM (the delete+recreate runs only if all rows resolve).
+            const upsertComponents: any[] = [];
+            let upsertHasError = false;
             for (let idx = 0; idx < rows.length; idx++) {
               const r = rows[idx];
               const compCode = String(r.componentCode).trim();
@@ -1413,21 +1508,35 @@ export class BulkImportService {
                   field: 'componentCode',
                   message: `Item ${compCode} not found`,
                 });
+                upsertHasError = true;
                 continue;
               }
-              await this.prisma.bomComponent.create({
-                data: {
-                  tenantId,
-                  bomId: existing.id,
-                  consumptionGroupId: compItem.id,
-                  lineNumber: idx + 1,
-                  quantityPer: new Decimal(Number(r.quantityPer) || 1),
-                  uom: this.str(r, 'uom') ?? compItem.baseUom,
-                  scrapPercent: new Decimal(Number(r.scrapPercent) || 0),
-                  createdBy: userId,
-                  updatedBy: userId,
-                },
+              upsertComponents.push({
+                tenantId,
+                bomId: existing.id,
+                consumptionGroupId: compItem.id,
+                lineNumber: idx + 1,
+                quantityPer: new Decimal(Number(r.quantityPer) || 1),
+                uom: this.str(r, 'uom') ?? compItem.baseUom,
+                scrapPercent: new Decimal(Number(r.scrapPercent) || 0),
+                createdBy: userId,
+                updatedBy: userId,
               });
+            }
+            if (upsertHasError) continue;
+
+            // Atomic: delete existing components and recreate. A mid-loop failure
+            // rolls the delete back so components are never lost.
+            try {
+              await this.prisma.$transaction(async (tx) => {
+                await tx.bomComponent.deleteMany({ where: { tenantId, bomId: existing.id } });
+                for (const comp of upsertComponents) {
+                  await tx.bomComponent.create({ data: comp });
+                }
+              });
+            } catch (e: any) {
+              this.writeError(errors, row, 'bomNumber', e, bomNumber);
+              continue;
             }
           }
           updated++;
@@ -1469,18 +1578,23 @@ export class BulkImportService {
       if (hasError) continue;
 
       if (!dryRun) {
-        await this.prisma.bom.create({
-          data: {
-            tenantId,
-            bomNumber,
-            parentItemId: parentItem.id,
-            version: Number(this.str(first, 'version')) || 1,
-            isActive: this.bool(first, 'isActive', true),
-            createdBy: userId,
-            updatedBy: userId,
-            components: { create: components },
-          },
-        });
+        try {
+          await this.prisma.bom.create({
+            data: {
+              tenantId,
+              bomNumber,
+              parentItemId: parentItem.id,
+              version: Number(this.str(first, 'version')) || 1,
+              isActive: this.bool(first, 'isActive', true),
+              createdBy: userId,
+              updatedBy: userId,
+              components: { create: components },
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'bomNumber', e, bomNumber);
+          continue;
+        }
       }
       inserted++;
     }
@@ -1551,14 +1665,14 @@ export class BulkImportService {
 
       // Check existing routing step
       const existing = await this.prisma.bomRouting.findFirst({
-        where: { bomId: bom.id, stepNumber: step, deletedAt: null },
+        where: { tenantId, bomId: bom.id, stepNumber: step, deletedAt: null },
       });
 
       if (existing) {
         if (upsert) {
           if (!dryRun) {
-            await this.prisma.bomRouting.update({
-              where: { id: existing.id },
+            await this.prisma.bomRouting.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
               data: {
                 workCenterId: wc.id,
                 description: this.str(r, 'description') ?? existing.description ?? undefined,
@@ -1579,20 +1693,25 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        await this.prisma.bomRouting.create({
-          data: {
-            tenantId,
-            bomId: bom.id,
-            stepNumber: step,
-            workCenterId: wc.id,
-            description: this.str(r, 'description'),
-            setupTime: new Decimal(this.num(r, 'setupTime') ?? 0),
-            runTimePerUnit: new Decimal(this.num(r, 'runTimePerUnit') ?? 0),
-            notes: this.str(r, 'notes'),
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.bomRouting.create({
+            data: {
+              tenantId,
+              bomId: bom.id,
+              stepNumber: step,
+              workCenterId: wc.id,
+              description: this.str(r, 'description'),
+              setupTime: new Decimal(this.num(r, 'setupTime') ?? 0),
+              runTimePerUnit: new Decimal(this.num(r, 'runTimePerUnit') ?? 0),
+              notes: this.str(r, 'notes'),
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch (e: any) {
+          this.writeError(errors, row, 'stepNumber', e, step);
+          continue;
+        }
       }
       inserted++;
     }
@@ -1739,8 +1858,8 @@ export class BulkImportService {
         if (existing) {
           if (upsert) {
             if (!dryRun)
-              await this.prisma.warehouseZone.update({
-                where: { id: existing.id },
+              await this.prisma.warehouseZone.updateMany({
+                where: { id: existing.id, tenantId, deletedAt: null },
                 data: {
                   name: name!,
                   zoneType: this.str(r, 'zoneType') ?? existing.zoneType,
@@ -1757,19 +1876,24 @@ export class BulkImportService {
           continue;
         }
         if (!dryRun) {
-          await this.prisma.warehouseZone.create({
-            data: {
-              tenantId,
-              warehouseId: warehouse.id,
-              code: code!,
-              name: name!,
-              zoneType: this.str(r, 'zoneType') ?? 'storage',
-              description: this.str(r, 'description'),
-              isActive: true,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+          try {
+            await this.prisma.warehouseZone.create({
+              data: {
+                tenantId,
+                warehouseId: warehouse.id,
+                code: code!,
+                name: name!,
+                zoneType: this.str(r, 'zoneType') ?? 'storage',
+                description: this.str(r, 'description'),
+                isActive: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          } catch (e: any) {
+            this.writeError(errors, row, 'code', e, code);
+            continue;
+          }
         }
         // Add to dry cache so subsequent rows can reference this zone
         dryCache.add(`ZONE:${warehouseCode}:${code}`);
@@ -1801,13 +1925,13 @@ export class BulkImportService {
         const existing = isDryNode
           ? null
           : await this.prisma.warehouseAisle.findFirst({
-              where: { zoneId: zone.id, code: code!, deletedAt: null },
+              where: { tenantId, zoneId: zone.id, code: code!, deletedAt: null },
             });
         if (existing) {
           if (upsert) {
             if (!dryRun)
-              await this.prisma.warehouseAisle.update({
-                where: { id: existing.id },
+              await this.prisma.warehouseAisle.updateMany({
+                where: { id: existing.id, tenantId, deletedAt: null },
                 data: { name: name!, fullCode, updatedBy: userId },
               });
             updated++;
@@ -1818,18 +1942,23 @@ export class BulkImportService {
           continue;
         }
         if (!dryRun && !isDryNode) {
-          await this.prisma.warehouseAisle.create({
-            data: {
-              tenantId,
-              zoneId: zone.id,
-              code: code!,
-              name: name!,
-              fullCode,
-              isActive: true,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+          try {
+            await this.prisma.warehouseAisle.create({
+              data: {
+                tenantId,
+                zoneId: zone.id,
+                code: code!,
+                name: name!,
+                fullCode,
+                isActive: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          } catch (e: any) {
+            this.writeError(errors, row, 'code', e, code);
+            continue;
+          }
         }
         dryCache.add(`AISLE:${warehouseCode}:${fullCode}`);
         inserted++;
@@ -1860,13 +1989,13 @@ export class BulkImportService {
         const existing = isDryNode
           ? null
           : await this.prisma.warehouseRack.findFirst({
-              where: { aisleId: aisle.id, code: code!, deletedAt: null },
+              where: { tenantId, aisleId: aisle.id, code: code!, deletedAt: null },
             });
         if (existing) {
           if (upsert) {
             if (!dryRun)
-              await this.prisma.warehouseRack.update({
-                where: { id: existing.id },
+              await this.prisma.warehouseRack.updateMany({
+                where: { id: existing.id, tenantId, deletedAt: null },
                 data: { name: name!, fullCode, updatedBy: userId },
               });
             updated++;
@@ -1877,18 +2006,23 @@ export class BulkImportService {
           continue;
         }
         if (!dryRun && !isDryNode) {
-          await this.prisma.warehouseRack.create({
-            data: {
-              tenantId,
-              aisleId: aisle.id,
-              code: code!,
-              name: name!,
-              fullCode,
-              isActive: true,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+          try {
+            await this.prisma.warehouseRack.create({
+              data: {
+                tenantId,
+                aisleId: aisle.id,
+                code: code!,
+                name: name!,
+                fullCode,
+                isActive: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          } catch (e: any) {
+            this.writeError(errors, row, 'code', e, code);
+            continue;
+          }
         }
         dryCache.add(`RACK:${warehouseCode}:${fullCode}`);
         inserted++;
@@ -1919,13 +2053,13 @@ export class BulkImportService {
         const existing = isDryNode
           ? null
           : await this.prisma.warehouseLevel.findFirst({
-              where: { rackId: rack.id, code: code!, deletedAt: null },
+              where: { tenantId, rackId: rack.id, code: code!, deletedAt: null },
             });
         if (existing) {
           if (upsert) {
             if (!dryRun)
-              await this.prisma.warehouseLevel.update({
-                where: { id: existing.id },
+              await this.prisma.warehouseLevel.updateMany({
+                where: { id: existing.id, tenantId, deletedAt: null },
                 data: {
                   name: name!,
                   fullCode,
@@ -1946,22 +2080,27 @@ export class BulkImportService {
           continue;
         }
         if (!dryRun && !isDryNode) {
-          await this.prisma.warehouseLevel.create({
-            data: {
-              tenantId,
-              rackId: rack.id,
-              code: code!,
-              name: name!,
-              fullCode,
-              maxWeightKg: this.num(r, 'maxWeightKg'),
-              maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
-              maxPallets:
-                this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
-              isActive: true,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+          try {
+            await this.prisma.warehouseLevel.create({
+              data: {
+                tenantId,
+                rackId: rack.id,
+                code: code!,
+                name: name!,
+                fullCode,
+                maxWeightKg: this.num(r, 'maxWeightKg'),
+                maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
+                maxPallets:
+                  this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
+                isActive: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          } catch (e: any) {
+            this.writeError(errors, row, 'code', e, code);
+            continue;
+          }
         }
         dryCache.add(`LEVEL:${warehouseCode}:${fullCode}`);
         inserted++;
@@ -1992,13 +2131,13 @@ export class BulkImportService {
         const existing = isDryNode
           ? null
           : await this.prisma.warehouseBin.findFirst({
-              where: { levelId: lvl.id, code: code!, deletedAt: null },
+              where: { tenantId, levelId: lvl.id, code: code!, deletedAt: null },
             });
         if (existing) {
           if (upsert) {
             if (!dryRun)
-              await this.prisma.warehouseBin.update({
-                where: { id: existing.id },
+              await this.prisma.warehouseBin.updateMany({
+                where: { id: existing.id, tenantId, deletedAt: null },
                 data: {
                   name: name!,
                   fullCode,
@@ -2020,25 +2159,30 @@ export class BulkImportService {
           continue;
         }
         if (!dryRun && !isDryNode) {
-          await this.prisma.warehouseBin.create({
-            data: {
-              tenantId,
-              levelId: lvl.id,
-              code: code!,
-              name: name!,
-              fullCode,
-              binType: this.str(r, 'binType') ?? 'standard',
-              maxWeightKg: this.num(r, 'maxWeightKg'),
-              maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
-              maxPallets:
-                this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
-              allowMixedItems: this.bool(r, 'allowMixedItems', true),
-              notes: this.str(r, 'notes'),
-              isActive: true,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+          try {
+            await this.prisma.warehouseBin.create({
+              data: {
+                tenantId,
+                levelId: lvl.id,
+                code: code!,
+                name: name!,
+                fullCode,
+                binType: this.str(r, 'binType') ?? 'standard',
+                maxWeightKg: this.num(r, 'maxWeightKg'),
+                maxVolumeLtr: this.num(r, 'maxVolumeLtr'),
+                maxPallets:
+                  this.num(r, 'maxPallets') != null ? Number(this.num(r, 'maxPallets')) : undefined,
+                allowMixedItems: this.bool(r, 'allowMixedItems', true),
+                notes: this.str(r, 'notes'),
+                isActive: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          } catch (e: any) {
+            this.writeError(errors, row, 'code', e, code);
+            continue;
+          }
         }
         inserted++;
       }
@@ -2134,69 +2278,78 @@ export class BulkImportService {
         continue;
       }
 
-      try {
-        // Check if user exists globally
-        let user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
-
-        if (!user) {
-          // Require password for new users
-          const password = this.str(rec, 'password');
-          if (!password) {
-            errors.push({
-              row,
-              field: 'password',
-              message: 'password is required for new users',
-              value: null,
-            });
-            continue;
-          }
-          const passwordHash = await bcrypt.hash(password, 12);
-          user = await this.prisma.user.create({
-            data: {
-              email: normalizedEmail,
-              passwordHash,
-              firstName: firstName.trim(),
-              lastName: lastName.trim(),
-              phone: this.str(rec, 'phone'),
-              status: 'active',
-              locale: 'en-US',
-              timezone: 'UTC',
-            },
-          });
-          inserted++;
-        } else if (upsert) {
-          // Update name if upsert mode
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: { firstName: firstName.trim(), lastName: lastName.trim() },
-          });
-          updated++;
-        } else {
-          skipped++;
-        }
-
-        // Ensure user is in tenant
-        await this.prisma.userTenant.upsert({
-          where: { userId_tenantId: { userId: user.id, tenantId } },
-          update: { isActive: true },
-          create: { userId: user.id, tenantId, isActive: true },
+      // Require password for new users (resolved before the atomic block so a
+      // missing password is a clean row error, not a rolled-back transaction).
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+      if (!existingUser && !this.str(rec, 'password')) {
+        errors.push({
+          row,
+          field: 'password',
+          message: 'password is required for new users',
+          value: null,
         });
+        continue;
+      }
 
-        // Assign roles (replace all if upsert, append if not)
-        if (resolvedRoleIds.length > 0) {
-          if (upsert) {
-            await this.prisma.userRole.deleteMany({ where: { userId: user.id, tenantId } });
+      try {
+        // user create/update + userTenant + userRole are atomic for this record
+        await this.prisma.$transaction(async (tx) => {
+          let user = existingUser;
+
+          if (!user) {
+            const passwordHash = await bcrypt.hash(this.str(rec, 'password')!, 12);
+            user = await tx.user.create({
+              data: {
+                email: normalizedEmail,
+                passwordHash,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                phone: this.str(rec, 'phone'),
+                status: 'active',
+                locale: 'en-US',
+                timezone: 'UTC',
+              },
+            });
+            inserted++;
+          } else if (upsert) {
+            // User is GLOBAL (no tenantId/deletedAt) — keep a bare update.
+            await tx.user.update({
+              where: { id: user.id },
+              data: { firstName: firstName.trim(), lastName: lastName.trim() },
+            });
+            updated++;
+          } else {
+            skipped++;
           }
-          await this.prisma.userRole.createMany({
-            data: resolvedRoleIds.map((roleId) => ({ userId: user!.id, roleId, tenantId })),
-            skipDuplicates: true,
+
+          // Ensure user is in tenant
+          await tx.userTenant.upsert({
+            where: { userId_tenantId: { userId: user.id, tenantId } },
+            update: { isActive: true },
+            create: { userId: user.id, tenantId, isActive: true },
           });
-        }
+
+          // Assign roles (replace all if upsert, append if not)
+          if (resolvedRoleIds.length > 0) {
+            if (upsert) {
+              await tx.userRole.deleteMany({ where: { userId: user.id, tenantId } });
+            }
+            await tx.userRole.createMany({
+              data: resolvedRoleIds.map((roleId) => ({ userId: user!.id, roleId, tenantId })),
+              skipDuplicates: true,
+            });
+          }
+        });
       } catch (e: any) {
         errors.push({
           row,
-          field: 'general',
-          message: e.message ?? 'Unknown error',
+          field: 'email',
+          message:
+            e?.code === 'P2002'
+              ? 'Duplicate email — already exists'
+              : (e.message ?? 'Unknown error'),
           value: normalizedEmail,
         });
       }
@@ -2273,56 +2426,68 @@ export class BulkImportService {
         continue;
       }
 
+      const existing = await this.prisma.role.findFirst({
+        where: { tenantId, code: normalizedCode, deletedAt: null },
+      });
+
+      // Skip without opening a transaction when nothing would be written.
+      if (existing && !upsert) {
+        skipped++;
+        continue;
+      }
+
       try {
-        const existing = await this.prisma.role.findFirst({
-          where: { tenantId, code: normalizedCode, deletedAt: null },
-        });
+        // role create/update + rolePermission replace are atomic for this record
+        await this.prisma.$transaction(async (tx) => {
+          let roleId: string;
 
-        let role: { id: string };
-
-        if (!existing) {
-          role = await this.prisma.role.create({
-            data: {
-              tenantId,
-              code: normalizedCode,
-              name: name.trim(),
-              description: this.str(rec, 'description'),
-              isSystem: false,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
-          inserted++;
-        } else if (upsert) {
-          role = await this.prisma.role.update({
-            where: { id: existing.id },
-            data: {
-              name: name.trim(),
-              description: this.str(rec, 'description'),
-              updatedBy: userId,
-            },
-          });
-          updated++;
-        } else {
-          skipped++;
-          continue;
-        }
-
-        // Assign permissions
-        if (resolvedPermIds.length > 0) {
-          if (upsert && existing) {
-            await this.prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+          if (!existing) {
+            const role = await tx.role.create({
+              data: {
+                tenantId,
+                code: normalizedCode,
+                name: name.trim(),
+                description: this.str(rec, 'description'),
+                isSystem: false,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+            roleId = role.id;
+            inserted++;
+          } else {
+            // Role carries tenantId — scope the write.
+            await tx.role.updateMany({
+              where: { id: existing.id, tenantId, deletedAt: null },
+              data: {
+                name: name.trim(),
+                description: this.str(rec, 'description'),
+                updatedBy: userId,
+              },
+            });
+            roleId = existing.id;
+            updated++;
           }
-          await this.prisma.rolePermission.createMany({
-            data: resolvedPermIds.map((permissionId) => ({ roleId: role.id, permissionId })),
-            skipDuplicates: true,
-          });
-        }
+
+          // Assign permissions
+          if (resolvedPermIds.length > 0) {
+            if (existing) {
+              await tx.rolePermission.deleteMany({ where: { roleId } });
+            }
+            await tx.rolePermission.createMany({
+              data: resolvedPermIds.map((permissionId) => ({ roleId, permissionId })),
+              skipDuplicates: true,
+            });
+          }
+        });
       } catch (e: any) {
         errors.push({
           row,
-          field: 'general',
-          message: e.message ?? 'Unknown error',
+          field: 'code',
+          message:
+            e?.code === 'P2002'
+              ? 'Duplicate code — already exists'
+              : (e.message ?? 'Unknown error'),
           value: normalizedCode,
         });
       }
