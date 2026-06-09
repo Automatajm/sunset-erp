@@ -1,10 +1,10 @@
 # spec-018 — Supplier Items (Supplier↔Item Catalog Links)
 
-Status: **Complete**  
+Status: **Complete** (v2 — commercial fields, price history & expiry alerts)  
 Owner: Platform  
-Sprint: 19  
-Module(s): `supplier-items` (touches `frontend/lib/api/supplier-items.ts` for the list envelopes)  
-Last updated: 2026-06-06  
+Sprint: 19 (v1) · recovery branch (v2, 2026-06-09)  
+Module(s): `supplier-items` (+ `SupplierItemPriceHistory` model; touches `frontend/app/procurement/supplier-items/page.tsx` and the list-envelope getters)  
+Last updated: 2026-06-09  
 
 ---
 
@@ -67,6 +67,19 @@ Notes (not violations): `UomUnit` is a global catalog (`@@unique([code])`, no
 `conversionFactor` DTO description claims catalog auto-calculation; the code defaults to
 1, which is correct *because* the UOM rule forces unit equality — the description is
 fixed, not the behavior.
+
+### v2 problem (2026-06-09) — commercial terms, price history & expiry alerts
+
+v1 stored only `lastPrice`. A recovered frontend page (`procurement/supplier-items`)
+needs the catalog to also carry **commercial terms** (currency, Incoterm, payment
+terms), **quality rating**, a **block flag** (stop sourcing from a supplier for an
+item, with a reason), and **price validity dates** with an **alert window** — plus a
+**price-history timeline** so buyers can see how a supplier's price moved and renew it.
+The schema migration (`20260608120000_supplier_item_v2_and_bom_yield`) added 9 fields to
+`in_supplier_items` and a new `po_supplier_item_price_history` table; this v2 wires the
+service/controller surface the page calls. The page consumed five endpoints that did not
+exist, and `forbidNonWhitelisted` made the new inline-edit fields hard-fail `400` until
+the DTO carried them.
 
 ---
 
@@ -139,29 +152,90 @@ fixed, not the behavior.
       (`"1 <purchaseUom> = <factor> <baseUom>"`); mutations return the enriched entity;
       delete returns `{ message, id }`.
 
+### v2 — Commercial fields, price history & expiry alerts (2026-06-09)
+
+#### New endpoints (5 — surface now 12 handlers)
+- [x] `GET /expiring-prices?daysAhead=N` *(INVENTORY:VIEW)* — supplier-items whose
+      `priceValidUntil` falls within `N` days (already-expired included); no window →
+      every priced row that has an expiry date. Accepts **`daysAhead`** and the alias
+      **`days`** (the page sends `days`). Each row carries `expiryStatus` +
+      `daysUntilExpiry`. Declared **before** `GET /:id` so it is not captured as an id.
+- [x] `GET /counts-by-supplier` *(INVENTORY:VIEW)* — `groupBy supplierId` →
+      `{ [supplierId]: count }` of non-deleted entries (tenant-scoped).
+- [x] `GET /counts-by-item` *(INVENTORY:VIEW)* — `groupBy itemId` →
+      `{ [itemId]: count }` (tenant-scoped).
+- [x] `GET /:id/price-history` *(INVENTORY:VIEW)* — `SupplierItemPriceHistory` rows for
+      the supplier-item, newest first (`validFrom desc, createdAt desc`); `findOne`
+      enforces tenant scope + `404` before any history is exposed.
+- [x] `PATCH /:id/price` *(INVENTORY:EDIT)* — writes `lastPrice`/`currency`/
+      `priceValidFrom`/`priceValidUntil` (tenant-scoped `updateMany`) **and** appends a
+      `SupplierItemPriceHistory` row in one call; returns the enriched entity.
+
+#### Commercial / pricing fields
+- [x] `CreateSupplierItemDto` (and `UpdateSupplierItemDto` via `PartialType`) carry the
+      9 v2 fields — required because `forbidNonWhitelisted: true` would otherwise `400`
+      the page's inline edits: `currency @MaxLength(3)`, `incoterm @IsIn(INCOTERMS)`
+      (11 ICC terms), `paymentTerms @MaxLength(50)`, `priceValidFrom/Until @IsDateString`,
+      `priceAlertDays @IsInt @Min(0) @Max(365)`, `qualityRating @IsNumber @Min(0) @Max(5)`,
+      `isBlocked @IsBoolean`, `blockedReason @MaxLength(255)`.
+- [x] `create` persists the 9 fields (date strings coerced to `Date`; `currency` defaults
+      `'USD'`, `priceAlertDays` defaults `30`, `isBlocked` defaults `false`).
+- [x] `update` coerces `priceValidFrom`/`priceValidUntil` date strings to `Date` before
+      the tenant-scoped `updateMany`.
+
+#### Price-expiry derivation (enrich)
+- [x] `enrich` adds `priceExpiryStatus` + `priceExpiryDaysLeft` from `lastPrice`,
+      `priceValidUntil`, `priceAlertDays`: `no_price` (no price) · `no_expiry` (no end
+      date) · `expired` (<0d) · `expires_today` (0d) · `critical` (≤7d) · `warning`
+      (≤`priceAlertDays`) · `ok`. `expiring-prices` aliases these as
+      `expiryStatus`/`daysUntilExpiry` for the alerts tab.
+
+#### Price-history write integrity
+- [x] `updatePrice` validates a supplied `rfqId` as an in-tenant, non-deleted RFQ before
+      writing → `404` otherwise (no cross-tenant FK on the history row); the history row
+      is tenant-scoped (`tenantId` + `supplierItemId`) with `source` defaulting `'manual'`.
+
+#### RBAC (v2)
+- [x] All five new reads/writes guarded: the 4 GETs `INVENTORY:VIEW`, `PATCH /:id/price`
+      `INVENTORY:EDIT`; every handler `@ApiOperation` + `@ApiResponse`; logic stays in the
+      service.
+
 ---
 
 ## Out of scope
 
-- Any change to `prisma/schema.prisma` — no migrations.
+- ~~Any change to `prisma/schema.prisma`~~ — **v2 adds** 9 columns to `in_supplier_items`
+  and the `po_supplier_item_price_history` table (migration
+  `20260608120000_supplier_item_v2_and_bom_yield`).
+- ~~Price history / price lists~~ — **now in scope** (`SupplierItemPriceHistory` +
+  `:id/price-history` + `:id/price`).
 - The cross-module `Item.defaultSupplierId` write stays a direct Prisma write
   (documented exception — `items` has no service API for it; it becomes tenant-scoped
   but not service-routed).
-- Price history / price lists (only `lastPrice` is stored here).
 - Supplier scoring interplay (`SupplierScore` belongs to spec-002).
 - Pagination; bulk import of supplier catalogs.
-- Frontend changes beyond the three envelope getters.
+- **Frozen-rate pattern (spec-021) does NOT apply here (documented decision):** a
+  supplier-item price is catalog *reference data*, not a posted monetary transaction, so
+  the history row stores `price` + `currency` only — no `exchangeRate`/`amountBase`/
+  `baseCurrency`. Rate freezing happens downstream when the price lands on a PO/AP
+  document.
+- Auto-ingesting price history from RFQ awards / GRN receipts (the `source`,`rfqId`,
+  `grnId` columns exist for it, but only `manual` is written today).
 
 ---
 
 ## Data model
 
-**No changes.** Schema preserved exactly. Reference only:
+**v2 adds 9 columns + 1 table** (migration `20260608120000_supplier_item_v2_and_bom_yield`):
 
 | Model | Table | Key fields |
 |---|---|---|
-| `SupplierItem` | `in_supplier_items` | `tenantId`, `supplierId` FK, `itemId` FK, `supplierItemCode/Name`, `purchaseUomId` FK → `UomUnit`, `packSize Decimal(15,4)`, `conversionFactor Decimal(18,8)`, `lastPrice Decimal(15,4)?`, `leadTimeDays`, `moq Decimal(15,3)`, `isPreferred`, `isActive`, audit + soft-delete; `@@unique([tenantId, supplierId, itemId])` |
-| Read-only / touched | — | `Item` (UOM rule source + `defaultSupplierId` mirror), `Supplier` (existence check), `UomUnit` (global catalog, display) |
+| `SupplierItem` | `in_supplier_items` | v1: `tenantId`, `supplierId` FK, `itemId` FK, `supplierItemCode/Name`, `purchaseUomId` FK → `UomUnit`, `packSize Decimal(15,4)`, `conversionFactor Decimal(18,8)`, `lastPrice Decimal(15,4)?`, `leadTimeDays`, `moq Decimal(15,3)`, `isPreferred`, `isActive`, audit + soft-delete; `@@unique([tenantId, supplierId, itemId])`. **v2 +:** `currency VarChar(3) ='USD'`, `incoterm VarChar(20)?`, `paymentTerms VarChar(50)?`, `priceValidFrom Date?`, `priceValidUntil Date?`, `priceAlertDays Int =30`, `qualityRating Decimal(3,2)?`, `isBlocked Bool =false`, `blockedReason VarChar(255)?`; indexes on `isBlocked`, `priceValidUntil` |
+| `SupplierItemPriceHistory` **(new)** | `po_supplier_item_price_history` | `tenantId` FK, `supplierItemId` FK (onDelete Cascade), `price Decimal(15,4)`, `currency VarChar(3) ='USD'`, `validFrom Date`, `validUntil Date?`, `source VarChar(20)` (`manual\|rfq\|grn\|import`), `rfqId` FK→`po_rfqs` (SET NULL)?, `grnId Uuid?` (no FK), `notes Text?`, `createdAt`, `createdBy`; indexes on tenant, supplierItem, validFrom, validUntil, source |
+| Read-only / touched | — | `Item` (UOM rule source + `defaultSupplierId` mirror), `Supplier` (existence check), `Rfq` (in-tenant check for `price-history` source), `UomUnit` (global catalog, display) |
+
+New invariant: every `PATCH /:id/price` writes the current price onto `SupplierItem` **and**
+appends a `SupplierItemPriceHistory` row — the history is append-only and tenant-scoped.
 
 Key invariants:
 - `purchaseUomId === Item.purchaseUomId` — always (the "different unit = different
@@ -232,6 +306,42 @@ All routes prefixed `/api/supplier-items`, JWT + permissions guarded.
 // Removing the preferred entry also clears Item.defaultSupplierId.
 ```
 
+### GET /api/supplier-items/expiring-prices?daysAhead=&days= *(INVENTORY:VIEW)*
+```json
+// Response 200 — priced rows with an expiry date, soonest first
+[ { "id": "...", "item": { "code": "..." }, "supplier": { "name": "..." },
+    "lastPrice": 52.75, "currency": "USD", "priceValidUntil": "2026-06-19",
+    "expiryStatus": "warning", "daysUntilExpiry": 10 } ]
+// daysAhead/days omitted → all with an expiry; given → within N days (expired included)
+```
+
+### GET /api/supplier-items/counts-by-supplier *(INVENTORY:VIEW)*
+```json
+{ "<supplierId>": 3, "<supplierId>": 1 }
+```
+
+### GET /api/supplier-items/counts-by-item *(INVENTORY:VIEW)*
+```json
+{ "<itemId>": 2 }
+```
+
+### GET /api/supplier-items/:id/price-history *(INVENTORY:VIEW)*
+```json
+// Response 200 — newest first | Errors: 404 unknown / other-tenant id | 403
+[ { "id": "...", "price": 52.75, "currency": "USD", "validFrom": "2026-06-08",
+    "validUntil": "2026-12-08", "source": "manual", "rfqId": null, "notes": "...",
+    "createdAt": "..." } ]
+```
+
+### PATCH /api/supplier-items/:id/price *(INVENTORY:EDIT)*
+```json
+// Request
+{ "price": 52.75, "currency": "USD", "validFrom": "2026-06-08",
+  "validUntil": "2026-12-08", "source": "manual", "notes": "Q3 quote" }
+// Response 200 — enriched entry with the new lastPrice + a fresh history row appended
+// Errors: 404 supplier-item / referenced rfqId not in tenant | 400 missing price/validFrom | 403
+```
+
 ---
 
 ## Implementation notes
@@ -244,6 +354,12 @@ All routes prefixed `/api/supplier-items`, JWT + permissions guarded.
 | `src/modules/supplier-items/dto/create-supplier-item.dto.ts` | `@Max` caps; corrected `conversionFactor` description |
 | `src/modules/supplier-items/dto/find-supplier-items-query.dto.ts` | **New** — `itemId`/`supplierId` `@IsUUID`, `isPreferred` `@IsIn` |
 | `frontend/lib/api/supplier-items.ts` | 3 getters unwrap `{ supplierItems, count }` |
+| **v2:** `supplier-items.service.ts` | +`expiringPrices`/`countsBySupplier`/`countsByItem`/`priceHistory`/`updatePrice`; `computeExpiry` helper; `enrich` adds expiry fields; `create`/`update` persist + date-coerce the 9 fields; in-tenant `rfqId` guard |
+| **v2:** `supplier-items.controller.ts` | +5 handlers (static GETs before `:id`); `daysAhead`/`days` query aliasing |
+| **v2:** `dto/create-supplier-item.dto.ts` | +9 commercial fields (`@IsIn(INCOTERMS)`, `@Max(5)` rating, `@Max(365)` alert-days, …) |
+| **v2:** `dto/update-price.dto.ts` | **New (recovered)** — `UpdateSupplierItemPriceDto` wired into `PATCH /:id/price` |
+| **v2:** `prisma/schema.prisma` + migration `20260608120000_…` | 9 columns + `SupplierItemPriceHistory` model |
+| **v2:** `frontend/app/procurement/supplier-items/page.tsx` | recovered page consuming all 12 endpoints |
 
 ### Cross-module dependencies
 - **`items` (spec-003)** — UOM-rule read + `defaultSupplierId` mirror write (direct
@@ -278,6 +394,15 @@ AUTH="Authorization: Bearer $TOKEN"
 # 10. Build + lint + tests
 cd backend && pnpm build && pnpm test supplier-items.service && pnpm test:e2e supplier-items
 # Expected: all pass
+
+# ── v2 smoke (verified live 2026-06-09 against DEMO) ──
+# 11. PATCH /:id/price {price,validFrom,validUntil} → 200; lastPrice + a history row written
+# 12. GET /:id/price-history → newest-first; before any write → []
+# 13. GET /expiring-prices → [] when no expiry; after a near-future validUntil → 1 row,
+#     expiryStatus warning, daysUntilExpiry≈10; ?days=5 excludes a 10-day row; ?daysAhead=30 includes it
+# 14. GET /counts-by-supplier, /counts-by-item → { id: n } maps
+# 15. Errors: bogus id price-history/price → 404; cross-tenant rfqId → 404;
+#     missing price → 400; no token → 401
 ```
 
 ---
@@ -290,3 +415,6 @@ cd backend && pnpm build && pnpm test supplier-items.service && pnpm test:e2e su
 | 2026-06-06 | Test scaffolding written (19 unit / 15 e2e, tagged [GAP]) | Red as expected on all gaps |
 | 2026-06-06 | All 9 gaps implemented: in-tenant supplier check (404), 5 writes tenant-scoped (updateMany + refetch), deletedAt on UOM-rule read, P2002->409, defaultSupplierId cleared on preferred removal, per-column @Max caps (corrected from draft to actual Decimal capacities), conversionFactor description fixed, query DTO, { supplierItems, count } envelopes + 3 frontend getters | Unit 19/19, e2e 15/15 (incl. same-id reactivation + preferred lifecycle), backend + frontend builds OK, lint clean |
 | 2026-06-06 | Shipped to origin (`80e90a2`); marked Complete and moved to specs/completed/ | All acceptance criteria met (100%) |
+| 2026-06-08 | **v2** schema migration `20260608120000_…` — 9 commercial fields + `SupplierItemPriceHistory` (recovered from older branch) | Migrated, `prisma generate`, build OK (`acbbfd8`) |
+| 2026-06-09 | **v2** service/controller/DTO — 5 endpoints (expiring-prices, counts-by-supplier/item, price-history, update-price), expiry derivation in `enrich`, in-tenant `rfqId` guard, 9 DTO fields | Unit 30/30 (20 v1 + 10 v2), build + lint clean (`9753ac6`) |
+| 2026-06-09 | **v2** live smoke vs DEMO — all 5 endpoints 200, window filter + expiry status correct, error paths 404/400/401 green | All v2 acceptance criteria met (100%) |
