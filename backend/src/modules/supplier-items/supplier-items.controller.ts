@@ -24,6 +24,7 @@ import {
 import { SupplierItemsService } from './supplier-items.service';
 import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
 import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
+import { UpdateSupplierItemPriceDto } from './dto/update-price.dto';
 import { FindSupplierItemsQueryDto } from './dto/find-supplier-items-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -85,6 +86,49 @@ export class SupplierItemsController {
     return this.supplierItemsService.findBySupplier(req.user.tenantId, supplierId);
   }
 
+  // NOTE: static GET routes must precede @Get(':id') so they are not captured as an id.
+
+  @Get('expiring-prices')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({
+    summary: 'List supplier-items whose price is expiring within a window (or all with an expiry)',
+  })
+  @ApiQuery({
+    name: 'daysAhead',
+    required: false,
+    description: 'Window in days (alias: days). Omit for every priced row with an expiry date.',
+  })
+  @ApiQuery({ name: 'days', required: false, description: 'Alias of daysAhead' })
+  @ApiResponse({ status: 200, description: 'Rows with expiryStatus + daysUntilExpiry' })
+  async expiringPrices(
+    @Request() req,
+    @Query('daysAhead') daysAhead?: string,
+    @Query('days') days?: string,
+  ) {
+    const raw = daysAhead ?? days;
+    const parsed = raw != null && raw !== '' ? parseInt(raw, 10) : undefined;
+    return this.supplierItemsService.expiringPrices(
+      req.user.tenantId,
+      parsed != null && !Number.isNaN(parsed) ? parsed : undefined,
+    );
+  }
+
+  @Get('counts-by-supplier')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Count of active supplier-items per supplier' })
+  @ApiResponse({ status: 200, description: 'Map { supplierId: count }' })
+  async countsBySupplier(@Request() req) {
+    return this.supplierItemsService.countsBySupplier(req.user.tenantId);
+  }
+
+  @Get('counts-by-item')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Count of active suppliers per item' })
+  @ApiResponse({ status: 200, description: 'Map { itemId: count }' })
+  async countsByItem(@Request() req) {
+    return this.supplierItemsService.countsByItem(req.user.tenantId);
+  }
+
   @Get(':id')
   @RequirePermissions('INVENTORY:VIEW')
   @ApiOperation({ summary: 'Get supplier-item by ID' })
@@ -93,6 +137,32 @@ export class SupplierItemsController {
   @ApiResponse({ status: 404, description: 'Supplier item not found' })
   async findOne(@Request() req, @Param('id') id: string) {
     return this.supplierItemsService.findOne(req.user.tenantId, id);
+  }
+
+  @Get(':id/price-history')
+  @RequirePermissions('INVENTORY:VIEW')
+  @ApiOperation({ summary: 'Price-history timeline for a supplier-item (newest first)' })
+  @ApiParam({ name: 'id', description: 'SupplierItem UUID' })
+  @ApiResponse({ status: 200, description: 'SupplierItemPriceHistory rows' })
+  @ApiResponse({ status: 404, description: 'Supplier item not found' })
+  async priceHistory(@Request() req, @Param('id') id: string) {
+    return this.supplierItemsService.priceHistory(req.user.tenantId, id);
+  }
+
+  @Patch(':id/price')
+  @RequirePermissions('INVENTORY:EDIT')
+  @ApiOperation({
+    summary: 'Update the current price and append a price-history record',
+  })
+  @ApiParam({ name: 'id', description: 'SupplierItem UUID' })
+  @ApiResponse({ status: 200, description: 'Updated supplier-item with the new price' })
+  @ApiResponse({ status: 404, description: 'Supplier item (or referenced RFQ) not found' })
+  async updatePrice(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateSupplierItemPriceDto,
+  ) {
+    return this.supplierItemsService.updatePrice(req.user.tenantId, req.user.id, id, dto);
   }
 
   @Patch(':id')

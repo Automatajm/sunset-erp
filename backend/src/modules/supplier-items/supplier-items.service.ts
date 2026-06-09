@@ -11,6 +11,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { UomService } from '../uom/uom.service';
 import { CreateSupplierItemDto } from './dto/create-supplier-item.dto';
 import { UpdateSupplierItemDto } from './dto/update-supplier-item.dto';
+import { UpdateSupplierItemPriceDto } from './dto/update-price.dto';
 
 const INCLUDE = {
   supplier: { select: { id: true, code: true, name: true } },
@@ -154,6 +155,16 @@ export class SupplierItemsService {
           isPreferred: dto.isPreferred ?? false,
           isActive: dto.isActive ?? true,
           notes: dto.notes,
+          // ── commercial / pricing v2 (recovered) ──
+          currency: dto.currency ?? 'USD',
+          incoterm: dto.incoterm,
+          paymentTerms: dto.paymentTerms,
+          priceValidFrom: dto.priceValidFrom ? new Date(dto.priceValidFrom) : null,
+          priceValidUntil: dto.priceValidUntil ? new Date(dto.priceValidUntil) : null,
+          priceAlertDays: dto.priceAlertDays ?? 30,
+          qualityRating: dto.qualityRating,
+          isBlocked: dto.isBlocked ?? false,
+          blockedReason: dto.blockedReason,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -242,10 +253,18 @@ export class SupplierItemsService {
       });
     }
 
+    // Date-only fields arrive as ISO strings from class-validator (@IsDateString
+    // does not transform) — coerce to Date so Prisma accepts them.
+    const data: any = { ...dto, updatedBy: userId };
+    if (dto.priceValidFrom !== undefined)
+      data.priceValidFrom = dto.priceValidFrom ? new Date(dto.priceValidFrom) : null;
+    if (dto.priceValidUntil !== undefined)
+      data.priceValidUntil = dto.priceValidUntil ? new Date(dto.priceValidUntil) : null;
+
     // Tenant-scoped at the write itself, then re-fetch for the enriched response.
     await this.prisma.supplierItem.updateMany({
       where: { id, tenantId, deletedAt: null },
-      data: { ...dto, updatedBy: userId },
+      data,
     });
     return this.findOne(tenantId, id);
   }
@@ -270,10 +289,149 @@ export class SupplierItemsService {
     return { message: 'Supplier item deleted successfully', id };
   }
 
+  // ── Expiring prices ──────────────────────────────────────────────────────────
+  // No window → every priced row that has an expiry date.
+  // With a window → rows expiring within `daysAhead` days (already-expired included).
+
+  async expiringPrices(tenantId: string, daysAhead?: number) {
+    const where: any = { tenantId, deletedAt: null, priceValidUntil: { not: null } };
+    if (daysAhead != null) {
+      const cutoff = this.today();
+      cutoff.setDate(cutoff.getDate() + daysAhead);
+      where.priceValidUntil = { not: null, lte: cutoff };
+    }
+    const rows = await this.prisma.supplierItem.findMany({
+      where,
+      include: INCLUDE,
+      orderBy: { priceValidUntil: 'asc' },
+    });
+    return rows.map((r) => {
+      const enriched = this.enrich(r);
+      // The alerts tab reads expiryStatus / daysUntilExpiry (aliases of the enriched fields).
+      return {
+        ...enriched,
+        expiryStatus: enriched.priceExpiryStatus,
+        daysUntilExpiry: enriched.priceExpiryDaysLeft,
+      };
+    });
+  }
+
+  // ── Counts ───────────────────────────────────────────────────────────────────
+
+  async countsBySupplier(tenantId: string): Promise<Record<string, number>> {
+    const groups = await this.prisma.supplierItem.groupBy({
+      by: ['supplierId'],
+      where: { tenantId, deletedAt: null },
+      _count: { _all: true },
+    });
+    return Object.fromEntries(groups.map((g: any) => [g.supplierId, g._count._all]));
+  }
+
+  async countsByItem(tenantId: string): Promise<Record<string, number>> {
+    const groups = await this.prisma.supplierItem.groupBy({
+      by: ['itemId'],
+      where: { tenantId, deletedAt: null },
+      _count: { _all: true },
+    });
+    return Object.fromEntries(groups.map((g: any) => [g.itemId, g._count._all]));
+  }
+
+  // ── Price history ────────────────────────────────────────────────────────────
+
+  async priceHistory(tenantId: string, id: string) {
+    // findOne enforces the tenant scope + 404 before we expose any history.
+    await this.findOne(tenantId, id);
+    return this.prisma.supplierItemPriceHistory.findMany({
+      where: { tenantId, supplierItemId: id },
+      orderBy: [{ validFrom: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  // ── Update price (writes lastPrice + appends a history row) ───────────────────
+
+  async updatePrice(tenantId: string, userId: string, id: string, dto: UpdateSupplierItemPriceDto) {
+    const si: any = await this.findOne(tenantId, id);
+
+    // If sourced from an RFQ, the RFQ must belong to this tenant — never trust
+    // a raw FK from the body (cross-tenant write leak).
+    if (dto.rfqId) {
+      const rfq = await this.prisma.rfq.findFirst({
+        where: { id: dto.rfqId, tenantId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!rfq) throw new NotFoundException(`RFQ ${dto.rfqId} not found`);
+    }
+
+    const currency = dto.currency ?? si.currency ?? 'USD';
+    const validFrom = new Date(dto.validFrom);
+    const validUntil = dto.validUntil ? new Date(dto.validUntil) : null;
+
+    await this.prisma.supplierItem.updateMany({
+      where: { id, tenantId, deletedAt: null },
+      data: {
+        lastPrice: dto.price,
+        currency,
+        priceValidFrom: validFrom,
+        priceValidUntil: validUntil,
+        updatedBy: userId,
+      },
+    });
+
+    await this.prisma.supplierItemPriceHistory.create({
+      data: {
+        tenantId,
+        supplierItemId: id,
+        price: dto.price,
+        currency,
+        validFrom,
+        validUntil,
+        source: dto.source ?? 'manual',
+        rfqId: dto.rfqId ?? null,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+      },
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  private today(): Date {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  // Price-expiry state used by the supplier/item tables and the alerts tab.
+  // Thresholds: critical ≤ 7d, warning ≤ priceAlertDays (default 30), else ok.
+  private computeExpiry(
+    lastPrice: unknown,
+    priceValidUntil: Date | null | undefined,
+    priceAlertDays: number | null | undefined,
+  ): { priceExpiryStatus: string; priceExpiryDaysLeft: number | null } {
+    if (lastPrice == null) return { priceExpiryStatus: 'no_price', priceExpiryDaysLeft: null };
+    if (!priceValidUntil) return { priceExpiryStatus: 'no_expiry', priceExpiryDaysLeft: null };
+
+    const until = new Date(priceValidUntil);
+    until.setHours(0, 0, 0, 0);
+    const daysLeft = Math.round((until.getTime() - this.today().getTime()) / 86_400_000);
+
+    let priceExpiryStatus: string;
+    if (daysLeft < 0) priceExpiryStatus = 'expired';
+    else if (daysLeft === 0) priceExpiryStatus = 'expires_today';
+    else if (daysLeft <= 7) priceExpiryStatus = 'critical';
+    else if (daysLeft <= (priceAlertDays ?? 30)) priceExpiryStatus = 'warning';
+    else priceExpiryStatus = 'ok';
+
+    return { priceExpiryStatus, priceExpiryDaysLeft: daysLeft };
+  }
+
   private enrich(si: any) {
     return {
       ...si,
       conversionPreview: `1 ${si.purchaseUom.code} = ${Number(si.conversionFactor)} ${si.item.baseUom}`,
+      ...this.computeExpiry(si.lastPrice, si.priceValidUntil, si.priceAlertDays),
     };
   }
 }

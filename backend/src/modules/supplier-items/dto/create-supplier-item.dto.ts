@@ -6,10 +6,27 @@ import {
   IsUUID,
   IsNumber,
   IsInt,
+  IsIn,
+  IsDateString,
   Min,
   Max,
   MaxLength,
 } from 'class-validator';
+
+// ICC Incoterms 2020 — the only valid three-letter delivery terms.
+const INCOTERMS = [
+  'EXW',
+  'FCA',
+  'CPT',
+  'CIP',
+  'DAP',
+  'DPU',
+  'DDP',
+  'FAS',
+  'FOB',
+  'CFR',
+  'CIF',
+] as const;
 
 // Safe caps within the Decimal column capacities — overflow fails 400, never 500.
 // packSize/lastPrice: Decimal(15,4) (< 1e11) | moq: Decimal(15,3) (< 1e12) |
@@ -105,4 +122,62 @@ export class CreateSupplierItemDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  // ── commercial / pricing v2 (recovered from older branch) ──────────────────
+
+  @ApiPropertyOptional({ example: 'USD', default: 'USD', description: 'Price currency (ISO 4217)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(3)
+  currency?: string;
+
+  @ApiPropertyOptional({ example: 'FOB', enum: INCOTERMS, description: 'ICC Incoterm 2020' })
+  @IsOptional()
+  @IsIn(INCOTERMS)
+  incoterm?: string;
+
+  @ApiPropertyOptional({ example: 'Net 30', description: 'Payment terms' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  paymentTerms?: string;
+
+  @ApiPropertyOptional({ example: '2026-04-11', description: 'Current price validity start date' })
+  @IsOptional()
+  @IsDateString()
+  priceValidFrom?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-11', description: 'Current price expiry date' })
+  @IsOptional()
+  @IsDateString()
+  priceValidUntil?: string;
+
+  @ApiPropertyOptional({
+    example: 30,
+    default: 30,
+    description: 'Days before expiry to start alerting',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  priceAlertDays?: number;
+
+  @ApiPropertyOptional({ example: 4.5, description: 'Quality rating 0–5' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  qualityRating?: number;
+
+  @ApiPropertyOptional({ default: false, description: 'Block this supplier for this item' })
+  @IsOptional()
+  @IsBoolean()
+  isBlocked?: boolean;
+
+  @ApiPropertyOptional({ example: 'Quality issues', description: 'Reason the supplier is blocked' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  blockedReason?: string;
 }

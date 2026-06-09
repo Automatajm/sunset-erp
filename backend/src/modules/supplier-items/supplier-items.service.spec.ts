@@ -26,6 +26,7 @@ const model = (): ModelMock => ({
   create: jest.fn(),
   update: jest.fn(),
   updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+  groupBy: jest.fn().mockResolvedValue([]),
 });
 
 const itemRecord = (over: Record<string, unknown> = {}) => ({
@@ -68,10 +69,19 @@ describe('SupplierItemsService', () => {
     item: ModelMock;
     supplier: ModelMock;
     uomUnit: ModelMock;
+    supplierItemPriceHistory: ModelMock;
+    rfq: ModelMock;
   };
 
   beforeEach(async () => {
-    prisma = { supplierItem: model(), item: model(), supplier: model(), uomUnit: model() };
+    prisma = {
+      supplierItem: model(),
+      item: model(),
+      supplier: model(),
+      uomUnit: model(),
+      supplierItemPriceHistory: model(),
+      rfq: model(),
+    };
     const uom = { calcAllQties: jest.fn(), calcNewWAC: jest.fn(), calcFinancialValue: jest.fn() };
     const mod = await Test.createTestingModule({
       providers: [
@@ -260,5 +270,138 @@ describe('SupplierItemsService', () => {
     await service.remove(TENANT_A, USER, 'si-1');
     const itemWrite = writesOf(prisma.item).find((c) => c?.data?.defaultSupplierId === null);
     expect(itemWrite).toBeTruthy();
+  });
+
+  // ── enrich: price-expiry state ──────────────────────────────────────────────
+  it('enrich classifies a priced row inside the alert window as "warning"', async () => {
+    const in20Days = new Date();
+    in20Days.setDate(in20Days.getDate() + 20);
+    prisma.supplierItem.findMany.mockResolvedValue([
+      siRecord({ lastPrice: 10, priceValidUntil: in20Days, priceAlertDays: 30 }),
+    ]);
+    const result: any = await service.findAll(TENANT_A);
+    expect(result.supplierItems[0].priceExpiryStatus).toBe('warning');
+    expect(result.supplierItems[0].priceExpiryDaysLeft).toBe(20);
+  });
+
+  it('enrich reports "no_price" when there is no price, "expired" when past', async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    prisma.supplierItem.findMany.mockResolvedValue([
+      siRecord({ id: 'a', lastPrice: null }),
+      siRecord({ id: 'b', lastPrice: 5, priceValidUntil: yesterday }),
+    ]);
+    const result: any = await service.findAll(TENANT_A);
+    expect(result.supplierItems[0].priceExpiryStatus).toBe('no_price');
+    expect(result.supplierItems[1].priceExpiryStatus).toBe('expired');
+  });
+
+  // ── expiringPrices ──────────────────────────────────────────────────────────
+  it('expiringPrices (no window) scopes to tenant + rows that have an expiry date', async () => {
+    await service.expiringPrices(TENANT_A);
+    expect(prisma.supplierItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: TENANT_A,
+          deletedAt: null,
+          priceValidUntil: { not: null },
+        }),
+      }),
+    );
+  });
+
+  it('expiringPrices (window) adds an lte cutoff and aliases expiryStatus/daysUntilExpiry', async () => {
+    const in5Days = new Date();
+    in5Days.setDate(in5Days.getDate() + 5);
+    prisma.supplierItem.findMany.mockResolvedValue([
+      siRecord({ lastPrice: 10, priceValidUntil: in5Days, priceAlertDays: 30 }),
+    ]);
+    const rows: any = await service.expiringPrices(TENANT_A, 30);
+    const where = prisma.supplierItem.findMany.mock.calls[0][0].where;
+    expect(where.priceValidUntil.lte).toEqual(expect.any(Date));
+    expect(rows[0].expiryStatus).toBe('critical'); // ≤ 7 days
+    expect(rows[0].daysUntilExpiry).toBe(5);
+  });
+
+  // ── counts ──────────────────────────────────────────────────────────────────
+  it('countsBySupplier groups tenant-scoped and returns a { supplierId: count } map', async () => {
+    prisma.supplierItem.groupBy.mockResolvedValue([{ supplierId: SUP, _count: { _all: 3 } }]);
+    const result = await service.countsBySupplier(TENANT_A);
+    expect(prisma.supplierItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['supplierId'],
+        where: expect.objectContaining({ tenantId: TENANT_A, deletedAt: null }),
+      }),
+    );
+    expect(result).toEqual({ [SUP]: 3 });
+  });
+
+  it('countsByItem groups by itemId tenant-scoped', async () => {
+    prisma.supplierItem.groupBy.mockResolvedValue([{ itemId: ITEM, _count: { _all: 2 } }]);
+    const result = await service.countsByItem(TENANT_A);
+    expect(prisma.supplierItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ by: ['itemId'] }),
+    );
+    expect(result).toEqual({ [ITEM]: 2 });
+  });
+
+  // ── priceHistory ────────────────────────────────────────────────────────────
+  it('priceHistory 404s for an id owned by another tenant', async () => {
+    prisma.supplierItem.findFirst.mockResolvedValue(null);
+    await expect(service.priceHistory(TENANT_B, 'owned-by-A')).rejects.toThrow(NotFoundException);
+  });
+
+  it('priceHistory returns rows scoped to tenant + supplierItem, newest first', async () => {
+    prisma.supplierItem.findFirst.mockResolvedValue(siRecord());
+    prisma.supplierItemPriceHistory.findMany.mockResolvedValue([{ id: 'h1' }]);
+    const rows = await service.priceHistory(TENANT_A, 'si-1');
+    expect(prisma.supplierItemPriceHistory.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: TENANT_A, supplierItemId: 'si-1' },
+        orderBy: [{ validFrom: 'desc' }, { createdAt: 'desc' }],
+      }),
+    );
+    expect(rows).toEqual([{ id: 'h1' }]);
+  });
+
+  // ── updatePrice ─────────────────────────────────────────────────────────────
+  const priceDto = (over: Record<string, unknown> = {}) =>
+    ({ price: 48.5, validFrom: '2026-04-11', ...over }) as never;
+
+  it('updatePrice 404s when the supplier-item is not in the tenant', async () => {
+    prisma.supplierItem.findFirst.mockResolvedValue(null);
+    await expect(service.updatePrice(TENANT_B, USER, 'x', priceDto())).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('updatePrice writes lastPrice tenant-scoped and appends a history row', async () => {
+    prisma.supplierItem.findFirst.mockResolvedValue(siRecord({ currency: 'USD' }));
+    await service.updatePrice(TENANT_A, USER, 'si-1', priceDto({ validUntil: '2026-10-11' }));
+
+    const priceWrite = writesOf(prisma.supplierItem).find((c) => c?.data?.lastPrice === 48.5);
+    expect(priceWrite?.where?.tenantId).toBe(TENANT_A);
+    expect(priceWrite.data.priceValidFrom).toEqual(expect.any(Date));
+
+    expect(prisma.supplierItemPriceHistory.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: TENANT_A,
+          supplierItemId: 'si-1',
+          price: 48.5,
+          source: 'manual',
+          createdBy: USER,
+        }),
+      }),
+    );
+  });
+
+  it('updatePrice rejects an RFQ source id that belongs to another tenant', async () => {
+    prisma.supplierItem.findFirst.mockResolvedValue(siRecord());
+    prisma.rfq.findFirst.mockResolvedValue(null); // foreign / bogus rfq
+    await expect(
+      service.updatePrice(TENANT_A, USER, 'si-1', priceDto({ source: 'rfq', rfqId: 'foreign' })),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.supplierItemPriceHistory.create).not.toHaveBeenCalled();
   });
 });
