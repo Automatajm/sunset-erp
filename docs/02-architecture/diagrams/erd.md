@@ -558,6 +558,7 @@ erDiagram
     Decimal scrap_percent 
     Boolean is_phantom 
     String consumption_uom_id "❓"
+    Decimal yield_per_unit "❓"
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
@@ -1225,12 +1226,38 @@ erDiagram
     Boolean is_preferred 
     Boolean is_active 
     String notes "❓"
+    String currency 
+    String incoterm "❓"
+    String payment_terms "❓"
+    DateTime price_valid_from "❓"
+    DateTime price_valid_until "❓"
+    Int price_alert_days 
+    Decimal quality_rating "❓"
+    Boolean is_blocked 
+    String blocked_reason "❓"
     DateTime created_at 
     DateTime updated_at 
     DateTime deleted_at "❓"
     String created_by 
     String updated_by 
     String deleted_by "❓"
+    }
+  
+
+  "po_supplier_item_price_history" {
+    String id "🗝️"
+    String tenant_id 
+    String supplier_item_id 
+    Decimal price 
+    String currency 
+    DateTime valid_from 
+    DateTime valid_until "❓"
+    String source 
+    String rfq_id "❓"
+    String grn_id "❓"
+    String notes "❓"
+    DateTime created_at 
+    String created_by 
     }
   
 
@@ -1870,6 +1897,9 @@ erDiagram
     "in_supplier_items" }o--|| po_suppliers : "supplier"
     "in_supplier_items" }o--|| in_items : "item"
     "in_supplier_items" }o--|| cfg_uom_units : "purchaseUom"
+    "po_supplier_item_price_history" }o--|| saas_tenants : "tenant"
+    "po_supplier_item_price_history" }o--|| in_supplier_items : "supplierItem"
+    "po_supplier_item_price_history" }o--|o po_rfqs : "rfq"
     "grn_receipts" }o--|| saas_tenants : "tenant"
     "grn_receipts" }o--|o po_purchase_orders : "purchaseOrder"
     "grn_receipts" }o--|o po_suppliers : "supplier"
