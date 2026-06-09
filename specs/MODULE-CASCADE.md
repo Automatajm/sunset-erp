@@ -73,29 +73,29 @@ back-fills.
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
 | ✅ spec-001 | auth | User, Role, Permission, RolePermission, UserRole | none |
-| ⬜ | tenants | Tenant, Subscription, SubscriptionPlan, Invoice, UsageRecord | none |
-| ⬜ | users | User, UserTenant | none |
-| ⬜ | roles | Role, RolePermission | none |
+| ✅ spec-027 | tenants | Tenant, Subscription, SubscriptionPlan, Invoice, UsageRecord | none |
+| ✅ spec-027 | users | User, UserTenant | none |
+| ✅ spec-027 | roles | Role, RolePermission | none |
 | ✅ spec-005 | uom | UomUnit, UomConversion | none |
 | ✅ spec-007 | chart-of-accounts | Account | none |
 | ✅ spec-006 | macro-categories | MacroCategory | none |
 | ✅ spec-013 | customers | Customer | none |
 | ✅ spec-010 | work-centers | WorkCenter | none |
 | ✅ spec-004 | warehouses | Warehouse | none |
-| ⬜ | automation | AutomationConfig, AutoJeQueue | none |
-| ⬜ | fiscal-periods | FiscalPeriod | none |
+| ✅ spec-031 | automation | AutomationConfig, AutoJeQueue | none |
+| ✅ spec-033 | fiscal-periods | FiscalPeriod | none |
 | ⬜ | bulk-import | StockLocationBatch, StockLocationBatchLine, StockLocationUpdate | none |
-| ⬜ | financial-reports | (none — read model) | none |
+| ✅ spec-032 | financial-reports | (none — read model) | none |
 
 ### Tier 1 — depend only on Tier 0
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
 | ✅ spec-008 | consumption-groups | ConsumptionGroup | uom |
 | ✅ spec-009 | categories | Category | chart-of-accounts, macro-categories |
-| ⬜ | tenant-settings | TenantSettings | uom |
+| ✅ spec-021 | tenant-settings | TenantSettings | uom |
 | ✅ spec-015 | journal-entries | JournalEntry, JournalEntryLine | chart-of-accounts |
-| ⬜ | budgets | Budget, BudgetLine | chart-of-accounts |
-| ⬜ | cash-flow | CashFlowProjection, CashFlowLine | chart-of-accounts |
+| ✅ spec-029 | budgets | Budget, BudgetLine | chart-of-accounts |
+| ✅ spec-030 | cash-flow | CashFlowProjection, CashFlowLine | chart-of-accounts |
 | ✅ spec-014 | warehouse-locations | WarehouseZone, WarehouseAisle, WarehouseRack, WarehouseLevel, WarehouseBin | warehouses |
 
 ### Tier 2 — master data
@@ -129,14 +129,14 @@ back-fills.
 ### Tier 5 — downstream transactions
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
-| ⬜ | goods-receipts | GoodsReceipt, GoodsReceiptLine | items, purchase-orders, stock-transactions, suppliers, uom, warehouses |
-| ⬜ | production-orders | ProductionOrder, MoLaborActual, MoMaterialActual, ProductionVariance | automation, bom, items, journal-entries, production-plans |
-| ⬜ | ar-invoices | ArInvoice, ArInvoiceLine, ArPayment | automation, chart-of-accounts, customers, items, journal-entries, sales-orders, stock-transactions |
+| ✅ spec-023 | goods-receipts | GoodsReceipt, GoodsReceiptLine | items, purchase-orders, stock-transactions, suppliers, uom, warehouses |
+| ✅ spec-024 | production-orders | ProductionOrder, MoLaborActual, MoMaterialActual, ProductionVariance | automation, bom, items, journal-entries, production-plans |
+| ✅ spec-026 | ar-invoices | ArInvoice, ArInvoiceLine, ArPayment | automation, chart-of-accounts, customers, items, journal-entries, sales-orders, stock-transactions |
 
 ### Tier 6 — top of stack
 | Status | Module | Owns (Prisma) | Depends on |
 |--------|--------|---------------|-----------|
-| ⬜ | ap-invoices | ApInvoice, ApInvoiceLine, ApPayment | automation, chart-of-accounts, goods-receipts, items, journal-entries, purchase-orders, stock-transactions, suppliers |
+| ✅ spec-025 | ap-invoices | ApInvoice, ApInvoiceLine, ApPayment | automation, chart-of-accounts, goods-receipts, items, journal-entries, purchase-orders, stock-transactions, suppliers |
 
 ---
 
@@ -159,4 +159,14 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 13. ~~**supplier-items**~~ ✅ spec-018 — Tier 4, last single module before the clusters.
 14. ~~**Production cluster**~~ ✅ spec-019 — first cluster spec, one unit.
 15. ~~**Procurement cluster**~~ ✅ spec-020 — Tier 4, four-module cycle shipped as one unit (award injection fix, 5 transactions, shared tx-aware generators).
-16. **goods-receipts** — Tier 5, wires the GoodsReceipt model that PO.receive bypasses; deps now all ✅. ← **next**
+16. ~~**goods-receipts**~~ ✅ spec-023 — Tier 5, wires the GoodsReceipt model that PO.receive bypasses.
+17. **bulk-import** — Tier 0, the ONLY genuinely unspecced backend module. CSV/Excel
+    import/export with preview + dry-run; generates codes and writes many
+    tenant-owned tables. ← **next** (`/new-spec bulk-import`).
+
+> **spec-018 (supplier-items) drift:** the module gained 5 endpoints
+> (`price-history`, `expiring-prices`, `counts-by-supplier`, `counts-by-item`,
+> `update-price`) and 9 schema fields (currency, incoterm, paymentTerms,
+> priceValidFrom/Until, priceAlertDays, qualityRating, isBlocked, blockedReason)
+> plus the `SupplierItemPriceHistory` model — all post-dating its spec. spec-018
+> needs a v2 refresh to re-cover the module.
