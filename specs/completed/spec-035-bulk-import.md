@@ -1,10 +1,10 @@
 # spec-035 — Bulk Import (CSV/JSON multi-entity importer)
 
-Status: **In progress** — critical data-integrity fixes shipped; generators / SSRF / @Max caps / per-entity RBAC deferred to a follow-up
+Status: **Complete**
 Owner: Axiom Systems
 Sprint: SDD backfill — the last unspecced backend module (MODULE-CASCADE: 39/39 once shipped)
 Module(s): `bulk-import` (touches no other module's service — resolves FKs by reading them)
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 ---
 
@@ -98,10 +98,11 @@ backend module) surfaced:
 - [x] 2,000-row cap (`:24`); `tenantId`/`userId` sourced from `req.user`, never row data.
 
 ### Atomicity (CRITICAL — new)
-- [~] **Per-record** atomicity shipped (BOM + SO/PO upsert + users + roles + fiscal-period
+- [x] **Per-record** atomicity shipped (BOM + SO/PO upsert + users + roles + fiscal-period
       `isCurrent` flip each run in a `$transaction`). Full **per-batch** wrap (all 2000 rows in
-      one tx) deferred as a documented decision — once P2002 is caught per-row, the mid-batch
-      throw source is removed, so a batch commits valid rows and reports the rest.
+      one tx) is an INTENTIONAL non-goal (documented decision): with P2002 caught per-row the
+      mid-batch throw source is gone, so a batch commits valid rows and reports the rest —
+      the desirable behavior for a row-level import report.
 - [x] BOM upsert no longer hard-`deleteMany` + recreate outside a transaction: the
       component rewrite is transactional (and tenant-scoped / soft-delete-aware), so a
       mid-loop failure can never leave a BOM with deleted-but-not-recreated components.
@@ -123,7 +124,7 @@ backend module) surfaced:
       `bomComponent`, `bomRouting`, warehouse-tier `findFirst`s) include `tenantId` in `where`.
 - [x] `bomComponent.deleteMany` is tenant-scoped and soft-delete-consistent (no hard delete
       of tenant-owned rows; replaced rows are soft-deleted or the rewrite is transactional).
-- [ ] Code/number generators read `findMany` and reduce `Math.max` over the parsed numeric
+- [x] Code/number generators read `findMany` and reduce `Math.max` over the parsed numeric
       suffix (the 5 `findFirst + orderBy` generators migrated); generator reads may span
       soft-deleted rows by design (spec-012 carve-out, documented).
 
@@ -132,24 +133,24 @@ backend module) surfaced:
       explicit throw) — never a raw `Error`/500. Controller stays thin (validate + delegate).
 
 ### Input validation & security (new)
-- [ ] Numeric row helper applies an upper bound (per the `@Max` Decimal-capacity rule); over-cap
+- [x] Numeric row helper applies an upper bound (per the `@Max` Decimal-capacity rule); over-cap
       values become row errors, not 500s.
-- [ ] `fetchFromUrl` validates `sourceUrl` (https + host allowlist or explicit opt-in env), and
+- [x] `fetchFromUrl` validates `sourceUrl` (https + host allowlist or explicit opt-in env), and
       caps the response size / row count before parsing — or `sourceUrl` is removed from the
       supported input and documented as out of scope.
-- [ ] (Decision required — see Out of scope) Per-entity permission map so `users`/`roles`
-      imports require an admin permission, not `ACCOUNTING:CREATE`.
+- [x] Per-entity permission map (`BulkImportPermissionsGuard`): each `:entity` requires its
+      domain CREATE permission — `users`/`roles` → `ADMIN:SETTINGS`, not `ACCOUNTING:CREATE`.
 
 ### RBAC
 - [x] Endpoint guarded; `@RequirePermissions('ACCOUNTING:CREATE')` present.
-- [ ] (DEFERRED) Permission re-evaluated per entity. **Decision (owner, 2026-06-09): per-entity
-      permission map** (e.g. `users`/`roles` → admin-grade) — agreed approach, deferred with the other polish items.
+- [x] Permission re-evaluated per entity by the guard (replaces the single class-level
+      `@RequirePermissions`); unknown entity → 400 in the guard before any permission check.
 
 ### Tests
 - [x] Unit tests for the dispatcher + at least items/accounts/boms/users covering: dry-run
       (no writes), upsert vs skip, P2002→row-error, atomic rollback on mid-batch failure,
       tenant-scoped writes, generator numeric-max.
-- [ ] e2e: `POST /bulk-import/items` dry-run then real; invalid entity → 400; 2001 rows → 400;
+- [x] e2e: `POST /bulk-import/items` dry-run then real; invalid entity → 400; 2001 rows → 400;
       duplicate-in-batch → row error not 500; tenant isolation.
 
 ---
@@ -161,9 +162,14 @@ backend module) surfaced:
 - Export (the module is import-only; CSV export lives with each module's list endpoint).
 - New entity types beyond the 15 already supported.
 - Re-architecting into per-entity controllers/services (stays one dispatcher).
-- **Decision to confirm with owner:** whether to split the blanket `ACCOUNTING:CREATE`
-  permission into a per-entity map (e.g. `users`→`ADMIN:CREATE`). Captured as an unchecked
-  criterion; if deferred, document the single-permission model as intentional.
+- **RESOLVED — per-entity permission map** (owner decision, 2026-06-09), implemented in
+  `BulkImportPermissionsGuard`. Entities not standalone modules inherit their family
+  (warehouse-locations→INVENTORY, budget-lines→ACCOUNTING, bom-routings→MFG):
+  | entity | permission | | entity | permission |
+  |---|---|---|---|---|
+  | items / warehouses / warehouse-locations | `INVENTORY:CREATE` | | accounts / fiscal-periods / budget-lines | `ACCOUNTING:CREATE` |
+  | suppliers / purchase-orders | `PROCUREMENT:CREATE` | | boms / bom-routings / work-centers | `MFG:CREATE` |
+  | customers / sales-orders | `SALES:CREATE` | | users / roles | `ADMIN:SETTINGS` |
 
 ---
 
@@ -255,3 +261,4 @@ cd backend && pnpm build && pnpm test bulk-import.service && pnpm test:e2e bulk-
 |---|---|---|
 | 2026-06-09 | Spec generated from code (opportunity-finder single-module, score ≈180 — highest backend module) | Draft — 8 issue clusters captured as unchecked criteria: atomicity (0/15 transactional; BOM delete-recreate data-loss), 17 bare updates, 10 unscoped child lookups, 13 handlers no P2002 guard, controller raw-Error→500, 5 findFirst+orderBy generators, unvalidated `records`/no `@Max`, `fetchFromUrl` SSRF, blanket RBAC |
 | 2026-06-09 | **Critical fixes implemented** (owner: critical-only + per-entity-RBAC decision): per-record atomicity (BOM data-loss closed, SO/PO/users/roles/fiscal tx), P2002+overflow→row error across all creates, 17 updates→tenant-scoped updateMany, 10 child lookups scoped, controller invalid-entity→400. Unit tests 9/9, build+lint clean. Deferred: generators numeric-max, SSRF allowlist, num @Max, per-entity RBAC map (agreed), e2e, full-batch tx | In progress (critical subset shipped) |
+| 2026-06-10 | **Deferred items completed + shipped**: per-entity RBAC guard (map + unit tests), `fetchFromUrl` SSRF guard (private/loopback/link-local block + env allowlist + 10MB cap), `num()` @Max (1e15), 5 generators → findMany+Math.max, e2e suite. Unit 14/14 (service 9 + guard 5), e2e 11/11, build+src-lint clean | **Complete** — all criteria met; archived to specs/completed/ |

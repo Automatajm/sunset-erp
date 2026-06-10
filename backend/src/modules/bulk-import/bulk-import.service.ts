@@ -60,13 +60,58 @@ export class BulkImportService {
     }
   }
 
+  // ── SSRF guard — reject private/loopback/link-local source URLs ──────────────
+  // `sourceUrl` is fetched server-side, so an unchecked host lets a caller probe
+  // the internal network (cloud metadata at 169.254.169.254, localhost, RFC-1918).
+  // A comma-separated BULK_IMPORT_URL_ALLOWLIST env var can re-permit specific
+  // internal hosts for a controlled migration source.
+  private assertSafeSourceUrl(url: string): void {
+    let u: URL;
+    try {
+      u = new URL(url);
+    } catch {
+      throw new BadRequestException('Invalid source URL');
+    }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+      throw new BadRequestException('Source URL must use http(s)');
+    }
+    const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    const isPrivate =
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^169\.254\./.test(host) || // link-local incl. cloud metadata
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      /^(fc|fd)[0-9a-f]{2}:/.test(host); // IPv6 ULA
+    const allowlist = (process.env.BULK_IMPORT_URL_ALLOWLIST ?? '')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean);
+    if (isPrivate && !allowlist.includes(host)) {
+      throw new BadRequestException(
+        'Source URL host is not allowed (private/loopback/link-local address blocked)',
+      );
+    }
+  }
+
   private async fetchFromUrl(url: string, token?: string): Promise<Record<string, any>[]> {
+    this.assertSafeSourceUrl(url);
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       const response = await fetch(url, { headers });
       if (!response.ok) throw new BadRequestException(`Source URL returned ${response.status}`);
-      const data = await response.json();
+      // Cap the payload (10 MB) before parsing — an unbounded body is a memory DoS.
+      const text = await response.text();
+      if (text.length > 10 * 1024 * 1024) {
+        throw new BadRequestException('Source payload too large (max 10 MB)');
+      }
+      const data = JSON.parse(text);
       if (!Array.isArray(data))
         throw new BadRequestException('Source URL must return a JSON array.');
       return data;
@@ -122,11 +167,19 @@ export class BulkImportService {
     return String(val).trim();
   }
 
+  // Upper bound that fits inside the widest Decimal column with margin
+  // (Decimal(18,x) < 1e18; cap an order of magnitude below). Values past this —
+  // or non-finite — are treated as absent so they never reach Prisma and
+  // overflow to a 500; a genuine column overflow that slips through is still
+  // caught per-row by writeError().
+  private static readonly MAX_NUMERIC = 1e15;
+
   private num(record: Record<string, any>, field: string): number | undefined {
     const val = record[field];
     if (val === undefined || val === null || String(val).trim() === '') return undefined;
     const n = Number(val);
-    return isNaN(n) ? undefined : n;
+    if (!Number.isFinite(n) || Math.abs(n) > BulkImportService.MAX_NUMERIC) return undefined;
+    return n;
   }
 
   private bool(record: Record<string, any>, field: string, fallback = true): boolean {
@@ -507,15 +560,17 @@ export class BulkImportService {
 
     const generateCode = async (warehouseType: string): Promise<string> => {
       const prefix = `WH-${TYPE_PREFIX[warehouseType] ?? 'REG'}`;
-      const last = await this.prisma.warehouse.findFirst({
+      // Numeric max over the parsed suffix — lexicographic `orderBy desc` would
+      // mis-rank once the suffix width changes (e.g. -009 vs -010 vs -100).
+      const rows = await this.prisma.warehouse.findMany({
         where: { tenantId, code: { startsWith: prefix }, deletedAt: null },
-        orderBy: { code: 'desc' },
+        select: { code: true },
       });
-      if (!last) return `${prefix}-001`;
-      const parts = last.code.split('-');
-      const lastNum = parseInt(parts[parts.length - 1], 10);
-      const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
-      return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
+      const maxNum = rows.reduce((m, r) => {
+        const n = parseInt(r.code.split('-').pop() ?? '', 10);
+        return Number.isNaN(n) ? m : Math.max(m, n);
+      }, 0);
+      return `${prefix}-${(maxNum + 1).toString().padStart(3, '0')}`;
     };
 
     for (let i = 0; i < records.length; i++) {
@@ -912,15 +967,17 @@ export class BulkImportService {
             // Add new lines to existing SO — atomic per record
             try {
               await this.prisma.$transaction(async (tx) => {
+                // Numeric max once, then increment locally (no per-line re-query).
+                const existingLines = await tx.salesOrderLine.findMany({
+                  where: { tenantId, salesOrderId: existingSo.id, deletedAt: null },
+                  select: { lineNumber: true },
+                });
+                let nextLine = existingLines.reduce((m, l) => Math.max(m, l.lineNumber), 0) + 1;
                 for (const line of lines) {
-                  const lastLine = await tx.salesOrderLine.findFirst({
-                    where: { tenantId, salesOrderId: existingSo.id, deletedAt: null },
-                    orderBy: { lineNumber: 'desc' },
-                  });
-                  const nextLine = (lastLine?.lineNumber ?? 0) + 1;
                   await tx.salesOrderLine.create({
                     data: { ...line, salesOrderId: existingSo.id, lineNumber: nextLine },
                   });
+                  nextLine++;
                 }
                 await tx.salesOrder.updateMany({
                   where: { id: existingSo.id, tenantId, deletedAt: null },
@@ -944,17 +1001,18 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
-        // Generate SO number
+        // Generate SO number — numeric max over the parsed suffix (not lexicographic).
         const year = new Date(orderDateStr).getFullYear();
         const prefix = `SO-${year}`;
-        const lastSo = await this.prisma.salesOrder.findFirst({
+        const existing = await this.prisma.salesOrder.findMany({
           where: { tenantId, soNumber: { startsWith: prefix } },
-          orderBy: { soNumber: 'desc' },
+          select: { soNumber: true },
         });
-        const nextNum = lastSo
-          ? (parseInt(lastSo.soNumber.split('-')[2]) + 1).toString().padStart(4, '0')
-          : '0001';
-        const soNumber = `${prefix}-${nextNum}`;
+        const maxNum = existing.reduce((m, s) => {
+          const n = parseInt(s.soNumber.split('-')[2], 10);
+          return Number.isNaN(n) ? m : Math.max(m, n);
+        }, 0);
+        const soNumber = `${prefix}-${(maxNum + 1).toString().padStart(4, '0')}`;
 
         try {
           await this.prisma.salesOrder.create({
@@ -1121,18 +1179,21 @@ export class BulkImportService {
           if (!dryRun) {
             try {
               await this.prisma.$transaction(async (tx) => {
+                // Numeric max once, then increment locally (no per-line re-query).
+                const existingLines = await tx.purchaseOrderLine.findMany({
+                  where: { tenantId, purchaseOrderId: existingPo.id, deletedAt: null },
+                  select: { lineNumber: true },
+                });
+                let nextLine = existingLines.reduce((m, l) => Math.max(m, l.lineNumber), 0) + 1;
                 for (const line of lines) {
-                  const lastLine = await tx.purchaseOrderLine.findFirst({
-                    where: { tenantId, purchaseOrderId: existingPo.id, deletedAt: null },
-                    orderBy: { lineNumber: 'desc' },
-                  });
                   await tx.purchaseOrderLine.create({
                     data: {
                       ...line,
                       purchaseOrderId: existingPo.id,
-                      lineNumber: (lastLine?.lineNumber ?? 0) + 1,
+                      lineNumber: nextLine,
                     },
                   });
+                  nextLine++;
                 }
                 await tx.purchaseOrder.updateMany({
                   where: { id: existingPo.id, tenantId, deletedAt: null },
@@ -1156,16 +1217,18 @@ export class BulkImportService {
       }
 
       if (!dryRun) {
+        // Numeric max over the parsed suffix (not lexicographic).
         const year = new Date(poDateStr).getFullYear();
         const prefix = `PO-${year}`;
-        const lastPo = await this.prisma.purchaseOrder.findFirst({
+        const existing = await this.prisma.purchaseOrder.findMany({
           where: { tenantId, poNumber: { startsWith: prefix } },
-          orderBy: { poNumber: 'desc' },
+          select: { poNumber: true },
         });
-        const nextNum = lastPo
-          ? (parseInt(lastPo.poNumber.split('-')[2]) + 1).toString().padStart(4, '0')
-          : '0001';
-        const poNumber = `${prefix}-${nextNum}`;
+        const maxNum = existing.reduce((m, p) => {
+          const n = parseInt(p.poNumber.split('-')[2], 10);
+          return Number.isNaN(n) ? m : Math.max(m, n);
+        }, 0);
+        const poNumber = `${prefix}-${(maxNum + 1).toString().padStart(4, '0')}`;
 
         try {
           await this.prisma.purchaseOrder.create({

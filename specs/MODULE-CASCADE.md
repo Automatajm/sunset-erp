@@ -18,16 +18,16 @@ Two legitimate dependency **cycles** exist and must be specced as one cluster ea
 
 ## Coverage summary
 
-_Recounted 2026-06-08 against `backend/src/modules/` (39 dirs) and
-`specs/completed/` (34 numbered backend specs + 5 frontend specs)._
+_Recounted 2026-06-10 against `backend/src/modules/` (39 dirs) and
+`specs/completed/` (35 numbered backend specs + 5 frontend specs)._
 
 | Metric | Value |
 |--------|-------|
 | Business modules total | 39 |
-| **Specced (Done)** | **38** |
-| **Pending** | **1 — `bulk-import`** |
+| **Specced (Done)** | **39** |
+| **Pending** | **0 — all covered** |
 
-**38 covered backend modules** (module → covering spec):
+**39 covered backend modules** (module → covering spec; `bulk-import` (035) completes the set):
 `auth` (001, +034 session), `suppliers` (002), `items` (003), `warehouses` (004),
 `uom` (005), `macro-categories` (006), `chart-of-accounts` (007),
 `consumption-groups` (008), `categories` (009), `work-centers` (010), `bom` (011),
@@ -40,7 +40,7 @@ _Recounted 2026-06-08 against `backend/src/modules/` (39 dirs) and
 `ap-invoices` (025), `ar-invoices` (026),
 `users` + `roles` + `tenants` (+`tenant-settings`) (027 admin cluster),
 `budgets` (029), `cash-flow` (030), `automation` (031), `financial-reports` (032),
-`fiscal-periods` (033).
+`fiscal-periods` (033), `bulk-import` (035).
 Cross-cutting (not a single module): `auto-codes` (012), `non-destructive-seed`
 (028, tooling).
 
@@ -49,15 +49,11 @@ frontend-002 (data components ✅), frontend-005/006/007/008 (document printing
 ✅); frontend-001 (theming) and frontend-003 (page inventory) remain in
 `specs/active/`.
 
-### ⚠️ The one genuinely unspecced backend module
-- **`bulk-import`** (`backend/src/modules/bulk-import/` — controller + service +
-  dto, ~2.4k LOC). It is *referenced* by several specs only as a frontend
-  consumer of their envelopes (007/010/011/013) and as an `auto-codes` exception
-  (012), but it has **no dedicated spec** of its own. It does CSV/Excel
-  import/export with preview + dry-run across multiple entities. Candidate for
-  the next `/new-spec bulk-import` (opportunity-finder first — it generates codes
-  and writes many tenant-owned tables, so tenant-scoping + validation are the
-  likely findings).
+### ✅ bulk-import — specced (spec-035, 2026-06-10)
+- **`bulk-import`** (spec-035) — the 2.4k-LOC multi-entity importer is now
+  specced and hardened: per-record atomicity (BOM data-loss closed), P2002→row
+  errors, tenant-scoped writes, per-entity RBAC guard, SSRF guard, numeric-max
+  generators. Unit 14/14 + e2e 11/11. **Backend SDD pipeline: 39/39 — COMPLETE.**
 
 ### Cascade integrity — resolved
 All prior "specced before its dependency" violations are closed: `uom` (005),
@@ -84,7 +80,7 @@ back-fills.
 | ✅ spec-004 | warehouses | Warehouse | none |
 | ✅ spec-031 | automation | AutomationConfig, AutoJeQueue | none |
 | ✅ spec-033 | fiscal-periods | FiscalPeriod | none |
-| ⬜ | bulk-import | StockLocationBatch, StockLocationBatchLine, StockLocationUpdate | none |
+| ✅ spec-035 | bulk-import | StockLocationBatch, StockLocationBatchLine, StockLocationUpdate | none |
 | ✅ spec-032 | financial-reports | (none — read model) | none |
 
 ### Tier 1 — depend only on Tier 0
@@ -160,13 +156,13 @@ Restore cascade integrity first (back-fill skipped prerequisites), then climb:
 14. ~~**Production cluster**~~ ✅ spec-019 — first cluster spec, one unit.
 15. ~~**Procurement cluster**~~ ✅ spec-020 — Tier 4, four-module cycle shipped as one unit (award injection fix, 5 transactions, shared tx-aware generators).
 16. ~~**goods-receipts**~~ ✅ spec-023 — Tier 5, wires the GoodsReceipt model that PO.receive bypasses.
-17. **bulk-import** — Tier 0, the ONLY genuinely unspecced backend module. CSV/Excel
-    import/export with preview + dry-run; generates codes and writes many
-    tenant-owned tables. ← **next** (`/new-spec bulk-import`).
+17. ~~**bulk-import**~~ ✅ spec-035 — Tier 0, the last unspecced module. Now specced +
+    hardened (atomicity, P2002 row-errors, tenant-scoping, per-entity RBAC, SSRF).
+    **39/39 — backend SDD pipeline COMPLETE.**
 
 > **spec-018 (supplier-items) drift:** the module gained 5 endpoints
 > (`price-history`, `expiring-prices`, `counts-by-supplier`, `counts-by-item`,
 > `update-price`) and 9 schema fields (currency, incoterm, paymentTerms,
 > priceValidFrom/Until, priceAlertDays, qualityRating, isBlocked, blockedReason)
 > plus the `SupplierItemPriceHistory` model — all post-dating its spec. spec-018
-> needs a v2 refresh to re-cover the module.
+> was refreshed to v2 (spec-018, shipped 2026-06-09) — drift resolved.
