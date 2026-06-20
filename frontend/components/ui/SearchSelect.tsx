@@ -88,13 +88,13 @@ export default function SearchSelect({
         ref={triggerRef}
         onClick={() => open ? setOpen(false) : openPanel()}
         style={{
-          background:     disabled ? 'rgba(255,255,255,0.02)' : 'var(--surface)',
+          background:     disabled ? 'rgba(255,255,255,0.02)' : 'var(--surface, #0e0b1a)',
           border:         `0.5px solid ${open ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
           borderRadius:   7,
           padding:        '7px 12px',
           fontSize:       12,
           fontFamily:     "'IBM Plex Sans', sans-serif",
-          color:          selected ? 'var(--text-strong)' : 'rgba(255,255,255,0.3)',
+          color:          selected ? 'var(--text-strong, #f1ede8)' : 'rgba(255,255,255,0.3)',
           cursor:         disabled ? 'not-allowed' : 'pointer',
           opacity:        disabled ? 0.5 : 1,
           display:        'flex',
@@ -125,7 +125,7 @@ export default function SearchSelect({
           onMouseDown={e => e.stopPropagation()}
           style={{
             ...panelStyle,
-            background:   'var(--surface)',
+            background:   'var(--surface, #0e0b1a)',
             border:       '0.5px solid rgba(251,146,60,0.25)',
             borderRadius: 8,
             boxShadow:    '0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.04) inset',
@@ -147,7 +147,7 @@ export default function SearchSelect({
                 padding:      '6px 10px',
                 fontSize:     12,
                 fontFamily:   "'IBM Plex Sans', sans-serif",
-                color:        'var(--text-strong)',
+                color:        'var(--text-strong, #f1ede8)',
                 outline:      'none',
               }}
             />
@@ -187,9 +187,9 @@ export default function SearchSelect({
                   fontSize:   12,
                   cursor:     'pointer',
                   fontFamily: "'IBM Plex Sans', sans-serif",
-                  color:      value === o.value ? 'var(--accent-strong)' : 'var(--text-primary)',
+                  color:      value === o.value ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)',
                   background: value === o.value ? 'rgba(251,146,60,0.08)' : 'transparent',
-                  borderLeft: value === o.value ? '2px solid var(--accent-strong)' : '2px solid transparent',
+                  borderLeft: value === o.value ? '2px solid var(--accent-strong, #fb923c)' : '2px solid transparent',
                   whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={e => { if (value !== o.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}

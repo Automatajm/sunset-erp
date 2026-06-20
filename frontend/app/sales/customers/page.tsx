@@ -35,9 +35,9 @@ function fmtCurrency(v?: number | null) {
 // ─── Credit status badge ──────────────────────────────────────────────────────
 
 const CREDIT_COLORS: Record<CreditStatus, { color: string; bg: string; border: string }> = {
-  good:  { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)' },
-  watch: { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)' },
-  hold:  { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)' },
+  good:  { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)' },
+  watch: { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)' },
+  hold:  { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)' },
 };
 
 function CreditBadge({ status }: { status?: CreditStatus }) {
@@ -119,7 +119,7 @@ function CustomerModal({
           display: flex; align-items: center; justify-content: center; padding: 24px;
         }
         .cm-box {
-          background: var(--surface); border: 0.5px solid rgba(251,146,60,0.2);
+          background: var(--surface, #0e0b1a); border: 0.5px solid rgba(251,146,60,0.2);
           border-radius: 14px; width: 100%; max-width: 540px;
           max-height: 90vh; overflow-y: auto; position: relative;
           box-shadow: 0 24px 60px rgba(0,0,0,0.7);
@@ -131,9 +131,9 @@ function CustomerModal({
         .cm-hdr {
           display: flex; align-items: center; justify-content: space-between;
           padding: 16px 20px 12px; border-bottom: 0.5px solid rgba(255,255,255,0.06);
-          position: sticky; top:0; background:var(--surface); z-index:1;
+          position: sticky; top:0; background:var(--surface, #0e0b1a); z-index:1;
         }
-        .cm-title { font-size:14px; font-weight:500; color:var(--text-strong); font-family:'IBM Plex Sans',sans-serif; }
+        .cm-title { font-size:14px; font-weight:500; color:var(--text-strong, #f1ede8); font-family:'IBM Plex Sans',sans-serif; }
         .cm-close {
           width:24px; height:24px; border-radius:6px; background:rgba(255,255,255,0.06);
           border:none; cursor:pointer; color:rgba(255,255,255,0.45); font-size:16px;
@@ -151,18 +151,18 @@ function CustomerModal({
         .cm-input, .cm-select, .cm-textarea {
           background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1);
           border-radius:7px; padding:9px 12px; font-size:13px;
-          font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%;
+          font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%;
           transition:border-color 0.2s, box-shadow 0.2s;
         }
         .cm-input::placeholder, .cm-textarea::placeholder { color:rgba(255,255,255,0.18); }
         .cm-input:focus, .cm-select:focus, .cm-textarea:focus {
           border-color:rgba(251,146,60,0.45); box-shadow:0 0 0 2px rgba(234,88,12,0.1);
         }
-        .cm-select option { background:var(--surface); color:var(--text-strong); }
+        .cm-select option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
         .cm-textarea { resize:vertical; min-height:68px; }
         .cm-error {
           background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.25);
-          border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle);
+          border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle, #fca5a5);
           font-family:'IBM Plex Sans',sans-serif;
         }
         .cm-ftr {
@@ -177,7 +177,7 @@ function CustomerModal({
         }
         .cm-btn-cancel:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.75); }
         .cm-btn-save {
-          background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none;
+          background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none;
           border-radius:7px; padding:8px 20px; font-size:13px; font-weight:500;
           font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer;
           box-shadow:0 3px 12px rgba(234,88,12,0.35); transition:opacity 0.2s;
@@ -298,13 +298,13 @@ function DeleteConfirm({ customer, onCancel, onConfirm, busy }: {
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
       <div style={{
-        background: 'var(--surface)', border: '0.5px solid rgba(239,68,68,0.25)',
+        background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(239,68,68,0.25)',
         borderRadius: 14, width: '100%', maxWidth: 400, padding: '24px 24px 20px',
         boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
       }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', marginBottom: 10 }}>Delete customer?</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', marginBottom: 10 }}>Delete customer?</div>
         <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 20, lineHeight: 1.5 }}>
-          <strong style={{ color: 'var(--text-strong)' }}>{customer.name}</strong> ({customer.code}) will be soft-deleted and removed from active records.
+          <strong style={{ color: 'var(--text-strong, #f1ede8)' }}>{customer.name}</strong> ({customer.code}) will be soft-deleted and removed from active records.
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onCancel} style={{
@@ -315,7 +315,7 @@ function DeleteConfirm({ customer, onCancel, onConfirm, busy }: {
           <button onClick={onConfirm} disabled={busy} style={{
             background: 'rgba(239,68,68,0.15)', border: '0.5px solid rgba(239,68,68,0.35)',
             borderRadius: 7, padding: '8px 16px', fontSize: 13, fontWeight: 500,
-            fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger)',
+            fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger, #f87171)',
             cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1,
           }}>{busy ? 'Deleting…' : 'Delete'}</button>
         </div>
@@ -385,14 +385,14 @@ export default function CustomersPage() {
         .cust-search {
           background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09);
           border-radius:7px; padding:7px 12px; font-size:12px;
-          font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; width:260px;
+          font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px;
           transition:border-color 0.2s, box-shadow 0.2s;
         }
         .cust-search::placeholder { color:rgba(255,255,255,0.2); }
         .cust-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
         .cust-btn-new {
           display:flex; align-items:center; gap:6px;
-          background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));
+          background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));
           border:none; border-radius:7px; padding:7px 14px;
           font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif;
           color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3);
@@ -417,8 +417,8 @@ export default function CustomersPage() {
         }
         .cust-table tbody tr:last-child td { border-bottom:none; }
         .cust-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .cust-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong); }
-        .cust-name { color:var(--text-primary); font-weight:500; }
+        .cust-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong, #fb923c); }
+        .cust-name { color:var(--text-primary, #e2dfd8); font-weight:500; }
         .cust-muted { color:rgba(255,255,255,0.45); }
         .cust-actions { display:flex; gap:6px; }
         .cust-btn-edit, .cust-btn-del {
@@ -431,7 +431,7 @@ export default function CustomersPage() {
           border-color:rgba(255,255,255,0.1);
         }
         .cust-btn-edit:hover { background:rgba(255,255,255,0.09); color:rgba(255,255,255,0.8); }
-        .cust-btn-del { background:rgba(239,68,68,0.08); color:var(--danger); border-color:rgba(239,68,68,0.2); }
+        .cust-btn-del { background:rgba(239,68,68,0.08); color:var(--danger, #f87171); border-color:rgba(239,68,68,0.2); }
         .cust-btn-del:hover { background:rgba(239,68,68,0.14); }
         .cust-empty, .cust-loading {
           text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px;
@@ -439,7 +439,7 @@ export default function CustomersPage() {
         }
         .cust-spinner {
           width:18px; height:18px; border-radius:50%;
-          border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong);
+          border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c);
           animation:cust-spin 0.7s linear infinite; flex-shrink:0;
         }
         @keyframes cust-spin { to { transform:rotate(360deg); } }
@@ -450,7 +450,7 @@ export default function CustomersPage() {
         .cust-error {
           background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2);
           border-radius:8px; padding:10px 14px; margin-bottom:14px;
-          font-size:13px; color:var(--danger-subtle);
+          font-size:13px; color:var(--danger-subtle, #fca5a5);
         }
       `}</style>
 

@@ -85,10 +85,10 @@ function IconSort({ dir }: { dir: SortDir }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, marginLeft: 4, verticalAlign: 'middle', opacity: dir ? 1 : 0.3 }}>
       <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
-        <path d="M3.5 0L7 4H0L3.5 0Z" fill={dir === 'asc' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)'} />
+        <path d="M3.5 0L7 4H0L3.5 0Z" fill={dir === 'asc' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)'} />
       </svg>
       <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
-        <path d="M3.5 4L0 0H7L3.5 4Z" fill={dir === 'desc' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)'} />
+        <path d="M3.5 4L0 0H7L3.5 4Z" fill={dir === 'desc' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)'} />
       </svg>
     </span>
   );
@@ -172,7 +172,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
           fontSize: 11, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif",
           background: 'rgba(251,146,60,0.08)',
           border: '0.5px solid rgba(251,146,60,0.2)',
-          color: 'var(--accent-strong)', cursor: 'pointer',
+          color: 'var(--accent-strong, #fb923c)', cursor: 'pointer',
         }}
         onClick={() => setOpen(o => !o)}
       >
@@ -181,7 +181,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
       {open && (
         <div style={{
           position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 50,
-          background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)',
+          background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)',
           borderRadius: 8, overflow: 'hidden', minWidth: 130,
           boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
         }}>
@@ -189,7 +189,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
             padding: '9px 14px', background: 'none', border: 'none',
             fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif",
-            color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left',
+            color: 'var(--text-primary, #e2dfd8)', cursor: 'pointer', textAlign: 'left',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,146,60,0.08)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -200,7 +200,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
             padding: '9px 14px', background: 'none', border: 'none',
             fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif",
-            color: 'var(--success)', cursor: 'pointer', textAlign: 'left',
+            color: 'var(--success, #4ade80)', cursor: 'pointer', textAlign: 'left',
             borderTop: '0.5px solid rgba(255,255,255,0.06)',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(74,222,128,0.08)')}
@@ -230,15 +230,15 @@ function FilterBar<T>({
   onClear: () => void;
 }) {
   const SEL: React.CSSProperties = {
-    background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)',
+    background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)',
     borderRadius: 6, padding: '5px 8px', fontSize: 11,
-    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)',
+    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', cursor: 'pointer', colorScheme: 'dark' as any,
   };
   const INP: React.CSSProperties = {
-    background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)',
+    background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)',
     borderRadius: 6, padding: '5px 10px', fontSize: 11,
-    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)',
+    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', minWidth: 160,
   };
   const LABEL: React.CSSProperties = {
@@ -298,7 +298,7 @@ function FilterBar<T>({
                       padding: '3px 9px', borderRadius: 20, fontSize: 10,
                       fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
                       fontWeight: selected ? 500 : 400,
-                      color: selected ? (o.color ?? 'var(--accent-strong)') : 'rgba(255,255,255,0.4)',
+                      color: selected ? (o.color ?? 'var(--accent-strong, #fb923c)') : 'rgba(255,255,255,0.4)',
                       background: selected ? (o.bg ?? 'rgba(251,146,60,0.12)') : 'rgba(255,255,255,0.04)',
                       border: `0.5px solid ${selected ? (o.border ?? 'rgba(251,146,60,0.3)') : 'rgba(255,255,255,0.09)'}`,
                       transition: 'all 0.15s',
@@ -318,7 +318,7 @@ function FilterBar<T>({
               style={{
                 padding: '5px 12px', borderRadius: 6, fontSize: 11,
                 fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-                color: values[f.key] === true ? 'var(--success)' : 'rgba(255,255,255,0.4)',
+                color: values[f.key] === true ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)',
                 background: values[f.key] === true ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
                 border: `0.5px solid ${values[f.key] === true ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.09)'}`,
                 transition: 'all 0.15s', whiteSpace: 'nowrap',
@@ -337,7 +337,7 @@ function FilterBar<T>({
           style={{
             padding: '5px 12px', borderRadius: 6, fontSize: 11,
             fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-            color: 'var(--danger)', background: 'rgba(239,68,68,0.08)',
+            color: 'var(--danger, #f87171)', background: 'rgba(239,68,68,0.08)',
             border: '0.5px solid rgba(239,68,68,0.2)', alignSelf: 'flex-end',
             transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}
@@ -549,7 +549,7 @@ export function ERPTable<T>({
       verticalAlign: 'middle' as const,
       fontSize: 13,
       textAlign: (col.align ?? 'left') as any,
-      color: 'var(--text-primary)',
+      color: 'var(--text-primary, #e2dfd8)',
       overflow: 'hidden' as const,
       textOverflow: 'ellipsis' as const,
       whiteSpace: 'nowrap' as const,
@@ -569,16 +569,16 @@ export function ERPTable<T>({
       opacity: disabled ? 0.35 : 1,
       background: active ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.04)',
       border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'rgba(255,255,255,0.09)'}`,
-      color: active ? 'var(--accent-strong)' : 'rgba(255,255,255,0.5)',
+      color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.5)',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       transition: 'background 0.15s',
     } as React.CSSProperties),
     select: {
-      background: 'var(--surface)',
+      background: 'var(--surface, #0e0b1a)',
       border: '0.5px solid rgba(255,255,255,0.15)',
       borderRadius: 6, padding: '3px 8px',
       fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
-      color: 'var(--text-primary)', outline: 'none',
+      color: 'var(--text-primary, #e2dfd8)', outline: 'none',
       colorScheme: 'dark',
     } as React.CSSProperties,
     btnExport: {
@@ -587,7 +587,7 @@ export function ERPTable<T>({
       fontSize: 11, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif",
       background: 'rgba(251,146,60,0.08)',
       border: '0.5px solid rgba(251,146,60,0.2)',
-      color: 'var(--accent-strong)', cursor: 'pointer',
+      color: 'var(--accent-strong, #fb923c)', cursor: 'pointer',
     } as React.CSSProperties,
   };
 
@@ -614,7 +614,7 @@ export function ERPTable<T>({
                 border: `0.5px solid ${searchInput ? 'rgba(251,146,60,0.35)' : 'rgba(255,255,255,0.09)'}`,
                 borderRadius: 6, fontSize: 12,
                 fontFamily: "'IBM Plex Sans',sans-serif",
-                color: 'var(--text-primary)', outline: 'none',
+                color: 'var(--text-primary, #e2dfd8)', outline: 'none',
                 transition: 'border-color 0.15s',
               }}
             />
@@ -680,7 +680,7 @@ export function ERPTable<T>({
             {loading ? (
               <tr>
                 <td colSpan={columns.length} style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
-                  <div style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(251,146,60,0.2)', borderTopColor: 'var(--accent-strong)', animation: 'erp-spin 0.7s linear infinite', marginBottom: 8 }} />
+                  <div style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(251,146,60,0.2)', borderTopColor: 'var(--accent-strong, #fb923c)', animation: 'erp-spin 0.7s linear infinite', marginBottom: 8 }} />
                   <div>Loading…</div>
                 </td>
               </tr>

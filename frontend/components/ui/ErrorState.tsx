@@ -13,17 +13,17 @@ const COPY: Record<ErrorVariant, { title: string; hint: string; color: string }>
   'unauthorized': {
     title: "You don't have access to this data",
     hint: 'Your role is missing the permission this page needs. Contact an administrator if you believe this is wrong.',
-    color: 'var(--warning)',
+    color: 'var(--warning, #fbbf24)',
   },
   'not-found': {
     title: 'Not found',
     hint: 'The data you requested no longer exists or was moved.',
-    color: 'var(--accent-blue)',
+    color: 'var(--accent-blue, #60a5fa)',
   },
   'server-error': {
     title: 'Something went wrong',
     hint: 'The server could not complete the request. Please try again in a moment.',
-    color: 'var(--danger)',
+    color: 'var(--danger, #f87171)',
   },
 };
 
@@ -66,7 +66,7 @@ export function ErrorState({ error, variant, onRetry }: ErrorStateProps) {
     }}>
       <IconAlert color={cfg.color} />
       <div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-strong)' }}>{cfg.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-strong, #f1ede8)' }}>{cfg.title}</div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 420, lineHeight: 1.5 }}>
           {cfg.hint}
         </div>
@@ -86,7 +86,7 @@ export function ErrorState({ error, variant, onRetry }: ErrorStateProps) {
           style={{
             border: 'none', borderRadius: 7, padding: '8px 18px', fontSize: 12, fontWeight: 600,
             cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: 'white',
-            background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))',
+            background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))',
           }}
         >
           Try again

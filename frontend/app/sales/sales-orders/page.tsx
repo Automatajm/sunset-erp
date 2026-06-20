@@ -85,18 +85,18 @@ const EMPTY_LINE: NewSOLine = {
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<SOStatus, { color: string; bg: string; border: string }> = {
-  draft:     { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  confirmed: { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  shipped:   { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
-  delivered: { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  draft:     { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
+  confirmed: { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  shipped:   { color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  delivered: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
   closed:    { color: 'rgba(255,255,255,0.35)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' },
 };
 
 // Status workflow: what actions are available per status
 const STATUS_ACTIONS: Record<SOStatus, { label: string; next: string; color: string; bg: string; border: string }[]> = {
-  draft:     [{ label: 'Confirm', next: 'confirmed', color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' }],
-  confirmed: [{ label: 'Ship',    next: 'shipped',   color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' }],
-  shipped:   [{ label: 'Deliver', next: 'delivered', color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' }],
+  draft:     [{ label: 'Confirm', next: 'confirmed', color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' }],
+  confirmed: [{ label: 'Ship',    next: 'shipped',   color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' }],
+  shipped:   [{ label: 'Deliver', next: 'delivered', color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' }],
   delivered: [{ label: 'Close',   next: 'closed',    color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' }],
   closed:    [],
 };
@@ -149,18 +149,18 @@ function SORow({ so, onStatusChange, actionBusy }: {
         <td>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: 'var(--accent-strong)', fontWeight: 500 }}>{so.soNumber}</span>
+            <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{so.soNumber}</span>
           </span>
         </td>
         <td>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{so.customer?.name ?? '—'}</span>
+          <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{so.customer?.name ?? '—'}</span>
           {so.customerPo && <div style={{ fontSize: 11, color: 'rgba(251,146,60,0.55)', marginTop: 1 }}>PO: {so.customerPo}</div>}
         </td>
         <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(so.orderDate)}</span></td>
         <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(so.promisedDate)}</span></td>
         <td><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{lineCount} line{lineCount !== 1 ? 's' : ''}</span></td>
         <td style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, color: 'var(--text-primary)' }}>{fmtAmt(so.total)}</span>
+          <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(so.total)}</span>
         </td>
         <td><span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{so.currency ?? 'USD'}</span></td>
         <td><StatusBadge status={so.status} /></td>
@@ -200,22 +200,22 @@ function SORow({ so, onStatusChange, actionBusy }: {
                     <tr key={line.id}>
                       <td style={{ padding: '7px 14px 7px 40px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                       <td style={{ padding: '7px 14px' }}>
-                        <span style={{ ...MONO, color: 'var(--accent-strong)' }}>{line.item?.code}</span>
+                        <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span>
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{line.item?.name}</span>
                       </td>
                       <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
                       <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{line.orderedQuantity}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)' }}>{line.shippedQuantity}</td>
+                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' }}>{line.shippedQuantity}</td>
                       <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
                       <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
                       <td style={{ padding: '7px 14px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: 'var(--text-primary)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
+                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
                       <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(line.deliveryDate)}</td>
                     </tr>
                   ))}
                   <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
                     <td colSpan={8} style={{ padding: '8px 14px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', ...MONO, color: 'var(--accent-strong)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
+                    <td style={{ padding: '8px 14px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
                     <td />
                   </tr>
                 </tbody>
@@ -308,37 +308,37 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
 
   if (!open) return null;
 
-  const inputCls = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' } as React.CSSProperties;
+  const inputCls = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' } as React.CSSProperties;
   const labelCls = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em' as const, textTransform: 'uppercase' as const, color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
   return (
     <>
       <style>{`
         .so-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-        .so-box { background:var(--surface); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
+        .so-box { background:var(--surface, #0e0b1a); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
         .so-box::before { content:''; position:absolute; top:0; left:30px; right:30px; height:1px; background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent); }
         .so-lines-table { width:100%; border-collapse:collapse; }
         .so-lines-table th { font-size:10px; color:rgba(251,146,60,0.5); text-transform:uppercase; letter-spacing:0.08em; padding:5px 6px; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); white-space:nowrap; }
         .so-lines-table td { padding:4px 3px; vertical-align:middle; }
-        .so-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; }
-        .so-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; }
-        .so-line-select option { background:var(--surface); }
+        .so-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
+        .so-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
+        .so-line-select option { background:var(--surface, #0e0b1a); }
         .so-section { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.25); padding:6px 0 4px; border-bottom:0.5px solid rgba(255,255,255,0.06); margin-top:4px; display:flex; align-items:center; justify-content:space-between; }
         .so-btn-add { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,0.5); cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
         .so-btn-add:hover { background:rgba(255,255,255,0.08); }
-        .so-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .so-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger, #f87171); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
       `}</style>
 
       <div className="so-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="so-box">
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface)', zIndex:1, borderRadius:'14px 14px 0 0' }}>
-            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Sans',sans-serif" }}>New Sales Order</span>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface, #0e0b1a)', zIndex:1, borderRadius:'14px 14px 0 0' }}>
+            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Sans',sans-serif" }}>New Sales Order</span>
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:10 }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
@@ -416,7 +416,7 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
                       <td><input className="so-line-input" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
                       <td><input className="so-line-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
                       <td><input className="so-line-input" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary)', textAlign: 'right' }}>
+                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right' }}>
                         {calcLineTotal(line) > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calcLineTotal(line)) : '—'}
                       </td>
                       <td><input className="so-line-input" type="date" value={line.deliveryDate} onChange={e => setLine(idx, 'deliveryDate', e.target.value)} /></td>
@@ -432,7 +432,7 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
 
               <div style={{ display:'flex', justifyContent:'flex-end', gap:16, padding:'8px 0', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                 <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>Grand Total</span>
-                <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:500, color:'var(--accent-strong)' }}>
+                <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:500, color:'var(--accent-strong, #fb923c)' }}>
                   {new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(grandTotal)}
                 </span>
               </div>
@@ -440,7 +440,7 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
 
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background:'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.35)', opacity:submitting?0.5:1 }}>
+              <button type="submit" disabled={submitting} style={{ background:'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.35)', opacity:submitting?0.5:1 }}>
                 {submitting ? 'Creating…' : 'Create Sales Order'}
               </button>
             </div>
@@ -538,14 +538,14 @@ export default function SalesOrdersPage() {
         .so-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:7px 12px; display:flex; flex-direction:column; gap:2px; min-width:80px; cursor:pointer; transition:opacity 0.15s; }
         .so-stat:hover { opacity:0.8; }
         .so-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .so-stat-value { font-size:20px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .so-stat-value { font-size:20px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .so-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .so-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; width:240px; }
+        .so-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:240px; }
         .so-search::placeholder { color:rgba(255,255,255,0.2); }
         .so-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
-        .so-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; }
-        .so-filter option { background:var(--surface); color:var(--text-strong); }
-        .so-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
+        .so-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .so-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
+        .so-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
         .so-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .so-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .so-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
@@ -555,10 +555,10 @@ export default function SalesOrdersPage() {
         .so-table tbody tr:last-child td { border-bottom:none; }
         .so-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
         .so-empty, .so-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .so-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong); animation:so-spin 0.7s linear infinite; flex-shrink:0; }
+        .so-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:so-spin 0.7s linear infinite; flex-shrink:0; }
         @keyframes so-spin { to { transform:rotate(360deg); } }
         .so-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .so-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .so-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
       `}</style>
 
       <div className="so-page">
@@ -583,7 +583,7 @@ export default function SalesOrdersPage() {
               onClick={() => setStatusFilter('')}
             >
               <span className="so-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
-              <span className="so-stat-value" style={{ color: 'var(--accent-strong)' }}>{orders.length}</span>
+              <span className="so-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{orders.length}</span>
             </div>
           </div>
         )}

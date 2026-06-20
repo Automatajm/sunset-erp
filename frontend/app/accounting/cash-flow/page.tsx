@@ -53,9 +53,9 @@ function fmtDateShort(d: string) {
 // ─── Scenario badge ───────────────────────────────────────────────────────────
 
 const SCENARIO_STYLE: Record<CashFlowScenario, { color: string; bg: string; border: string }> = {
-  optimistic:  { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  realistic:   { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  pessimistic: { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
+  optimistic:  { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  realistic:   { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  pessimistic: { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 };
 
 function ScenarioBadge({ scenario }: { scenario: CashFlowScenario }) {
@@ -104,9 +104,9 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
         onClick={() => setExpanded(e => !e)}
       >
         <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>▶</span>
-        <span style={{ ...MONO, color: 'var(--accent-strong)', fontWeight: 500, flexShrink: 0 }}>{proj.projectionCode}</span>
+        <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, flexShrink: 0 }}>{proj.projectionCode}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{proj.projectionName}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{proj.projectionName}</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
             {fmtDate(proj.startDate)} → {fmtDate(proj.endDate)} · {proj.cashFlowLines.length} line{proj.cashFlowLines.length !== 1 ? 's' : ''}
           </div>
@@ -116,17 +116,17 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.6)', letterSpacing: '0.06em' }}>INFLOW</span>
-            <span style={{ ...MONO, color: 'var(--success)', fontWeight: 500 }}>{fmtAmt(totalInflow)}</span>
+            <span style={{ ...MONO, color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(totalInflow)}</span>
           </div>
           <div style={{ width: 0.5, height: 28, background: 'rgba(255,255,255,0.1)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <span style={{ fontSize: 10, color: 'rgba(248,113,113,0.6)', letterSpacing: '0.06em' }}>OUTFLOW</span>
-            <span style={{ ...MONO, color: 'var(--danger)', fontWeight: 500 }}>{fmtAmt(totalOutflow)}</span>
+            <span style={{ ...MONO, color: 'var(--danger, #f87171)', fontWeight: 500 }}>{fmtAmt(totalOutflow)}</span>
           </div>
           <div style={{ width: 0.5, height: 28, background: 'rgba(255,255,255,0.1)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>NET</span>
-            <span style={{ ...MONO, fontWeight: 600, color: netFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmtAmt(netFlow)}</span>
+            <span style={{ ...MONO, fontWeight: 600, color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtAmt(netFlow)}</span>
           </div>
           <ScenarioBadge scenario={proj.scenario} />
         </div>
@@ -150,7 +150,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                     padding: '5px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
                     cursor: 'pointer', border: 'none',
                     background: lineFilter === f ? 'rgba(251,146,60,0.15)' : 'transparent',
-                    color: lineFilter === f ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)',
+                    color: lineFilter === f ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)',
                     transition: 'background 0.15s',
                   }}
                 >
@@ -162,7 +162,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
               onClick={() => onAddLine(proj.id)}
               style={{
                 padding: '5px 12px', borderRadius: 6, fontSize: 11,
-                background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue)',
+                background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue, #60a5fa)',
                 border: '0.5px solid rgba(96,165,250,0.2)',
                 fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
               }}
@@ -199,20 +199,20 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                     <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                       <span style={{
                         fontSize: 11, padding: '1px 7px', borderRadius: 20,
-                        color: line.lineType === 'inflow' ? 'var(--success)' : 'var(--danger)',
+                        color: line.lineType === 'inflow' ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
                         background: line.lineType === 'inflow' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
                         border: `0.5px solid ${line.lineType === 'inflow' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`,
                       }}>
                         {line.lineType === 'inflow' ? '↑ In' : '↓ Out'}
                       </span>
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500, borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                       {line.category}
                     </td>
                     <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                       {line.description || '—'}
                     </td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: line.lineType === 'inflow' ? 'var(--success)' : 'var(--danger)', fontWeight: 500 }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: line.lineType === 'inflow' ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontWeight: 500 }}>
                       {line.lineType === 'inflow' ? '+' : '−'}{fmtAmt(line.amount)}
                     </td>
                   </tr>
@@ -224,7 +224,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                   <td colSpan={4} style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
                     NET FLOW
                   </td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, fontWeight: 600, fontSize: 13, color: netFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, fontWeight: 600, fontSize: 13, color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
                     {netFlow >= 0 ? '+' : ''}{fmtAmt(netFlow)}
                   </td>
                 </tr>
@@ -274,20 +274,20 @@ function CreateProjectionModal({ open, onClose, onSaved }: {
 
   if (!open) return null;
 
-  const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LABEL: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 500, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 500, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Cash Flow Projection</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Cash Flow Projection</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -327,7 +327,7 @@ function CreateProjectionModal({ open, onClose, onSaved }: {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
               {submitting ? 'Creating…' : 'Create Projection'}
             </button>
           </div>
@@ -377,20 +377,20 @@ function AddLineModal({ open, projectionId, onClose, onSaved }: {
 
   if (!open) return null;
 
-  const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LABEL: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Add Cash Flow Line</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Add Cash Flow Line</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={LABEL}>Date *</label>
@@ -421,7 +421,7 @@ function AddLineModal({ open, projectionId, onClose, onSaved }: {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
               {submitting ? 'Adding…' : 'Add Line'}
             </button>
           </div>
@@ -466,16 +466,16 @@ export default function CashFlowPage() {
         .cf-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
         .cf-sum-card { background:rgba(10,7,18,0.7); border-radius:8px; padding:10px 16px; display:flex; flex-direction:column; gap:3px; min-width:140px; }
         .cf-sum-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .cf-sum-value { font-size:24px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .cf-sum-value { font-size:24px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .cf-toolbar { display:flex; align-items:center; justify-content:flex-end; margin-bottom:14px; }
-        .cf-btn-new { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; }
+        .cf-btn-new { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; }
         .cf-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .cf-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .cf-list { display:flex; flex-direction:column; gap:10px; }
         .cf-empty, .cf-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; }
-        .cf-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong); animation:cf-spin 0.7s linear infinite; flex-shrink:0; }
+        .cf-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:cf-spin 0.7s linear infinite; flex-shrink:0; }
         @keyframes cf-spin { to { transform:rotate(360deg); } }
-        .cf-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .cf-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
       `}</style>
 
       <div className="cf-page">
@@ -484,20 +484,20 @@ export default function CashFlowPage() {
         {projections.length > 0 && (
           <div className="cf-summary">
             <div className="cf-sum-card" style={{ border: '0.5px solid rgba(74,222,128,0.2)' }}>
-              <span className="cf-sum-label" style={{ color: 'var(--success)' }}>Total Inflow</span>
+              <span className="cf-sum-label" style={{ color: 'var(--success, #4ade80)' }}>Total Inflow</span>
               <span className="cf-sum-value">{fmtAmt(totalInflow)}</span>
             </div>
             <div className="cf-sum-card" style={{ border: '0.5px solid rgba(248,113,113,0.2)' }}>
-              <span className="cf-sum-label" style={{ color: 'var(--danger)' }}>Total Outflow</span>
+              <span className="cf-sum-label" style={{ color: 'var(--danger, #f87171)' }}>Total Outflow</span>
               <span className="cf-sum-value">{fmtAmt(totalOutflow)}</span>
             </div>
             <div className="cf-sum-card" style={{ border: `0.5px solid ${netFlow >= 0 ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
-              <span className="cf-sum-label" style={{ color: netFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>Net Flow</span>
-              <span className="cf-sum-value" style={{ color: netFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmtAmt(netFlow)}</span>
+              <span className="cf-sum-label" style={{ color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>Net Flow</span>
+              <span className="cf-sum-value" style={{ color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtAmt(netFlow)}</span>
             </div>
             <div className="cf-sum-card" style={{ border: '0.5px solid rgba(251,146,60,0.2)' }}>
               <span className="cf-sum-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Projections</span>
-              <span className="cf-sum-value" style={{ color: 'var(--accent-strong)' }}>{projections.length}</span>
+              <span className="cf-sum-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{projections.length}</span>
             </div>
           </div>
         )}

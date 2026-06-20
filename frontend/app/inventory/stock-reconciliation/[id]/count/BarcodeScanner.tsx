@@ -91,7 +91,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
       {/* Header */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Scan Item Barcode
         </div>
         <button
@@ -117,17 +117,17 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             <div style={{ position: 'relative', width: '70%', height: '70%' }}>
               {/* Corners */}
               {[
-                { top: 0, left: 0, borderTop: '3px solid var(--accent-strong)', borderLeft: '3px solid var(--accent-strong)', borderRadius: '8px 0 0 0' },
-                { top: 0, right: 0, borderTop: '3px solid var(--accent-strong)', borderRight: '3px solid var(--accent-strong)', borderRadius: '0 8px 0 0' },
-                { bottom: 0, left: 0, borderBottom: '3px solid var(--accent-strong)', borderLeft: '3px solid var(--accent-strong)', borderRadius: '0 0 0 8px' },
-                { bottom: 0, right: 0, borderBottom: '3px solid var(--accent-strong)', borderRight: '3px solid var(--accent-strong)', borderRadius: '0 0 8px 0' },
+                { top: 0, left: 0, borderTop: '3px solid var(--accent-strong, #fb923c)', borderLeft: '3px solid var(--accent-strong, #fb923c)', borderRadius: '8px 0 0 0' },
+                { top: 0, right: 0, borderTop: '3px solid var(--accent-strong, #fb923c)', borderRight: '3px solid var(--accent-strong, #fb923c)', borderRadius: '0 8px 0 0' },
+                { bottom: 0, left: 0, borderBottom: '3px solid var(--accent-strong, #fb923c)', borderLeft: '3px solid var(--accent-strong, #fb923c)', borderRadius: '0 0 0 8px' },
+                { bottom: 0, right: 0, borderBottom: '3px solid var(--accent-strong, #fb923c)', borderRight: '3px solid var(--accent-strong, #fb923c)', borderRadius: '0 0 8px 0' },
               ].map((style, i) => (
                 <div key={i} style={{ position: 'absolute', width: 28, height: 28, ...style }} />
               ))}
 
               {/* Scanning line animation */}
               {scanning && (
-                <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, var(--accent-strong), transparent)', animation: 'scan-line 1.5s ease-in-out infinite alternate', boxShadow: '0 0 8px var(--accent-strong)' }} />
+                <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, var(--accent-strong, #fb923c), transparent)', animation: 'scan-line 1.5s ease-in-out infinite alternate', boxShadow: '0 0 8px var(--accent-strong, #fb923c)' }} />
               )}
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       ) : (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '20px 24px', maxWidth: 320, textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📷</div>
-          <div style={{ fontSize: 14, color: 'var(--danger-subtle)', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.5 }}>{error}</div>
+          <div style={{ fontSize: 14, color: 'var(--danger-subtle, #fca5a5)', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.5 }}>{error}</div>
         </div>
       )}
 

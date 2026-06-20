@@ -48,11 +48,11 @@ function StatusBadge({ status }: { status: EntryStatus }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-      color: posted ? 'var(--success)' : 'var(--warning)',
+      color: posted ? 'var(--success, #4ade80)' : 'var(--warning, #fbbf24)',
       background: posted ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)',
       border: `0.5px solid ${posted ? 'rgba(74,222,128,0.2)' : 'rgba(251,191,36,0.2)'}`,
     }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: posted ? 'var(--success)' : 'var(--warning)', flexShrink: 0 }} />
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: posted ? 'var(--success, #4ade80)' : 'var(--warning, #fbbf24)', flexShrink: 0 }} />
       {posted ? 'Posted' : 'Draft'}
     </span>
   );
@@ -97,7 +97,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
               transform: expanded ? 'rotate(90deg)' : 'none',
               display: 'inline-block', transition: 'transform 0.15s',
             }}>▶</span>
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)' }}>
+            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>
               {entry.entryNumber}
             </span>
           </span>
@@ -105,13 +105,13 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
         <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{fmtDate(entry.entryDate)}</span></td>
         <td><TypeBadge type={entry.journalType} /></td>
         <td>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{entry.description || '—'}</span>
+          <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{entry.description || '—'}</span>
           {entry.reference && (
             <div style={{ fontSize: 11, color: 'rgba(251,146,60,0.6)', marginTop: 1 }}>{entry.reference}</div>
           )}
         </td>
         <td style={{ textAlign: 'right' }}>
-          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--text-primary)' }}>
+          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>
             {fmtAmt(totalDebit)}
           </span>
         </td>
@@ -130,7 +130,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                   disabled={busy}
                   style={{
                     padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                    background: 'rgba(74,222,128,0.1)', color: 'var(--success)',
+                    background: 'rgba(74,222,128,0.1)', color: 'var(--success, #4ade80)',
                     border: '0.5px solid rgba(74,222,128,0.2)', opacity: busy ? 0.5 : 1,
                     fontFamily: "'IBM Plex Sans',sans-serif",
                   }}
@@ -139,7 +139,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                   onClick={() => onDelete(entry)}
                   style={{
                     padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                    background: 'rgba(239,68,68,0.08)', color: 'var(--danger)',
+                    background: 'rgba(239,68,68,0.08)', color: 'var(--danger, #f87171)',
                     border: '0.5px solid rgba(239,68,68,0.2)',
                     fontFamily: "'IBM Plex Sans',sans-serif",
                   }}
@@ -152,7 +152,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                 disabled={busy}
                 style={{
                   padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-                  background: 'rgba(251,191,36,0.08)', color: 'var(--warning)',
+                  background: 'rgba(251,191,36,0.08)', color: 'var(--warning, #fbbf24)',
                   border: '0.5px solid rgba(251,191,36,0.2)', opacity: busy ? 0.5 : 1,
                   fontFamily: "'IBM Plex Sans',sans-serif",
                 }}
@@ -184,7 +184,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                   <tr key={line.id}>
                     <td style={{ padding: '7px 14px 7px 40px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                     <td style={{ padding: '7px 14px' }}>
-                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--accent-strong)' }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>
                         {line.account?.accountNumber}
                       </span>
                       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>
@@ -192,7 +192,7 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                       </span>
                     </td>
                     <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
-                    <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: line.debitAmount > 0 ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>
+                    <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: line.debitAmount > 0 ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>
                       {fmtAmt(line.debitAmount)}
                     </td>
                     <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: line.creditAmount > 0 ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}>
@@ -203,10 +203,10 @@ function EntryRow({ entry, onPost, onUnpost, onDelete, actionBusy }: {
                 {/* Totals row */}
                 <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
                   <td colSpan={3} style={{ padding: '7px 14px 7px 40px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTALS</td>
-                  <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--success)', fontWeight: 500 }}>
+                  <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--success, #4ade80)', fontWeight: 500 }}>
                     {fmtAmt(totalDebit)}
                   </td>
-                  <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--success)', fontWeight: 500 }}>
+                  <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--success, #4ade80)', fontWeight: 500 }}>
                     {fmtAmt(totalCredit)}
                   </td>
                 </tr>
@@ -280,10 +280,10 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
     <>
       <style>{`
         .je-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-        .je-box { background:var(--surface); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:760px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
+        .je-box { background:var(--surface, #0e0b1a); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:760px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
         .je-box::before { content:''; position:absolute; top:0; left:30px; right:30px; height:1px; background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent); }
-        .je-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:0.5px solid rgba(255,255,255,0.06); position:sticky; top:0; background:var(--surface); z-index:1; border-radius:14px 14px 0 0; }
-        .je-title { font-size:14px; font-weight:500; color:var(--text-strong); font-family:'IBM Plex Sans',sans-serif; }
+        .je-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:0.5px solid rgba(255,255,255,0.06); position:sticky; top:0; background:var(--surface, #0e0b1a); z-index:1; border-radius:14px 14px 0 0; }
+        .je-title { font-size:14px; font-weight:500; color:var(--text-strong, #f1ede8); font-family:'IBM Plex Sans',sans-serif; }
         .je-close { width:24px; height:24px; border-radius:6px; background:rgba(255,255,255,0.06); border:none; cursor:pointer; color:rgba(255,255,255,0.45); font-size:16px; display:flex; align-items:center; justify-content:center; }
         .je-close:hover { background:rgba(255,255,255,0.1); }
         .je-body { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
@@ -291,32 +291,32 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
         .je-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
         .je-field { display:flex; flex-direction:column; gap:5px; }
         .je-label { font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(251,146,60,0.6); font-family:'IBM Plex Sans',sans-serif; }
-        .je-input, .je-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; transition:border-color 0.2s; }
+        .je-input, .je-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; transition:border-color 0.2s; }
         .je-input::placeholder { color:rgba(255,255,255,0.18); }
         .je-input:focus, .je-select:focus { border-color:rgba(251,146,60,0.45); box-shadow:0 0 0 2px rgba(234,88,12,0.1); }
-        .je-select option { background:var(--surface); color:var(--text-strong); }
+        .je-select option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
         .je-section { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.25); padding:6px 0 4px; border-bottom:0.5px solid rgba(255,255,255,0.06); margin-top:4px; display:flex; align-items:center; justify-content:space-between; }
         .je-lines-table { width:100%; border-collapse:collapse; }
         .je-lines-table th { font-size:10px; color:rgba(251,146,60,0.5); text-transform:uppercase; letter-spacing:0.08em; padding:5px 8px; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); white-space:nowrap; }
         .je-lines-table td { padding:5px 4px; vertical-align:middle; }
-        .je-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; }
+        .je-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
         .je-line-input:focus { border-color:rgba(251,146,60,0.4); }
-        .je-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; }
-        .je-line-select option { background:var(--surface); }
-        .je-btn-remove-line { width:22px; height:22px; border-radius:5px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .je-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
+        .je-line-select option { background:var(--surface, #0e0b1a); }
+        .je-btn-remove-line { width:22px; height:22px; border-radius:5px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger, #f87171); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
         .je-btn-add-line { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 12px; font-size:11px; color:rgba(255,255,255,0.5); cursor:pointer; font-family:'IBM Plex Sans',sans-serif; transition:background 0.15s; }
         .je-btn-add-line:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.8); }
         .je-totals { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
         .je-total-block { display:flex; flex-direction:column; gap:2px; }
         .je-total-label { font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:0.08em; }
         .je-total-value { font-size:15px; font-weight:500; font-family:'IBM Plex Mono',monospace; }
-        .je-balance-ok  { color:var(--success); font-size:11px; background:rgba(74,222,128,0.1); border:0.5px solid rgba(74,222,128,0.2); border-radius:20px; padding:3px 10px; }
-        .je-balance-err { color:var(--danger); font-size:11px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); border-radius:20px; padding:3px 10px; }
-        .je-error { background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.25); border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle); }
+        .je-balance-ok  { color:var(--success, #4ade80); font-size:11px; background:rgba(74,222,128,0.1); border:0.5px solid rgba(74,222,128,0.2); border-radius:20px; padding:3px 10px; }
+        .je-balance-err { color:var(--danger, #f87171); font-size:11px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); border-radius:20px; padding:3px 10px; }
+        .je-error { background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.25); border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle, #fca5a5); }
         .je-ftr { display:flex; justify-content:flex-end; gap:8px; padding:12px 20px 18px; border-top:0.5px solid rgba(255,255,255,0.06); }
         .je-btn-cancel { background:rgba(255,255,255,0.05); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 16px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:rgba(255,255,255,0.5); cursor:pointer; }
         .je-btn-cancel:hover { background:rgba(255,255,255,0.08); }
-        .je-btn-save { background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:8px 20px; font-size:13px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.35); transition:opacity 0.2s; }
+        .je-btn-save { background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:8px 20px; font-size:13px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.35); transition:opacity 0.2s; }
         .je-btn-save:disabled { opacity:0.5; cursor:not-allowed; }
         .je-btn-save:hover:not(:disabled) { opacity:0.88; }
       `}</style>
@@ -443,7 +443,7 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
               <div className="je-totals">
                 <div className="je-total-block">
                   <span className="je-total-label">Total Debit</span>
-                  <span className="je-total-value" style={{ color: 'var(--text-primary)' }}>{fmtAmt(debit)}</span>
+                  <span className="je-total-value" style={{ color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(debit)}</span>
                 </div>
                 <div className="je-total-block">
                   <span className="je-total-label">Total Credit</span>
@@ -451,7 +451,7 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
                 </div>
                 <div className="je-total-block">
                   <span className="je-total-label">Difference</span>
-                  <span className="je-total-value" style={{ color: balanced ? 'var(--success)' : 'var(--danger)' }}>
+                  <span className="je-total-value" style={{ color: balanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
                     {fmtAmt(Math.abs(debit - credit))}
                   </span>
                 </div>
@@ -483,15 +483,15 @@ function DeleteConfirm({ entry, onCancel, onConfirm, busy }: {
 }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', marginBottom:10 }}>Delete journal entry?</div>
+      <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete journal entry?</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
-          <strong style={{ color:'var(--text-strong)' }}>{entry.entryNumber}</strong> — {entry.description || 'No description'}.
+          <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{entry.entryNumber}</strong> — {entry.description || 'No description'}.
           Only draft entries can be deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
+          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
         </div>
       </div>
     </div>
@@ -591,14 +591,14 @@ export default function JournalEntriesPage() {
         .je-stats { display:flex; gap:10px; margin-bottom:14px; }
         .je-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:8px 14px; display:flex; flex-direction:column; gap:2px; min-width:100px; }
         .je-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .je-stat-value { font-size:22px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .je-stat-value { font-size:22px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .je-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .je-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; width:260px; transition:border-color 0.2s; }
+        .je-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px; transition:border-color 0.2s; }
         .je-search::placeholder { color:rgba(255,255,255,0.2); }
         .je-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
-        .je-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; }
-        .je-filter option { background:var(--surface); color:var(--text-strong); }
-        .je-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
+        .je-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .je-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
+        .je-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
         .je-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .je-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .je-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
@@ -608,10 +608,10 @@ export default function JournalEntriesPage() {
         .je-table tbody tr:last-child td { border-bottom:none; }
         .je-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
         .je-empty, .je-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .je-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong); animation:je-spin 0.7s linear infinite; flex-shrink:0; }
+        .je-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:je-spin 0.7s linear infinite; flex-shrink:0; }
         @keyframes je-spin { to { transform:rotate(360deg); } }
         .je-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .je-page-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .je-page-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
       `}</style>
 
       <div className="je-page">
@@ -620,16 +620,16 @@ export default function JournalEntriesPage() {
         {entries.length > 0 && (
           <div className="je-stats">
             <div className="je-stat" style={{ border: '0.5px solid rgba(74,222,128,0.2)' }}>
-              <span className="je-stat-label" style={{ color: 'var(--success)' }}>Posted</span>
+              <span className="je-stat-label" style={{ color: 'var(--success, #4ade80)' }}>Posted</span>
               <span className="je-stat-value">{postedCount}</span>
             </div>
             <div className="je-stat" style={{ border: '0.5px solid rgba(251,191,36,0.2)' }}>
-              <span className="je-stat-label" style={{ color: 'var(--warning)' }}>Draft</span>
+              <span className="je-stat-label" style={{ color: 'var(--warning, #fbbf24)' }}>Draft</span>
               <span className="je-stat-value">{draftCount}</span>
             </div>
             <div className="je-stat" style={{ border: '0.5px solid rgba(251,146,60,0.2)' }}>
               <span className="je-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
-              <span className="je-stat-value" style={{ color: 'var(--accent-strong)' }}>{entries.length}</span>
+              <span className="je-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{entries.length}</span>
             </div>
           </div>
         )}

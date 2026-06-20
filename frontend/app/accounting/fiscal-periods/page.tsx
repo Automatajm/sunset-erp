@@ -9,9 +9,9 @@ import { FiscalPeriod, CreateFiscalPeriodDto, PeriodStatus } from '@/lib/api/typ
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<PeriodStatus, { color: string; bg: string; border: string; dot: string }> = {
-  open:   { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  dot: 'var(--success)' },
-  closed: { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  dot: 'var(--warning)' },
-  locked: { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', dot: 'var(--danger)' },
+  open:   { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  dot: 'var(--success, #4ade80)' },
+  closed: { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  dot: 'var(--warning, #fbbf24)' },
+  locked: { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', dot: 'var(--danger, #f87171)' },
 };
 
 const EMPTY_FORM: CreateFiscalPeriodDto = {
@@ -53,7 +53,7 @@ function CurrentBadge() {
   return (
     <span style={{
       display: 'inline-flex', padding: '1px 7px', borderRadius: 20, fontSize: 10,
-      color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)',
+      color: 'var(--accent-blue, #60a5fa)', background: 'rgba(96,165,250,0.1)',
       border: '0.5px solid rgba(96,165,250,0.2)', fontWeight: 500, whiteSpace: 'nowrap',
     }}>Current</span>
   );
@@ -87,14 +87,14 @@ function PeriodActions({ period, onAction, busy }: {
   const actions: React.ReactNode[] = [];
 
   if (period.status === 'open') {
-    actions.push(btn('Close', 'close', 'var(--warning)', 'rgba(251,191,36,0.08)', 'rgba(251,191,36,0.2)'));
+    actions.push(btn('Close', 'close', 'var(--warning, #fbbf24)', 'rgba(251,191,36,0.08)', 'rgba(251,191,36,0.2)'));
   }
   if (period.status === 'closed') {
-    actions.push(btn('Reopen', 'reopen', 'var(--success)', 'rgba(74,222,128,0.08)', 'rgba(74,222,128,0.2)'));
-    actions.push(btn('Lock', 'lock', 'var(--danger)', 'rgba(248,113,113,0.08)', 'rgba(248,113,113,0.2)'));
+    actions.push(btn('Reopen', 'reopen', 'var(--success, #4ade80)', 'rgba(74,222,128,0.08)', 'rgba(74,222,128,0.2)'));
+    actions.push(btn('Lock', 'lock', 'var(--danger, #f87171)', 'rgba(248,113,113,0.08)', 'rgba(248,113,113,0.2)'));
   }
   if (period.status === 'locked') {
-    actions.push(btn('Unlock', 'unlock', 'var(--warning)', 'rgba(251,191,36,0.08)', 'rgba(251,191,36,0.2)'));
+    actions.push(btn('Unlock', 'unlock', 'var(--warning, #fbbf24)', 'rgba(251,191,36,0.08)', 'rgba(251,191,36,0.2)'));
   }
 
   return <div style={{ display: 'flex', gap: 5 }}>{actions}</div>;
@@ -164,10 +164,10 @@ function PeriodModal({ open, onClose, onSaved, initial }: {
     <>
       <style>{`
         .fp-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px; }
-        .fp-box { background:var(--surface); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:520px; max-height:92vh; overflow-y:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
+        .fp-box { background:var(--surface, #0e0b1a); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:520px; max-height:92vh; overflow-y:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
         .fp-box::before { content:''; position:absolute; top:0; left:30px; right:30px; height:1px; background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent); }
-        .fp-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:0.5px solid rgba(255,255,255,0.06); position:sticky; top:0; background:var(--surface); z-index:1; }
-        .fp-title { font-size:14px; font-weight:500; color:var(--text-strong); font-family:'IBM Plex Sans',sans-serif; }
+        .fp-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:0.5px solid rgba(255,255,255,0.06); position:sticky; top:0; background:var(--surface, #0e0b1a); z-index:1; }
+        .fp-title { font-size:14px; font-weight:500; color:var(--text-strong, #f1ede8); font-family:'IBM Plex Sans',sans-serif; }
         .fp-close { width:24px; height:24px; border-radius:6px; background:rgba(255,255,255,0.06); border:none; cursor:pointer; color:rgba(255,255,255,0.45); font-size:16px; display:flex; align-items:center; justify-content:center; }
         .fp-close:hover { background:rgba(255,255,255,0.1); }
         .fp-body { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
@@ -175,15 +175,15 @@ function PeriodModal({ open, onClose, onSaved, initial }: {
         .fp-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
         .fp-field { display:flex; flex-direction:column; gap:5px; }
         .fp-label { font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(251,146,60,0.6); font-family:'IBM Plex Sans',sans-serif; }
-        .fp-input, .fp-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; transition:border-color 0.2s; }
+        .fp-input, .fp-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 12px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; transition:border-color 0.2s; }
         .fp-input::placeholder { color:rgba(255,255,255,0.18); }
         .fp-input:focus, .fp-select:focus { border-color:rgba(251,146,60,0.45); box-shadow:0 0 0 2px rgba(234,88,12,0.1); }
-        .fp-select option { background:var(--surface); color:var(--text-strong); }
-        .fp-error { background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.25); border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle); }
+        .fp-select option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
+        .fp-error { background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.25); border-radius:7px; padding:8px 12px; font-size:12px; color:var(--danger-subtle, #fca5a5); }
         .fp-ftr { display:flex; justify-content:flex-end; gap:8px; padding:12px 20px 18px; border-top:0.5px solid rgba(255,255,255,0.06); }
         .fp-btn-cancel { background:rgba(255,255,255,0.05); border:0.5px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 16px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:rgba(255,255,255,0.5); cursor:pointer; }
         .fp-btn-cancel:hover { background:rgba(255,255,255,0.08); }
-        .fp-btn-save { background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:8px 20px; font-size:13px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.35); transition:opacity 0.2s; }
+        .fp-btn-save { background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:8px 20px; font-size:13px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.35); transition:opacity 0.2s; }
         .fp-btn-save:disabled { opacity:0.5; cursor:not-allowed; }
         .fp-btn-save:hover:not(:disabled) { opacity:0.88; }
       `}</style>
@@ -248,7 +248,7 @@ function PeriodModal({ open, onClose, onSaved, initial }: {
 
               <label style={{
                 display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                fontSize: 12, color: form.isCurrent ? 'var(--text-primary)' : 'rgba(255,255,255,0.4)',
+                fontSize: 12, color: form.isCurrent ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)',
                 fontFamily: "'IBM Plex Sans',sans-serif", userSelect: 'none',
                 background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)',
                 borderRadius: 8, padding: '10px 14px',
@@ -279,15 +279,15 @@ function DeleteConfirm({ period, onCancel, onConfirm, busy }: {
 }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', marginBottom:10 }}>Delete fiscal period?</div>
+      <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete fiscal period?</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
-          <strong style={{ color:'var(--text-strong)' }}>{period.periodCode} — {period.periodName}</strong> will be deleted.
+          <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{period.periodCode} — {period.periodName}</strong> will be deleted.
           Cannot delete closed/locked periods or periods with journal entries.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
+          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
         </div>
       </div>
     </div>
@@ -400,11 +400,11 @@ export default function FiscalPeriodsPage() {
         .fp-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:8px 14px; display:flex; flex-direction:column; gap:2px; min-width:90px; cursor:pointer; transition:opacity 0.15s; }
         .fp-stat:hover { opacity:0.8; }
         .fp-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .fp-stat-value { font-size:22px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .fp-stat-value { font-size:22px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .fp-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .fp-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; }
-        .fp-filter option { background:var(--surface); color:var(--text-strong); }
-        .fp-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
+        .fp-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .fp-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
+        .fp-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
         .fp-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .fp-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .fp-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
@@ -413,18 +413,18 @@ export default function FiscalPeriodsPage() {
         .fp-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
         .fp-table tbody tr:last-child td { border-bottom:none; }
         .fp-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .fp-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong); font-weight:500; }
-        .fp-name { color:var(--text-primary); font-weight:500; }
+        .fp-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong, #fb923c); font-weight:500; }
+        .fp-name { color:var(--text-primary, #e2dfd8); font-weight:500; }
         .fp-muted { color:rgba(255,255,255,0.45); font-size:12px; }
         .fp-empty, .fp-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .fp-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong); animation:fp-spin 0.7s linear infinite; flex-shrink:0; }
+        .fp-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:fp-spin 0.7s linear infinite; flex-shrink:0; }
         @keyframes fp-spin { to { transform:rotate(360deg); } }
         .fp-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .fp-error-bar { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .fp-error-bar { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
         .fp-row-actions { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
         .fp-btn-edit { padding:4px 9px; border-radius:6px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.55); border:0.5px solid rgba(255,255,255,0.1); }
         .fp-btn-edit:hover { background:rgba(255,255,255,0.09); color:rgba(255,255,255,0.8); }
-        .fp-btn-del { padding:4px 9px; border-radius:6px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; background:rgba(239,68,68,0.08); color:var(--danger); border:0.5px solid rgba(239,68,68,0.2); }
+        .fp-btn-del { padding:4px 9px; border-radius:6px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; background:rgba(239,68,68,0.08); color:var(--danger, #f87171); border:0.5px solid rgba(239,68,68,0.2); }
         .fp-btn-del:hover { background:rgba(239,68,68,0.14); }
       `}</style>
 
@@ -453,7 +453,7 @@ export default function FiscalPeriodsPage() {
               onClick={() => setStatusFilter('')}
             >
               <span className="fp-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
-              <span className="fp-stat-value" style={{ color: 'var(--accent-strong)' }}>{periods.length}</span>
+              <span className="fp-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{periods.length}</span>
             </div>
           </div>
         )}

@@ -15,14 +15,14 @@ interface User {
 }
 
 // ---- Styles -----------------------------------------------------------------
-const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
+const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
 const LBL: React.CSSProperties = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)', marginBottom: 5, display: 'block' };
 const BTN = (variant: 'primary'|'ghost'|'danger' = 'ghost'): React.CSSProperties => ({
   border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 600,
   cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif",
-  background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))'
+  background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))'
     : variant === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)',
-  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger)' : 'rgba(255,255,255,0.6)',
+  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.6)',
   outline: variant === 'danger' ? '0.5px solid rgba(239,68,68,0.2)' : 'none',
 });
 
@@ -70,9 +70,9 @@ function UserModal({ user, roles, onClose, onSaved }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{isEdit ? 'Edit User' : 'New User'}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)' }}>{isEdit ? 'Edit User' : 'New User'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18 }}>x</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -101,9 +101,9 @@ function UserModal({ user, roles, onClose, onSaved }: {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
               {roles.map(role => (
                 <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', background: form.roleIds.includes(role.id) ? 'rgba(251,146,60,0.08)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${form.roleIds.includes(role.id) ? 'rgba(251,146,60,0.25)' : 'rgba(255,255,255,0.07)'}` }}>
-                  <input type="checkbox" checked={form.roleIds.includes(role.id)} onChange={() => toggleRole(role.id)} style={{ accentColor: 'var(--accent-strong)' }} />
+                  <input type="checkbox" checked={form.roleIds.includes(role.id)} onChange={() => toggleRole(role.id)} style={{ accentColor: 'var(--accent-strong, #fb923c)' }} />
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: form.roleIds.includes(role.id) ? 'var(--accent-strong)' : 'var(--text-primary)' }}>{role.name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: form.roleIds.includes(role.id) ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)' }}>{role.name}</div>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>{role.code}</div>
                   </div>
                 </label>
@@ -111,7 +111,7 @@ function UserModal({ user, roles, onClose, onSaved }: {
               {roles.length === 0 && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: '8px 0' }}>No roles created yet. Create roles first.</div>}
             </div>
           </div>
-          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
         </div>
         <div style={{ padding: '12px 20px', borderTop: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={BTN('ghost')}>Cancel</button>
@@ -142,18 +142,18 @@ function ResetPasswordModal({ user, onClose, onSaved }: { user: User; onClose: (
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Reset Password</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)' }}>Reset Password</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18 }}>x</button>
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Setting new password for <strong style={{ color: 'var(--accent-strong)' }}>{user.fullName}</strong></div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Setting new password for <strong style={{ color: 'var(--accent-strong, #fb923c)' }}>{user.fullName}</strong></div>
           <div>
             <label style={LBL}>New Password</label>
             <input style={INP} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Minimum 8 characters" autoFocus />
           </div>
-          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
         </div>
         <div style={{ padding: '12px 20px', borderTop: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={BTN('ghost')}>Cancel</button>
@@ -211,7 +211,7 @@ export default function UsersPage() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#06040f', color: 'var(--text-primary)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#06040f', color: 'var(--text-primary, #e2dfd8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
       {/* Header */}
       <div style={{ padding: '20px 28px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
@@ -228,9 +228,9 @@ export default function UsersPage() {
         {/* Stats */}
         <div style={{ display: 'flex', gap: 12 }}>
           {[
-            { label: 'Total Users', value: users.length, color: 'var(--text-primary)' },
-            { label: 'Active', value: users.filter(u => u.isActive).length, color: 'var(--success)' },
-            { label: 'Inactive', value: users.filter(u => !u.isActive).length, color: 'var(--danger)' },
+            { label: 'Total Users', value: users.length, color: 'var(--text-primary, #e2dfd8)' },
+            { label: 'Active', value: users.filter(u => u.isActive).length, color: 'var(--success, #4ade80)' },
+            { label: 'Inactive', value: users.filter(u => !u.isActive).length, color: 'var(--danger, #f87171)' },
           ].map(s => (
             <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 16px', minWidth: 110 }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: s.color, fontFamily: "'IBM Plex Mono',monospace" }}>{s.value}</div>
@@ -239,7 +239,7 @@ export default function UsersPage() {
           ))}
         </div>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
         {/* Table */}
         {loading ? (
@@ -256,14 +256,14 @@ export default function UsersPage() {
               <div key={user.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 2fr 1fr', gap: 0, padding: '12px 16px', borderBottom: i < filtered.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none', alignItems: 'center' }}>
                 {/* Name */}
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: user.isActive ? 'var(--text-primary)' : 'rgba(255,255,255,0.35)' }}>{user.fullName}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: user.isActive ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.35)' }}>{user.fullName}</div>
                   {user.lastLoginAt && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>Last login: {new Date(user.lastLoginAt).toLocaleDateString()}</div>}
                 </div>
                 {/* Email */}
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Mono',monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
                 {/* Status */}
                 <div>
-                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: user.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', color: user.isActive ? 'var(--success)' : 'var(--danger)', border: `0.5px solid ${user.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
+                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: user.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', color: user.isActive ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: `0.5px solid ${user.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -272,7 +272,7 @@ export default function UsersPage() {
                   {user.roles.length === 0
                     ? <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>No roles</span>
                     : user.roles.map(r => (
-                        <span key={r.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong)', border: '0.5px solid rgba(251,146,60,0.2)' }}>{r.name}</span>
+                        <span key={r.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong, #fb923c)', border: '0.5px solid rgba(251,146,60,0.2)' }}>{r.name}</span>
                       ))
                   }
                 </div>

@@ -54,12 +54,12 @@ function fmtDateShort(d?: string) {
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<POStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:              { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   label: 'Draft' },
-  confirmed:          { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   label: 'Confirmed' },
-  partially_received: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.1)',   border: 'rgba(251,146,60,0.2)',   label: 'Partial' },
-  received:           { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   label: 'Received' },
-  cancelled:          { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  label: 'Cancelled' },
-  closed:             { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)',  label: 'Closed' },
+  draft:              { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   label: 'Draft' },
+  confirmed:          { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   label: 'Confirmed' },
+  partially_received: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',   border: 'rgba(251,146,60,0.2)',   label: 'Partial' },
+  received:           { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   label: 'Received' },
+  cancelled:          { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  label: 'Cancelled' },
+  closed:             { color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)',  label: 'Closed' },
 };
 
 function StatusBadge({ status }: { status: POStatus }) {
@@ -142,11 +142,11 @@ function PODetailDrawer({ po, onClose, onAction }: {
       {/* Backdrop */}
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
       {/* Drawer */}
-      <div style={{ width: 680, background: 'var(--bg)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div style={{ width: 680, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{po.poNumber}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{po.poNumber}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{po.supplier?.name}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -173,7 +173,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
               ].map(item => (
                 <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.value}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -198,12 +198,12 @@ function PODetailDrawer({ po, onClose, onAction }: {
                       <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                         <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                         <td style={{ padding: '8px' }}>
-                          <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.item?.code}</div>
+                          <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code}</div>
                           <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 }}>{line.item?.name}</div>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.orderedQuantity).toLocaleString()}</td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <div style={{ ...MONO, color: pct >= 100 ? 'var(--success)' : pct > 0 ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)' }}>
+                          <div style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : pct > 0 ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)' }}>
                             {Number(line.receivedQuantity).toLocaleString()}
                           </div>
                           {pct > 0 && pct < 100 && (
@@ -212,9 +212,9 @@ function PODetailDrawer({ po, onClose, onAction }: {
                         </td>
                         <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontSize: 11 }}>{fmtAmt(line.unitPrice)}</td>
-                        <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--text-primary)' }}>{fmtAmt(line.lineTotal)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(line.lineTotal)}</td>
                         <td style={{ padding: '8px' }}>
-                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: line.status === 'closed' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'closed' ? 'var(--success)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'closed' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: line.status === 'closed' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'closed' ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'closed' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
                             {line.status}
                           </span>
                         </td>
@@ -223,7 +223,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
                   })}
                   <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
                     <td colSpan={5} style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
-                    <td colSpan={2} style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--accent-strong)', fontSize: 14 }}>{fmtAmt(detail.total)}</td>
+                    <td colSpan={2} style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--accent-strong, #fb923c)', fontSize: 14 }}>{fmtAmt(detail.total)}</td>
                     <td />
                   </tr>
                 </tbody>
@@ -234,11 +234,11 @@ function PODetailDrawer({ po, onClose, onAction }: {
             {canReceive && (
               <div style={{ background: 'rgba(74,222,128,0.04)', border: '0.5px solid rgba(74,222,128,0.15)', borderRadius: 10, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Receive Goods</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--success, #4ade80)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Receive Goods</span>
                   <button
                     type="button"
                     onClick={() => setReceiving(r => !r)}
-                    style={{ fontSize: 11, color: receiving ? 'var(--danger)' : 'var(--success)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}
+                    style={{ fontSize: 11, color: receiving ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}
                   >
                     {receiving ? 'Cancel' : 'Enter Receipt'}
                   </button>
@@ -247,14 +247,14 @@ function PODetailDrawer({ po, onClose, onAction }: {
                 {receiving && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {recvError && (
-                      <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)' }}>{recvError}</div>
+                      <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{recvError}</div>
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Warehouse *</label>
                       <select
                         value={recvWh} onChange={e => setRecvWh(e.target.value)}
-                        style={{ background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', colorScheme: 'dark' as any }}
+                        style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any }}
                       >
                         <option value="">— Select warehouse —</option>
                         {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
@@ -277,19 +277,19 @@ function PODetailDrawer({ po, onClose, onAction }: {
                           return (
                             <tr key={line.id} style={{ borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
                               <td style={{ padding: '6px' }}>
-                                <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)' }}>{line.item?.code}</span>
+                                <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span>
                                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{line.item?.name}</span>
                               </td>
                               <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.orderedQuantity).toLocaleString()}</td>
                               <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.receivedQuantity).toLocaleString()}</td>
-                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'var(--accent-strong)' }}>{pending.toLocaleString()}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{pending.toLocaleString()}</td>
                               <td style={{ padding: '6px' }}>
                                 <input
                                   type="number" min="0" max={pending} step="0.001"
                                   placeholder={`max ${pending}`}
                                   value={recvQtys[line.id] ?? ''}
                                   onChange={e => setRecvQtys(q => ({ ...q, [line.id]: e.target.value }))}
-                                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '4px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary)', outline: 'none', width: '100%', textAlign: 'right' }}
+                                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '4px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', textAlign: 'right' }}
                                 />
                               </td>
                             </tr>
@@ -315,19 +315,19 @@ function PODetailDrawer({ po, onClose, onAction }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canConfirm && (
                 <button onClick={() => setConfirmStatus({ status: 'confirmed', title: `Confirm PO ${po.poNumber}?`, description: 'This issues the purchase order to the supplier.', variant: 'default', label: 'Confirm PO' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Confirm PO
                 </button>
               )}
               {detail?.status === 'received' && (
                 <button onClick={() => setConfirmStatus({ status: 'closed', title: `Close PO ${po.poNumber}?`, description: 'This marks the purchase order complete.', variant: 'default', label: 'Close PO' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', border: '0.5px solid rgba(167,139,250,0.25)', color: 'var(--accent-violet)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', border: '0.5px solid rgba(167,139,250,0.25)', color: 'var(--accent-violet, #a78bfa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Close PO
                 </button>
               )}
               {canCancel && (
                 <button onClick={() => setConfirmStatus({ status: 'cancelled', title: `Cancel PO ${po.poNumber}?`, description: 'This cancels the purchase order. It cannot be undone.', variant: 'destructive', label: 'Cancel PO' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel PO
                 </button>
               )}
@@ -409,32 +409,32 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
 
   return (
     <>
       <style>{`
         .po-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .po-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:860px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .po-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:860px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .po-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .po-lines-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .po-line-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .po-line-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .po-line-sel option{background:var(--surface)}
+        .po-line-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .po-line-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .po-line-sel option{background:var(--surface, #0e0b1a)}
         .po-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .po-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
-        .po-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .po-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div className="po-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="po-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>New Purchase Order</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Purchase Order</span>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -500,7 +500,7 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary)', textAlign: 'right' }}>{lineTotal(line) > 0 ? fmtAmt(lineTotal(line)) : '—'}</td>
+                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right' }}>{lineTotal(line) > 0 ? fmtAmt(lineTotal(line)) : '—'}</td>
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="date" value={line.expectedDate} onChange={e => setLine(idx, 'expectedDate', e.target.value)} /></td>
                       <td style={{ padding: '4px 3px' }}>{lines.length > 1 && <button type="button" className="po-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}</td>
                     </tr>
@@ -510,13 +510,13 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: 'var(--accent-strong)' }}>{fmtAmt(grandTotal)}</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{fmtAmt(grandTotal)}</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create Purchase Order'}
               </button>
             </div>
@@ -590,12 +590,12 @@ export default function PurchaseOrdersPage() {
     {
       key: 'poNumber', header: 'PO Number', width: 140, sortable: true,
       value: r => r.poNumber,
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.poNumber}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.poNumber}</span>,
     },
     {
       key: 'supplier', header: 'Supplier', sortable: true,
       value: r => r.supplier?.name ?? '',
-      render: r => <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{r.supplier?.name ?? '—'}</span>,
+      render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.supplier?.name ?? '—'}</span>,
     },
     {
       key: 'poDate', header: 'Date', width: 100, sortable: true,
@@ -615,7 +615,7 @@ export default function PurchaseOrdersPage() {
     {
       key: 'total', header: 'Total', width: 120, align: 'right', sortable: true,
       value: r => Number(r.total),
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{fmtAmt(r.total)}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.total)}</span>,
     },
     {
       key: 'currency', header: 'Cur.', width: 55, align: 'center', sortable: false,
@@ -643,7 +643,7 @@ export default function PurchaseOrdersPage() {
     <ERPShell breadcrumbs={['Home', 'Procurement', 'Purchase Orders']} title="Purchase Orders">
       <style>{`
         .po-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-        .po-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
+        .po-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
       `}</style>
 
       <div className="po-page">
@@ -660,7 +660,7 @@ export default function PurchaseOrdersPage() {
                 style={{ background: isActive ? cfg.bg : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? cfg.color : cfg.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 85, cursor: 'pointer', transition: 'all 0.15s', boxShadow: isActive ? `0 0 12px ${cfg.bg}` : 'none' }}
               >
                 <span style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{cfg.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
               </div>
             );
           })}
@@ -669,7 +669,7 @@ export default function PurchaseOrdersPage() {
             style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer', transition: 'all 0.15s' }}
           >
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
-            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{orders.length}</span>
+            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{orders.length}</span>
           </div>
         </div>
 
@@ -686,7 +686,7 @@ export default function PurchaseOrdersPage() {
           </div>
           <button
             onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}
           >
             + New PO
           </button>

@@ -68,8 +68,8 @@ function fmtAmt(v?: number | string | null) {
 
 function ActiveBadge({ active }: { active: boolean }) {
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active ? 'var(--success)' : 'rgba(255,255,255,0.35)', background:active ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', border:`0.5px solid ${active ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
-      <span style={{ width:5, height:5, borderRadius:'50%', background:active ? 'var(--success)' : 'rgba(255,255,255,0.2)', flexShrink:0 }} />
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.35)', background:active ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', border:`0.5px solid ${active ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:active ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.2)', flexShrink:0 }} />
       {active ? 'Active' : 'Inactive'}
     </span>
   );
@@ -81,7 +81,7 @@ function StarRating({ value }: { value?: number | null }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:3 }}>
       {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ fontSize:11, color: i <= Math.round(v) ? 'var(--warning)' : 'rgba(255,255,255,0.15)' }}>★</span>
+        <span key={i} style={{ fontSize:11, color: i <= Math.round(v) ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.15)' }}>★</span>
       ))}
       <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginLeft:2 }}>{v.toFixed(1)}</span>
     </div>
@@ -154,7 +154,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
 
   if (!open) return null;
 
-  const F: React.CSSProperties = { background:'var(--surface)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
+  const F: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const L: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
   const SL: React.CSSProperties = { fontSize:10, color:'rgba(255,255,255,0.3)', marginTop:-2 };
 
@@ -169,23 +169,23 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
     <>
       <style>{`
         .sm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
-        .sm-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
+        .sm-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
         .sm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .sm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
         .sm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;overflow-x:auto}
         .sm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap;flex-shrink:0}
         .sm-tab:hover{color:rgba(255,255,255,0.7)}
-        .sm-tab-on{color:var(--accent-strong) !important;border-bottom-color:var(--accent-strong) !important}
+        .sm-tab-on{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
         .sm-scroll{flex:1;overflow-y:auto;min-height:0}
         .sm-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
         .sm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .sm-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
         .sm-field{display:flex;flex-direction:column;gap:5px}
         .sm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
-        .sm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle)}
+        .sm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
         .sm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
         .sm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
-        .sm-btn-save{background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
+        .sm-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .sm-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .sm-stars{display:flex;gap:4px;padding:4px 0}
         .sm-star{font-size:22px;cursor:pointer;transition:transform 0.1s}
@@ -195,7 +195,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
       <div className="sm-overlay">
         <div className="sm-box">
           <div className="sm-hdr">
-            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)' }}>
+            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>
               {initial ? `Edit — ${initial.code}` : 'New Supplier'}
             </span>
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
@@ -280,7 +280,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                         {[1,2,3,4,5].map(i => (
                           <span key={i} className="sm-star"
                             onClick={() => setForm(f => ({ ...f, qualityRating: f.qualityRating === i ? undefined : i }))}
-                            style={{ color: form.qualityRating && i <= form.qualityRating ? 'var(--warning)' : 'rgba(255,255,255,0.2)' }}>
+                            style={{ color: form.qualityRating && i <= form.qualityRating ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.2)' }}>
                             ★
                           </span>
                         ))}
@@ -300,7 +300,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                     <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                       <input type="checkbox" id="pref-chk" checked={form.isPreferred ?? false}
                         onChange={e => setForm(f => ({ ...f, isPreferred: e.target.checked }))}
-                        style={{ accentColor:'var(--accent-strong)', cursor:'pointer' }} />
+                        style={{ accentColor:'var(--accent-strong, #fb923c)', cursor:'pointer' }} />
                       <label htmlFor="pref-chk" style={{ fontSize:12, color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>
                         Mark as preferred / strategic supplier
                       </label>
@@ -471,14 +471,14 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
-      <div style={{ width:680, background:'var(--bg)', borderLeft:'0.5px solid rgba(251,146,60,0.15)', display:'flex', flexDirection:'column' }}>
+      <div style={{ width:680, background:'var(--bg, #0a0712)', borderLeft:'0.5px solid rgba(251,146,60,0.15)', display:'flex', flexDirection:'column' }}>
         {/* Header */}
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
-              <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)' }}>{supplier.name}</div>
+              <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>{supplier.name}</div>
               <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', marginTop:2 }}>
-                <span style={{ ...MONO, color:'var(--accent-strong)' }}>{supplier.code}</span>
+                <span style={{ ...MONO, color:'var(--accent-strong, #fb923c)' }}>{supplier.code}</span>
                 {supplier.paymentTerms && <span style={{ marginLeft:10 }}>{supplier.paymentTerms}</span>}
                 {supplier.currency && <span style={{ marginLeft:10 }}>{supplier.currency}</span>}
               </div>
@@ -492,9 +492,9 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
           {/* Quick stats */}
           <div style={{ display:'flex', gap:10, marginTop:10 }}>
             {[
-              { label:'Items', value: items.length, color:'var(--accent-strong)' },
-              { label:'Preferred', value: items.filter(i => i.isPreferred).length, color:'var(--success)' },
-              { label:'With Price', value: items.filter(i => i.lastPrice).length, color:'var(--accent-blue)' },
+              { label:'Items', value: items.length, color:'var(--accent-strong, #fb923c)' },
+              { label:'Preferred', value: items.filter(i => i.isPreferred).length, color:'var(--success, #4ade80)' },
+              { label:'With Price', value: items.filter(i => i.lastPrice).length, color:'var(--accent-blue, #60a5fa)' },
             ].map(s => (
               <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:6, padding:'5px 12px', display:'flex', gap:6, alignItems:'center' }}>
                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>{s.label}</span>
@@ -509,7 +509,7 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search item code or name…"
-            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary)', outline:'none', width:'100%' }}
+            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', width:'100%' }}
           />
         </div>
 
@@ -544,12 +544,12 @@ function PriceRow({ si }: { si: SupplierItem }) {
     <div style={{ background:'rgba(255,255,255,0.02)', border:`0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.06)'}`, borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:12 }}>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong)' }}>{si.item?.code}</span>
+          <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong, #fb923c)' }}>{si.item?.code}</span>
           {(si as any).supplierItemCode && (
             <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.04)', padding:'1px 6px', borderRadius:4 }}>{(si as any).supplierItemCode}</span>
           )}
           {si.isPreferred && (
-            <span style={{ fontSize:9, color:'var(--success)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', padding:'1px 6px', borderRadius:10 }}>preferred</span>
+            <span style={{ fontSize:9, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', padding:'1px 6px', borderRadius:10 }}>preferred</span>
           )}
         </div>
         <div style={{ fontSize:11, color:'rgba(255,255,255,0.45)', marginTop:2 }}>{si.item?.name}</div>
@@ -557,11 +557,11 @@ function PriceRow({ si }: { si: SupplierItem }) {
       <div style={{ display:'flex', gap:14, alignItems:'center', flexShrink:0 }}>
         <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>UOM</div>
-          <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong)' }}>{si.purchaseUom?.code ?? '—'}</span>
+          <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong, #fb923c)' }}>{si.purchaseUom?.code ?? '—'}</span>
         </div>
         <div style={{ textAlign:'right' }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>Last Price</div>
-          <span style={{ ...MONO, fontSize:13, fontWeight:500, color: si.lastPrice ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>
+          <span style={{ ...MONO, fontSize:13, fontWeight:500, color: si.lastPrice ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>
             {si.lastPrice ? `$${Number(si.lastPrice).toFixed(4)}` : '—'}
           </span>
         </div>
@@ -585,14 +585,14 @@ function DeleteConfirm({ supplier, onCancel, onConfirm, busy }: {
 }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', marginBottom:10 }}>Delete supplier?</div>
+      <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete supplier?</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
-          <strong style={{ color:'var(--text-strong)' }}>{supplier.name}</strong> ({supplier.code}) will be soft-deleted.
+          <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{supplier.name}</strong> ({supplier.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
+          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
             {busy ? 'Deleting…' : 'Delete'}
           </button>
         </div>
@@ -614,8 +614,8 @@ function SUPPLIER_COLUMNS(
       value: r => r.code,
       render: r => (
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong)' }}>{r.code}</span>
-          {(r as any).isPreferred && <span style={{ fontSize:9, color:'var(--warning)', background:'rgba(251,191,36,0.1)', border:'0.5px solid rgba(251,191,36,0.2)', padding:'1px 5px', borderRadius:10 }}>⭐</span>}
+          <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong, #fb923c)' }}>{r.code}</span>
+          {(r as any).isPreferred && <span style={{ fontSize:9, color:'var(--warning, #fbbf24)', background:'rgba(251,191,36,0.1)', border:'0.5px solid rgba(251,191,36,0.2)', padding:'1px 5px', borderRadius:10 }}>⭐</span>}
         </div>
       ),
     },
@@ -624,7 +624,7 @@ function SUPPLIER_COLUMNS(
       value: r => r.name,
       render: r => (
         <div>
-          <div style={{ color:'var(--text-primary)', fontWeight:500 }}>{r.name}</div>
+          <div style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500 }}>{r.name}</div>
           {r.legalName && r.legalName !== r.name && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.legalName}</div>}
           {(r as any).city && <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:1 }}>{(r as any).city}{(r as any).country ? ` · ${(r as any).country}` : ''}</div>}
         </div>
@@ -634,7 +634,7 @@ function SUPPLIER_COLUMNS(
       key: 'category', header: 'Category', width: 120, sortable: true,
       value: r => r.category ?? '',
       render: r => r.category
-        ? <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'var(--accent-violet)', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{r.category}</span>
+        ? <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'var(--accent-violet, #a78bfa)', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{r.category}</span>
         : <span style={{ color:'rgba(255,255,255,0.25)', fontSize:12 }}>—</span>,
     },
     {
@@ -643,7 +643,7 @@ function SUPPLIER_COLUMNS(
         const s = r as any;
         return (
           <div>
-            {s.contactName && <div style={{ fontSize:12, color:'var(--text-primary)' }}>{s.contactName}</div>}
+            {s.contactName && <div style={{ fontSize:12, color:'var(--text-primary, #e2dfd8)' }}>{s.contactName}</div>}
             {r.email && <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>{r.email}</div>}
             {r.phone && <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', ...MONO }}>{r.phone}</div>}
           </div>
@@ -658,7 +658,7 @@ function SUPPLIER_COLUMNS(
     {
       key: 'creditLimit', header: 'Credit', width: 100, align:'right', sortable: true,
       value: r => r.creditLimit ? Number(r.creditLimit) : 0,
-      render: r => <span style={{ ...MONO, fontSize:11, color: r.creditLimit ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(r.creditLimit)}</span>,
+      render: r => <span style={{ ...MONO, fontSize:11, color: r.creditLimit ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(r.creditLimit)}</span>,
     },
     {
       key: 'qualityRating', header: 'Rating', width: 110, sortable: true,
@@ -738,27 +738,27 @@ export default function SuppliersPage() {
       <style>{`
         .sup-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
         .sup-btn-edit,.sup-btn-del,.sup-btn-price{padding:4px 8px;border-radius:6px;font-size:10px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;white-space:nowrap}
-        .sup-btn-price{background:rgba(251,146,60,0.08);color:var(--accent-strong);border-color:rgba(251,146,60,0.2)}
+        .sup-btn-price{background:rgba(251,146,60,0.08);color:var(--accent-strong, #fb923c);border-color:rgba(251,146,60,0.2)}
         .sup-btn-price:hover{background:rgba(251,146,60,0.14)}
         .sup-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
         .sup-btn-edit:hover{background:rgba(255,255,255,0.09)}
-        .sup-btn-del{background:rgba(239,68,68,0.08);color:var(--danger);border-color:rgba(239,68,68,0.2)}
+        .sup-btn-del{background:rgba(239,68,68,0.08);color:var(--danger, #f87171);border-color:rgba(239,68,68,0.2)}
         .sup-btn-del:hover{background:rgba(239,68,68,0.14)}
-        .sup-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
+        .sup-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
       `}</style>
 
       <div className="sup-page">
         {/* Stats */}
         <div style={{ display:'flex', gap:10, marginBottom:10, flexShrink:0 }}>
           {[
-            { label:'Total',     value:stats.total,     color:'var(--accent-strong)', border:'rgba(251,146,60,0.2)'  },
-            { label:'Active',    value:stats.active,    color:'var(--success)', border:'rgba(74,222,128,0.2)'  },
-            { label:'Preferred', value:stats.preferred, color:'var(--warning)', border:'rgba(251,191,36,0.2)'  },
-            { label:'Inactive',  value:stats.inactive,  color:'var(--danger)', border:'rgba(248,113,113,0.2)' },
+            { label:'Total',     value:stats.total,     color:'var(--accent-strong, #fb923c)', border:'rgba(251,146,60,0.2)'  },
+            { label:'Active',    value:stats.active,    color:'var(--success, #4ade80)', border:'rgba(74,222,128,0.2)'  },
+            { label:'Preferred', value:stats.preferred, color:'var(--warning, #fbbf24)', border:'rgba(251,191,36,0.2)'  },
+            { label:'Inactive',  value:stats.inactive,  color:'var(--danger, #f87171)', border:'rgba(248,113,113,0.2)' },
           ].map(s => (
             <div key={s.label} style={{ background:'rgba(10,7,18,0.7)', border:`0.5px solid ${s.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}>
               <span style={{ fontSize:10, color:s.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{s.label}</span>
-              <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{s.value}</span>
+              <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{s.value}</span>
             </div>
           ))}
         </div>
@@ -769,7 +769,7 @@ export default function SuppliersPage() {
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
           </div>
           <button onClick={() => { setEditing(null); setModalOpen(true); }}
-            style={{ display:'flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border:'none', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.3)', flexShrink:0, alignSelf:'flex-end' }}>
+            style={{ display:'flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border:'none', borderRadius:7, padding:'7px 14px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.3)', flexShrink:0, alignSelf:'flex-end' }}>
             + New Supplier
           </button>
         </div>

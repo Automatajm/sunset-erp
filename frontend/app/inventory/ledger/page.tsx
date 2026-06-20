@@ -60,20 +60,20 @@ function fmtDate(d: string) {
 }
 
 const MOVE_CFG: Record<string, { color: string; bg: string; border: string; sign: string; label: string }> = {
-  receipt:         { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   sign: '+', label: 'Receipt'      },
-  issue:           { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  sign: '−', label: 'Issue'        },
-  transfer:        { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   sign: '⇄', label: 'Transfer'     },
-  adjustment:      { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   sign: '±', label: 'Adjustment'   },
-  opening_balance: { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)',  sign: '◎', label: 'Opening Bal.' },
+  receipt:         { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   sign: '+', label: 'Receipt'      },
+  issue:           { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  sign: '−', label: 'Issue'        },
+  transfer:        { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   sign: '⇄', label: 'Transfer'     },
+  adjustment:      { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   sign: '±', label: 'Adjustment'   },
+  opening_balance: { color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)',  sign: '◎', label: 'Opening Bal.' },
 };
 
 const ITEM_TYPE_CFG: Record<string, string> = {
-  finished_good: 'var(--success)', raw_material: 'var(--accent-blue)',
-  consumable: 'var(--warning)', service: 'rgba(255,255,255,0.35)',
+  finished_good: 'var(--success, #4ade80)', raw_material: 'var(--accent-blue, #60a5fa)',
+  consumable: 'var(--warning, #fbbf24)', service: 'rgba(255,255,255,0.35)',
 };
 
 function MoveBadge({ type }: { type: string }) {
-  const c = MOVE_CFG[type] ?? { color: 'var(--text-primary)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
+  const c = MOVE_CFG[type] ?? { color: 'var(--text-primary, #e2dfd8)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -102,7 +102,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'movementNumber', header: 'Movement #', width: 130, sortable: true,
     value: r => r.movementNumber,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)' }}>{r.movementNumber}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{r.movementNumber}</span>,
   },
   {
     key: 'movementType', header: 'Type', width: 120, sortable: true,
@@ -119,7 +119,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.item?.code ?? '',
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong)', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong, #f1ede8)', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.item?.name}</div>
       </div>
     ),
@@ -156,7 +156,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
             {r.referenceType.replace(/_/g, ' ')}
           </div>
         )}
-        <span style={{ ...MONO, fontSize: 11, color: r.referenceNumber !== '—' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.2)' }}>
+        <span style={{ ...MONO, fontSize: 11, color: r.referenceNumber !== '—' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.2)' }}>
           {r.referenceNumber}
         </span>
       </div>
@@ -172,7 +172,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.signedQuantity,
     render: r => {
       const sign   = getEffectiveSign(r);
-      const color  = sign > 0 ? 'var(--success)' : sign < 0 ? 'var(--danger)' : 'var(--warning)';
+      const color  = sign > 0 ? 'var(--success, #4ade80)' : sign < 0 ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)';
       const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
@@ -191,7 +191,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
       const pQty   = r.purchaseQty ?? r.quantity;
       const pUom   = r.purchaseUom ?? r.uom;
       const sign   = getEffectiveSign(r);
-      const color  = sign > 0 ? 'var(--success)' : sign < 0 ? 'var(--danger)' : 'var(--warning)';
+      const color  = sign > 0 ? 'var(--success, #4ade80)' : sign < 0 ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)';
       const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
@@ -201,7 +201,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
           <div style={{ marginTop: 2 }}>
             <span style={{
               fontSize: 9, padding: '1px 5px', borderRadius: 8,
-              color: 'var(--accent-strong)', background: 'rgba(251,146,60,0.1)',
+              color: 'var(--accent-strong, #fb923c)', background: 'rgba(251,146,60,0.1)',
               border: '0.5px solid rgba(251,146,60,0.2)', ...MONO,
             }}>{pUom}</span>
           </div>
@@ -212,7 +212,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'closingBalance', header: 'Closing Bal.', width: 110, align: 'right', sortable: true,
     value: r => r.closingBalance,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-blue)', fontWeight: 500 }}>{fmtQty(r.closingBalance)}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-blue, #60a5fa)', fontWeight: 500 }}>{fmtQty(r.closingBalance)}</span>,
   },
   {
     key: 'unitCost', header: 'Unit Cost', width: 110, align: 'right', sortable: true,
@@ -233,7 +233,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
       const val  = r.movementValue ?? r.totalValue;
       const isPos = val > 0;
       const isNeg = val < 0;
-      const color = isPos ? 'var(--success)' : isNeg ? 'var(--danger)' : 'var(--warning)';
+      const color = isPos ? 'var(--success, #4ade80)' : isNeg ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)';
       return (
         <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color }}>
           {val !== 0 ? (isPos ? '+' : '−') + fmtAmt(Math.abs(val)) : '—'}
@@ -270,9 +270,9 @@ function buildFilters(items: Item[], warehouses: Warehouse[]): ERPFilter<LedgerR
     {
       key: 'itemType', label: 'Category', type: 'multiselect',
       options: [
-        { value: 'finished_good', label: 'Finished Good', color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
-        { value: 'raw_material',  label: 'Raw Material',  color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
-        { value: 'consumable',    label: 'Consumable',    color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
+        { value: 'finished_good', label: 'Finished Good', color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
+        { value: 'raw_material',  label: 'Raw Material',  color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
+        { value: 'consumable',    label: 'Consumable',    color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
       ],
       filterFn: (row, val) => (val as string[]).includes(row.item?.itemType ?? ''),
     },
@@ -351,7 +351,7 @@ export default function StockLedgerPage() {
         .sl-page    { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .sl-filters { background: rgba(10,7,18,0.7); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
         .sl-filter-actions { display: flex; align-items: center; gap: 8px; }
-        .sl-btn-apply { background: linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border: none; border-radius: 7px; padding: 7px 18px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; box-shadow: 0 3px 10px rgba(234,88,12,0.3); }
+        .sl-btn-apply { background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border: none; border-radius: 7px; padding: 7px 18px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; box-shadow: 0 3px 10px rgba(234,88,12,0.3); }
         .sl-btn-apply:hover { opacity: 0.88; }
         .sl-btn-reset { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 7px 14px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.4); cursor: pointer; }
         .sl-totals  { display: grid; grid-template-columns: repeat(8,1fr); gap: 6px; flex-shrink: 0; }
@@ -359,7 +359,7 @@ export default function StockLedgerPage() {
         .sl-total-l { font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
         .sl-total-v { font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sl-table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .sl-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
+        .sl-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
       `}</style>
 
       <div className="sl-page">
@@ -387,14 +387,14 @@ export default function StockLedgerPage() {
         {data && (
           <div className="sl-totals">
             {[
-              { label: 'Opening Bal.',   value: fmtQty(data.totals.openingBalance), color: 'var(--accent-violet)', border: 'rgba(167,139,250,0.15)' },
-              { label: 'Total IN (qty)', value: `+${fmtQty(data.totals.totalIn)}`,  color: 'var(--success)', border: 'rgba(74,222,128,0.15)'  },
-              { label: 'Total OUT (qty)',value: `−${fmtQty(data.totals.totalOut)}`,  color: 'var(--danger)', border: 'rgba(248,113,113,0.15)' },
-              { label: 'Net Movement',   value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? 'var(--success)' : 'var(--danger)', border: 'rgba(255,255,255,0.06)' },
-              { label: 'Closing Bal.',   value: fmtQty(data.totals.closingBalance), color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)'  },
-              { label: 'IN Value',       value: fmtAmt(data.totals.totalInValue),   color: 'var(--success)', border: 'rgba(74,222,128,0.1)'   },
-              { label: 'OUT Value',      value: fmtAmt(data.totals.totalOutValue),  color: 'var(--danger)', border: 'rgba(248,113,113,0.1)'  },
-              { label: 'Net Value',      value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? 'var(--success)' : 'var(--danger)', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Opening Bal.',   value: fmtQty(data.totals.openingBalance), color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
+              { label: 'Total IN (qty)', value: `+${fmtQty(data.totals.totalIn)}`,  color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.15)'  },
+              { label: 'Total OUT (qty)',value: `−${fmtQty(data.totals.totalOut)}`,  color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.15)' },
+              { label: 'Net Movement',   value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Closing Bal.',   value: fmtQty(data.totals.closingBalance), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
+              { label: 'IN Value',       value: fmtAmt(data.totals.totalInValue),   color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.1)'   },
+              { label: 'OUT Value',      value: fmtAmt(data.totals.totalOutValue),  color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.1)'  },
+              { label: 'Net Value',      value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'rgba(255,255,255,0.06)' },
             ].map(t => (
               <div key={t.label} className="sl-total" style={{ border: `0.5px solid ${t.border}` }}>
                 <div className="sl-total-l">{t.label}</div>

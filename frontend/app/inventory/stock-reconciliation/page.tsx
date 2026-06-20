@@ -41,11 +41,11 @@ function fmtDate(d: string) {
 
 const STATUS_CFG: Record<SessionStatus, { color: string; bg: string; border: string; label: string }> = {
   draft:            { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Draft'            },
-  in_progress:      { color: 'var(--accent-blue)',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
-  pending_approval: { color: 'var(--warning)',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
-  approved:         { color: 'var(--accent-violet)',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
-  posted:           { color: 'var(--success)',               bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)', label: 'Posted'           },
-  cancelled:        { color: 'var(--danger)',               bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled'        },
+  in_progress:      { color: 'var(--accent-blue, #60a5fa)',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
+  pending_approval: { color: 'var(--warning, #fbbf24)',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
+  approved:         { color: 'var(--accent-violet, #a78bfa)',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
+  posted:           { color: 'var(--success, #4ade80)',               bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)', label: 'Posted'           },
+  cancelled:        { color: 'var(--danger, #f87171)',               bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled'        },
 };
 
 const STATUS_ORDER: Record<SessionStatus, number> = {
@@ -77,15 +77,15 @@ function CreateSessionModal({
   const INP: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
     borderRadius: 7, padding: '8px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif",
-    color: 'var(--text-primary)', outline: 'none', width: '100%', boxSizing: 'border-box',
+    color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', boxSizing: 'border-box',
   };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)', marginBottom: 5 };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'var(--bg)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 12, padding: 28, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
+      <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 12, padding: 28, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)' }}>New Cycle Count Session</span>
+          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>New Cycle Count Session</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
@@ -108,7 +108,7 @@ function CreateSessionModal({
         </div>
 
         {error && (
-          <div style={{ marginTop: 12, background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>
+          <div style={{ marginTop: 12, background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>
             {error}
           </div>
         )}
@@ -117,7 +117,7 @@ function CreateSessionModal({
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
             Cancel
           </button>
-          <button onClick={handleSubmit} disabled={saving} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={handleSubmit} disabled={saving} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Creating…' : 'Create Session'}
           </button>
         </div>
@@ -149,7 +149,7 @@ function buildColumns(onOpen: (id: string) => void): ERPColumn<CountSession>[] {
         <button
           onClick={() => onOpen(r.id)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-          <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500, textDecoration: 'underline', textDecorationColor: 'rgba(251,146,60,0.3)' }}>{r.sessionNumber}</span>
+          <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, textDecoration: 'underline', textDecorationColor: 'rgba(251,146,60,0.3)' }}>{r.sessionNumber}</span>
         </button>
       ),
     },
@@ -171,20 +171,20 @@ function buildColumns(onOpen: (id: string) => void): ERPColumn<CountSession>[] {
     {
       key: 'lines', header: 'Items', width: 80, align: 'right', sortable: true,
       value: r => r._count.lines,
-      render: r => <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary)' }}>{r._count.lines}</span>,
+      render: r => <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>{r._count.lines}</span>,
     },
     {
       key: 'linesWithVariance', header: 'Variances', width: 100, align: 'right', sortable: true,
       value: r => r.linesWithVariance ?? 0,
       render: r => r.linesWithVariance !== null
-        ? <span style={{ ...MONO, fontSize: 12, color: r.linesWithVariance > 0 ? 'var(--warning)' : 'var(--success)' }}>{r.linesWithVariance}</span>
+        ? <span style={{ ...MONO, fontSize: 12, color: r.linesWithVariance > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)' }}>{r.linesWithVariance}</span>
         : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>,
     },
     {
       key: 'totalVarianceValue', header: 'Variance Value', width: 140, align: 'right', sortable: true,
       value: r => r.totalVarianceValue ?? 0,
       render: r => r.totalVarianceValue !== null
-        ? <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color: r.totalVarianceValue < 0 ? 'var(--danger)' : r.totalVarianceValue > 0 ? 'var(--warning)' : 'var(--success)' }}>{fmtAmt(r.totalVarianceValue)}</span>
+        ? <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color: r.totalVarianceValue < 0 ? 'var(--danger, #f87171)' : r.totalVarianceValue > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)' }}>{fmtAmt(r.totalVarianceValue)}</span>
         : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>,
     },
     {
@@ -271,8 +271,8 @@ export default function StockReconciliationPage() {
         .sr-kpi-v { font-size: 22px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sr-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .sr-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .sr-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
-        .sr-btn-new { background: linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
+        .sr-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
+        .sr-btn-new { background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
       `}</style>
 
       <div className="sr-page">
@@ -280,10 +280,10 @@ export default function StockReconciliationPage() {
         {/* KPI bar */}
         <div className="sr-kpis">
           {[
-            { label: 'Total Sessions',  value: String(kpis.total),      color: 'var(--text-strong)', border: 'rgba(255,255,255,0.07)' },
-            { label: 'In Progress',     value: String(kpis.inProgress), color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)'  },
-            { label: 'Pending Approval',value: String(kpis.pending),    color: 'var(--warning)', border: 'rgba(251,191,36,0.15)'  },
-            { label: 'Posted',          value: String(kpis.posted),     color: 'var(--success)', border: 'rgba(74,222,128,0.15)'  },
+            { label: 'Total Sessions',  value: String(kpis.total),      color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'In Progress',     value: String(kpis.inProgress), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
+            { label: 'Pending Approval',value: String(kpis.pending),    color: 'var(--warning, #fbbf24)', border: 'rgba(251,191,36,0.15)'  },
+            { label: 'Posted',          value: String(kpis.posted),     color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.15)'  },
           ].map(k => (
             <div key={k.label} className="sr-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="sr-kpi-l">{k.label}</div>

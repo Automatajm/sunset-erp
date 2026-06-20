@@ -76,15 +76,15 @@ function uid() { return Math.random().toString(36).slice(2, 9); }
 // ─── Status / Condition config ────────────────────────────────────────────────
 
 const STATUS_CFG = {
-  posted:    { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Posted'    },
-  cancelled: { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
+  posted:    { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Posted'    },
+  cancelled: { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
 };
 
 const CONDITION_CFG: Record<string, { color: string; label: string }> = {
-  complete: { color: 'var(--success)', label: 'Complete' },
-  partial:  { color: 'var(--accent-strong)', label: 'Partial'  },
-  damaged:  { color: 'var(--danger)', label: 'Damaged'  },
-  rejected: { color: 'var(--danger)', label: 'Rejected' },
+  complete: { color: 'var(--success, #4ade80)', label: 'Complete' },
+  partial:  { color: 'var(--accent-strong, #fb923c)', label: 'Partial'  },
+  damaged:  { color: 'var(--danger, #f87171)', label: 'Damaged'  },
+  rejected: { color: 'var(--danger, #f87171)', label: 'Rejected' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -124,10 +124,10 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
-      <div style={{ width:720, background:'var(--bg)', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+      <div style={{ width:720, background:'var(--bg, #0a0712)', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
-            <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', ...MONO }}>{grn.grnNumber}</div>
+            <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', ...MONO }}>{grn.grnNumber}</div>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
               {grn.supplierName ? `${grn.supplierName} · ` : ''}{grn.warehouseName}
               {grn.poNumber && <span style={{ color:'rgba(251,146,60,0.5)', marginLeft:8 }}>· PO {grn.poNumber}</span>}
@@ -144,7 +144,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:16 }}>
-            {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
             {/* Info grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
@@ -156,7 +156,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
               ].map(item => (
                 <div key={item.label} style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 12px' }}>
                   <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{item.label}</div>
-                  <div style={{ fontSize:12, color:'var(--text-primary)' }}>{item.value}</div>
+                  <div style={{ fontSize:12, color:'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -165,7 +165,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
             {(detail as any).supplierRef && (
               <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:'rgba(96,165,250,0.05)', border:'0.5px solid rgba(96,165,250,0.15)', borderRadius:7 }}>
                 <span style={{ fontSize:10, color:'rgba(96,165,250,0.5)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Supplier Ref</span>
-                <span style={{ ...MONO, fontSize:12, color:'var(--accent-blue)' }}>{(detail as any).supplierRef}</span>
+                <span style={{ ...MONO, fontSize:12, color:'var(--accent-blue, #60a5fa)' }}>{(detail as any).supplierRef}</span>
               </div>
             )}
 
@@ -185,19 +185,19 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                     <tr key={line.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
                       <td style={{ padding:'8px', color:'rgba(255,255,255,0.3)', ...MONO }}>{line.lineNumber}</td>
                       <td style={{ padding:'8px' }}>
-                        <div style={{ ...MONO, color:'var(--accent-strong)', fontSize:11 }}>{line.item?.code}</div>
+                        <div style={{ ...MONO, color:'var(--accent-strong, #fb923c)', fontSize:11 }}>{line.item?.code}</div>
                         <div style={{ color:'rgba(255,255,255,0.55)', fontSize:11, marginTop:1 }}>{line.item?.name}</div>
                       </td>
-                      <td style={{ padding:'8px', textAlign:'right', ...MONO, color:'var(--success)', fontWeight:500 }}>{Number(line.receivedQuantity).toLocaleString()}</td>
+                      <td style={{ padding:'8px', textAlign:'right', ...MONO, color:'var(--success, #4ade80)', fontWeight:500 }}>{Number(line.receivedQuantity).toLocaleString()}</td>
                       <td style={{ padding:'8px', color:'rgba(255,255,255,0.45)' }}>{line.uom}</td>
                       <td style={{ padding:'8px', textAlign:'right', ...MONO, fontSize:11 }}>{line.unitCost ? fmtAmt(line.unitCost) : '—'}</td>
-                      <td style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:500, color:'var(--text-primary)' }}>
+                      <td style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:500, color:'var(--text-primary, #e2dfd8)' }}>
                         {line.unitCost ? fmtAmt(Number(line.receivedQuantity) * Number(line.unitCost)) : '—'}
                       </td>
                       <td style={{ padding:'8px', color:'rgba(255,255,255,0.35)', fontSize:11 }}>{line.lotNumber ?? '—'}</td>
                       <td style={{ padding:'8px', fontSize:11 }}>
                         {line.expiryDate ? (
-                          <span style={{ color: new Date(line.expiryDate) < new Date() ? 'var(--danger)' : 'var(--warning)', ...MONO }}>
+                          <span style={{ color: new Date(line.expiryDate) < new Date() ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)', ...MONO }}>
                             {fmtDateShort(line.expiryDate)}
                           </span>
                         ) : <span style={{ color:'rgba(255,255,255,0.2)' }}>—</span>}
@@ -206,7 +206,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                   ))}
                   <tr style={{ background:'rgba(255,255,255,0.02)' }}>
                     <td colSpan={5} style={{ padding:'8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL VALUE</td>
-                    <td colSpan={3} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'var(--success)', fontSize:14 }}>
+                    <td colSpan={3} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'var(--success, #4ade80)', fontSize:14 }}>
                       {fmtAmt(detail.lines?.reduce((sum, l) => sum + Number(l.receivedQuantity) * Number(l.unitCost ?? 0), 0) ?? 0)}
                     </td>
                   </tr>
@@ -224,7 +224,7 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
             {detail.status === 'posted' && (
               <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                 <button onClick={cancelModal.openModal}
-                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger, #f87171)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
                   Cancel GRN
                 </button>
               </div>
@@ -426,9 +426,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
+  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(74,222,128,0.6)', display:'block', marginBottom:4 };
-  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
+  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
 
   const filteredSupplierItems = supplierItems.filter(si =>
     !itemSearch.trim() ||
@@ -447,21 +447,21 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
     <>
       <style>{`
         .grn-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .grn-box{background:var(--surface);border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:1060px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .grn-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(74,222,128,0.2);border-radius:14px;width:100%;max-width:1060px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .grn-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);pointer-events:none}
         .grn-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .grn-th{font-size:10px;color:rgba(74,222,128,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 8px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
         .mode-tab{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid transparent;transition:all 0.15s;font-family:'IBM Plex Sans',sans-serif}
-        .mode-tab-active{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:var(--success)}
+        .mode-tab-active{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:var(--success, #4ade80)}
         .mode-tab-inactive{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:rgba(255,255,255,0.35)}
         .pool-row{border-bottom:0.5px solid rgba(255,255,255,0.04)}
         .pool-row:hover{background:rgba(255,255,255,0.01)}
         .pool-row-skip{opacity:0.4}
-        .item-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--surface);border:0.5px solid rgba(74,222,128,0.2);border-radius:8px;box-shadow:0 12px 36px rgba(0,0,0,0.7);max-height:240px;overflow-y:auto}
+        .item-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--surface, #0e0b1a);border:0.5px solid rgba(74,222,128,0.2);border-radius:8px;box-shadow:0 12px 36px rgba(0,0,0,0.7);max-height:240px;overflow-y:auto}
         .item-drop-row{padding:9px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.1s}
         .item-drop-row:hover{background:rgba(74,222,128,0.06)}
         .item-drop-row:not(:last-child){border-bottom:0.5px solid rgba(255,255,255,0.04)}
-        .grn-date-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%;color-scheme:dark}
+        .grn-date-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%;color-scheme:dark}
         .grn-date-inp::-webkit-calendar-picker-indicator{filter:invert(0.5) sepia(1) saturate(3) hue-rotate(10deg);cursor:pointer;opacity:0.6}
         .grn-date-inp::-webkit-calendar-picker-indicator:hover{opacity:1}
       `}</style>
@@ -469,9 +469,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
       <div className="grn-overlay">
         <div className="grn-box">
           {/* Header */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface)', zIndex:10, borderRadius:'14px 14px 0 0' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface, #0e0b1a)', zIndex:10, borderRadius:'14px 14px 0 0' }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)' }}>New Goods Receipt (GRN)</span>
+              <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>New Goods Receipt (GRN)</span>
               <div style={{ display:'flex', gap:4 }}>
                 <button className={`mode-tab ${mode === 'po' ? 'mode-tab-active' : 'mode-tab-inactive'}`}
                   onClick={() => { setMode('po'); setPool([]); setSelectedSupplierId(''); setSupplierRef(''); }}>
@@ -488,7 +488,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
 
           <form onSubmit={handleSubmit}>
             <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
-              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               {/* ── FROM PO ── */}
               {mode === 'po' && (
@@ -512,7 +512,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                     {poDetLoading && <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)', flexShrink:0 }}>Loading…</span>}
                     {selectedPo && (
                       <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, flexShrink:0 }}>
-                        <span style={{ fontSize:11, color:'var(--success)', ...MONO }}>{selectedPo.poNumber}</span>
+                        <span style={{ fontSize:11, color:'var(--success, #4ade80)', ...MONO }}>{selectedPo.poNumber}</span>
                         {selectedPo.supplier?.name && <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>{selectedPo.supplier.name}</span>}
                         <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.05)', padding:'1px 6px', borderRadius:4 }}>{pool.length} lines</span>
                       </div>
@@ -560,13 +560,13 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                           ) : filteredSupplierItems.map(si => (
                             <div key={si.id} className="item-drop-row" onClick={() => addItemToPool(si)}>
                               <div>
-                                <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong)' }}>{si.item?.code ?? si.supplierItemCode}</span>
+                                <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong, #fb923c)' }}>{si.item?.code ?? si.supplierItemCode}</span>
                                 <span style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginLeft:8 }}>{si.item?.name ?? si.supplierItemName}</span>
-                                {si.isPreferred && <span style={{ fontSize:9, color:'var(--success)', marginLeft:6, background:'rgba(74,222,128,0.1)', padding:'1px 5px', borderRadius:3 }}>preferred</span>}
+                                {si.isPreferred && <span style={{ fontSize:9, color:'var(--success, #4ade80)', marginLeft:6, background:'rgba(74,222,128,0.1)', padding:'1px 5px', borderRadius:3 }}>preferred</span>}
                               </div>
                               <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
                                 {si.lastPrice && <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', ...MONO }}>{fmtAmt(si.lastPrice)}</span>}
-                                <span style={{ fontSize:10, color:'var(--accent-strong)', background:'rgba(251,146,60,0.08)', padding:'1px 6px', borderRadius:4, ...MONO }}>{si.purchaseUom?.code ?? 'PCS'}</span>
+                                <span style={{ fontSize:10, color:'var(--accent-strong, #fb923c)', background:'rgba(251,146,60,0.08)', padding:'1px 6px', borderRadius:4, ...MONO }}>{si.purchaseUom?.code ?? 'PCS'}</span>
                               </div>
                             </div>
                           ))}
@@ -662,13 +662,13 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                               <td style={{ padding:'8px', textAlign:'center', verticalAlign:'middle' }}>
                                 <input type="checkbox" checked={line.skip}
                                   onChange={e => updateLine(line.key, 'skip', e.target.checked)}
-                                  title="Skip this line" style={{ accentColor:'var(--danger)', cursor:'pointer' }} />
+                                  title="Skip this line" style={{ accentColor:'var(--danger, #f87171)', cursor:'pointer' }} />
                               </td>
                             )}
                             {/* Item */}
                             <td style={{ padding:'6px 8px', verticalAlign:'middle' }}>
                               <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
-                                <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong)' }}>{line.itemCode}</span>
+                                <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong, #fb923c)' }}>{line.itemCode}</span>
                                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>{line.itemName}</span>
                                 {pendingQty !== null && (
                                   <span style={{ fontSize:9, color:'rgba(255,255,255,0.25)' }}>
@@ -691,7 +691,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                             {/* UOM */}
                             <td style={{ padding:'4px 3px', verticalAlign:'middle' }}>
                               <input
-                                style={{ ...LINE_INP, color:'var(--accent-strong)', background:'rgba(251,146,60,0.04)', borderColor:'rgba(251,146,60,0.2)' }}
+                                style={{ ...LINE_INP, color:'var(--accent-strong, #fb923c)', background:'rgba(251,146,60,0.04)', borderColor:'rgba(251,146,60,0.2)' }}
                                 value={line.uom} disabled={line.skip}
                                 onChange={e => updateLine(line.key, 'uom', e.target.value)}
                               />
@@ -719,9 +719,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                                   borderColor: isExpired ? 'rgba(248,113,113,0.5)'
                                     : line.expiryDate ? 'rgba(251,191,36,0.35)'
                                     : 'rgba(255,255,255,0.1)',
-                                  color: isExpired ? 'var(--danger)'
-                                    : line.expiryDate ? 'var(--warning)'
-                                    : 'var(--text-strong)',
+                                  color: isExpired ? 'var(--danger, #f87171)'
+                                    : line.expiryDate ? 'var(--warning, #fbbf24)'
+                                    : 'var(--text-strong, #f1ede8)',
                                 }}
                                 value={line.expiryDate}
                                 disabled={line.skip}
@@ -737,7 +737,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                             {mode === 'manual' && (
                               <td style={{ padding:'4px', verticalAlign:'middle' }}>
                                 <button type="button"
-                                  style={{ width:22, height:22, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
+                                  style={{ width:22, height:22, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger, #f87171)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
                                   onClick={() => removeLine(line.key)}>×</button>
                               </td>
                             )}
@@ -858,28 +858,28 @@ export default function GoodsReceiptsPage() {
     {
       key: 'grnNumber', header: 'GRN Number', width: 150, sortable: true,
       value: r => r.grnNumber,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--success)', fontWeight:500 }}>{r.grnNumber}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--success, #4ade80)', fontWeight:500 }}>{r.grnNumber}</span>,
     },
     {
       key: 'poNumber', header: 'PO / Ref', width: 140, sortable: true,
       value: r => r.poNumber ?? (r as any).supplierRef ?? '',
       render: r => r.poNumber
-        ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-strong)' }}>{r.poNumber}</span>
+        ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-strong, #fb923c)' }}>{r.poNumber}</span>
         : (r as any).supplierRef
-          ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-blue)' }}>{(r as any).supplierRef}</span>
+          ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-blue, #60a5fa)' }}>{(r as any).supplierRef}</span>
           : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
       key: 'supplierName', header: 'Supplier', sortable: true,
       value: r => r.supplierName ?? '',
-      render: r => <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{r.supplierName ?? '—'}</span>,
+      render: r => <span style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500 }}>{r.supplierName ?? '—'}</span>,
     },
     {
       key: 'warehouseCode', header: 'Warehouse', width: 140, sortable: true,
       value: r => r.warehouseCode,
       render: r => (
         <div>
-          <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-violet)' }}>{r.warehouseCode}</div>
+          <div style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--accent-violet, #a78bfa)' }}>{r.warehouseCode}</div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginTop:1 }}>{r.warehouseName}</div>
         </div>
       ),
@@ -898,7 +898,7 @@ export default function GoodsReceiptsPage() {
       key: 'totalValue', header: 'Total Value', width: 120, align: 'right', sortable: true,
       value: r => r.totalValue ?? 0,
       render: r => r.totalValue
-        ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, fontWeight:500, color:'var(--text-primary)' }}>{fmtAmt(r.totalValue)}</span>
+        ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, fontWeight:500, color:'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.totalValue)}</span>
         : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
@@ -931,35 +931,35 @@ export default function GoodsReceiptsPage() {
     <ERPShell breadcrumbs={['Home','Procurement','Goods Receipts']} title="Goods Receipts (GRN)">
       <style>{`
         .grn-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-        .grn-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
+        .grn-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
       `}</style>
       <div className="grn-page">
         {/* Stats */}
         <div style={{ display:'flex', gap:10, marginBottom:10, flexShrink:0, flexWrap:'wrap' }}>
           {stats && [
-            { key:'posted',    label:'Posted',    value:stats.posted,    color:'var(--success)', border:'rgba(74,222,128,0.2)'  },
-            { key:'cancelled', label:'Cancelled', value:stats.cancelled, color:'var(--danger)', border:'rgba(248,113,113,0.2)' },
-            { key:'today',     label:'Today',     value:stats.today,     color:'var(--accent-blue)', border:'rgba(96,165,250,0.2)'  },
+            { key:'posted',    label:'Posted',    value:stats.posted,    color:'var(--success, #4ade80)', border:'rgba(74,222,128,0.2)'  },
+            { key:'cancelled', label:'Cancelled', value:stats.cancelled, color:'var(--danger, #f87171)', border:'rgba(248,113,113,0.2)' },
+            { key:'today',     label:'Today',     value:stats.today,     color:'var(--accent-blue, #60a5fa)', border:'rgba(96,165,250,0.2)'  },
           ].map(s => {
             const isActive = statusFilter === s.key;
             return (
               <div key={s.key} onClick={() => setStatusFilter(prev => prev === s.key ? null : s.key)}
                 style={{ background: isActive ? `color-mix(in srgb, ${s.color} 8%, transparent)` : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? s.color : s.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90, cursor:'pointer', transition:'all 0.15s' }}>
                 <span style={{ fontSize:10, color:s.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{s.label}</span>
-                <span style={{ fontSize:22, fontWeight:500, color: isActive ? s.color : 'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{s.value}</span>
+                <span style={{ fontSize:22, fontWeight:500, color: isActive ? s.color : 'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{s.value}</span>
               </div>
             );
           })}
           {stats && (
             <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:130 }}>
               <span style={{ fontSize:10, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total Value</span>
-              <span style={{ fontSize:16, fontWeight:500, color:'var(--success)', fontFamily:"'IBM Plex Mono',monospace" }}>{fmtAmt(stats.totalValue)}</span>
+              <span style={{ fontSize:16, fontWeight:500, color:'var(--success, #4ade80)', fontFamily:"'IBM Plex Mono',monospace" }}>{fmtAmt(stats.totalValue)}</span>
             </div>
           )}
           <div onClick={() => setStatusFilter(null)}
             style={{ background: !statusFilter ? 'rgba(74,222,128,0.08)' : 'rgba(10,7,18,0.7)', border:`0.5px solid ${!statusFilter ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70, cursor:'pointer', transition:'all 0.15s' }}>
             <span style={{ fontSize:10, color:'rgba(74,222,128,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span>
-            <span style={{ fontSize:22, fontWeight:500, color:'var(--success)', fontFamily:"'IBM Plex Mono',monospace" }}>{grns.length}</span>
+            <span style={{ fontSize:22, fontWeight:500, color:'var(--success, #4ade80)', fontFamily:"'IBM Plex Mono',monospace" }}>{grns.length}</span>
           </div>
         </div>
 

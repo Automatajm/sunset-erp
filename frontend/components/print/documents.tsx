@@ -509,7 +509,7 @@ export const PRINT_DOCS: Record<string, PrintDoc> = {
             <tbody>
               <tr>
                 <td style={{ ...TD, color: '#888' }}>Amount received</td>
-                <td style={{ ...TDR, fontSize: 16, fontWeight: 700, color: 'var(--accent-pressed)' }}>{inv.currency ? inv.currency + ' ' : ''}{money2(payment.amount)}</td>
+                <td style={{ ...TDR, fontSize: 16, fontWeight: 700, color: 'var(--accent-pressed, #c2410c)' }}>{inv.currency ? inv.currency + ' ' : ''}{money2(payment.amount)}</td>
               </tr>
               {crossCurrency && (
                 <tr>
@@ -704,7 +704,7 @@ export const PRINT_DOCS: Record<string, PrintDoc> = {
                     <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{ccy}</td>
                     <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + Number(i.totalAmount ?? 0), 0))}</td>
                     <td style={{ ...TDR, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + Number(i.paidAmount ?? 0), 0))}</td>
-                    <td style={{ ...TDR, fontWeight: 700, color: 'var(--accent-pressed)', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + balanceOf(i), 0))}</td>
+                    <td style={{ ...TDR, fontWeight: 700, color: 'var(--accent-pressed, #c2410c)', borderTop: '1.5px solid #333' }}>{money2(list.reduce((s, i) => s + balanceOf(i), 0))}</td>
                   </tr>
                 ))}
               </tfoot>

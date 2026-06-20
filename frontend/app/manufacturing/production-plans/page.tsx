@@ -52,23 +52,23 @@ function fmtNum(v: number) { return new Intl.NumberFormat('en-US').format(v); }
 // ─── Status / Horizon configs ─────────────────────────────────────────────────
 
 const STATUS_CFG: Record<PPStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:       { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
-  confirmed:   { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Confirmed' },
-  in_progress: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'In Progress' },
-  completed:   { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Completed' },
-  cancelled:   { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
+  draft:       { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
+  confirmed:   { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Confirmed' },
+  in_progress: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'In Progress' },
+  completed:   { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Completed' },
+  cancelled:   { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
 };
 
 const HORIZON_CFG: Record<PPHorizon, { color: string; label: string }> = {
   weekly:    { color: '#34d399', label: 'Weekly' },
-  monthly:   { color: 'var(--accent-blue)', label: 'Monthly' },
-  quarterly: { color: 'var(--accent-violet)', label: 'Quarterly' },
+  monthly:   { color: 'var(--accent-blue, #60a5fa)', label: 'Monthly' },
+  quarterly: { color: 'var(--accent-violet, #a78bfa)', label: 'Quarterly' },
 };
 
 const CRP_CFG: Record<string, { color: string; label: string }> = {
-  feasible:    { color: 'var(--success)', label: 'Feasible' },
-  constrained: { color: 'var(--warning)', label: 'Constrained' },
-  infeasible:  { color: 'var(--danger)', label: 'Infeasible' },
+  feasible:    { color: 'var(--success, #4ade80)', label: 'Feasible' },
+  constrained: { color: 'var(--warning, #fbbf24)', label: 'Constrained' },
+  infeasible:  { color: 'var(--danger, #f87171)', label: 'Infeasible' },
 };
 
 function StatusBadge({ status }: { status: PPStatus }) {
@@ -156,7 +156,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
     padding: '6px 14px', fontSize: 12, borderRadius: 6, cursor: 'pointer', border: 'none',
     fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400,
     background: active ? 'rgba(251,146,60,0.12)' : 'transparent',
-    color: active ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s',
+    color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', transition: 'all 0.15s',
   });
 
   const canConfirm    = detail?.status === 'draft';
@@ -167,20 +167,20 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex' }}>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
-      <div style={{ width: 820, background: 'var(--bg)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: 820, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', ...MONO }}>{plan.planNumber}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', ...MONO }}>{plan.planNumber}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{plan.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, color: HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary)', background: `${HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary)'}18`, padding: '2px 9px', borderRadius: 20, border: `0.5px solid ${HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary)'}35` }}>
+            <span style={{ fontSize: 11, color: HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary, #e2dfd8)', background: `${HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary, #e2dfd8)'}18`, padding: '2px 9px', borderRadius: 20, border: `0.5px solid ${HORIZON_CFG[plan.horizon]?.color ?? 'var(--text-primary, #e2dfd8)'}35` }}>
               {HORIZON_CFG[plan.horizon]?.label ?? plan.horizon}
             </span>
             {plan.crpStatus && (
-              <span style={{ fontSize: 11, color: CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary)', background: `${CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary)'}18`, padding: '2px 9px', borderRadius: 20, border: `0.5px solid ${CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary)'}35` }}>
+              <span style={{ fontSize: 11, color: CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary, #e2dfd8)', background: `${CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary, #e2dfd8)'}18`, padding: '2px 9px', borderRadius: 20, border: `0.5px solid ${CRP_CFG[plan.crpStatus]?.color ?? 'var(--text-primary, #e2dfd8)'}35` }}>
                 CRP: {CRP_CFG[plan.crpStatus]?.label ?? plan.crpStatus}
               </span>
             )}
@@ -200,8 +200,8 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
         ) : detail ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
-            {notice && <div style={{ background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--success)' }}>{notice}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
+            {notice && <div style={{ background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--success, #4ade80)' }}>{notice}</div>}
 
             {/* Info cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -213,7 +213,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
               ].map(item => (
                 <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.value}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -251,30 +251,30 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                           style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)', cursor: isPending ? 'pointer' : 'default', background: isSelected ? 'rgba(96,165,250,0.06)' : 'transparent', transition: 'background 0.1s' }}>
                           <td style={{ padding: '8px 6px', width: 24 }}>
                             {isPending && (
-                              <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue, #60a5fa)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {isSelected && <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>✓</span>}
                               </div>
                             )}
                           </td>
                           <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                           <td style={{ padding: '8px' }}>
-                            <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.item?.code}</div>
+                            <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code}</div>
                             <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{line.item?.name}</div>
                           </td>
                           <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{fmtNum(line.plannedQty)}</td>
                           <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
                           <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(line.plannedStart)}</td>
                           <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(line.plannedEnd)}</td>
-                          <td style={{ padding: '8px', fontSize: 11, ...MONO, color: line.bom ? 'var(--accent-violet)' : 'rgba(255,255,255,0.2)' }}>
+                          <td style={{ padding: '8px', fontSize: 11, ...MONO, color: line.bom ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.2)' }}>
                             {line.bom ? `v${line.bom.version}` : '—'}
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <span style={{ fontSize: 12, color: moCount > 0 ? 'var(--success)' : 'rgba(255,255,255,0.2)' }}>{moCount}</span>
+                            <span style={{ fontSize: 12, color: moCount > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.2)' }}>{moCount}</span>
                           </td>
                           <td style={{ padding: '8px' }}>
                             <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10,
                               background: line.status === 'completed' ? 'rgba(74,222,128,0.1)' : line.status === 'mo_created' ? 'rgba(96,165,250,0.1)' : line.status === 'cancelled' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
-                              color: line.status === 'completed' ? 'var(--success)' : line.status === 'mo_created' ? 'var(--accent-blue)' : line.status === 'cancelled' ? 'var(--danger)' : 'var(--warning)',
+                              color: line.status === 'completed' ? 'var(--success, #4ade80)' : line.status === 'mo_created' ? 'var(--accent-blue, #60a5fa)' : line.status === 'cancelled' ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)',
                               border: `0.5px solid ${line.status === 'completed' ? 'rgba(74,222,128,0.2)' : line.status === 'mo_created' ? 'rgba(96,165,250,0.2)' : line.status === 'cancelled' ? 'rgba(248,113,113,0.2)' : 'rgba(251,191,36,0.2)'}`,
                             }}>
                               {line.status.replace('_', ' ')}
@@ -290,7 +290,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                 {canGenerate && pendingLines.length > 0 && (
                   <div style={{ background: 'rgba(74,222,128,0.04)', border: '0.5px solid rgba(74,222,128,0.15)', borderRadius: 10, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Generate Production Orders</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--success, #4ade80)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Generate Production Orders</div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>
                         {selectedLines.size > 0 ? `${selectedLines.size} lines selected` : `All ${pendingLines.length} pending lines`}
                       </div>
@@ -310,11 +310,11 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                 {/* Totals */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                   {[
-                    { label: 'Total Planned',  value: fmtNum(avp.totals.totalPlanned),                 color: 'var(--text-primary)' },
-                    { label: 'Total Produced', value: fmtNum(avp.totals.totalProduced),                color: 'var(--success)' },
-                    { label: 'Pending',        value: String(avp.totals.linesPending),                 color: 'var(--warning)' },
-                    { label: 'MO Created',     value: String(avp.totals.linesMoCreated),               color: 'var(--accent-blue)' },
-                    { label: 'Completed',      value: String(avp.totals.linesCompleted),               color: 'var(--success)' },
+                    { label: 'Total Planned',  value: fmtNum(avp.totals.totalPlanned),                 color: 'var(--text-primary, #e2dfd8)' },
+                    { label: 'Total Produced', value: fmtNum(avp.totals.totalProduced),                color: 'var(--success, #4ade80)' },
+                    { label: 'Pending',        value: String(avp.totals.linesPending),                 color: 'var(--warning, #fbbf24)' },
+                    { label: 'MO Created',     value: String(avp.totals.linesMoCreated),               color: 'var(--accent-blue, #60a5fa)' },
+                    { label: 'Completed',      value: String(avp.totals.linesCompleted),               color: 'var(--success, #4ade80)' },
                   ].map(item => (
                     <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
@@ -340,20 +340,20 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                         <tr key={line.lineId} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                           <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                           <td style={{ padding: '8px' }}>
-                            <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.item?.code}</div>
+                            <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code}</div>
                             <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{line.item?.name}</div>
                           </td>
                           <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{fmtNum(line.plannedQty)}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', ...MONO, color: 'var(--success)' }}>{fmtNum(line.producedQty)}</td>
-                          <td style={{ padding: '8px', textAlign: 'right', ...MONO, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
+                          <td style={{ padding: '8px', textAlign: 'right', ...MONO, color: 'var(--success, #4ade80)' }}>{fmtNum(line.producedQty)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', ...MONO, color: isPositive ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
                             {isPositive ? '+' : ''}{fmtNum(line.variance)}
                           </td>
                           <td style={{ padding: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ width: 60, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}>
-                                <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: pct >= 100 ? 'var(--success)' : pct > 50 ? 'var(--accent-strong)' : 'var(--warning)' }} />
+                                <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: pct >= 100 ? 'var(--success, #4ade80)' : pct > 50 ? 'var(--accent-strong, #fb923c)' : 'var(--warning, #fbbf24)' }} />
                               </div>
-                              <span style={{ ...MONO, fontSize: 11, color: pct >= 100 ? 'var(--success)' : 'rgba(255,255,255,0.5)' }}>{pct}%</span>
+                              <span style={{ ...MONO, fontSize: 11, color: pct >= 100 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.5)' }}>{pct}%</span>
                             </div>
                           </td>
                           <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
@@ -365,9 +365,9 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
                               ) : (
                                 <>
-                                  {line.moSummary.inProgress > 0  && <span style={{ fontSize: 10, color: 'var(--accent-strong)',  background: 'rgba(251,146,60,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.inProgress} active</span>}
-                                  {line.moSummary.completed > 0   && <span style={{ fontSize: 10, color: 'var(--success)',  background: 'rgba(74,222,128,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.completed} done</span>}
-                                  {line.moSummary.draft > 0       && <span style={{ fontSize: 10, color: 'var(--warning)',  background: 'rgba(251,191,36,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.draft} draft</span>}
+                                  {line.moSummary.inProgress > 0  && <span style={{ fontSize: 10, color: 'var(--accent-strong, #fb923c)',  background: 'rgba(251,146,60,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.inProgress} active</span>}
+                                  {line.moSummary.completed > 0   && <span style={{ fontSize: 10, color: 'var(--success, #4ade80)',  background: 'rgba(74,222,128,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.completed} done</span>}
+                                  {line.moSummary.draft > 0       && <span style={{ fontSize: 10, color: 'var(--warning, #fbbf24)',  background: 'rgba(251,191,36,0.1)',  padding: '1px 5px', borderRadius: 8 }}>{line.moSummary.draft} draft</span>}
                                 </>
                               )}
                             </div>
@@ -375,7 +375,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                           <td style={{ padding: '8px' }}>
                             <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10,
                               background: line.status === 'completed' ? 'rgba(74,222,128,0.1)' : line.status === 'mo_created' ? 'rgba(96,165,250,0.1)' : 'rgba(251,191,36,0.1)',
-                              color: line.status === 'completed' ? 'var(--success)' : line.status === 'mo_created' ? 'var(--accent-blue)' : 'var(--warning)',
+                              color: line.status === 'completed' ? 'var(--success, #4ade80)' : line.status === 'mo_created' ? 'var(--accent-blue, #60a5fa)' : 'var(--warning, #fbbf24)',
                             }}>
                               {line.status.replace('_', ' ')}
                             </span>
@@ -392,19 +392,19 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canConfirm && (
                 <button onClick={() => handleStatus('confirmed')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Confirm Plan
                 </button>
               )}
               {detail?.status === 'in_progress' && (
                 <button onClick={() => handleStatus('completed')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Mark Completed
                 </button>
               )}
               {canCancel && (
                 <button onClick={cancelModal.openModal} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel Plan
                 </button>
               )}
@@ -494,7 +494,7 @@ function CreatePlanModal({ open, onClose, onSaved, items, boms }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
 
   const mfgItems = items.filter(it => it.isManufacturable);
@@ -503,25 +503,25 @@ function CreatePlanModal({ open, onClose, onSaved, items, boms }: {
     <>
       <style>{`
         .pp-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .pp-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:980px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .pp-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:980px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .pp-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .pp-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .pp-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .pp-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .pp-sel option{background:var(--surface)}
+        .pp-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .pp-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .pp-sel option{background:var(--surface, #0e0b1a)}
         .pp-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .pp-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
-        .pp-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .pp-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div className="pp-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="pp-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>New Production Plan</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Production Plan</span>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -611,7 +611,7 @@ function CreatePlanModal({ open, onClose, onSaved, items, boms }: {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create Production Plan'}
               </button>
             </div>
@@ -690,19 +690,19 @@ export default function ProductionPlansPage() {
     {
       key: 'planNumber', header: 'Plan', width: 140, sortable: true,
       value: r => r.planNumber,
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.planNumber}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.planNumber}</span>,
     },
     {
       key: 'title', header: 'Title', sortable: true,
       value: r => r.title,
-      render: r => <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{r.title}</span>,
+      render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.title}</span>,
     },
     {
       key: 'horizon', header: 'Horizon', width: 100, sortable: true,
       value: r => r.horizon,
       render: r => {
         const h = HORIZON_CFG[r.horizon as PPHorizon];
-        return <span style={{ fontSize: 11, color: h?.color ?? 'var(--text-primary)', background: `${h?.color ?? 'var(--text-primary)'}18`, padding: '2px 8px', borderRadius: 20, border: `0.5px solid ${h?.color ?? 'var(--text-primary)'}35` }}>{h?.label ?? r.horizon}</span>;
+        return <span style={{ fontSize: 11, color: h?.color ?? 'var(--text-primary, #e2dfd8)', background: `${h?.color ?? 'var(--text-primary, #e2dfd8)'}18`, padding: '2px 8px', borderRadius: 20, border: `0.5px solid ${h?.color ?? 'var(--text-primary, #e2dfd8)'}35` }}>{h?.label ?? r.horizon}</span>;
       },
     },
     {
@@ -720,7 +720,7 @@ export default function ProductionPlansPage() {
       render: r => {
         if (!r.crpStatus) return <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>—</span>;
         const c = CRP_CFG[r.crpStatus];
-        return <span style={{ fontSize: 11, color: c?.color ?? 'var(--text-primary)' }}>{c?.label ?? r.crpStatus}</span>;
+        return <span style={{ fontSize: 11, color: c?.color ?? 'var(--text-primary, #e2dfd8)' }}>{c?.label ?? r.crpStatus}</span>;
       },
     },
     {
@@ -755,14 +755,14 @@ export default function ProductionPlansPage() {
                 onClick={() => setActiveStatus(prev => prev === status ? null : status)}
                 style={{ background: isActive ? cfg.bg : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? cfg.color : cfg.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 95, cursor: 'pointer', transition: 'all 0.15s' }}>
                 <span style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{cfg.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
               </div>
             );
           })}
           <div onClick={() => setActiveStatus(null)}
             style={{ background: !activeStatus ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeStatus ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer' }}>
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
-            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{plans.length}</span>
+            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{plans.length}</span>
           </div>
         </div>
 
@@ -772,12 +772,12 @@ export default function ProductionPlansPage() {
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
           </div>
           <button onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
             + New Plan
           </button>
         </div>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle)', flexShrink: 0 }}>{error}</div>}
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle, #fca5a5)', flexShrink: 0 }}>{error}</div>}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <ERPTable<PP>

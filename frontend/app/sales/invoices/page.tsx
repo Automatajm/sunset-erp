@@ -25,11 +25,11 @@ function daysUntil(d: string) {
 type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
 
 const STATUS_STYLE: Record<InvoiceStatus, { color: string; bg: string; border: string }> = {
-  draft:   { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  sent:    { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  partial: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)' },
-  paid:    { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  overdue: { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
+  draft:   { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
+  sent:    { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  partial: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)' },
+  paid:    { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  overdue: { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
   void:    { color: 'rgba(255,255,255,0.25)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)' },
 };
 
@@ -53,11 +53,11 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
 function KpiCards({ kpis, aging }: { kpis: ArKpis | null; aging: ArAging | null }) {
   if (!kpis) return null;
   const cards = [
-    { label: 'Total Invoiced',    value: fmtAmt(kpis.invoiced),       color: 'var(--text-primary)' },
-    { label: 'Collected',         value: fmtAmt(kpis.collected),       color: 'var(--success)' },
-    { label: 'Pending',           value: fmtAmt(kpis.pending),         color: 'var(--accent-blue)' },
-    { label: 'Overdue',           value: fmtAmt(kpis.overdue),         color: 'var(--danger)' },
-    { label: 'Collection Rate',   value: `${kpis.collectionRate.toFixed(1)}%`, color: kpis.collectionRate >= 80 ? 'var(--success)' : 'var(--warning)' },
+    { label: 'Total Invoiced',    value: fmtAmt(kpis.invoiced),       color: 'var(--text-primary, #e2dfd8)' },
+    { label: 'Collected',         value: fmtAmt(kpis.collected),       color: 'var(--success, #4ade80)' },
+    { label: 'Pending',           value: fmtAmt(kpis.pending),         color: 'var(--accent-blue, #60a5fa)' },
+    { label: 'Overdue',           value: fmtAmt(kpis.overdue),         color: 'var(--danger, #f87171)' },
+    { label: 'Collection Rate',   value: `${kpis.collectionRate.toFixed(1)}%`, color: kpis.collectionRate >= 80 ? 'var(--success, #4ade80)' : 'var(--warning, #fbbf24)' },
   ];
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -71,10 +71,10 @@ function KpiCards({ kpis, aging }: { kpis: ArKpis | null; aging: ArAging | null 
       {aging && (
         <div style={{ background: 'rgba(10,7,18,0.7)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 16, alignItems: 'center' }}>
           {[
-            { label: 'Current',  val: aging.summary.current.amount,    color: 'var(--success)' },
-            { label: '1-30d',    val: aging.summary.days1to30.amount,   color: 'var(--warning)' },
-            { label: '31-60d',   val: aging.summary.days31to60.amount,  color: 'var(--accent-strong)' },
-            { label: '90d+',     val: aging.summary.days90plus.amount,  color: 'var(--danger)' },
+            { label: 'Current',  val: aging.summary.current.amount,    color: 'var(--success, #4ade80)' },
+            { label: '1-30d',    val: aging.summary.days1to30.amount,   color: 'var(--warning, #fbbf24)' },
+            { label: '31-60d',   val: aging.summary.days31to60.amount,  color: 'var(--accent-strong, #fb923c)' },
+            { label: '90d+',     val: aging.summary.days90plus.amount,  color: 'var(--danger, #f87171)' },
           ].map(b => (
             <div key={b.label} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: b.color, opacity: 0.7 }}>{b.label}</span>
@@ -124,34 +124,34 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
         <td>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: 'var(--accent-blue)', fontWeight: 500 }}>{inv.invoiceNumber}</span>
+            <span style={{ ...MONO, color: 'var(--accent-blue, #60a5fa)', fontWeight: 500 }}>{inv.invoiceNumber}</span>
           </span>
         </td>
         {/* Customer */}
         <td>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{inv.customer?.name ?? '—'}</span>
+          <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{inv.customer?.name ?? '—'}</span>
           {inv.salesOrder && <div style={{ fontSize: 11, color: 'rgba(96,165,250,0.5)', marginTop: 1 }}>SO: {inv.salesOrder.soNumber}</div>}
         </td>
         {/* Invoice Date */}
         <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(inv.invoiceDate)}</span></td>
         {/* Due Date */}
         <td>
-          <span style={{ fontSize: 12, color: dueSoon ? 'var(--warning)' : inv.status === 'overdue' ? 'var(--danger)' : 'rgba(255,255,255,0.5)' }}>
+          <span style={{ fontSize: 12, color: dueSoon ? 'var(--warning, #fbbf24)' : inv.status === 'overdue' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.5)' }}>
             {fmtDate(inv.dueDate)}
-            {dueSoon && <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--warning)' }}>({days}d)</span>}
+            {dueSoon && <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--warning, #fbbf24)' }}>({days}d)</span>}
           </span>
         </td>
         {/* Total */}
         <td style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, color: 'var(--text-primary)' }}>{fmtAmt(inv.totalAmount)}</span>
+          <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(inv.totalAmount)}</span>
         </td>
         {/* Paid progress */}
         <td style={{ textAlign: 'right', minWidth: 110 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
             <div style={{ width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', flexShrink: 0 }}>
-              <div style={{ height: '100%', width: `${Math.min(100, pctPaid)}%`, background: pctPaid >= 100 ? 'var(--success)' : 'var(--accent-strong)', borderRadius: 2, transition: 'width 0.3s' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, pctPaid)}%`, background: pctPaid >= 100 ? 'var(--success, #4ade80)' : 'var(--accent-strong, #fb923c)', borderRadius: 2, transition: 'width 0.3s' }} />
             </div>
-            <span style={{ ...MONO, fontSize: 11, color: pctPaid >= 100 ? 'var(--success)' : outstanding > 0 ? 'var(--accent-strong)' : 'rgba(255,255,255,0.3)' }}>
+            <span style={{ ...MONO, fontSize: 11, color: pctPaid >= 100 ? 'var(--success, #4ade80)' : outstanding > 0 ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>
               {fmtAmt(outstanding)}
             </span>
           </div>
@@ -163,19 +163,19 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
           <div style={{ display: 'flex', gap: 4 }}>
             {inv.status === 'draft' && (
               <button onClick={() => onAction(inv.id, 'send')} disabled={busy}
-                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
+                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--accent-blue, #60a5fa)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 {busy ? '…' : 'Send'}
               </button>
             )}
             {['sent', 'partial'].includes(inv.status) && (
               <button onClick={() => onPayment(inv)} disabled={busy}
-                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--success)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
+                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--success, #4ade80)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 + Payment
               </button>
             )}
             {['draft', 'sent', 'partial'].includes(inv.status) && (
               <button onClick={() => onAction(inv.id, 'void')} disabled={busy}
-                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--danger)', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.15)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
+                style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--danger, #f87171)', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.15)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 Void
               </button>
             )}
@@ -210,13 +210,13 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
                         <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom || '—'}</td>
                         <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 }}>{fmtAmt(line.unitPrice)}</td>
                         <td style={{ padding: '7px 14px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
-                        <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
+                        <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
                         <td style={{ padding: '7px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{line.cogsAmount ? fmtAmt(line.cogsAmount) : '—'}</td>
                       </tr>
                     ))}
                     <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
                       <td colSpan={6} style={{ padding: '8px 14px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
-                      <td style={{ padding: '8px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-blue)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.totalAmount)}</td>
+                      <td style={{ padding: '8px 14px', textAlign: 'right', fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-blue, #60a5fa)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.totalAmount)}</td>
                       <td />
                     </tr>
                   </tbody>
@@ -229,7 +229,7 @@ function InvoiceRow({ inv, onAction, actionBusy, onPayment }: {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {detail.payments.map(p => (
                         <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
-                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: 'var(--success)', fontWeight: 500 }}>{fmtAmt(p.amount)}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(p.amount)}</span>
                           <span style={{ color: 'rgba(255,255,255,0.4)' }}>{fmtDate(p.paymentDate)}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{p.paymentMethod ?? '—'}</span>
                           {p.reference && <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11 }}>{p.reference}</span>}
@@ -287,26 +287,26 @@ function PaymentModal({ inv, onClose, onSaved }: {
     } finally { setSubmitting(false); }
   };
 
-  const inp = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' } as React.CSSProperties;
+  const inp = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' } as React.CSSProperties;
   const lbl = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em' as const, textTransform: 'uppercase' as const, color: 'rgba(74,222,128,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
   return (
     <>
       <style>{`.pay-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; }`}</style>
       <div className="pay-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 14, width: '100%', maxWidth: 420, boxShadow: '0 24px 60px rgba(0,0,0,0.7)', position: 'relative' }}>
+        <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 14, width: '100%', maxWidth: 420, boxShadow: '0 24px 60px rgba(0,0,0,0.7)', position: 'relative' }}>
           <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>Apply Payment</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>Apply Payment</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                {inv.invoiceNumber} · Outstanding: <span style={{ color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{fmtAmt(outstanding)}</span>
+                {inv.invoiceNumber} · Outstanding: <span style={{ color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{fmtAmt(outstanding)}</span>
               </div>
             </div>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={lbl}>Date *</label>
@@ -416,31 +416,31 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers, items }: {
 
   if (!open) return null;
 
-  const inp = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' } as React.CSSProperties;
+  const inp = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' } as React.CSSProperties;
   const lbl = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em' as const, textTransform: 'uppercase' as const, color: 'rgba(96,165,250,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
   return (
     <>
       <style>{`
         .inv-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-        .inv-box { background:var(--surface); border:0.5px solid rgba(96,165,250,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
-        .inv-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; }
-        .inv-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong); outline:none; width:100%; cursor:pointer; }
-        .inv-line-select option { background:var(--surface); }
+        .inv-box { background:var(--surface, #0e0b1a); border:0.5px solid rgba(96,165,250,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
+        .inv-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
+        .inv-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; cursor:pointer; }
+        .inv-line-select option { background:var(--surface, #0e0b1a); }
         .inv-lines-table { width:100%; border-collapse:collapse; }
         .inv-lines-table th { font-size:10px; color:rgba(96,165,250,0.5); text-transform:uppercase; letter-spacing:0.08em; padding:5px 6px; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); white-space:nowrap; }
         .inv-lines-table td { padding:4px 3px; vertical-align:middle; }
-        .inv-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .inv-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger, #f87171); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
       `}</style>
       <div className="inv-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="inv-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>New Invoice</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Invoice</span>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={lbl}>Customer *</label>
@@ -499,7 +499,7 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers, items }: {
                       <td><input className="inv-line-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
                       <td><input className="inv-line-input" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
                       <td><input className="inv-line-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.cogsAmount} onChange={e => setLine(idx, 'cogsAmount', e.target.value)} style={{ textAlign: 'right', color: 'rgba(255,255,255,0.45)' }} /></td>
-                      <td style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary)', textAlign: 'right', padding: '4px 6px' }}>
+                      <td style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right', padding: '4px 6px' }}>
                         {calcLineTotal(line) > 0 ? fmtAmt(calcLineTotal(line)) : '—'}
                       </td>
                       <td>{lines.length > 1 && <button type="button" className="inv-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}</td>
@@ -510,7 +510,7 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers, items }: {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '6px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: 'var(--accent-blue)' }}>{fmtAmt(grandTotal)}</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: 'var(--accent-blue, #60a5fa)' }}>{fmtAmt(grandTotal)}</span>
               </div>
             </div>
 
@@ -609,13 +609,13 @@ export default function ArInvoicesPage() {
         .ar-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:2px; min-width:70px; cursor:pointer; transition:opacity 0.15s; }
         .ar-stat:hover { opacity:0.8; }
         .ar-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .ar-stat-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .ar-stat-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .ar-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .ar-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; width:240px; }
+        .ar-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:240px; }
         .ar-search::placeholder { color:rgba(255,255,255,0.2); }
         .ar-search:focus { border-color:rgba(96,165,250,0.4); box-shadow:0 0 0 2px rgba(96,165,250,0.08); }
-        .ar-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; cursor:pointer; }
-        .ar-filter option { background:var(--surface); }
+        .ar-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; cursor:pointer; }
+        .ar-filter option { background:var(--surface, #0e0b1a); }
         .ar-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(59,130,246,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
         .ar-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .ar-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(96,165,250,0.12); border-radius:10px; overflow:hidden; }
@@ -625,10 +625,10 @@ export default function ArInvoicesPage() {
         .ar-table tbody tr:last-child td { border-bottom:none; }
         .ar-table tbody tr:hover td { background:rgba(96,165,250,0.02); }
         .ar-empty, .ar-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .ar-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(96,165,250,0.2); border-top-color:var(--accent-blue); animation:ar-spin 0.7s linear infinite; }
+        .ar-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(96,165,250,0.2); border-top-color:var(--accent-blue, #60a5fa); animation:ar-spin 0.7s linear infinite; }
         @keyframes ar-spin { to { transform:rotate(360deg); } }
         .ar-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .ar-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .ar-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
       `}</style>
 
       <div className="ar-page">
@@ -652,7 +652,7 @@ export default function ArInvoicesPage() {
             style={{ border: `0.5px solid ${!statusFilter ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.07)'}` }}
             onClick={() => setStatusFilter('')}>
             <span className="ar-stat-label" style={{ color: 'rgba(96,165,250,0.6)' }}>Total</span>
-            <span className="ar-stat-value" style={{ color: 'var(--accent-blue)' }}>{invoices.length}</span>
+            <span className="ar-stat-value" style={{ color: 'var(--accent-blue, #60a5fa)' }}>{invoices.length}</span>
           </div>
         </div>
 

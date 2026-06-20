@@ -8,11 +8,11 @@ import { uomApi } from '@/lib/api/uom';
 import { UomUnit, UomConversion } from '@/lib/api/types';
  
 const TYPE_COLORS: Record<string, string> = {
-  volume: 'var(--accent-blue)', mass: 'var(--accent-violet)', count: 'var(--success)',
-  length: 'var(--warning)', area: 'var(--accent-strong)', time: 'var(--danger)',
+  volume: 'var(--accent-blue, #60a5fa)', mass: 'var(--accent-violet, #a78bfa)', count: 'var(--success, #4ade80)',
+  length: 'var(--warning, #fbbf24)', area: 'var(--accent-strong, #fb923c)', time: 'var(--danger, #f87171)',
 };
 const SYS_COLORS: Record<string, string> = {
-  metric: 'var(--success)', imperial: 'var(--warning)', universal: 'var(--accent-blue)',
+  metric: 'var(--success, #4ade80)', imperial: 'var(--warning, #fbbf24)', universal: 'var(--accent-blue, #60a5fa)',
 };
  
 function Badge({ label, color }: { label: string; color: string }) {
@@ -79,25 +79,25 @@ export default function UomCatalogPage() {
         .uom-page { padding: 0 18px 24px; }
         .uom-tabs { display:flex; gap:4px; margin-bottom:14px; }
         .uom-tab { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:0.5px solid transparent; transition:all 0.15s; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.04); }
-        .uom-tab-active { color:var(--accent-strong); background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); }
+        .uom-tab-active { color:var(--accent-strong, #fb923c); background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); }
         .uom-toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
-        .uom-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; }
+        .uom-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
         .uom-input:focus { border-color:rgba(251,146,60,0.4); }
-        .uom-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; cursor:pointer; }
-        .uom-select option { background:var(--surface); }
+        .uom-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; cursor:pointer; }
+        .uom-select option { background:var(--surface, #0e0b1a); }
         .uom-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .uom-table { width:100%; border-collapse:collapse; }
         .uom-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; }
         .uom-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); font-size:13px; }
         .uom-table tbody tr:last-child td { border-bottom:none; }
         .uom-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .uom-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong); }
+        .uom-code { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-strong, #fb923c); }
         .uom-muted { color:rgba(255,255,255,0.4); font-size:12px; }
         .uom-converter { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
         .uom-conv-hdr { font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(251,146,60,0.55); margin-bottom:12px; }
         .uom-conv-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-        .uom-conv-result { margin-top:10px; font-size:13px; color:var(--success); font-family:'IBM Plex Mono',monospace; background:rgba(74,222,128,0.06); border:0.5px solid rgba(74,222,128,0.2); border-radius:7px; padding:8px 12px; }
-        .uom-btn { background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; transition:opacity 0.2s; }
+        .uom-conv-result { margin-top:10px; font-size:13px; color:var(--success, #4ade80); font-family:'IBM Plex Mono',monospace; background:rgba(74,222,128,0.06); border:0.5px solid rgba(74,222,128,0.2); border-radius:7px; padding:8px 12px; }
+        .uom-btn { background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; transition:opacity 0.2s; }
         .uom-btn:disabled { opacity:0.5; cursor:not-allowed; }
         .uom-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
         .uom-loading { text-align:center; padding:52px; color:rgba(255,255,255,0.25); font-size:13px; }
@@ -157,11 +157,11 @@ export default function UomCatalogPage() {
                       {filteredUnits.map(u => (
                         <tr key={u.id}>
                           <td><span className="uom-code">{u.code}</span></td>
-                          <td style={{ color: 'var(--text-primary)' }}>{u.name}</td>
+                          <td style={{ color: 'var(--text-primary, #e2dfd8)' }}>{u.name}</td>
                           <td><span className="uom-muted">{u.symbol ?? '—'}</span></td>
-                          <td><Badge label={u.type} color={TYPE_COLORS[u.type] ?? 'var(--text-primary)'} /></td>
-                          <td><Badge label={u.system} color={SYS_COLORS[u.system] ?? 'var(--text-primary)'} /></td>
-                          <td>{u.isBase ? <span style={{ color: 'var(--success)', fontSize: 12 }}>✓ base</span> : <span className="uom-muted">—</span>}</td>
+                          <td><Badge label={u.type} color={TYPE_COLORS[u.type] ?? 'var(--text-primary, #e2dfd8)'} /></td>
+                          <td><Badge label={u.system} color={SYS_COLORS[u.system] ?? 'var(--text-primary, #e2dfd8)'} /></td>
+                          <td>{u.isBase ? <span style={{ color: 'var(--success, #4ade80)', fontSize: 12 }}>✓ base</span> : <span className="uom-muted">—</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -186,8 +186,8 @@ export default function UomCatalogPage() {
                       <tr key={c.id}>
                         <td><span className="uom-code">{c.fromUom.code}</span> <span className="uom-muted">({c.fromUom.name})</span></td>
                         <td><span className="uom-code">{c.toUom.code}</span> <span className="uom-muted">({c.toUom.name})</span></td>
-                        <td style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)' }}>{Number(c.factor).toFixed(6)}</td>
-                        <td><Badge label={c.fromUom.type} color={TYPE_COLORS[c.fromUom.type] ?? 'var(--text-primary)'} /></td>
+                        <td style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{Number(c.factor).toFixed(6)}</td>
+                        <td><Badge label={c.fromUom.type} color={TYPE_COLORS[c.fromUom.type] ?? 'var(--text-primary, #e2dfd8)'} /></td>
                       </tr>
                     ))}
                   </tbody>

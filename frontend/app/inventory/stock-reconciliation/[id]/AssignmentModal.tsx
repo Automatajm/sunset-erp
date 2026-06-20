@@ -54,7 +54,7 @@ const INP: React.CSSProperties = {
   border: '0.5px solid rgba(255,255,255,0.1)',
   borderRadius: 7, padding: '8px 12px', fontSize: 13,
   fontFamily: "'IBM Plex Sans',sans-serif",
-  color: 'var(--text-primary)', outline: 'none', width: '100%',
+  color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%',
   boxSizing: 'border-box' as const,
 };
 
@@ -70,9 +70,9 @@ const LABEL: React.CSSProperties = {
 
 function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 20, padding: '2px 8px 2px 10px', fontSize: 11, color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 20, padding: '2px 8px 2px 10px', fontSize: 11, color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
       {label}
-      <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+      <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--accent-blue, #60a5fa)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
     </span>
   );
 }
@@ -218,7 +218,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
                 {assignments.map(a => (
                   <div key={a.id} style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>
                         {a.user ? `${a.user.firstName} ${a.user.lastName}` : a.userId}
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
@@ -230,7 +230,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
                     <button
                       onClick={() => handleDelete(a.id)}
                       disabled={deleting === a.id}
-                      style={{ background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--danger)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                      style={{ background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--danger, #f87171)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                       {deleting === a.id ? '…' : 'Remove'}
                     </button>
                   </div>
@@ -300,13 +300,13 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
           </div>
 
           {!hasFilters && selectedUserId && (
-            <div style={{ background: 'rgba(251,191,36,0.08)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--warning)', marginBottom: 12 }}>
+            <div style={{ background: 'rgba(251,191,36,0.08)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--warning, #fbbf24)', marginBottom: 12 }}>
               No filters selected — all unassigned lines will be assigned to this user.
             </div>
           )}
 
           {preview && (
-            <div style={{ background: 'rgba(74,222,128,0.06)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: 'var(--success)', marginBottom: 12 }}>
+            <div style={{ background: 'rgba(74,222,128,0.06)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: 'var(--success, #4ade80)', marginBottom: 12 }}>
               <span style={{ fontWeight: 600 }}>{preview.unassignedLines}</span> unassigned lines available out of {preview.totalLines} total.
               {selectedUserId && <span> Ready to assign to <b>{selectedUser?.fullName}</b>.</span>}
             </div>
@@ -316,7 +316,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
           <button
             onClick={handlePreview}
             disabled={!selectedUserId}
-            style={{ width: '100%', height: 38, borderRadius: 7, fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: selectedUserId ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${selectedUserId ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`, color: selectedUserId ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)', cursor: selectedUserId ? 'pointer' : 'not-allowed' }}>
+            style={{ width: '100%', height: 38, borderRadius: 7, fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: selectedUserId ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${selectedUserId ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`, color: selectedUserId ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)', cursor: selectedUserId ? 'pointer' : 'not-allowed' }}>
             Preview
           </button>
         </>

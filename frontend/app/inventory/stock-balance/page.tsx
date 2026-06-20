@@ -18,10 +18,10 @@ function fmtAmt(v: number) {
 }
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: 'var(--success)', label: 'Finished Good' },
-  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
-  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
-  service:       { color: 'var(--accent-violet)', label: 'Service'       },
+  finished_good: { color: 'var(--success, #4ade80)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue, #60a5fa)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning, #fbbf24)', label: 'Consumable'    },
+  service:       { color: 'var(--accent-violet, #a78bfa)', label: 'Service'       },
 };
 
 type UomView = 'purchase' | 'storage' | 'consumption';
@@ -46,7 +46,7 @@ function UomToggle({ active, onChange }: { active: UomView; onChange: (v: UomVie
             cursor: 'pointer', border: 'none',
             borderLeft: i > 0 ? '0.5px solid rgba(255,255,255,0.08)' : 'none',
             background: active === v.value ? 'rgba(251,146,60,0.15)' : 'transparent',
-            color: active === v.value ? 'var(--accent-strong)' : 'rgba(255,255,255,0.35)',
+            color: active === v.value ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.35)',
             transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}>
           {v.icon} {v.label}
@@ -66,7 +66,7 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
     {
       title: '💰 Purchase UOM — Financial',
       subtitle: 'Unit of record for WAC, valuation, JE amounts',
-      color: 'var(--accent-strong)',
+      color: 'var(--accent-strong, #fb923c)',
       rows: [
         { label: 'Purchase Qty',   value: `${fmtQty(row.purchaseQty)} ${row.purchaseUom}`, mono: true },
         { label: 'Unit Cost (WAC)',  value: fmtAmt(row.unitCost),                           mono: true },
@@ -76,7 +76,7 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
     {
       title: '🏭 Storage UOM — Warehouse',
       subtitle: 'Physical counting, bin management',
-      color: 'var(--accent-blue)',
+      color: 'var(--accent-blue, #60a5fa)',
       rows: [
         { label: 'On Hand',          value: `${fmtQty(row.storageQty)} ${row.storageUom}`,          mono: true },
         { label: 'Reserved',         value: `${fmtQty(row.reservedQuantity)} ${row.storageUom}`,    mono: true },
@@ -87,7 +87,7 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
     {
       title: '⚙️ Consumption UOM — Production',
       subtitle: 'BOM quantities, MRP explosion',
-      color: 'var(--success)',
+      color: 'var(--success, #4ade80)',
       rows: [
         { label: 'Consumption Qty',     value: `${fmtQty(row.consumptionQty)} ${row.consumptionUom}`,   mono: true },
         { label: 'Unit Cost Consumption', value: fmtAmt(row.unitCostConsumption),                        mono: true },
@@ -99,14 +99,14 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex' }}
       onClick={onClose}>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }} />
-      <div style={{ width: 380, background: 'var(--surface)', borderLeft: '0.5px solid rgba(251,146,60,0.2)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
+      <div style={{ width: 380, background: 'var(--surface, #0e0b1a)', borderLeft: '0.5px solid rgba(251,146,60,0.2)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'var(--accent-strong)' }}>{row.item?.code}</div>
+              <div style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{row.item?.code}</div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{row.item?.name}</div>
             </div>
             <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -133,7 +133,7 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
                 {sec.rows.map(r => (
                   <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.label}</span>
-                    <span style={{ ...MONO, fontSize: 12, fontWeight: r.highlight ? 600 : 400, color: r.highlight ? sec.color : 'var(--text-strong)' }}>{r.value}</span>
+                    <span style={{ ...MONO, fontSize: 12, fontWeight: r.highlight ? 600 : 400, color: r.highlight ? sec.color : 'var(--text-strong, #f1ede8)' }}>{r.value}</span>
                   </div>
                 ))}
               </div>
@@ -144,8 +144,8 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
           {(row.lotNumber || row.serialNumber) && (
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
               <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Tracking</div>
-              {row.lotNumber    && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Lot</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning)' }}>{row.lotNumber}</span></div>}
-              {row.serialNumber && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Serial</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning)' }}>{row.serialNumber}</span></div>}
+              {row.lotNumber    && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Lot</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.lotNumber}</span></div>}
+              {row.serialNumber && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Serial</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.serialNumber}</span></div>}
             </div>
           )}
         </div>
@@ -210,7 +210,7 @@ export default function StockBalancePage() {
   const SEL: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
     borderRadius: 7, padding: '7px 10px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary)',
+    fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', cursor: 'pointer',
   };
 
@@ -231,7 +231,7 @@ export default function StockBalancePage() {
         .sb-kpi-label{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3)}
         .sb-kpi-value{font-size:18px;font-weight:500;font-family:'IBM Plex Mono',monospace}
         .sb-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0}
-        .sb-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-primary);outline:none;width:220px}
+        .sb-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-primary, #e2dfd8);outline:none;width:220px}
         .sb-search::placeholder{color:rgba(255,255,255,0.2)}
         .sb-search:focus{border-color:rgba(251,146,60,0.4)}
         .sb-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
@@ -247,10 +247,10 @@ export default function StockBalancePage() {
         .sb-table tbody tr{cursor:pointer;transition:background 0.1s}
         .sb-table tbody tr:hover td{background:rgba(251,146,60,0.03)}
         .sb-empty,.sb-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px}
-        .sb-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:var(--accent-strong);animation:sb-spin 0.7s linear infinite}
+        .sb-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:var(--accent-strong, #fb923c);animation:sb-spin 0.7s linear infinite}
         @keyframes sb-spin{to{transform:rotate(360deg)}}
         .sb-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 12px;border-top:0.5px solid rgba(255,255,255,0.04);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-        .sb-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
+        .sb-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
         .sb-btn-reset{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 10px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.4);cursor:pointer}
         .sb-zero-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.35);font-family:'IBM Plex Sans',sans-serif;cursor:pointer;user-select:none}
         .sb-uom-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
@@ -261,11 +261,11 @@ export default function StockBalancePage() {
         {/* KPI bar */}
         <div className="sb-kpis">
           {[
-            { label: 'Total Value',   value: fmtAmt(totalValue),           color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.2)'   },
-            { label: 'Unique Items',  value: String(totalItems),            color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)'  },
-            { label: 'Warehouses',    value: String(totalWH),               color: 'var(--accent-violet)', border: 'rgba(167,139,250,0.15)' },
-            { label: 'Low Stock',     value: String(lowStockCount),         color: lowStockCount > 0 ? 'var(--warning)' : 'rgba(255,255,255,0.3)', border: lowStockCount > 0 ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)' },
-            { label: 'Zero Stock',    value: String(zeroCount),             color: zeroCount  > 0 ? 'var(--danger)' : 'rgba(255,255,255,0.3)',   border: zeroCount  > 0 ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.06)' },
+            { label: 'Total Value',   value: fmtAmt(totalValue),           color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.2)'   },
+            { label: 'Unique Items',  value: String(totalItems),            color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
+            { label: 'Warehouses',    value: String(totalWH),               color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
+            { label: 'Low Stock',     value: String(lowStockCount),         color: lowStockCount > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.3)', border: lowStockCount > 0 ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)' },
+            { label: 'Zero Stock',    value: String(zeroCount),             color: zeroCount  > 0 ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.3)',   border: zeroCount  > 0 ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.06)' },
           ].map(k => (
             <div key={k.label} className="sb-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="sb-kpi-label">{k.label}</div>
@@ -287,7 +287,7 @@ export default function StockBalancePage() {
           </select>
           <label className="sb-zero-toggle">
             <input type="checkbox" checked={zeroStock} onChange={e => setZeroStock(e.target.checked)}
-              style={{ accentColor: 'var(--accent-strong)' }} />
+              style={{ accentColor: 'var(--accent-strong, #fb923c)' }} />
             Show zero stock
           </label>
           {hasFilters && (
@@ -304,7 +304,7 @@ export default function StockBalancePage() {
         <div style={{ marginBottom: 8, flexShrink: 0 }}>
           {UOM_VIEWS.filter(v => v.value === uomView).map(v => (
             <div key={v.value} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: uomView === 'purchase' ? 'var(--accent-strong)' : uomView === 'storage' ? 'var(--accent-blue)' : 'var(--success)' }}>
+              <span style={{ color: uomView === 'purchase' ? 'var(--accent-strong, #fb923c)' : uomView === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--success, #4ade80)' }}>
                 {v.icon} {v.label}
               </span>
               <span>—</span>
@@ -369,7 +369,7 @@ export default function StockBalancePage() {
 
                           {/* Item */}
                           <td>
-                            <div style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500 }}>{row.item?.code ?? '—'}</div>
+                            <div style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{row.item?.code ?? '—'}</div>
                             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.item?.name}</div>
                           </td>
 
@@ -391,12 +391,12 @@ export default function StockBalancePage() {
                           {/* Purchase view */}
                           {uomView === 'purchase' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-strong)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-strong, #fb923c)' }}>
                                 {fmtQty(row.purchaseQty)}
                               </span>
                             </td>
                             <td>
-                              <span className="sb-uom-badge" style={{ color: 'var(--accent-strong)', background: 'rgba(251,146,60,0.1)', border: '0.5px solid rgba(251,146,60,0.2)' }}>
+                              <span className="sb-uom-badge" style={{ color: 'var(--accent-strong, #fb923c)', background: 'rgba(251,146,60,0.1)', border: '0.5px solid rgba(251,146,60,0.2)' }}>
                                 {row.purchaseUom}
                               </span>
                             </td>
@@ -404,7 +404,7 @@ export default function StockBalancePage() {
                               <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.unitCost > 0 ? fmtAmt(row.unitCost) : '—'}</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
                                 {row.totalValue > 0 ? fmtAmt(row.totalValue) : '—'}
                               </span>
                             </td>
@@ -413,23 +413,23 @@ export default function StockBalancePage() {
                           {/* Storage view */}
                           {uomView === 'storage' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-blue)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-blue, #60a5fa)' }}>
                                 {fmtQty(row.storageQty)}
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 12, color: row.reservedQuantity > 0 ? 'var(--warning)' : 'rgba(255,255,255,0.3)' }}>
+                              <span style={{ ...MONO, fontSize: 12, color: row.reservedQuantity > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.3)' }}>
                                 {fmtQty(row.reservedQuantity)}
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--success)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'var(--danger, #f87171)' : isLow ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)' }}>
                                 {fmtQty(row.availableQty)}
                               </span>
-                              {isLow && !isZero && <div style={{ fontSize: 9, color: 'var(--warning)', marginTop: 1 }}>⚠ low</div>}
+                              {isLow && !isZero && <div style={{ fontSize: 9, color: 'var(--warning, #fbbf24)', marginTop: 1 }}>⚠ low</div>}
                             </td>
                             <td>
-                              <span className="sb-uom-badge" style={{ color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)' }}>
+                              <span className="sb-uom-badge" style={{ color: 'var(--accent-blue, #60a5fa)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)' }}>
                                 {row.storageUom}
                               </span>
                             </td>
@@ -441,12 +441,12 @@ export default function StockBalancePage() {
                           {/* Consumption view */}
                           {uomView === 'consumption' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
                                 {fmtQty(row.consumptionQty)}
                               </span>
                             </td>
                             <td>
-                              <span className="sb-uom-badge" style={{ color: 'var(--success)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)' }}>
+                              <span className="sb-uom-badge" style={{ color: 'var(--success, #4ade80)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)' }}>
                                 {row.consumptionUom}
                               </span>
                             </td>
@@ -454,7 +454,7 @@ export default function StockBalancePage() {
                               <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.unitCostConsumption > 0 ? fmtAmt(row.unitCostConsumption) : '—'}</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
                                 {row.totalValue > 0 ? fmtAmt(row.totalValue) : '—'}
                               </span>
                             </td>
@@ -463,7 +463,7 @@ export default function StockBalancePage() {
                           {/* Lot */}
                           <td>
                             {row.lotNumber
-                              ? <span style={{ ...MONO, fontSize: 10, color: 'var(--warning)' }}>{row.lotNumber}</span>
+                              ? <span style={{ ...MONO, fontSize: 10, color: 'var(--warning, #fbbf24)' }}>{row.lotNumber}</span>
                               : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>—</span>
                             }
                           </td>
@@ -477,7 +477,7 @@ export default function StockBalancePage() {
               {/* Footer */}
               <div className="sb-footer">
                 <span>{filtered.length} of {rows.length} record{rows.length !== 1 ? 's' : ''}</span>
-                <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 12 }}>{fmtAmt(totalValue)} total inventory value</span>
+                <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 12 }}>{fmtAmt(totalValue)} total inventory value</span>
                 {hasFilters && <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.4)' }}>Filtered</span>}
               </div>
             </>

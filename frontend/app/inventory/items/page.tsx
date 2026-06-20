@@ -26,15 +26,15 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ITEM_TYPES: { value: ItemType; label: string; color: string; bg: string; border: string }[] = [
-  { value: 'raw_material',     label: 'Raw Material',     color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  { value: 'finished_good',    label: 'Finished Good',    color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  { value: 'work_in_progress', label: 'Work in Progress', color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  { value: 'service',          label: 'Service',          color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  { value: 'raw_material',     label: 'Raw Material',     color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  { value: 'finished_good',    label: 'Finished Good',    color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  { value: 'work_in_progress', label: 'Work in Progress', color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
+  { value: 'service',          label: 'Service',          color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
 ];
 
 const UOM_TYPE_COLOR: Record<string, string> = {
-  volume: 'var(--accent-blue)', mass: 'var(--accent-violet)', count: 'var(--success)',
-  length: 'var(--warning)', area: 'var(--accent-strong)', time: 'var(--danger)',
+  volume: 'var(--accent-blue, #60a5fa)', mass: 'var(--accent-violet, #a78bfa)', count: 'var(--success, #4ade80)',
+  length: 'var(--warning, #fbbf24)', area: 'var(--accent-strong, #fb923c)', time: 'var(--danger, #f87171)',
 };
 
 const EMPTY_FORM: CreateItemDto = {
@@ -67,7 +67,7 @@ function TypeBadge({ type }: { type: ItemType }) {
 
 function UomBadge({ unit }: { unit?: { code: string; name: string; type: string } | null }) {
   if (!unit) return <span style={{ color:'rgba(255,255,255,0.25)', fontSize:12 }}>—</span>;
-  const color = UOM_TYPE_COLOR[unit.type] ?? 'var(--text-primary)';
+  const color = UOM_TYPE_COLOR[unit.type] ?? 'var(--text-primary, #e2dfd8)';
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500, color, background:`color-mix(in srgb, ${color} 8%, transparent)`, border:`0.5px solid color-mix(in srgb, ${color} 21%, transparent)` }}>
       {unit.code}
@@ -76,12 +76,12 @@ function UomBadge({ unit }: { unit?: { code: string; name: string; type: string 
 }
 
 function BoolDot({ value }: { value: boolean }) {
-  return <span style={{ width:7, height:7, borderRadius:'50%', display:'inline-block', background:value ? 'var(--success)' : 'rgba(255,255,255,0.15)', boxShadow:value ? '0 0 4px rgba(74,222,128,0.4)' : 'none' }} />;
+  return <span style={{ width:7, height:7, borderRadius:'50%', display:'inline-block', background:value ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.15)', boxShadow:value ? '0 0 4px rgba(74,222,128,0.4)' : 'none' }} />;
 }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked ? 'var(--text-primary)' : 'rgba(255,255,255,0.4)', userSelect:'none' }}>
+    <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect:'none' }}>
       <div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border:`0.5px solid ${checked ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}>
         <div style={{ position:'absolute', top:2, left:checked ? 16 : 2, width:13, height:13, borderRadius:'50%', background:'#fff', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
       </div>
@@ -113,24 +113,24 @@ function StatsBar({ stats, activeType, onTypeClick }: {
           <div key={t.value} onClick={() => onTypeClick?.(isActive ? null : t.value)}
             style={{ background: isActive ? t.bg : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? t.color : t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:onTypeClick ? 'pointer' : 'default', transition:'all 0.15s', boxShadow:isActive ? `0 0 12px ${t.bg}` : 'none' }}>
             <span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span>
-            <span style={{ fontSize:22, fontWeight:500, color:isActive ? t.color : 'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
+            <span style={{ fontSize:22, fontWeight:500, color:isActive ? t.color : 'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
           </div>
         );
       })}
       <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}>
         <span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span>
-        <span style={{ fontSize:22, fontWeight:500, color:'var(--accent-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.total}</span>
+        <span style={{ fontSize:22, fontWeight:500, color:'var(--accent-strong, #fb923c)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.total}</span>
       </div>
       {stats.withCategory !== undefined && (
         <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
-          <span style={{ fontSize:10, color:'var(--accent-violet)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Categorized</span>
-          <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withCategory}</span>
+          <span style={{ fontSize:10, color:'var(--accent-violet, #a78bfa)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Categorized</span>
+          <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withCategory}</span>
         </div>
       )}
       {stats.withUomTriple !== undefined && (
         <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
-          <span style={{ fontSize:10, color:'var(--accent-blue)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>UOM Triple</span>
-          <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withUomTriple}</span>
+          <span style={{ fontSize:10, color:'var(--accent-blue, #60a5fa)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>UOM Triple</span>
+          <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withUomTriple}</span>
         </div>
       )}
     </div>
@@ -273,13 +273,13 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
   const supplierOpts = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
 
   const L: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
-  const INP: React.CSSProperties = { background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ background: 'rgba(251,146,60,0.04)', border: '0.5px solid rgba(251,146,60,0.15)', borderRadius: 8, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 500, color: editingId ? 'var(--success)' : 'var(--accent-strong)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div style={{ fontSize: 11, fontWeight: 500, color: editingId ? 'var(--success, #4ade80)' : 'var(--accent-strong, #fb923c)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {editingId ? `Editing — ${suppliers.find(s => s.id === addForm.supplierId)?.name ?? 'Supplier'}` : 'Add Supplier'}
           </div>
           {editingId && (
@@ -290,7 +290,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
         </div>
 
         {addError && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)', marginBottom: 10 }}>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)', marginBottom: 10 }}>
             {addError}
           </div>
         )}
@@ -312,12 +312,12 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
               <label style={L}>Purchase UOM</label>
               {itemPurchaseUom ? (
                 <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(251,146,60,0.06)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:7, padding:'7px 12px', height:36 }}>
-                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'var(--accent-strong)', fontWeight:600 }}>{itemPurchaseUom.code}</span>
+                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'var(--accent-strong, #fb923c)', fontWeight:600 }}>{itemPurchaseUom.code}</span>
                   <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>{itemPurchaseUom.name}</span>
                   <span style={{ fontSize:10, color:'rgba(251,146,60,0.4)', marginLeft:'auto', whiteSpace:'nowrap' }}>🔒 from item</span>
                 </div>
               ) : (
-                <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(239,68,68,0.07)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 12px', fontSize:11, color:'var(--danger-subtle)', height:36 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(239,68,68,0.07)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 12px', fontSize:11, color:'var(--danger-subtle, #fca5a5)', height:36 }}>
                   ⚠ Set Purchase UOM in UOM tab first
                 </div>
               )}
@@ -363,7 +363,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
               </button>
             ) : (
               <button type="button" disabled={adding || !itemPurchaseUom} onClick={handleAdd}
-                style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: adding || !itemPurchaseUom ? 'not-allowed' : 'pointer', opacity: adding || !itemPurchaseUom ? 0.4 : 1 }}>
+                style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: adding || !itemPurchaseUom ? 'not-allowed' : 'pointer', opacity: adding || !itemPurchaseUom ? 0.4 : 1 }}>
                 {adding ? 'Adding…' : '+ Add Supplier'}
               </button>
             )}
@@ -378,7 +378,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
           </div>
           {supplierItems.length > 0 && (
             <input value={supSearch} onChange={e => setSupSearch(e.target.value)} placeholder="Search supplier…"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', width: 160 }} />
+              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 160 }} />
           )}
         </div>
 
@@ -393,9 +393,9 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 120 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {si.supplier?.name}
-                    {si.isPreferred && <span style={{ fontSize: 10, color: 'var(--success)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
+                    {si.isPreferred && <span style={{ fontSize: 10, color: 'var(--success, #4ade80)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
                     {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
@@ -403,11 +403,11 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
                 </div>
                 <div style={{ minWidth: 55, textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
-                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong)' }}>{si.purchaseUom?.code ?? '—'}</span>
+                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong, #fb923c)' }}>{si.purchaseUom?.code ?? '—'}</span>
                 </div>
                 <div style={{ minWidth: 70, textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
-                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary)' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
+                  <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
                 </div>
                 <div style={{ minWidth: 45, textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
@@ -419,10 +419,10 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
                 </div>
                 <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
                   {!si.isPreferred && (
-                    <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: 'var(--success)', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
+                    <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
                   )}
                   <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
-                  <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
+                  <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
                 </div>
               </div>
             </div>
@@ -542,15 +542,15 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
     <>
       <style>{`
         .im-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
-        .im-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative;overflow:visible}
+        .im-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative;overflow:visible}
         .im-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none;border-radius:14px 14px 0 0}
-        .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0;border-radius:14px 14px 0 0;background:var(--surface);position:relative;z-index:1}
-        .im-title{font-size:14px;font-weight:500;color:var(--text-strong)}
+        .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0;border-radius:14px 14px 0 0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
+        .im-title{font-size:14px;font-weight:500;color:var(--text-strong, #f1ede8)}
         .im-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
-        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface);position:relative;z-index:1}
+        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
         .im-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap}
         .im-tab:hover{color:rgba(255,255,255,0.7)}
-        .im-tab-active{color:var(--accent-strong) !important;border-bottom-color:var(--accent-strong) !important}
+        .im-tab-active{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
         .im-scroll{flex:1;overflow-y:auto;min-height:0;overflow-x:visible}
         .im-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow:visible}
         .im-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -558,17 +558,17 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-field{display:flex;flex-direction:column;gap:5px}
         .im-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.6)}
         .im-sublabel{font-size:10px;color:rgba(255,255,255,0.3);margin-top:-2px}
-        .im-input,.im-select,.im-textarea{background:var(--surface);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s}
+        .im-input,.im-select,.im-textarea{background:var(--surface, #0e0b1a);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s}
         .im-input::placeholder,.im-textarea::placeholder{color:rgba(255,255,255,0.18)}
         .im-input:focus,.im-select:focus,.im-textarea:focus{border-color:rgba(251,146,60,0.45);box-shadow:0 0 0 2px rgba(234,88,12,0.1)}
-        .im-select option{background:var(--surface);color:var(--text-strong)}
+        .im-select option{background:var(--surface, #0e0b1a);color:var(--text-strong, #f1ede8)}
         .im-textarea{resize:vertical;min-height:60px}
         .im-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
         .im-toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-        .im-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle)}
-        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface);border-radius:0 0 14px 14px;position:relative;z-index:1}
+        .im-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
+        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface, #0e0b1a);border-radius:0 0 14px 14px;position:relative;z-index:1}
         .im-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
-        .im-btn-save{background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
+        .im-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .im-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .im-uom-info{background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.6}
       `}</style>
@@ -730,9 +730,9 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                   <>
                     <div className="im-uom-info">
                       <strong style={{ color:'rgba(255,255,255,0.5)' }}>Triple UOM:</strong> Three independent logistics domains.
-                      Purchasing receives in <strong style={{ color:'var(--accent-strong)' }}>Purchase UOM</strong> ·
-                      Warehouse manages in <strong style={{ color:'var(--accent-blue)' }}>Storage UOM</strong> ·
-                      Production consumes in <strong style={{ color:'var(--success)' }}>Consumption UOM</strong>.
+                      Purchasing receives in <strong style={{ color:'var(--accent-strong, #fb923c)' }}>Purchase UOM</strong> ·
+                      Warehouse manages in <strong style={{ color:'var(--accent-blue, #60a5fa)' }}>Storage UOM</strong> ·
+                      Production consumes in <strong style={{ color:'var(--success, #4ade80)' }}>Consumption UOM</strong>.
                     </div>
                     <div className="im-field">
                       <label className="im-label">Base UOM (legacy) *</label>
@@ -740,7 +740,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       <input className="im-input" placeholder="PCS" value={form.baseUom} onChange={e => setForm(f => ({ ...f, baseUom: e.target.value }))} required />
                     </div>
 
-                    <div className="im-section" style={{ color:'var(--accent-strong)', opacity:0.8 }}>Purchase — Purchasing domain</div>
+                    <div className="im-section" style={{ color:'var(--accent-strong, #fb923c)', opacity:0.8 }}>Purchase — Purchasing domain</div>
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Purchase UOM</label>
@@ -754,7 +754,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       </div>
                     </div>
 
-                    <div className="im-section" style={{ color:'var(--accent-blue)', opacity:0.8 }}>Storage — Warehouse domain</div>
+                    <div className="im-section" style={{ color:'var(--accent-blue, #60a5fa)', opacity:0.8 }}>Storage — Warehouse domain</div>
                     <div className="im-row">
                       <div className="im-field">
                         <label className="im-label">Storage UOM</label>
@@ -768,7 +768,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       </div>
                     </div>
 
-                    <div className="im-section" style={{ color:'var(--success)', opacity:0.8 }}>Consumption — Production domain</div>
+                    <div className="im-section" style={{ color:'var(--success, #4ade80)', opacity:0.8 }}>Consumption — Production domain</div>
                     <div className="im-field">
                       <label className="im-label">Consumption UOM</label>
                       <p className="im-sublabel">Restricted to system UOMs — configured in Settings → General. MRP aggregates to this unit.</p>
@@ -786,8 +786,8 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                       <div style={{ background:'rgba(74,222,128,0.04)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
                         <div style={{ color:'rgba(255,255,255,0.4)', marginBottom:6, fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Conversion Preview</div>
                         <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-                          <span style={{ color:'var(--accent-strong)' }}>1 {uomUnits.find(u => u.id === form.purchaseUomId)?.code ?? 'purchase'} = {form.purchaseToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
-                          <span style={{ color:'var(--accent-blue)' }}>1 {uomUnits.find(u => u.id === form.storageUomId)?.code ?? 'storage'} = {form.storageToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
+                          <span style={{ color:'var(--accent-strong, #fb923c)' }}>1 {uomUnits.find(u => u.id === form.purchaseUomId)?.code ?? 'purchase'} = {form.purchaseToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
+                          <span style={{ color:'var(--accent-blue, #60a5fa)' }}>1 {uomUnits.find(u => u.id === form.storageUomId)?.code ?? 'storage'} = {form.storageToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
                         </div>
                       </div>
                     )}
@@ -811,14 +811,14 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
 function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', marginBottom:10 }}>Delete item?</div>
+      <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete item?</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
-          <strong style={{ color:'var(--text-strong)' }}>{item.name}</strong> ({item.code}) will be soft-deleted.
+          <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{item.name}</strong> ({item.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
+          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
             {busy ? 'Deleting…' : 'Delete'}
           </button>
         </div>
@@ -834,12 +834,12 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
     {
       key: 'code', header: 'Code', width: 110, sortable: true,
       value: r => r.code,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-strong)', fontWeight:500 }}>{r.code}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-strong, #fb923c)', fontWeight:500 }}>{r.code}</span>,
     },
     {
       key: 'name', header: 'Name', width: 180, sortable: true,
       value: r => r.name,
-      render: r => <span style={{ color:'var(--text-primary)', fontWeight:500, fontSize:12 }}>{r.name}</span>,
+      render: r => <span style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500, fontSize:12 }}>{r.name}</span>,
     },
     {
       key: 'macroCategory', header: 'Macro Cat.', width: 110, sortable: true,
@@ -857,7 +857,7 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
       render: r => {
         const cat = (r as any).category;
         return cat
-          ? <span style={{ fontSize:11, color:'var(--accent-violet)' }}>{cat.name}</span>
+          ? <span style={{ fontSize:11, color:'var(--accent-violet, #a78bfa)' }}>{cat.name}</span>
           : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
       },
     },
@@ -905,7 +905,7 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
       render: r => {
         const count = (r as any).supplierItems?.length ?? 0;
         return count > 0
-          ? <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'var(--success)' }}>{count}</span>
+          ? <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'var(--success, #4ade80)' }}>{count}</span>
           : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
       },
     },
@@ -992,12 +992,12 @@ export default function ItemsPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .itm-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;gap:0;overflow:hidden}
         .itm-toolbar{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-        .itm-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);flex-shrink:0}
+        .itm-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);flex-shrink:0}
         .itm-btn-new:hover{opacity:0.88}
-        .itm-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger-subtle)}
+        .itm-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger-subtle, #fca5a5)}
         .itm-btn-edit,.itm-btn-del{padding:5px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;white-space:nowrap}
         .itm-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
-        .itm-btn-del{background:rgba(239,68,68,0.08);color:var(--danger);border-color:rgba(239,68,68,0.2)}
+        .itm-btn-del{background:rgba(239,68,68,0.08);color:var(--danger, #f87171);border-color:rgba(239,68,68,0.2)}
       `}</style>
 
       <div className="itm-page">

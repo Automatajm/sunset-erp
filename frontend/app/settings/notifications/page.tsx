@@ -18,26 +18,26 @@ import {
 // ─── Config ─────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<string, { color: string; bg: string; label: string }> = {
-  pending:   { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  label: 'Pending'   },
-  sent:      { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  label: 'Sent'      },
-  failed:    { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', label: 'Failed'    },
+  pending:   { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  label: 'Pending'   },
+  sent:      { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  label: 'Sent'      },
+  failed:    { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', label: 'Failed'    },
   cancelled: { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', label: 'Cancelled' },
 };
 
 const TYPE_CFG: Record<string, { color: string; label: string }> = {
-  so_confirmed:        { color: 'var(--success)', label: 'SO Confirmed'   },
-  po_created:          { color: 'var(--accent-strong)', label: 'PO Created'      },
-  rfq_sent:            { color: 'var(--accent-blue)', label: 'RFQ Sent'        },
-  invoice_overdue:     { color: 'var(--danger)', label: 'Invoice Overdue' },
-  stock_below_reorder: { color: 'var(--warning)', label: 'Low Stock'       },
+  so_confirmed:        { color: 'var(--success, #4ade80)', label: 'SO Confirmed'   },
+  po_created:          { color: 'var(--accent-strong, #fb923c)', label: 'PO Created'      },
+  rfq_sent:            { color: 'var(--accent-blue, #60a5fa)', label: 'RFQ Sent'        },
+  invoice_overdue:     { color: 'var(--danger, #f87171)', label: 'Invoice Overdue' },
+  stock_below_reorder: { color: 'var(--warning, #fbbf24)', label: 'Low Stock'       },
 };
 
 const BTN = (variant: 'primary' | 'ghost' | 'danger' = 'ghost'): React.CSSProperties => ({
   border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 600,
   cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif",
-  background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))'
+  background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))'
     : variant === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)',
-  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger)' : 'rgba(255,255,255,0.6)',
+  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.6)',
   outline: variant === 'danger' ? '0.5px solid rgba(239,68,68,0.2)' : 'none',
 });
 
@@ -156,7 +156,7 @@ export default function NotificationsPage() {
       render: r => (
         <div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.createdAt)}</div>
-          {r.sentAt && <div style={{ fontSize: 9, color: 'var(--success)', marginTop: 1 }}>sent {fmtDate(r.sentAt)}</div>}
+          {r.sentAt && <div style={{ fontSize: 9, color: 'var(--success, #4ade80)', marginTop: 1 }}>sent {fmtDate(r.sentAt)}</div>}
         </div>
       ),
     },
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {drainMsg && <span style={{ fontSize: 11, color: 'var(--success)' }}>{drainMsg}</span>}
+            {drainMsg && <span style={{ fontSize: 11, color: 'var(--success, #4ade80)' }}>{drainMsg}</span>}
             <button style={BTN('ghost')} disabled={busy === 'drain'} onClick={load}>Refresh</button>
             <button style={BTN('primary')} disabled={busy === 'drain'} onClick={drain}>
               {busy === 'drain' ? 'Draining…' : 'Drain queue now'}
@@ -236,7 +236,7 @@ export default function NotificationsPage() {
 
         {error && (
           <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 7, fontSize: 12,
-            color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)' }}>
+            color: 'var(--danger, #f87171)', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)' }}>
             {error}
           </div>
         )}

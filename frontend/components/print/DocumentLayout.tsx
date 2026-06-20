@@ -39,7 +39,7 @@ function PrintToolbar() {
         style={{
           border: 'none', borderRadius: 7, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           fontFamily: "'IBM Plex Sans',sans-serif", color: 'white',
-          background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))',
+          background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))',
           display: 'inline-flex', alignItems: 'center', gap: 8,
         }}
       >
@@ -113,10 +113,10 @@ export function DocumentLayout({
             <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{title}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-pressed)', letterSpacing: '0.02em' }}>{number}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-pressed, #c2410c)', letterSpacing: '0.02em' }}>{number}</div>
             <div style={{ fontSize: 11, color: '#444', marginTop: 4 }}>Date: {fmtDate(date)}</div>
             {status && (
-              <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-pressed)', border: '1px solid var(--accent-pressed)' }}>
+              <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-pressed, #c2410c)', border: '1px solid var(--accent-pressed, #c2410c)' }}>
                 {status}
               </div>
             )}
@@ -240,7 +240,7 @@ export function LinesTable({
             <tr><td colSpan={4} /><td style={{ ...rd, color: '#888', borderBottom: 'none' }}>Tax</td><td style={{ ...rd, borderBottom: 'none' }}>{money(totals.tax, currency)}</td></tr>
           )}
           {totals.total != null && (
-            <tr><td colSpan={4} /><td style={{ ...rd, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>Total</td><td style={{ ...rd, fontWeight: 700, color: 'var(--accent-pressed)', borderTop: '1.5px solid #333' }}>{money(totals.total, currency)}</td></tr>
+            <tr><td colSpan={4} /><td style={{ ...rd, fontWeight: 700, color: '#111', borderTop: '1.5px solid #333' }}>Total</td><td style={{ ...rd, fontWeight: 700, color: 'var(--accent-pressed, #c2410c)', borderTop: '1.5px solid #333' }}>{money(totals.total, currency)}</td></tr>
           )}
         </tfoot>
       )}

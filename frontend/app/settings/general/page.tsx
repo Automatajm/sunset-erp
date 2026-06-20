@@ -26,8 +26,8 @@ interface SettingsForm {
 }
 
 const UOM_TYPE_COLOR: Record<string, string> = {
-  volume: 'var(--accent-blue)', mass: 'var(--accent-violet)', count: 'var(--success)',
-  length: 'var(--warning)', area: 'var(--accent-strong)', time: 'var(--danger)',
+  volume: 'var(--accent-blue, #60a5fa)', mass: 'var(--accent-violet, #a78bfa)', count: 'var(--success, #4ade80)',
+  length: 'var(--warning, #fbbf24)', area: 'var(--accent-strong, #fb923c)', time: 'var(--danger, #f87171)',
 };
 
 const SYSTEM_DEFAULTS: Record<string, Record<string, string>> = {
@@ -58,12 +58,12 @@ interface WarnPayload {
 function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,191,36,0.3)', borderRadius: 14, width: '100%', maxWidth: 500, boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,191,36,0.3)', borderRadius: 14, width: '100%', maxWidth: 500, boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }}>
 
         <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 20 }}>⚠️</span>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--warning)' }}>Confirm System UOM Changes</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--warning, #fbbf24)' }}>Confirm System UOM Changes</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
               {payload.changes.length} change{payload.changes.length !== 1 ? 's' : ''} will be saved
             </div>
@@ -77,9 +77,9 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
             {payload.changes.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderBottom: i < payload.changes.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none' }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', width: 90, flexShrink: 0 }}>{c.label}</span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--success)' }}>{c.fromCode}</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--success, #4ade80)' }}>{c.fromCode}</span>
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>→</span>
-                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--danger)' }}>{c.toCode}</span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--danger, #f87171)' }}>{c.toCode}</span>
               </div>
             ))}
           </div>
@@ -285,18 +285,18 @@ export default function GeneralSettingsPage() {
         .gs-section-hdr{padding:10px 16px;border-bottom:0.5px solid rgba(255,255,255,0.06);font-size:11px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:rgba(251,146,60,0.6);display:flex;align-items:center;justify-content:space-between}
         .gs-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
         .gs-sublabel{font-size:10px;color:rgba(255,255,255,0.28);line-height:1.5}
-        .gs-btn-save{background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:8px 22px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
+        .gs-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 22px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .gs-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .gs-alert{border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:10px;flex-shrink:0}
-        .gs-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:var(--accent-strong);animation:gs-spin 0.7s linear infinite;margin:52px auto;display:block}
+        .gs-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:var(--accent-strong, #fb923c);animation:gs-spin 0.7s linear infinite;margin:52px auto;display:block}
         @keyframes gs-spin{to{transform:rotate(360deg)}}
         .badge-saved{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:rgba(74,222,128,0.75);background:rgba(74,222,128,0.08);border:0.5px solid rgba(74,222,128,0.2);border-radius:10px;padding:1px 7px;font-family:'IBM Plex Sans',sans-serif}
         .badge-pending{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:rgba(251,191,36,0.85);background:rgba(251,191,36,0.08);border:0.5px solid rgba(251,191,36,0.25);border-radius:10px;padding:1px 7px;font-family:'IBM Plex Sans',sans-serif}
       `}</style>
 
       <div className="gs-page">
-        {error   && <div className="gs-alert" style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger-subtle)' }}>{error}</div>}
-        {success && <div className="gs-alert" style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'var(--success)' }}>✓ {success}</div>}
+        {error   && <div className="gs-alert" style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
+        {success && <div className="gs-alert" style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'var(--success, #4ade80)' }}>✓ {success}</div>}
 
         {loading ? <div className="gs-spinner" /> : (
           <div className="gs-layout">
@@ -314,14 +314,14 @@ export default function GeneralSettingsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 7, padding: '5px 12px' }}>
                       <span style={{ fontSize: 9, color: 'rgba(251,146,60,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 2 }}>System</span>
-                      <span style={{ fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong)' }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong, #fb923c)' }}>
                         {systemLabel[saved.defaultUomSystem ?? 'metric']}
                       </span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {savedSystemUoms.map(({ label, type, uom }) => {
-                      const color = UOM_TYPE_COLOR[type] ?? 'var(--text-primary)';
+                      const color = UOM_TYPE_COLOR[type] ?? 'var(--text-primary, #e2dfd8)';
                       return (
                         <div key={label} style={{ background: `color-mix(in srgb, ${color} 5%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 16%, transparent)`, borderRadius: 7, padding: '5px 10px' }}>
                           <span style={{ fontSize: 9, color: `color-mix(in srgb, ${color} 40%, transparent)`, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block' }}>{label}</span>
@@ -355,7 +355,7 @@ export default function GeneralSettingsPage() {
                       const sub     = sys === 'metric' ? 'LTR · KG · M · PCS' : sys === 'imperial' ? 'GAL · LB · FT · PCS' : 'Pick each UOM freely →';
                       return (
                         <div key={sys} onClick={() => handleSystemChange(sys)}
-                          style={{ padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontSize: 13, fontWeight: 500, border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s', color: active ? 'var(--accent-strong)' : 'rgba(255,255,255,0.35)', background: active ? 'rgba(251,146,60,0.07)' : 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          style={{ padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontSize: 13, fontWeight: 500, border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s', color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.35)', background: active ? 'rgba(251,146,60,0.07)' : 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span>{sys === 'metric' ? 'Metric (SI)' : sys === 'imperial' ? 'Imperial (US)' : '⚙ Custom Mix'}</span>
                             {isSaved && !isDirty('defaultUomSystem') && <span className="badge-saved">✓ saved</span>}
@@ -371,7 +371,7 @@ export default function GeneralSettingsPage() {
 
               {/* Info */}
               <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.1)', borderRadius: 10, padding: '10px 14px', fontSize: 11, color: 'rgba(255,255,255,0.28)', lineHeight: 1.7 }}>
-                <strong style={{ color: 'var(--accent-blue)' }}>How it works:</strong> Formulators, buyers and warehouse staff work in any unit.
+                <strong style={{ color: 'var(--accent-blue, #60a5fa)' }}>How it works:</strong> Formulators, buyers and warehouse staff work in any unit.
                 MRP converts everything to system UOMs at aggregation time.
                 ConsumptionGroups and Item consumption UOMs are restricted to these system units only.
               </div>
@@ -379,8 +379,8 @@ export default function GeneralSettingsPage() {
               {/* Save row */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
                 {hasAnyDirty && (
-                  <span style={{ fontSize: 11, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--warning)', boxShadow: '0 0 4px rgba(251,191,36,0.6)', display: 'inline-block' }} />
+                  <span style={{ fontSize: 11, color: 'var(--warning, #fbbf24)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--warning, #fbbf24)', boxShadow: '0 0 4px rgba(251,191,36,0.6)', display: 'inline-block' }} />
                     Unsaved changes
                   </span>
                 )}
@@ -401,7 +401,7 @@ export default function GeneralSettingsPage() {
                 </div>
                 <div className="gs-body">
                   {UOM_ROWS.map(row => {
-                    const color    = UOM_TYPE_COLOR[row.type] ?? 'var(--text-primary)';
+                    const color    = UOM_TYPE_COLOR[row.type] ?? 'var(--text-primary, #e2dfd8)';
                     const opts     = byType(row.type);
                     const selId    = form[row.key as keyof SettingsForm] as string ?? '';
                     const savedId  = saved[row.key as keyof SettingsForm] as string ?? '';
@@ -439,8 +439,8 @@ export default function GeneralSettingsPage() {
                           {dirty && selUom && selUom.id !== savedId && (
                             <div style={{ marginTop: 5, background: 'rgba(251,191,36,0.07)', borderRadius: 6, padding: '5px 8px', border: '0.5px solid rgba(251,191,36,0.2)', display: 'flex', flexDirection: 'column', gap: 2 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ fontSize: 11, color: 'var(--warning)' }}>→</span>
-                                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--warning)', fontWeight: 500 }}>{selUom.code}</span>
+                                <span style={{ fontSize: 11, color: 'var(--warning, #fbbf24)' }}>→</span>
+                                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--warning, #fbbf24)', fontWeight: 500 }}>{selUom.code}</span>
                                 <span className="badge-pending">pending</span>
                               </div>
                               <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.5)' }}>{selUom.name}</span>

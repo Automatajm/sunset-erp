@@ -55,18 +55,18 @@ function fmtNum(v: number) {
 const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.CSSProperties;
 
 const PO_STATUS: Record<ProductionOrderStatus, { color: string; bg: string; border: string }> = {
-  draft:       { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  released:    { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  in_progress: { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
-  completed:   { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  cancelled:   { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
+  draft:       { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
+  released:    { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  in_progress: { color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  completed:   { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
+  cancelled:   { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 };
-const PRIORITY_COLOR: Record<string, string> = { low: 'rgba(255,255,255,0.3)', medium: 'var(--warning)', high: 'var(--accent-strong)', urgent: 'var(--danger)' };
+const PRIORITY_COLOR: Record<string, string> = { low: 'rgba(255,255,255,0.3)', medium: 'var(--warning, #fbbf24)', high: 'var(--accent-strong, #fb923c)', urgent: 'var(--danger, #f87171)' };
 const STATUS_FLOW: Record<ProductionOrderStatus, string | null> = {
   draft: 'released', released: 'in_progress', in_progress: 'completed', completed: null, cancelled: null,
 };
 
-const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 function Field({ label, color, children }: { label: string; color?: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -105,17 +105,17 @@ function DeliverModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: 
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>Confirm FG Delivery</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{mo.poNumber} · Planned: <span style={{ color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{fmtNum(planned)}</span> units</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>Confirm FG Delivery</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{mo.poNumber} · Planned: <span style={{ color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{fmtNum(planned)}</span> units</div>
           </div>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Qty Delivered *" color="rgba(74,222,128,0.6)">
                 <input type="number" min="0.001" step="0.001" style={INPUT} value={form.quantityDelivered} onChange={e => setForm(f => ({ ...f, quantityDelivered: e.target.value }))} />
@@ -127,7 +127,7 @@ function DeliverModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: 
             {form.quantityDelivered && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${variance === 0 ? 'rgba(255,255,255,0.08)' : variance < 0 ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}`, borderRadius: 7, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Variance</span>
-                <span style={{ ...MONO, color: variance === 0 ? 'rgba(255,255,255,0.5)' : variance < 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 500 }}>
+                <span style={{ ...MONO, color: variance === 0 ? 'rgba(255,255,255,0.5)' : variance < 0 ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)', fontWeight: 500 }}>
                   {variance > 0 ? '+' : ''}{fmtNum(variance)} units
                   {variance < 0 ? ' (merma)' : variance > 0 ? ' (surplus)' : ' (exact)'}
                 </span>
@@ -177,14 +177,14 @@ function LaborModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: ()
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(167,139,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(167,139,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>Log Labor Actuals — {mo.poNumber}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>Log Labor Actuals — {mo.poNumber}</div>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Work Date" color="rgba(167,139,250,0.6)">
                 <input type="date" style={INPUT} value={form.workDate} onChange={e => setForm(f => ({ ...f, workDate: e.target.value }))} />
@@ -336,14 +336,14 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
     </button>
   );
 
-  const CB_STYLE: React.CSSProperties = { width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--accent-violet)' };
+  const CB_STYLE: React.CSSProperties = { width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--accent-violet, #a78bfa)' };
 
   return (
     <div style={{ padding: '10px 40px 16px', background: 'rgba(255,255,255,0.01)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        <button style={TAB_STYLE(tab === 'labor',     'var(--accent-violet)')} onClick={() => setTab('labor')}>⏱ Labor</button>
-        <button style={TAB_STYLE(tab === 'materials', 'var(--accent-strong)')} onClick={() => setTab('materials')}>📦 Materials</button>
-        <button style={TAB_STYLE(tab === 'variances', 'var(--danger)')} onClick={() => setTab('variances')}>⚠ Variances</button>
+        <button style={TAB_STYLE(tab === 'labor',     'var(--accent-violet, #a78bfa)')} onClick={() => setTab('labor')}>⏱ Labor</button>
+        <button style={TAB_STYLE(tab === 'materials', 'var(--accent-strong, #fb923c)')} onClick={() => setTab('materials')}>📦 Materials</button>
+        <button style={TAB_STYLE(tab === 'variances', 'var(--danger, #f87171)')} onClick={() => setTab('variances')}>⚠ Variances</button>
       </div>
 
       {loading ? (
@@ -355,10 +355,10 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {[
                 { label: 'Planned',    value: `${laborData.summary.totalPlannedHours}h`,                                              color: 'rgba(255,255,255,0.5)' },
-                { label: 'Actual',     value: `${laborData.summary.totalActualHours}h`,                                               color: 'var(--accent-violet)' },
-                { label: 'Variance',   value: `${laborData.summary.varianceHours > 0 ? '+' : ''}${laborData.summary.varianceHours}h`, color: laborData.summary.varianceHours > 0 ? 'var(--danger)' : 'var(--success)' },
-                { label: 'Labor Cost', value: fmtAmt(laborData.summary.totalLaborCost),                                               color: 'var(--text-primary)' },
-                { label: 'Efficiency', value: laborData.summary.efficiency ? `${laborData.summary.efficiency.toFixed(1)}%` : '—',    color: (laborData.summary.efficiency ?? 0) >= 90 ? 'var(--success)' : 'var(--warning)' },
+                { label: 'Actual',     value: `${laborData.summary.totalActualHours}h`,                                               color: 'var(--accent-violet, #a78bfa)' },
+                { label: 'Variance',   value: `${laborData.summary.varianceHours > 0 ? '+' : ''}${laborData.summary.varianceHours}h`, color: laborData.summary.varianceHours > 0 ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)' },
+                { label: 'Labor Cost', value: fmtAmt(laborData.summary.totalLaborCost),                                               color: 'var(--text-primary, #e2dfd8)' },
+                { label: 'Efficiency', value: laborData.summary.efficiency ? `${laborData.summary.efficiency.toFixed(1)}%` : '—',    color: (laborData.summary.efficiency ?? 0) >= 90 ? 'var(--success, #4ade80)' : 'var(--warning, #fbbf24)' },
               ].map(s => (
                 <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -366,7 +366,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                 </div>
               ))}
             </div>
-            <SuggestBtn label="Load from Routing" loading={loadingRouting} onClick={handleLoadFromRouting} color="var(--accent-violet)" />
+            <SuggestBtn label="Load from Routing" loading={loadingRouting} onClick={handleLoadFromRouting} color="var(--accent-violet, #a78bfa)" />
           </div>
 
           {/* Routing suggestions with checkboxes */}
@@ -405,13 +405,13 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                         <td style={{ padding: '5px 8px', textAlign: 'center' }}>
                           <input type="checkbox" style={CB_STYLE} checked={checked} onChange={() => {}} />
                         </td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-violet)' }}>{s.stepNumber}</td>
-                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'var(--text-primary)' }}>{s.description || '—'}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-violet, #a78bfa)' }}>{s.stepNumber}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>{s.description || '—'}</td>
                         <td style={{ padding: '5px 8px', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{s.workCenter?.name}</td>
                         <td style={{ padding: '5px 8px', ...MONO, textAlign: 'right' }}>{s.setupTime}</td>
                         <td style={{ padding: '5px 8px', ...MONO, textAlign: 'right' }}>{s.totalRunHours}</td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-violet)', textAlign: 'right', fontWeight: 500 }}>{s.totalHours}</td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--success)', textAlign: 'right' }}>{fmtAmt(s.estimatedCost)}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-violet, #a78bfa)', textAlign: 'right', fontWeight: 500 }}>{s.totalHours}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--success, #4ade80)', textAlign: 'right' }}>{fmtAmt(s.estimatedCost)}</td>
                       </tr>
                     );
                   })}
@@ -431,7 +431,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
             </div>
           )}
           {routingSuggestions && routingSuggestions.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--warning)', marginBottom: 10 }}>No routing steps defined. Add them in the BOM page first.</div>
+            <div style={{ fontSize: 12, color: 'var(--warning, #fbbf24)', marginBottom: 10 }}>No routing steps defined. Add them in the BOM page first.</div>
           )}
 
           {laborData.actuals.length === 0 ? (
@@ -449,12 +449,12 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                   return (
                     <tr key={a.id}>
                       <td style={{ padding: '5px 10px', color: 'rgba(255,255,255,0.45)' }}>{fmtDate(a.workDate)}</td>
-                      <td style={{ padding: '5px 10px', color: 'var(--text-primary)' }}>{a.employeeName || '—'}</td>
+                      <td style={{ padding: '5px 10px', color: 'var(--text-primary, #e2dfd8)' }}>{a.employeeName || '—'}</td>
                       <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{a.hoursPlanned ?? '—'}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--accent-violet)', textAlign: 'right' }}>{a.hoursActual}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: variance > 0 ? 'var(--danger)' : variance < 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{a.hoursPlanned != null ? `${variance > 0 ? '+' : ''}${variance}h` : '—'}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--accent-violet, #a78bfa)', textAlign: 'right' }}>{a.hoursActual}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: variance > 0 ? 'var(--danger, #f87171)' : variance < 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{a.hoursPlanned != null ? `${variance > 0 ? '+' : ''}${variance}h` : '—'}</td>
                       <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{a.laborRate ? `$${a.laborRate}` : '—'}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--text-primary)', textAlign: 'right' }}>{a.laborCost ? fmtAmt(a.laborCost) : '—'}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right' }}>{a.laborCost ? fmtAmt(a.laborCost) : '—'}</td>
                       <td style={{ padding: '5px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{a.notes || '—'}</td>
                     </tr>
                   );
@@ -469,10 +469,10 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {[
-                { label: 'Materials',       value: String(materialData.summary.totalMaterials),    color: 'var(--text-primary)' },
-                { label: 'Over-consumed',   value: String(materialData.summary.overConsumed),      color: materialData.summary.overConsumed > 0 ? 'var(--danger)' : 'rgba(255,255,255,0.3)' },
-                { label: 'Under-consumed',  value: String(materialData.summary.underConsumed),     color: materialData.summary.underConsumed > 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)' },
-                { label: 'Total Var. Cost', value: fmtAmt(materialData.summary.totalVarianceCost), color: materialData.summary.totalVarianceCost > 0 ? 'var(--danger)' : materialData.summary.totalVarianceCost < 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)' },
+                { label: 'Materials',       value: String(materialData.summary.totalMaterials),    color: 'var(--text-primary, #e2dfd8)' },
+                { label: 'Over-consumed',   value: String(materialData.summary.overConsumed),      color: materialData.summary.overConsumed > 0 ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.3)' },
+                { label: 'Under-consumed',  value: String(materialData.summary.underConsumed),     color: materialData.summary.underConsumed > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' },
+                { label: 'Total Var. Cost', value: fmtAmt(materialData.summary.totalVarianceCost), color: materialData.summary.totalVarianceCost > 0 ? 'var(--danger, #f87171)' : materialData.summary.totalVarianceCost < 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' },
               ].map(s => (
                 <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -480,7 +480,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                 </div>
               ))}
             </div>
-            <SuggestBtn label="Load from BOM" loading={loadingBom} onClick={handleLoadFromBom} color="var(--accent-strong)" />
+            <SuggestBtn label="Load from BOM" loading={loadingBom} onClick={handleLoadFromBom} color="var(--accent-strong, #fb923c)" />
           </div>
 
           {/* BOM suggestions with checkboxes */}
@@ -517,13 +517,13 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                       <tr key={s.consumptionGroupId ?? s.itemId ?? s.consumptionGroupCode} style={{ opacity: checked ? 1 : 0.4, cursor: 'pointer' }}
                         onClick={() => setBomSelected(prev => { const k = s.consumptionGroupId ?? s.itemId; const n = new Set(prev); checked ? n.delete(k) : n.add(k); return n; })}>
                         <td style={{ padding: '5px 8px', textAlign: 'center' }}>
-                          <input type="checkbox" style={{ ...CB_STYLE, accentColor: 'var(--accent-strong)' }} checked={checked} onChange={() => {}} />
+                          <input type="checkbox" style={{ ...CB_STYLE, accentColor: 'var(--accent-strong, #fb923c)' }} checked={checked} onChange={() => {}} />
                         </td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{s.consumptionGroupCode ?? s.itemCode ?? '—'}</td>
-                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'var(--text-primary)' }}>{s.consumptionGroupName ?? s.itemName ?? '—'}</td>
-                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-strong)', textAlign: 'right', fontWeight: 500 }}>{fmtNum(s.qtyPlanned)}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{s.consumptionGroupCode ?? s.itemCode ?? '—'}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>{s.consumptionGroupName ?? s.itemName ?? '—'}</td>
+                        <td style={{ padding: '5px 8px', ...MONO, color: 'var(--accent-strong, #fb923c)', textAlign: 'right', fontWeight: 500 }}>{fmtNum(s.qtyPlanned)}</td>
                         <td style={{ padding: '5px 8px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.uom}</td>
-                        <td style={{ padding: '5px 8px', fontSize: 11, color: 'var(--warning)' }}>{s.note || '—'}</td>
+                        <td style={{ padding: '5px 8px', fontSize: 11, color: 'var(--warning, #fbbf24)' }}>{s.note || '—'}</td>
                       </tr>
                     );
                   })}
@@ -531,7 +531,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
               </table>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button onClick={handleConfirmBomSuggestions} disabled={loadingBom || bomSelected.size === 0}
-                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: bomSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent))', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingBom || bomSelected.size === 0 ? 0.5 : 1 }}>
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: bomSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c))', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingBom || bomSelected.size === 0 ? 0.5 : 1 }}>
                   {loadingBom ? 'Adding…' : `✓ Add ${bomSelected.size} material${bomSelected.size !== 1 ? 's' : ''}`}
                 </button>
                 <button onClick={() => { setBomSuggestions(null); setBomSelected(new Set()); }}
@@ -543,7 +543,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
             </div>
           )}
           {bomSuggestions && bomSuggestions.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--warning)', marginBottom: 10 }}>No BOM components found for this order.</div>
+            <div style={{ fontSize: 12, color: 'var(--warning, #fbbf24)', marginBottom: 10 }}>No BOM components found for this order.</div>
           )}
 
           {materialData.actuals.length === 0 ? (
@@ -561,14 +561,14 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                   return (
                     <tr key={a.id}>
                       <td style={{ padding: '5px 10px' }}>
-                        <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{a.item?.code}</span>
+                        <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{a.item?.code}</span>
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{a.item?.name}</span>
                       </td>
                       <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{fmtNum(a.qtyPlanned)}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--accent-strong)', textAlign: 'right' }}>{fmtNum(a.qtyActual)}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: varQty > 0 ? 'var(--danger)' : varQty < 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{varQty > 0 ? '+' : ''}{fmtNum(varQty)}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: 'var(--accent-strong, #fb923c)', textAlign: 'right' }}>{fmtNum(a.qtyActual)}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: varQty > 0 ? 'var(--danger, #f87171)' : varQty < 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{varQty > 0 ? '+' : ''}{fmtNum(varQty)}</td>
                       <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{fmtAmt(a.unitCost)}</td>
-                      <td style={{ padding: '5px 10px', ...MONO, color: a.varianceCost > 0 ? 'var(--danger)' : a.varianceCost < 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{fmtAmt(a.varianceCost)}</td>
+                      <td style={{ padding: '5px 10px', ...MONO, color: a.varianceCost > 0 ? 'var(--danger, #f87171)' : a.varianceCost < 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)', textAlign: 'right' }}>{fmtAmt(a.varianceCost)}</td>
                       <td style={{ padding: '5px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{a.notes || '—'}</td>
                     </tr>
                   );
@@ -582,11 +582,11 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
         <>
           <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
             {[
-              { label: 'Open',          value: String(varianceData.summary.open),              color: varianceData.summary.open > 0 ? 'var(--warning)' : 'rgba(255,255,255,0.3)' },
-              { label: 'JE Posted',     value: String(varianceData.summary.jePosted),          color: 'var(--success)' },
-              { label: 'Merma Cost',    value: fmtAmt(varianceData.summary.totalMermaCost),   color: 'var(--danger)' },
-              { label: 'Surplus Value', value: fmtAmt(varianceData.summary.totalSurplusCost), color: 'var(--success)' },
-              { label: 'Net',           value: fmtAmt(varianceData.summary.netVarianceCost),  color: varianceData.summary.netVarianceCost > 0 ? 'var(--danger)' : 'var(--success)' },
+              { label: 'Open',          value: String(varianceData.summary.open),              color: varianceData.summary.open > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.3)' },
+              { label: 'JE Posted',     value: String(varianceData.summary.jePosted),          color: 'var(--success, #4ade80)' },
+              { label: 'Merma Cost',    value: fmtAmt(varianceData.summary.totalMermaCost),   color: 'var(--danger, #f87171)' },
+              { label: 'Surplus Value', value: fmtAmt(varianceData.summary.totalSurplusCost), color: 'var(--success, #4ade80)' },
+              { label: 'Net',           value: fmtAmt(varianceData.summary.netVarianceCost),  color: varianceData.summary.netVarianceCost > 0 ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)' },
             ].map(s => (
               <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -607,21 +607,21 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                 {varianceData.variances.map((v: Variance) => (
                   <tr key={v.id}>
                     <td style={{ padding: '5px 10px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 10, fontSize: 11, fontWeight: 500, color: v.varianceType === 'merma' ? 'var(--danger)' : 'var(--success)', background: v.varianceType === 'merma' ? 'rgba(248,113,113,0.1)' : 'rgba(74,222,128,0.1)', border: `0.5px solid ${v.varianceType === 'merma' ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}` }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 10, fontSize: 11, fontWeight: 500, color: v.varianceType === 'merma' ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)', background: v.varianceType === 'merma' ? 'rgba(248,113,113,0.1)' : 'rgba(74,222,128,0.1)', border: `0.5px solid ${v.varianceType === 'merma' ? 'rgba(248,113,113,0.2)' : 'rgba(74,222,128,0.2)'}` }}>
                         {v.varianceType === 'merma' ? '▼' : '▲'} {v.varianceType}
                       </span>
                     </td>
                     <td style={{ padding: '5px 10px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{v.description || '—'}</td>
                     <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{v.quantity != null ? fmtNum(v.quantity) : '—'}</td>
                     <td style={{ padding: '5px 10px', ...MONO, textAlign: 'right' }}>{v.unitCost != null ? fmtAmt(v.unitCost) : '—'}</td>
-                    <td style={{ padding: '5px 10px', ...MONO, color: v.varianceType === 'merma' ? 'var(--danger)' : 'var(--success)', textAlign: 'right', fontWeight: 500 }}>{v.totalCost != null ? fmtAmt(v.totalCost) : '—'}</td>
+                    <td style={{ padding: '5px 10px', ...MONO, color: v.varianceType === 'merma' ? 'var(--danger, #f87171)' : 'var(--success, #4ade80)', textAlign: 'right', fontWeight: 500 }}>{v.totalCost != null ? fmtAmt(v.totalCost) : '—'}</td>
                     <td style={{ padding: '5px 10px' }}>
-                      <span style={{ fontSize: 11, color: v.status === 'open' ? 'var(--warning)' : 'var(--success)', background: v.status === 'open' ? 'rgba(251,191,36,0.1)' : 'rgba(74,222,128,0.1)', padding: '2px 7px', borderRadius: 10, border: `0.5px solid ${v.status === 'open' ? 'rgba(251,191,36,0.2)' : 'rgba(74,222,128,0.2)'}` }}>{v.status}</span>
+                      <span style={{ fontSize: 11, color: v.status === 'open' ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)', background: v.status === 'open' ? 'rgba(251,191,36,0.1)' : 'rgba(74,222,128,0.1)', padding: '2px 7px', borderRadius: 10, border: `0.5px solid ${v.status === 'open' ? 'rgba(251,191,36,0.2)' : 'rgba(74,222,128,0.2)'}` }}>{v.status}</span>
                     </td>
                     <td style={{ padding: '5px 10px' }}>
                       {v.status === 'open' && v.totalCost && (
                         <button onClick={() => handlePostJe(v.id)} disabled={postingJe === v.id}
-                          style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: postingJe === v.id ? 0.5 : 1 }}>
+                          style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--accent-blue, #60a5fa)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: postingJe === v.id ? 0.5 : 1 }}>
                           {postingJe === v.id ? '…' : 'Post JE'}
                         </button>
                       )}
@@ -660,16 +660,16 @@ function MORow({ mo, boms, onStatusChange, actionBusy, onOpenLabor, onOpenDelive
         <td>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: 'var(--accent-strong)', fontWeight: 500 }}>{mo.poNumber}</span>
+            <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{mo.poNumber}</span>
           </span>
         </td>
         <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{boms.find(b => b.id === mo.bomId)?.bomNumber ?? '—'}</span></td>
         <td style={{ textAlign: 'right' }}><span style={MONO}>{fmtNum(mo.quantityToProduce)}</span></td>
         <td>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ ...MONO, color: pct >= 100 ? 'var(--success)' : 'var(--text-primary)', fontSize: 11 }}>{fmtNum(mo.quantityProduced)}/{fmtNum(mo.quantityToProduce)}</span>
+            <span style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : 'var(--text-primary, #e2dfd8)', fontSize: 11 }}>{fmtNum(mo.quantityProduced)}/{fmtNum(mo.quantityToProduce)}</span>
             <div style={{ width: 52, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}>
-              <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: pct >= 100 ? 'var(--success)' : 'var(--accent-strong)' }} />
+              <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: pct >= 100 ? 'var(--success, #4ade80)' : 'var(--accent-strong, #fb923c)' }} />
             </div>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{pct}%</span>
           </div>
@@ -687,25 +687,25 @@ function MORow({ mo, boms, onStatusChange, actionBusy, onOpenLabor, onOpenDelive
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {nextStatus && (
               <button onClick={() => onStatusChange(mo.id, nextStatus)} disabled={busy}
-                style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong)', border: '0.5px solid rgba(251,146,60,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
+                style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong, #fb923c)', border: '0.5px solid rgba(251,146,60,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 {busy ? '…' : nextStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </button>
             )}
             {isActive && (
               <>
                 <button onClick={() => onOpenLabor(mo)} disabled={busy}
-                  style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: 'var(--accent-violet)', border: '0.5px solid rgba(167,139,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: 'var(--accent-violet, #a78bfa)', border: '0.5px solid rgba(167,139,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   + Labor
                 </button>
                 <button onClick={() => onOpenDeliver(mo)} disabled={busy}
-                  style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: 'var(--success)', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: 'var(--success, #4ade80)', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   Deliver FG
                 </button>
               </>
             )}
             {mo.status !== 'completed' && mo.status !== 'cancelled' && (
               <button onClick={() => onStatusChange(mo.id, 'cancelled')} disabled={busy}
-                style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', color: 'var(--danger)', border: '0.5px solid rgba(248,113,113,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
+                style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', color: 'var(--danger, #f87171)', border: '0.5px solid rgba(248,113,113,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 Cancel
               </button>
             )}
@@ -745,15 +745,15 @@ function MOModal({ boms, onClose, onSaved }: { boms: Bom[]; onClose: () => void;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 520, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 520, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Production Order</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Production Order</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
               <Field label="BOM *"><select style={INPUT} value={form.bomId} onChange={set('bomId')}><option value="">— Select BOM —</option>{boms.map(b => <option key={b.id} value={b.id}>{b.bomNumber} — {b.parentItem?.name}</option>)}</select></Field>
               <Field label="Qty To Produce *"><input style={INPUT} type="number" min="1" placeholder="100" value={form.quantityToProduce} onChange={set('quantityToProduce')} required /></Field>
@@ -767,7 +767,7 @@ function MOModal({ boms, onClose, onSaved }: { boms: Bom[]; onClose: () => void;
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>{busy ? 'Creating…' : 'Create'}</button>
+            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>{busy ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
       </div>
@@ -827,11 +827,11 @@ export default function ProductionOrdersPage() {
         .mo-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:7px 12px; display:flex; flex-direction:column; gap:2px; min-width:80px; cursor:pointer; transition:opacity 0.15s; }
         .mo-stat:hover { opacity:0.8; }
         .mo-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
-        .mo-stat-value { font-size:20px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong); }
+        .mo-stat-value { font-size:20px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
         .mo-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .mo-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; }
-        .mo-filter option { background:var(--surface); color:var(--text-strong); }
-        .mo-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; }
+        .mo-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .mo-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
+        .mo-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; }
         .mo-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .mo-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .mo-table { width:100%; border-collapse:collapse; }
@@ -841,7 +841,7 @@ export default function ProductionOrdersPage() {
         .mo-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
         .mo-empty, .mo-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; }
         .mo-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .mo-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
+        .mo-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
       `}</style>
 
       <div className="mo-page">
@@ -855,7 +855,7 @@ export default function ProductionOrdersPage() {
             ))}
             <div className="mo-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter('')}>
               <span className="mo-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
-              <span className="mo-stat-value" style={{ color: 'var(--accent-strong)' }}>{list.length}</span>
+              <span className="mo-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{list.length}</span>
             </div>
           </div>
         )}

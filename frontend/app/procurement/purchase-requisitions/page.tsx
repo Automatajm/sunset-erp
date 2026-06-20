@@ -64,19 +64,19 @@ function fmtAmt(v?: string | number) {
 // ─── Status / Priority configs ────────────────────────────────────────────────
 
 const STATUS_CFG: Record<PRStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:       { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
-  submitted:   { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Submitted' },
+  draft:       { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
+  submitted:   { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Submitted' },
   approved:    { color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)',  label: 'Approved' },
-  in_progress: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'In Progress' },
-  completed:   { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Completed' },
-  rejected:    { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Rejected' },
-  cancelled:   { color: 'var(--text-secondary)', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.2)', label: 'Cancelled' },
+  in_progress: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'In Progress' },
+  completed:   { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Completed' },
+  rejected:    { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Rejected' },
+  cancelled:   { color: 'var(--text-secondary, #6b7280)', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.2)', label: 'Cancelled' },
 };
 
 const PRIORITY_CFG: Record<PRPriority, { color: string; label: string }> = {
   normal:   { color: 'rgba(255,255,255,0.35)', label: 'Normal' },
-  urgent:   { color: 'var(--accent-strong)',                label: 'Urgent' },
-  critical: { color: 'var(--danger)',                label: 'Critical' },
+  urgent:   { color: 'var(--accent-strong, #fb923c)',                label: 'Urgent' },
+  critical: { color: 'var(--danger, #f87171)',                label: 'Critical' },
 };
 
 function StatusBadge({ status }: { status: PRStatus }) {
@@ -189,12 +189,12 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex' }}>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
-      <div style={{ width: 740, background: 'var(--bg)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: 740, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1 }}>
+        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, background: 'var(--bg, #0a0712)', zIndex: 1 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', ...MONO }}>{pr.prNumber}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', ...MONO }}>{pr.prNumber}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{pr.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -220,7 +220,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
               ].map(item => (
                 <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.value}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -228,7 +228,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             {/* Rejection reason */}
             {detail.status === 'rejected' && detail.rejectionReason && (
               <div style={{ background: 'rgba(248,113,113,0.06)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Rejection Reason</div>
+                <div style={{ fontSize: 10, color: 'var(--danger, #f87171)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Rejection Reason</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{detail.rejectionReason}</div>
               </div>
             )}
@@ -247,7 +247,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                 <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Linked RFQs</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {detail.rfqs.map(rfq => (
-                    <span key={rfq.id} style={{ ...MONO, fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'rgba(96,165,250,0.08)', border: '0.5px solid rgba(96,165,250,0.2)', color: 'var(--accent-blue)' }}>
+                    <span key={rfq.id} style={{ ...MONO, fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'rgba(96,165,250,0.08)', border: '0.5px solid rgba(96,165,250,0.2)', color: 'var(--accent-blue, #60a5fa)' }}>
                       {rfq.rfqNumber} · {rfq.status}
                     </span>
                   ))}
@@ -285,7 +285,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                         style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)', cursor: canConvert ? 'pointer' : 'default', background: isSelected ? 'rgba(96,165,250,0.06)' : 'transparent', transition: 'background 0.1s' }}>
                         <td style={{ padding: '8px 6px', width: 24 }}>
                           {canConvert && (
-                            <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue, #60a5fa)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {isSelected && <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>✓</span>}
                             </div>
                           )}
@@ -294,7 +294,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                         <td style={{ padding: '8px' }}>
                           {line.item ? (
                             <>
-                              <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.item.code}</div>
+                              <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item.code}</div>
                               <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 }}>{line.item.name}</div>
                             </>
                           ) : (
@@ -307,7 +307,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                         <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{line.warehouse?.code ?? '—'}</td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtAmt(line.unitEstimate)}</td>
                         <td style={{ padding: '8px' }}>
-                          <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.itemStatus === 'catalog' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)', color: line.itemStatus === 'catalog' ? 'var(--success)' : 'var(--warning)', border: `0.5px solid ${line.itemStatus === 'catalog' ? 'rgba(74,222,128,0.2)' : 'rgba(251,191,36,0.2)'}` }}>
+                          <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.itemStatus === 'catalog' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)', color: line.itemStatus === 'catalog' ? 'var(--success, #4ade80)' : 'var(--warning, #fbbf24)', border: `0.5px solid ${line.itemStatus === 'catalog' ? 'rgba(74,222,128,0.2)' : 'rgba(251,191,36,0.2)'}` }}>
                             {line.itemStatus}
                           </span>
                         </td>
@@ -322,29 +322,29 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             {canConvert && (
               <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.15)', borderRadius: 10, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: rfqOpen ? 12 : 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--accent-blue, #60a5fa)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     Convert to RFQ
                     {selectedLines.size > 0 && <span style={{ marginLeft: 6, color: 'rgba(255,255,255,0.4)' }}>({selectedLines.size} lines)</span>}
                   </span>
-                  <button type="button" onClick={() => setRfqOpen(o => !o)} style={{ fontSize: 11, color: rfqOpen ? 'var(--danger)' : 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  <button type="button" onClick={() => setRfqOpen(o => !o)} style={{ fontSize: 11, color: rfqOpen ? 'var(--danger, #f87171)' : 'var(--accent-blue, #60a5fa)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                     {rfqOpen ? 'Cancel' : 'Create RFQ →'}
                   </button>
                 </div>
 
                 {rfqOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {rfqError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)' }}>{rfqError}</div>}
+                    {rfqError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{rfqError}</div>}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>RFQ Title *</label>
                         <input value={rfqTitle} onChange={e => setRfqTitle(e.target.value)}
-                          style={{ background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none' }} />
+                          style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Response Deadline</label>
                         <input type="date" value={rfqDeadline} onChange={e => setRfqDeadline(e.target.value)}
-                          style={{ background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', colorScheme: 'dark' as any }} />
+                          style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any }} />
                       </div>
                     </div>
 
@@ -357,9 +357,9 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                           const sel = rfqSuppliers.includes(s.id);
                           return (
                             <span key={s.id} onClick={() => toggleSupplier(s.id)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, cursor: 'pointer', background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)'}`, color: sel ? 'var(--accent-violet)' : 'rgba(255,255,255,0.4)', transition: 'all 0.1s', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, cursor: 'pointer', background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)'}`, color: sel ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.4)', transition: 'all 0.1s', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                               {sel && <span style={{ fontSize: 9, fontWeight: 700 }}>✓</span>}
-                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
                               {s.name}
                             </span>
                           );
@@ -381,14 +381,14 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             {/* Reject modal inline */}
             {rejectOpen && (
               <div style={{ background: 'rgba(248,113,113,0.05)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rejection Reason *</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--danger, #f87171)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rejection Reason *</div>
                 <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
                   placeholder="Explain why this PR is being rejected…"
-                  style={{ background: 'var(--surface)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }} />
+                  style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', resize: 'vertical' }} />
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button onClick={() => { setRejectOpen(false); setRejectReason(''); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
                   <button onClick={() => handleStatus('rejected', rejectReason)} disabled={!rejectReason.trim() || actionBusy}
-                    style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.15)', border: '0.5px solid rgba(248,113,113,0.3)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: !rejectReason.trim() ? 0.5 : 1 }}>
+                    style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.15)', border: '0.5px solid rgba(248,113,113,0.3)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: !rejectReason.trim() ? 0.5 : 1 }}>
                     Confirm Rejection
                   </button>
                 </div>
@@ -399,25 +399,25 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canSubmit && (
                 <button onClick={() => handleStatus('submitted')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   📤 Submit for Approval
                 </button>
               )}
               {canResubmit && (
                 <button onClick={() => handleStatus('submitted')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   🔄 Re-submit
                 </button>
               )}
               {canApprove && (
                 <button onClick={() => setConfirmStatus({ status: 'approved', title: `Approve PR ${pr.prNumber}?`, description: 'This approves the requisition for procurement.', variant: 'default', label: 'Approve' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✓ Approve
                 </button>
               )}
               {canReject && !rejectOpen && (
                 <button onClick={() => setRejectOpen(true)} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>
               )}
@@ -512,34 +512,34 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
-  const PRIORITY_COLORS: Record<string, string> = { normal: 'rgba(255,255,255,0.4)', urgent: 'var(--accent-strong)', critical: 'var(--danger)' };
+  const PRIORITY_COLORS: Record<string, string> = { normal: 'rgba(255,255,255,0.4)', urgent: 'var(--accent-strong, #fb923c)', critical: 'var(--danger, #f87171)' };
 
   return (
     <>
       <style>{`
         .pr-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .pr-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:940px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .pr-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:940px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .pr-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .pr-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .pr-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .pr-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .pr-sel option{background:var(--surface)}
+        .pr-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .pr-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .pr-sel option{background:var(--surface, #0e0b1a)}
         .pr-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .pr-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
-        .pr-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .pr-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div className="pr-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="pr-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>New Purchase Requisition</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Purchase Requisition</span>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -556,7 +556,7 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Priority</label>
-                  <select value={header.priority} onChange={setH('priority')} style={{ ...INP, cursor: 'pointer', color: PRIORITY_COLORS[header.priority] ?? 'var(--text-strong)' }}>
+                  <select value={header.priority} onChange={setH('priority')} style={{ ...INP, cursor: 'pointer', color: PRIORITY_COLORS[header.priority] ?? 'var(--text-strong, #f1ede8)' }}>
                     <option value="normal">Normal</option>
                     <option value="urgent">🟠 Urgent</option>
                     <option value="critical">🔴 Critical</option>
@@ -639,7 +639,7 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create PR'}
               </button>
             </div>
@@ -722,12 +722,12 @@ export default function PurchaseRequisitionsPage() {
     {
       key: 'prNumber', header: 'PR Number', width: 140, sortable: true,
       value: r => r.prNumber,
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.prNumber}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.prNumber}</span>,
     },
     {
       key: 'title', header: 'Title', sortable: true,
       value: r => r.title,
-      render: r => <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{r.title}</span>,
+      render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.title}</span>,
     },
     {
       key: 'priority', header: 'Priority', width: 90, sortable: true,
@@ -739,7 +739,7 @@ export default function PurchaseRequisitionsPage() {
       value: r => r.requiredDate,
       render: r => {
         const isLate = new Date(r.requiredDate) < new Date() && !['completed', 'cancelled'].includes(r.status);
-        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger)' : 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.requiredDate)}</span>;
+        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.requiredDate)}</span>;
       },
     },
     {
@@ -757,13 +757,13 @@ export default function PurchaseRequisitionsPage() {
       value: r => r._count?.rfqs ?? 0,
       render: r => {
         const count = r._count?.rfqs ?? 0;
-        return <span style={{ fontSize: 12, color: count > 0 ? 'var(--accent-blue)' : 'rgba(255,255,255,0.25)' }}>{count}</span>;
+        return <span style={{ fontSize: 12, color: count > 0 ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.25)' }}>{count}</span>;
       },
     },
     {
       key: 'estimatedAmount', header: 'Est. Amount', width: 120, align: 'right', sortable: true,
       value: r => Number(r.estimatedAmount ?? 0),
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: r.estimatedAmount ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(r.estimatedAmount)}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: r.estimatedAmount ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(r.estimatedAmount)}</span>,
     },
     {
       key: 'status', header: 'Status', width: 130, sortable: true,
@@ -797,14 +797,14 @@ export default function PurchaseRequisitionsPage() {
                 onClick={() => setActiveStatus(prev => prev === status ? null : status)}
                 style={{ background: isActive ? cfg.bg : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? cfg.color : cfg.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 95, cursor: 'pointer', transition: 'all 0.15s' }}>
                 <span style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{cfg.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
               </div>
             );
           })}
           <div onClick={() => setActiveStatus(null)}
             style={{ background: !activeStatus ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeStatus ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer' }}>
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
-            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{prs.length}</span>
+            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{prs.length}</span>
           </div>
         </div>
 
@@ -814,12 +814,12 @@ export default function PurchaseRequisitionsPage() {
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
           </div>
           <button onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
             + New PR
           </button>
         </div>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle)', flexShrink: 0 }}>{error}</div>}
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle, #fca5a5)', flexShrink: 0 }}>{error}</div>}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <ERPTable<PR>

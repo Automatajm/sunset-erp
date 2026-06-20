@@ -43,7 +43,7 @@ export const headerStyle: CSSProperties = {
 export const titleStyle: CSSProperties = {
   fontSize: 15,
   fontWeight: 600,
-  color: 'var(--text-strong)',
+  color: 'var(--text-strong, #f1ede8)',
   margin: 0,
 };
 
@@ -75,7 +75,7 @@ export const footerStyle: CSSProperties = {
 export const errorLineStyle: CSSProperties = {
   flex: 1,
   fontSize: 12,
-  color: 'var(--danger)',
+  color: 'var(--danger, #f87171)',
   textAlign: 'left',
 };
 
@@ -90,10 +90,10 @@ export const btn = (variant: Variant = 'ghost', disabled = false): CSSProperties
   opacity: disabled ? 0.5 : 1,
   fontFamily: "'IBM Plex Sans',sans-serif",
   color:
-    variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger)' : 'rgba(255,255,255,0.6)',
+    variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.6)',
   background:
     variant === 'primary'
-      ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))'
+      ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))'
       : variant === 'danger'
         ? 'rgba(239,68,68,0.1)'
         : 'rgba(255,255,255,0.06)',

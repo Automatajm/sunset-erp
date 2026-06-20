@@ -77,12 +77,12 @@ function fmtAmt(v?: string | number) {
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<RFQStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:            { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
-  sent:             { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Sent' },
-  partial_response: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'Partial' },
+  draft:            { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft' },
+  sent:             { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Sent' },
+  partial_response: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)',  label: 'Partial' },
   fully_responded:  { color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)',  label: 'Responded' },
-  awarded:          { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Awarded' },
-  cancelled:        { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
+  awarded:          { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Awarded' },
+  cancelled:        { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
 };
 
 function StatusBadge({ status }: { status: RFQStatus }) {
@@ -195,19 +195,19 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
     padding: '6px 14px', fontSize: 12, borderRadius: 6, cursor: 'pointer', border: 'none',
     fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400,
     background: active ? 'rgba(251,146,60,0.12)' : 'transparent',
-    color: active ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)',
+    color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)',
     transition: 'all 0.15s',
   });
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex' }}>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
-      <div style={{ width: 780, background: 'var(--bg)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: 780, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', ...MONO }}>{rfq.rfqNumber}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', ...MONO }}>{rfq.rfqNumber}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{rfq.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -239,7 +239,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
               ].map(item => (
                 <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.value}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -252,12 +252,12 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                   <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Invited Suppliers</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {detail.rfqSuppliers?.map(rs => {
-                      const scfg = { invited: 'var(--warning)', sent: 'var(--accent-blue)', responded: '#34d399', awarded: 'var(--success)', declined: 'var(--danger)' }[rs.status] ?? 'var(--warning)';
+                      const scfg = { invited: 'var(--warning, #fbbf24)', sent: 'var(--accent-blue, #60a5fa)', responded: '#34d399', awarded: 'var(--success, #4ade80)', declined: 'var(--danger, #f87171)' }[rs.status] ?? 'var(--warning, #fbbf24)';
                       return (
                         <div key={rs.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                           <div>
-                            <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong)' }}>{rs.supplier?.code}</span>
-                            <span style={{ fontSize: 12, color: 'var(--text-primary)', marginLeft: 8 }}>{rs.supplier?.name}</span>
+                            <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{rs.supplier?.code}</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-primary, #e2dfd8)', marginLeft: 8 }}>{rs.supplier?.name}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {rs.totalOfferedAmount && <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtAmt(rs.totalOfferedAmount)}</span>}
@@ -288,7 +288,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                           <td style={{ padding: '8px' }}>
                             {line.item ? (
                               <>
-                                <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.item.code}</div>
+                                <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item.code}</div>
                                 <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{line.item.name}</div>
                               </>
                             ) : <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontStyle: 'italic' }}>{line.genericDescription}</div>}
@@ -297,11 +297,11 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                           <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
                           <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(line.requiredDate)}</td>
                           <td style={{ padding: '8px' }}>
-                            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.status === 'awarded' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'awarded' ? 'var(--success)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'awarded' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.status === 'awarded' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'awarded' ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'awarded' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
                               {line.status}
                             </span>
                           </td>
-                          <td style={{ padding: '8px', fontSize: 11, color: 'var(--accent-violet)' }}>{line.awardedSupplier?.code ?? '—'}</td>
+                          <td style={{ padding: '8px', fontSize: 11, color: 'var(--accent-violet, #a78bfa)' }}>{line.awardedSupplier?.code ?? '—'}</td>
                           <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontSize: 11 }}>{line.awardedUnitPrice ? fmtAmt(line.awardedUnitPrice) : '—'}</td>
                         </tr>
                       ))}
@@ -323,7 +323,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                     </div>
 
                     {/* Award error */}
-                    {awardError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)', marginBottom: 8 }}>{awardError}</div>}
+                    {awardError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)', marginBottom: 8 }}>{awardError}</div>}
 
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
@@ -332,19 +332,19 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                             <th style={{ padding: '7px 10px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', minWidth: 160 }}>Item</th>
                             <th style={{ padding: '7px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>Needed</th>
                             {comparison.matrix[0]?.offers.map((o: any) => (
-                              <th key={o.supplierId} style={{ padding: '7px 10px', fontSize: 10, color: 'var(--accent-violet)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', minWidth: 120 }}>
+                              <th key={o.supplierId} style={{ padding: '7px 10px', fontSize: 10, color: 'var(--accent-violet, #a78bfa)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', minWidth: 120 }}>
                                 {o.supplierCode}
                                 <div style={{ fontSize: 9, color: o.supplierStatus === 'responded' ? '#34d399' : 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{o.supplierStatus}</div>
                               </th>
                             ))}
-                            {canAward && <th style={{ padding: '7px 10px', fontSize: 10, color: 'var(--success)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>Award</th>}
+                            {canAward && <th style={{ padding: '7px 10px', fontSize: 10, color: 'var(--success, #4ade80)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>Award</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {comparison.matrix.map((line: any) => (
                             <tr key={line.lineId} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                               <td style={{ padding: '8px 10px' }}>
-                                <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{line.itemName}</div>
+                                <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.itemName}</div>
                                 <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 2 }}>{fmtDateShort(line.requiredDate)}</div>
                               </td>
                               <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.quantity).toLocaleString()} {line.uom}</td>
@@ -352,7 +352,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                                 <td key={offer.supplierId} style={{ padding: '8px 10px', textAlign: 'right', background: offer.isAwarded ? 'rgba(74,222,128,0.06)' : 'transparent' }}>
                                   {offer.unitPrice ? (
                                     <>
-                                      <div style={{ ...MONO, color: offer.isAwarded ? 'var(--success)' : 'var(--text-primary)', fontWeight: offer.isAwarded ? 600 : 400 }}>{fmtAmt(offer.unitPrice)}</div>
+                                      <div style={{ ...MONO, color: offer.isAwarded ? 'var(--success, #4ade80)' : 'var(--text-primary, #e2dfd8)', fontWeight: offer.isAwarded ? 600 : 400 }}>{fmtAmt(offer.unitPrice)}</div>
                                       <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 1 }}>{offer.leadTimeDays}d · {Number(offer.offeredQty).toLocaleString()} {line.uom}</div>
                                     </>
                                   ) : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
@@ -363,7 +363,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                                   <select
                                     value={awardMap[line.lineId] ?? ''}
                                     onChange={e => setAwardMap(m => ({ ...m, [line.lineId]: e.target.value }))}
-                                    style={{ background: 'var(--surface)', border: `0.5px solid ${awardMap[line.lineId] ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 5, padding: '4px 8px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: awardMap[line.lineId] ? 'var(--success)' : 'rgba(255,255,255,0.4)', outline: 'none', cursor: 'pointer' }}
+                                    style={{ background: 'var(--surface, #0e0b1a)', border: `0.5px solid ${awardMap[line.lineId] ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 5, padding: '4px 8px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: awardMap[line.lineId] ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', outline: 'none', cursor: 'pointer' }}
                                   >
                                     <option value="">— No award —</option>
                                     {line.offers.filter((o: any) => o.responseLineId).map((offer: any) => (
@@ -398,12 +398,12 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Enter Supplier Response</div>
 
-                {respError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle)' }}>{respError}</div>}
+                {respError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{respError}</div>}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Responding Supplier *</label>
                   <select value={respSupplier} onChange={e => setRespSupplier(e.target.value)}
-                    style={{ background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', colorScheme: 'dark' as any, maxWidth: 320 }}>
+                    style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any, maxWidth: 320 }}>
                     <option value="">— Select supplier —</option>
                     {detail.rfqSuppliers?.filter(rs => rs.status === 'sent').map(rs => (
                       <option key={rs.id} value={rs.id}>{rs.supplier?.code} — {rs.supplier?.name}</option>
@@ -424,24 +424,24 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                       <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                         <td style={{ padding: '7px 8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                         <td style={{ padding: '7px 8px' }}>
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong)', fontSize: 11 }}>{line.item?.code ?? '—'}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code ?? '—'}</div>
                           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{line.item?.name ?? line.genericDescription}</div>
                         </td>
                         <td style={{ padding: '7px 8px', fontFamily: "'IBM Plex Mono',monospace", color: 'rgba(255,255,255,0.5)' }}>{Number(line.quantity).toLocaleString()} {line.uom}</td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="0.001" placeholder="0" value={respLines[line.id]?.qty ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], qty: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary)', outline: 'none', width: 90, textAlign: 'right' }} />
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="0.01" placeholder="0.00" value={respLines[line.id]?.price ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], price: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary)', outline: 'none', width: 90, textAlign: 'right' }} />
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="1" placeholder="0" value={respLines[line.id]?.leadDays ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], leadDays: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary)', outline: 'none', width: 70, textAlign: 'right' }} />
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 70, textAlign: 'right' }} />
                         </td>
                       </tr>
                     ))}
@@ -461,13 +461,13 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canSend && (
                 <button onClick={sendModal.openModal} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Send to Suppliers
                 </button>
               )}
               {canCancel && (
                 <button onClick={cancelModal.openModal} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel RFQ
                 </button>
               )}
@@ -560,33 +560,33 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
 
   return (
     <>
       <style>{`
         .rfq-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .rfq-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:940px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
+        .rfq-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:940px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .rfq-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .rfq-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .rfq-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .rfq-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong);outline:none;width:100%}
-        .rfq-sel option{background:var(--surface)}
+        .rfq-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .rfq-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .rfq-sel option{background:var(--surface, #0e0b1a)}
         .rfq-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
         .rfq-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
-        .rfq-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .rfq-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .sup-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'IBM Plex Sans',sans-serif;border:0.5px solid}
       `}</style>
       <div className="rfq-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="rfq-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>New RFQ — Request for Quotation</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New RFQ — Request for Quotation</span>
             <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
+              {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
               <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -614,9 +614,9 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
                     return (
                       <span key={s.id} className="sup-chip"
                         onClick={() => toggleSupplier(s.id)}
-                        style={{ background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', borderColor: sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)', color: sel ? 'var(--accent-violet)' : 'rgba(255,255,255,0.45)' }}>
+                        style={{ background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', borderColor: sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)', color: sel ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.45)' }}>
                         {sel && <span style={{ fontSize: 9, fontWeight: 700 }}>✓</span>}
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
                         {s.name}
                       </span>
                     );
@@ -672,7 +672,7 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
+              <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create RFQ'}
               </button>
             </div>
@@ -738,12 +738,12 @@ export default function RFQsPage() {
     {
       key: 'rfqNumber', header: 'RFQ Number', width: 140, sortable: true,
       value: r => r.rfqNumber,
-      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.rfqNumber}</span>,
+      render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.rfqNumber}</span>,
     },
     {
       key: 'title', header: 'Title', sortable: true,
       value: r => r.title,
-      render: r => <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{r.title}</span>,
+      render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.title}</span>,
     },
     {
       key: 'issueDate', header: 'Issued', width: 100, sortable: true,
@@ -756,7 +756,7 @@ export default function RFQsPage() {
       render: r => {
         if (!r.responseDeadline) return <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>;
         const isLate = new Date(r.responseDeadline) < new Date() && r.status === 'sent';
-        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger)' : 'rgba(255,255,255,0.45)' }}>{fmtDateShort(r.responseDeadline)}</span>;
+        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.45)' }}>{fmtDateShort(r.responseDeadline)}</span>;
       },
     },
     {
@@ -773,7 +773,7 @@ export default function RFQsPage() {
       key: 'source', header: 'Source', width: 100, sortable: false,
       render: r => {
         const src = r.purchaseRequisition?.prNumber ?? r.generalNeed?.gnNumber;
-        return <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: src ? 'var(--accent-blue)' : 'rgba(255,255,255,0.25)' }}>{src ?? 'Manual'}</span>;
+        return <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: src ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.25)' }}>{src ?? 'Manual'}</span>;
       },
     },
     {
@@ -808,14 +808,14 @@ export default function RFQsPage() {
                 onClick={() => setActiveStatus(prev => prev === status ? null : status)}
                 style={{ background: isActive ? cfg.bg : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? cfg.color : cfg.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 95, cursor: 'pointer', transition: 'all 0.15s' }}>
                 <span style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{cfg.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
+                <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? cfg.color : 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
               </div>
             );
           })}
           <div onClick={() => setActiveStatus(null)}
             style={{ background: !activeStatus ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeStatus ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer' }}>
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
-            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong)', fontFamily: "'IBM Plex Mono',monospace" }}>{rfqs.length}</span>
+            <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{rfqs.length}</span>
           </div>
         </div>
 
@@ -825,12 +825,12 @@ export default function RFQsPage() {
             <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
           </div>
           <button onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.3)', flexShrink: 0, alignSelf: 'flex-end' }}>
             + New RFQ
           </button>
         </div>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle)', flexShrink: 0 }}>{error}</div>}
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: 'var(--danger-subtle, #fca5a5)', flexShrink: 0 }}>{error}</div>}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <ERPTable<RFQ>

@@ -70,10 +70,10 @@ const FIN_ROWS_STATIC: FinRow[] = [
 // ─── Quick Access — with correct tab deep links ────────────────────────────────
 
 const QUICK_ACCESS = [
-  { label: 'Balance Sheet',    color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.2)',   href: '/accounting/reports?tab=bs' },
-  { label: 'Trial Balance',    color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.18)', href: '/accounting/reports?tab=tb' },
-  { label: 'Income Statement', color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.18)', href: '/accounting/reports?tab=pl' },
-  { label: 'Budget vs Actual', color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.18)',href: '/accounting/budgets' },
+  { label: 'Balance Sheet',    color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.2)',   href: '/accounting/reports?tab=bs' },
+  { label: 'Trial Balance',    color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.18)', href: '/accounting/reports?tab=tb' },
+  { label: 'Income Statement', color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.18)', href: '/accounting/reports?tab=pl' },
+  { label: 'Budget vs Actual', color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.18)',href: '/accounting/budgets' },
 ];
 
 // ─── Mini charts — data driven ───────────────────────────────────────────────
@@ -175,7 +175,7 @@ function InteractiveChart({
                 {display.map((p, i) => {
                   const isActive = activeLabel ? p.label === activeLabel : i === display.length - 1;
                   return isActive
-                    ? <circle key={i} cx={xs[i]} cy={ys[i]} r={3} fill={color} stroke="var(--surface)" strokeWidth={1.5} />
+                    ? <circle key={i} cx={xs[i]} cy={ys[i]} r={3} fill={color} stroke="var(--surface, #0e0b1a)" strokeWidth={1.5} />
                     : null;
                 })}
               </>
@@ -220,7 +220,7 @@ function Portlet({ title, children }: { title: string; children: React.ReactNode
         padding: '5px 10px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--accent-strong)', letterSpacing: '0.04em', fontFamily: "'IBM Plex Sans', sans-serif" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', letterSpacing: '0.04em', fontFamily: "'IBM Plex Sans', sans-serif" }}>
           {title}
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -249,7 +249,7 @@ function Delta({ value, positive }: { value: string; positive: boolean }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
       fontSize: 11, fontWeight: 500,
-      color: positive ? 'var(--success)' : 'var(--danger)',
+      color: positive ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
       background: positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
       border: `0.5px solid ${positive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`,
       padding: '2px 7px', borderRadius: 20,
@@ -558,10 +558,10 @@ function DashboardContent() {
 
         // ── KPI heroes with YoY ──
         setHeroes([
-          { label: 'Revenue',      value: fmtK(revenue),   color: 'var(--success)',   up: revenue >= prevRev  },
-          { label: 'Expenses',     value: fmtK(expenses),  color: 'var(--danger)',   up: false               },
-          { label: 'Net Income',   value: fmtK(netIncome), color: netIncome >= 0 ? 'var(--success)' : 'var(--danger)', up: netIncome >= prevNI },
-          { label: 'Bank Balance', value: fmtK(cashInBank),color: 'var(--accent-blue)',   up: cashInBank > 0      },
+          { label: 'Revenue',      value: fmtK(revenue),   color: 'var(--success, #4ade80)',   up: revenue >= prevRev  },
+          { label: 'Expenses',     value: fmtK(expenses),  color: 'var(--danger, #f87171)',   up: false               },
+          { label: 'Net Income',   value: fmtK(netIncome), color: netIncome >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', up: netIncome >= prevNI },
+          { label: 'Bank Balance', value: fmtK(cashInBank),color: 'var(--accent-blue, #60a5fa)',   up: cashInBank > 0      },
         ]);
 
 
@@ -856,10 +856,10 @@ function DashboardContent() {
           display: flex; align-items: center; justify-content: space-between;
           padding: 6px 12px 5px;
         }
-        .db-title  { font-size: 15px; font-weight: 500; color: var(--text-strong); }
+        .db-title  { font-size: 15px; font-weight: 500; color: var(--text-strong, #f1ede8); }
         .db-actions { display: flex; align-items: center; gap: 6px; font-size: 12px; }
         .db-action-link { color: rgba(251,146,60,0.55); cursor: pointer; transition: color 0.15s; }
-        .db-action-link:hover { color: var(--accent-strong); }
+        .db-action-link:hover { color: var(--accent-strong, #fb923c); }
         .db-sep { color: rgba(255,255,255,0.15); }
 
         .portlet-grid {
@@ -902,7 +902,7 @@ function DashboardContent() {
           padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.07); text-align: left; white-space: nowrap;
         }
         .kpi-table tbody td { padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); vertical-align: middle; white-space: nowrap; }
-        .kpi-table tbody td.indicator { font-weight: 500; color: var(--text-primary); }
+        .kpi-table tbody td.indicator { font-weight: 500; color: var(--text-primary, #e2dfd8); }
         .kpi-table tbody td.period    { color: rgba(251,146,60,0.55); font-size: 11px; }
         .kpi-table tbody td.mono      { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
         .kpi-table tbody tr:last-child td { border-bottom: none; }
@@ -915,7 +915,7 @@ function DashboardContent() {
         }
         .fin-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
         .fin-hero-label { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; margin-bottom: 2px; }
-        .fin-hero-value { font-size: 14px; font-weight: 500; color: var(--text-strong); font-family: 'IBM Plex Mono', monospace; }
+        .fin-hero-value { font-size: 14px; font-weight: 500; color: var(--text-strong, #f1ede8); font-family: 'IBM Plex Mono', monospace; }
 
         .fin-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .fin-table thead th {
@@ -931,7 +931,7 @@ function DashboardContent() {
           font-family: 'IBM Plex Mono', monospace; font-size: 10px;
           white-space: nowrap;
         }
-        .fin-table tbody td:first-child { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; color: var(--text-primary); text-align: left; }
+        .fin-table tbody td:first-child { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; color: var(--text-primary, #e2dfd8); text-align: left; }
         .fin-table tbody tr:last-child td { border-bottom: none; }
         .fin-table tbody tr:hover td { background: rgba(251,146,60,0.04); }
 
@@ -954,7 +954,7 @@ function DashboardContent() {
                   fontFamily: "'IBM Plex Sans',sans-serif",
                   background: active ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
                   border: `0.5px solid ${active ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
-                  color: active ? 'var(--accent-strong)' : 'rgba(255,255,255,0.45)',
+                  color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.45)',
                   fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
 
@@ -968,7 +968,7 @@ function DashboardContent() {
               fontFamily: "'IBM Plex Sans',sans-serif",
               background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
               border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.1)'}`,
-              color: ytd ? 'var(--accent-violet)' : 'rgba(255,255,255,0.45)',
+              color: ytd ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.45)',
               fontWeight: ytd ? 600 : 400,
               transition: 'all 0.15s',
             }}>YTD</button>
@@ -1014,7 +1014,7 @@ function DashboardContent() {
                   fontFamily: "'IBM Plex Sans',sans-serif",
                   background: active ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.03)',
                   border: `0.5px solid ${active ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                  color: active ? 'var(--accent-blue)' : 'rgba(255,255,255,0.38)',
+                  color: active ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.38)',
                   fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
                   userSelect: 'none',
@@ -1041,7 +1041,7 @@ function DashboardContent() {
           <Portlet title="Income By Period Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? incPoints : weekPoints.inc}
-              color="var(--accent-strong)"
+              color="var(--accent-strong, #fb923c)"
               mode={chartMode}
               onModeChange={setChartMode}
               activeLabel={selMonths.length > 0 && chartMode === 'monthly'
@@ -1055,7 +1055,7 @@ function DashboardContent() {
           <Portlet title="Cost of Sales Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? cosPoints : weekPoints.cos}
-              color="var(--danger)"
+              color="var(--danger, #f87171)"
               mode={chartMode}
               onModeChange={setChartMode}
               activeLabel={selMonths.length > 0 && chartMode === 'monthly'
@@ -1118,12 +1118,12 @@ function DashboardContent() {
               <thead>
                 <tr>
                   <th>Indicator</th>
-                  <th style={{ textAlign:'right', color:'var(--accent-strong)' }}>Current</th>
+                  <th style={{ textAlign:'right', color:'var(--accent-strong, #fb923c)' }}>Current</th>
                   <th style={{ textAlign:'right' }}>Previous</th>
-                  <th style={{ textAlign:'right', color:'var(--warning)' }}>Current vs Previous</th>
-                  <th style={{ textAlign:'right', color:'var(--accent-blue)' }}>Current YTD</th>
+                  <th style={{ textAlign:'right', color:'var(--warning, #fbbf24)' }}>Current vs Previous</th>
+                  <th style={{ textAlign:'right', color:'var(--accent-blue, #60a5fa)' }}>Current YTD</th>
                   <th style={{ textAlign:'right' }}>Previous YTD</th>
-                  <th style={{ textAlign:'right', color:'var(--warning)' }}>Current vs Prev YTD</th>
+                  <th style={{ textAlign:'right', color:'var(--warning, #fbbf24)' }}>Current vs Prev YTD</th>
                   <th style={{ textAlign:'center' }}>Status</th>
                 </tr>
               </thead>
@@ -1138,15 +1138,15 @@ function DashboardContent() {
                     ))
                   : kpiRows.map(row => (
                       <tr key={row.indicator} style={row.isSubtotal ? { background: 'rgba(251,146,60,0.04)', borderTop: '0.5px solid rgba(251,146,60,0.15)' } : {}}>
-                        <td className="indicator" style={row.isSubtotal ? { color: 'var(--accent-strong)', fontWeight: 600 } : row.indicator.startsWith('─') ? { color: 'rgba(255,255,255,0.2)', fontSize: 10 } : {}}>{row.indicator}</td>
-                        <td className="mono" style={{ textAlign:'right', color:'var(--accent-strong)', fontWeight:500 }}>{row.current}</td>
+                        <td className="indicator" style={row.isSubtotal ? { color: 'var(--accent-strong, #fb923c)', fontWeight: 600 } : row.indicator.startsWith('─') ? { color: 'rgba(255,255,255,0.2)', fontSize: 10 } : {}}>{row.indicator}</td>
+                        <td className="mono" style={{ textAlign:'right', color:'var(--accent-strong, #fb923c)', fontWeight:500 }}>{row.current}</td>
                         <td className="mono" style={{ textAlign:'right', color:'rgba(255,255,255,0.4)' }}>{row.previous}</td>
-                        <td style={{ textAlign:'right', fontSize:10, color: row.vsP==='—' ? 'rgba(255,255,255,0.25)' : row.vsPPos ? 'var(--success)' : 'var(--danger)' }}>{row.vsP}</td>
-                        <td className="mono" style={{ textAlign:'right', color:'var(--accent-blue)' }}>{row.ytd}</td>
+                        <td style={{ textAlign:'right', fontSize:10, color: row.vsP==='—' ? 'rgba(255,255,255,0.25)' : row.vsPPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsP}</td>
+                        <td className="mono" style={{ textAlign:'right', color:'var(--accent-blue, #60a5fa)' }}>{row.ytd}</td>
                         <td className="mono" style={{ textAlign:'right', color:'rgba(255,255,255,0.4)' }}>{row.prevYtd}</td>
-                        <td style={{ textAlign:'right', fontSize:10, color: row.vsYtd==='—' ? 'rgba(255,255,255,0.25)' : row.vsYtdPos ? 'var(--success)' : 'var(--danger)' }}>{row.vsYtd}</td>
+                        <td style={{ textAlign:'right', fontSize:10, color: row.vsYtd==='—' ? 'rgba(255,255,255,0.25)' : row.vsYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsYtd}</td>
                         <td style={{ textAlign:'center' }}>
-                          <span style={{ fontSize:10, color: row.statusPos ? 'var(--success)' : 'var(--danger)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
+                          <span style={{ fontSize:10, color: row.statusPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
                             {row.statusPos ? '▲' : '▼'} YTD
                           </span>
                         </td>
@@ -1181,12 +1181,12 @@ function DashboardContent() {
                   <th style={{ textAlign:'left', minWidth: 110 }}>Indicator</th>
                   <th>Today</th>
                   <th>This Week</th>
-                  <th style={{ color:'var(--accent-strong)' }}>Current</th>
-                  <th style={{ color:'var(--accent-violet)' }}>Budget</th>
-                  <th style={{ color:'var(--warning)' }}>Current vs Budget</th>
-                  <th style={{ color:'var(--accent-blue)' }}>Current YTD</th>
-                  <th style={{ color:'var(--accent-violet)' }}>Budget YTD</th>
-                  <th style={{ color:'var(--warning)' }}>Current vs Bud YTD</th>
+                  <th style={{ color:'var(--accent-strong, #fb923c)' }}>Current</th>
+                  <th style={{ color:'var(--accent-violet, #a78bfa)' }}>Budget</th>
+                  <th style={{ color:'var(--warning, #fbbf24)' }}>Current vs Budget</th>
+                  <th style={{ color:'var(--accent-blue, #60a5fa)' }}>Current YTD</th>
+                  <th style={{ color:'var(--accent-violet, #a78bfa)' }}>Budget YTD</th>
+                  <th style={{ color:'var(--warning, #fbbf24)' }}>Current vs Bud YTD</th>
                   <th style={{ textAlign:'center', color:'rgba(255,255,255,0.3)' }}>Status</th>
                 </tr>
               </thead>
@@ -1194,18 +1194,18 @@ function DashboardContent() {
                 {finRows.map(row => (
                   <tr key={row.indicator} style={row.isSubtotal ? { background:'rgba(251,146,60,0.04)', borderTop:'0.5px solid rgba(251,146,60,0.15)' } : {}}>
                     <td style={{ fontFamily:"'IBM Plex Sans',sans-serif", textAlign:'left',
-                      color: row.indicator.startsWith('─') ? 'rgba(255,255,255,0.2)' : row.isSubtotal ? 'var(--accent-strong)' : 'var(--text-primary)',
+                      color: row.indicator.startsWith('─') ? 'rgba(255,255,255,0.2)' : row.isSubtotal ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)',
                       fontWeight: row.isSubtotal ? 600 : 400, fontSize: row.indicator.startsWith('─') ? 9 : undefined }}>{row.indicator}</td>
-                    <td style={{ color: row.today !== '—' ? 'var(--text-strong)' : undefined }}>{row.today}</td>
-                    <td style={{ color: row.thisWeek !== '—' ? 'var(--text-strong)' : undefined }}>{row.thisWeek}</td>
-                    <td style={{ color:'var(--accent-strong)', fontWeight: 500 }}>{row.current}</td>
+                    <td style={{ color: row.today !== '—' ? 'var(--text-strong, #f1ede8)' : undefined }}>{row.today}</td>
+                    <td style={{ color: row.thisWeek !== '—' ? 'var(--text-strong, #f1ede8)' : undefined }}>{row.thisWeek}</td>
+                    <td style={{ color:'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{row.current}</td>
                     <td style={{ color:'rgba(167,139,250,0.8)' }}>{row.budget}</td>
-                    <td style={{ color: row.varBud === '—' ? 'rgba(255,255,255,0.25)' : row.varBudPos ? 'var(--success)' : 'var(--danger)', fontSize: 10 }}>{row.varBud}</td>
-                    <td style={{ color:'var(--accent-blue)' }}>{row.ytd}</td>
+                    <td style={{ color: row.varBud === '—' ? 'rgba(255,255,255,0.25)' : row.varBudPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varBud}</td>
+                    <td style={{ color:'var(--accent-blue, #60a5fa)' }}>{row.ytd}</td>
                     <td style={{ color:'rgba(167,139,250,0.8)' }}>{row.budgetYtd}</td>
-                    <td style={{ color: row.varYtd === '—' ? 'rgba(255,255,255,0.25)' : row.varYtdPos ? 'var(--success)' : 'var(--danger)', fontSize: 10 }}>{row.varYtd}</td>
+                    <td style={{ color: row.varYtd === '—' ? 'rgba(255,255,255,0.25)' : row.varYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varYtd}</td>
                     <td style={{ textAlign:'center' }}>
-                      <span style={{ fontSize:10, color: row.statusPos ? 'var(--success)' : 'var(--danger)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
+                      <span style={{ fontSize:10, color: row.statusPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
                         {row.statusPos ? '▲' : '▼'} YTD
                       </span>
                     </td>
@@ -1221,7 +1221,7 @@ function DashboardContent() {
           <Portlet title="Revenue By Period Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? revPoints : weekPoints.rev}
-              color="var(--success)"
+              color="var(--success, #4ade80)"
               mode={chartMode}
               onModeChange={setChartMode}
               activeLabel={selMonths.length > 0 && chartMode === 'monthly'
@@ -1235,7 +1235,7 @@ function DashboardContent() {
           <Portlet title="Expenses By Period Trend">
             <InteractiveChart
               points={chartMode === 'monthly' ? expPoints : weekPoints.exp}
-              color="var(--danger)"
+              color="var(--danger, #f87171)"
               mode={chartMode}
               onModeChange={setChartMode}
               activeLabel={selMonths.length > 0 && chartMode === 'monthly'
