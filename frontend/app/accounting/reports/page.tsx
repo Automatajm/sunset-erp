@@ -257,7 +257,7 @@ function BSView({ data }: { data: BalanceSheetReport }) {
           color: data.isBalanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
           background: data.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
           border: `0.5px solid ${data.isBalanced ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
-          {data.isBalanced ? '✓ Balanced' : '✗ Not balanced'}
+          {data.isBalanced ? 'Balanced' : 'Not balanced'}
         </span>
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -313,7 +313,7 @@ function TBView({ data }: { data: TrialBalanceReport }) {
           color: data.totals.isBalanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
           background: data.totals.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
           border: `0.5px solid ${data.totals.isBalanced ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
-          {data.totals.isBalanced ? '✓ Balanced' : '✗ Not balanced'}
+          {data.totals.isBalanced ? 'Balanced' : 'Not balanced'}
         </span>
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
