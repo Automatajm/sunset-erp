@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { purchaseRequisitionsApi } from '@/lib/api/purchase-requisitions';
@@ -93,8 +94,8 @@ function PriorityBadge({ priority }: { priority: PRPriority }) {
   const p = PRIORITY_CFG[priority] ?? PRIORITY_CFG.normal;
   if (priority === 'normal') return <span style={{ fontSize: 11, color: p.color }}>{p.label}</span>;
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, color: p.color, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-      {priority === 'critical' ? '🔴' : '🟠'} {p.label}
+    <span style={{ fontSize: 11, fontWeight: 600, color: p.color, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: p.color, flexShrink: 0 }} /> {p.label}
     </span>
   );
 }
@@ -109,6 +110,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
   const [actionBusy,  setActionBusy]  = useState(false);
   const [rejectOpen,  setRejectOpen]  = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [rfqOpen,     setRfqOpen]     = useState(false);
   const [rfqTitle,    setRfqTitle]    = useState('');
@@ -129,12 +131,12 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
   }, [pr.id]);
 
   const handleStatus = async (status: string, reason?: string) => {
-    setActionBusy(true);
+    setActionBusy(true); setActionError(null);
     try {
       await purchaseRequisitionsApi.updateStatus(pr.id, status, reason);
       onAction(); onClose();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to update status');
+      setActionError(err?.response?.data?.message || 'Failed to update status');
     } finally { setActionBusy(false); }
   };
 
@@ -286,7 +288,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                         <td style={{ padding: '8px 6px', width: 24 }}>
                           {canConvert && (
                             <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue, #60a5fa)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {isSelected && <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>✓</span>}
+                              {isSelected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                             </div>
                           )}
                         </td>
@@ -358,7 +360,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                           return (
                             <span key={s.id} onClick={() => toggleSupplier(s.id)}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, cursor: 'pointer', background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)'}`, color: sel ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.4)', transition: 'all 0.1s', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-                              {sel && <span style={{ fontSize: 9, fontWeight: 700 }}>✓</span>}
+                              {sel && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
                               {s.name}
                             </span>
@@ -396,29 +398,36 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
             )}
 
             {/* Actions */}
+            {actionError && (
+              <div style={{ marginTop: 8, background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{actionError}</div>
+            )}
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canSubmit && (
                 <button onClick={() => handleStatus('submitted')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  📤 Submit for Approval
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  Submit for Approval
                 </button>
               )}
               {canResubmit && (
                 <button onClick={() => handleStatus('submitted')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  🔄 Re-submit
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Re-submit
                 </button>
               )}
               {canApprove && (
                 <button onClick={() => setConfirmStatus({ status: 'approved', title: `Approve PR ${pr.prNumber}?`, description: 'This approves the requisition for procurement.', variant: 'default', label: 'Approve' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✓ Approve
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
                 </button>
               )}
               {canReject && !rejectOpen && (
                 <button onClick={() => setRejectOpen(true)} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✕ Reject
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Reject
                 </button>
               )}
               {canCancel && (
@@ -556,23 +565,26 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Priority</label>
-                  <select value={header.priority} onChange={setH('priority')} style={{ ...INP, cursor: 'pointer', color: PRIORITY_COLORS[header.priority] ?? 'var(--text-strong, #f1ede8)' }}>
-                    <option value="normal">Normal</option>
-                    <option value="urgent">🟠 Urgent</option>
-                    <option value="critical">🔴 Critical</option>
-                  </select>
+                  <SearchSelect
+                    options={[{ value: 'normal', label: 'Normal' }, { value: 'urgent', label: 'Urgent' }, { value: 'critical', label: 'Critical' }]}
+                    value={header.priority}
+                    onChange={v => setHeader(h => ({ ...h, priority: v }))}
+                    placeholder="Priority…"
+                    minWidth={180}
+                  />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Source</label>
-                  <select value={header.source} onChange={setH('source')} style={{ ...INP, cursor: 'pointer' }}>
-                    <option value="manual">Manual</option>
-                    <option value="production_plan">Production Plan</option>
-                    <option value="mrp">MRP</option>
-                    <option value="general_need">General Need</option>
-                  </select>
+                  <SearchSelect
+                    options={[{ value: 'manual', label: 'Manual' }, { value: 'production_plan', label: 'Production Plan' }, { value: 'mrp', label: 'MRP' }, { value: 'general_need', label: 'General Need' }]}
+                    value={header.source}
+                    onChange={v => setHeader(h => ({ ...h, source: v }))}
+                    placeholder="Source…"
+                    minWidth={200}
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Justification</label>
@@ -602,10 +614,14 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
                   {lines.map((line, idx) => (
                     <tr key={idx}>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="pr-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                          <option value="">— Catalog item —</option>
-                          {items.filter(it => it.isPurchasable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={items.filter(it => it.isPurchasable).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                          value={line.itemId}
+                          onChange={v => setLine(idx, 'itemId', v)}
+                          placeholder="Catalog item…"
+                          clearLabel="— Catalog item —"
+                          minWidth={280}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
                         <input className="pr-inp" placeholder="Or free-text…" value={line.genericDescription} onChange={e => setLine(idx, 'genericDescription', e.target.value)} disabled={!!line.itemId} style={{ opacity: line.itemId ? 0.4 : 1 }} />
@@ -623,10 +639,14 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
                         <input className="pr-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitEstimate} onChange={e => setLine(idx, 'unitEstimate', e.target.value)} style={{ textAlign: 'right' }} />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="pr-sel" value={line.warehouseId} onChange={e => setLine(idx, 'warehouseId', e.target.value)}>
-                          <option value="">— Optional —</option>
-                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }))}
+                          value={line.warehouseId}
+                          onChange={v => setLine(idx, 'warehouseId', v)}
+                          placeholder="Optional…"
+                          clearLabel="— Optional —"
+                          minWidth={240}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
                         {lines.length > 1 && <button type="button" className="pr-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}
@@ -667,8 +687,8 @@ export default function PurchaseRequisitionsPage() {
     {
       key: 'priority', label: 'Priority', type: 'select', placeholder: 'All',
       options: [
-        { value: 'critical', label: '🔴 Critical' },
-        { value: 'urgent',   label: '🟠 Urgent' },
+        { value: 'critical', label: 'Critical' },
+        { value: 'urgent',   label: 'Urgent' },
         { value: 'normal',   label: 'Normal' },
       ],
       filterFn: (row, val) => row.priority === val,
