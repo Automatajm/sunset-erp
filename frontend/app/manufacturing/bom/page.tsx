@@ -4,6 +4,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { bomApi } from '@/lib/api/bom';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 import { itemsApi } from '@/lib/api/items';
 import { consumptionGroupsApi } from '@/lib/api/consumption-groups';
 import { tenantSettingsApi } from '@/lib/api/tenant-settings';
@@ -166,6 +167,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
   const [loadingEstimate, setLoadingEstimate] = useState(false);
   const [addRoutingOpen, setAddRoutingOpen] = useState(false);
   const [deletingStep, setDeletingStep] = useState<string | null>(null);
+  const [deleteStep, setDeleteStep] = useState<RoutingStep | null>(null);
 
   const loadRouting = useCallback(async () => {
     setLoadingRouting(true);
@@ -275,7 +277,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                       {step.workCenter?.costPerHour ? fmtAmt(Number(step.workCenter.costPerHour)) : '—'}
                     </td>
                     <td style={{ padding: '6px 10px' }}>
-                      <button onClick={() => handleDeleteStep(step.id)} disabled={deletingStep === step.id}
+                      <button onClick={() => setDeleteStep(step)} disabled={deletingStep === step.id}
                         style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.15)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: deletingStep === step.id ? 0.5 : 1 }}>
                         {deletingStep === step.id ? '…' : 'Del'}
                       </button>
@@ -321,6 +323,16 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
           onSaved={() => { loadRouting(); onRefresh(); }}
         />
       )}
+
+      <ConfirmModal
+        open={deleteStep !== null}
+        onClose={() => setDeleteStep(null)}
+        title={deleteStep ? `Delete routing step ${deleteStep.stepNumber}?` : ''}
+        description="This removes the operation from the routing. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Delete Step"
+        onConfirm={async () => { if (deleteStep) await handleDeleteStep(deleteStep.id); }}
+      />
     </div>
   );
 }
@@ -572,6 +584,8 @@ export default function BOMPage() {
   const [error,       setError]       = useState('');
   const [detail,      setDetail]      = useState<Record<string, Bom>>({});
   const [modalOpen,   setModalOpen]   = useState(false);
+  // spec-frontend-002/003 — BOM delete was a zero-guard direct call.
+  const [deleteBom,   setDeleteBom]   = useState<Bom | null>(null);
 
   const fetchBoms = useCallback(async () => {
     try { setLoading(true); setList(extractList<Bom>(await bomApi.getAll())); }
@@ -650,13 +664,13 @@ export default function BOMPage() {
     {
       key: '_actions', header: '', width: 80, sortable: false,
       render: r => (
-        <button onClick={e => { e.stopPropagation(); bomApi.remove(r.id).then(fetchBoms); }}
+        <button onClick={e => { e.stopPropagation(); setDeleteBom(r); }}
           style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Delete
         </button>
       ),
     },
-  ], [fetchBoms]);
+  ], []);
 
   return (
     <ERPShell breadcrumbs={['Home', 'Manufacturing', 'Bill of Materials']} title="Bill of Materials">
@@ -710,6 +724,16 @@ export default function BOMPage() {
           onSaved={fetchBoms}
         />
       )}
+
+      <ConfirmModal
+        open={deleteBom !== null}
+        onClose={() => setDeleteBom(null)}
+        title={deleteBom ? `Delete BOM ${deleteBom.bomNumber}?` : ''}
+        description="This removes the bill of materials and its components and routing. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Delete BOM"
+        onConfirm={async () => { if (deleteBom) { await bomApi.remove(deleteBom.id); await fetchBoms(); } }}
+      />
     </ERPShell>
   );
 }
