@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { fiscalPeriodsApi } from '@/lib/api/fiscal-periods';
+import { ConfirmModal } from '@/components/ui/modal';
 import { FiscalPeriod, CreateFiscalPeriodDto, PeriodStatus } from '@/lib/api/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -307,6 +308,11 @@ export default function FiscalPeriodsPage() {
   const [deleting,   setDeleting]   = useState<FiscalPeriod | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
+  // spec-frontend-002/003 — close/lock/unlock/reopen change posting rules;
+  // guard each transition with the shared ConfirmModal.
+  const [confirmAction, setConfirmAction] = useState<
+    { id: string; action: string; period: FiscalPeriod } | null
+  >(null);
 
   const fetchPeriods = useCallback(async () => {
     try {
@@ -332,8 +338,8 @@ export default function FiscalPeriodsPage() {
     }));
   }, [yearFilter, statusFilter, periods]);
 
-  const handleAction = async (id: string, action: string) => {
-    setActionBusy(id);
+  const runAction = async (id: string, action: string) => {
+    setActionBusy(id); setError('');
     try {
       switch (action) {
         case 'close':  await fiscalPeriodsApi.close(id);  break;
@@ -345,7 +351,20 @@ export default function FiscalPeriodsPage() {
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(msg || `${action} failed.`);
+      throw err; // surface inline in ConfirmModal, keep it open
     } finally { setActionBusy(null); }
+  };
+
+  const requestAction = (id: string, action: string) => {
+    const period = periods.find(p => p.id === id);
+    if (period) setConfirmAction({ id, action, period });
+  };
+
+  const ACTION_COPY: Record<string, { title: string; description: string; variant: 'default' | 'destructive'; label: string }> = {
+    close:  { title: 'Close fiscal period?',  description: 'Closing prevents new journal entries from posting to this period. It can be reopened later.', variant: 'default',     label: 'Close Period' },
+    reopen: { title: 'Reopen fiscal period?', description: 'Reopening allows journal entries to post to this period again.',                                  variant: 'default',     label: 'Reopen Period' },
+    lock:   { title: 'Lock fiscal period?',   description: 'Locking permanently seals the period — no further changes are allowed.',                          variant: 'destructive', label: 'Lock Period' },
+    unlock: { title: 'Unlock fiscal period?', description: 'Unlocking re-allows changes to this previously locked period.',                                   variant: 'default',     label: 'Unlock Period' },
   };
 
   const handleDelete = async () => {
@@ -500,7 +519,7 @@ export default function FiscalPeriodsPage() {
                       <td><StatusBadge status={p.status} /></td>
                       <td>
                         <div className="fp-row-actions">
-                          <PeriodActions period={p} onAction={handleAction} busy={actionBusy} />
+                          <PeriodActions period={p} onAction={requestAction} busy={actionBusy} />
                           <button className="fp-btn-edit" onClick={() => { setEditing(p); setModalOpen(true); }}>Edit</button>
                           {p.status === 'open' && (
                             <button className="fp-btn-del" onClick={() => setDeleting(p)}>Delete</button>
@@ -534,6 +553,16 @@ export default function FiscalPeriodsPage() {
           busy={deleteBusy}
         />
       )}
+
+      <ConfirmModal
+        open={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction ? `${ACTION_COPY[confirmAction.action].title.replace('?', '')} ${confirmAction.period.periodCode}?` : ''}
+        description={confirmAction ? ACTION_COPY[confirmAction.action].description : undefined}
+        variant={confirmAction ? ACTION_COPY[confirmAction.action].variant : 'default'}
+        confirmLabel={confirmAction ? ACTION_COPY[confirmAction.action].label : undefined}
+        onConfirm={async () => { if (confirmAction) await runAction(confirmAction.id, confirmAction.action); }}
+      />
     </ERPShell>
   );
 }
