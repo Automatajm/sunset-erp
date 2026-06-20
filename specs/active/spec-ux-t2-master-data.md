@@ -24,17 +24,20 @@ A page is "done" when:
 
 ## Tasks (worst-score-first, per roadmap)
 
-- [ ] **T2.1 settings/uom** (score 2) — read-only catalog. ERPTable ×2 (units, conversions);
+- [x] **T2.1 settings/uom** (score 2) — read-only catalog. ERPTable ×2 (units, conversions);
       SearchSelect ×4 (converter from/to + type/system filters → FilterBar); drop `✓` dingbat.
-      No CRUD (global seeded catalog). **Cx M**
+      No CRUD (global seeded catalog). **Cx M** — shipped `8ea16b5`
 - [ ] **T2.2 inventory/macro-categories** (score 2) — ERPTable + FormModal; SearchSelect for any FK. **Cx M**
 - [ ] **T2.3 inventory/categories** (score 2) — ERPTable + FormModal; SearchSelect ×2 (macro-category FK). Dep: T2.2 pattern. **Cx M**
 - [ ] **T2.4 manufacturing/work-centers** (score 2) — ERPTable + FormModal; SearchSelect. **Cx M**
-- [ ] **T2.5 inventory/items** (score 3) — SearchSelect ×2; drop `🔒 ⚠` emoji. (Large page — surgical, no full rewrite.) **Cx M**
-- [ ] **T2.6 inventory/consumption-groups** (score 3) — de-emoji (`⚠`). Already gold-standard otherwise. **Cx S**
-- [ ] **T2.7 inventory/warehouses** (score 3) — SearchSelect ×2; drop `⚖` emoji. **Cx S**
+- [x] **T2.5 inventory/items** (score 3) — SearchSelect ×2; drop `🔒 ⚠` emoji. (Large page — surgical, no full rewrite.) **Cx M** — shipped `7fced1c`
+- [x] **T2.6 inventory/consumption-groups** (score 3) — de-emoji (`⚠`). Already gold-standard otherwise. **Cx S** — shipped `ba65978`
+- [x] **T2.7 inventory/warehouses** (score 3) — SearchSelect ×2; drop `⚖` emoji. **Cx S** — shipped `8e2fbad`
 
 Each task ships as its own commit. Reference idiom: `inventory/consumption-groups/page.tsx`.
+
+**Progress: 4/7 shipped.** Remaining: T2.2, T2.3, T2.4 — the three score-2 CRUD pages
+needing hand-rolled table + form → `ERPTable` + `FormModal` (the heavier rewrites).
 
 ## Out of scope
 
@@ -47,3 +50,4 @@ Each task ships as its own commit. Reference idiom: `inventory/consumption-group
 | Date | Change |
 |------|--------|
 | 2026-06-20 | Sub-spec created from parent roadmap. Starting T2.1 (uom). |
+| 2026-06-20 | Shipped T2.1 (uom full rewrite), T2.5 (items), T2.6 (consumption-groups), T2.7 (warehouses). All tsc 0, prod build green (51 routes). 4/7 done; T2.2–T2.4 (CRUD table+modal rewrites) remain. |
