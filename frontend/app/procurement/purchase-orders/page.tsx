@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { suppliersApi } from '@/lib/api/suppliers';
@@ -252,13 +253,14 @@ function PODetailDrawer({ po, onClose, onAction }: {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Warehouse *</label>
-                      <select
-                        value={recvWh} onChange={e => setRecvWh(e.target.value)}
-                        style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any }}
-                      >
-                        <option value="">— Select warehouse —</option>
-                        {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
-                      </select>
+                      <SearchSelect
+                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }))}
+                        value={recvWh}
+                        onChange={setRecvWh}
+                        placeholder="Search warehouse…"
+                        clearLabel="— Select warehouse —"
+                        minWidth={260}
+                      />
                     </div>
 
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -303,7 +305,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
                         onClick={handleReceive} disabled={recvBusy}
                         style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: recvBusy ? 'not-allowed' : 'pointer', opacity: recvBusy ? 0.5 : 1 }}
                       >
-                        {recvBusy ? 'Processing…' : '✓ Confirm Receipt'}
+                        {recvBusy ? 'Processing…' : 'Confirm Receipt'}
                       </button>
                     </div>
                   </div>
@@ -315,8 +317,9 @@ function PODetailDrawer({ po, onClose, onAction }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canConfirm && (
                 <button onClick={() => setConfirmStatus({ status: 'confirmed', title: `Confirm PO ${po.poNumber}?`, description: 'This issues the purchase order to the supplier.', variant: 'default', label: 'Confirm PO' })} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✓ Confirm PO
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Confirm PO
                 </button>
               )}
               {detail?.status === 'received' && (
@@ -439,10 +442,14 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Supplier *</label>
-                  <select value={header.supplierId} onChange={setH('supplierId')} style={{ ...INP, cursor: 'pointer' }}>
-                    <option value="">— Select supplier —</option>
-                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    options={suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
+                    value={header.supplierId}
+                    onChange={v => setHeader(h => ({ ...h, supplierId: v }))}
+                    placeholder="Search supplier…"
+                    clearLabel="— Select supplier —"
+                    minWidth={280}
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Expected Date</label>
@@ -450,9 +457,7 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Currency</label>
-                  <select value={header.currency} onChange={setH('currency')} style={{ ...INP, cursor: 'pointer' }}>
-                    {['USD','EUR','DOP','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <SearchSelect options={['USD','EUR','DOP','GBP'].map(c => ({ value: c, label: c }))} value={header.currency} onChange={v => setHeader(h => ({ ...h, currency: v }))} placeholder="Currency…" minWidth={160} />
                 </div>
               </div>
 
@@ -490,10 +495,14 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
                   {lines.map((line, idx) => (
                     <tr key={idx}>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="po-line-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                          <option value="">— Item —</option>
-                          {items.filter(it => it.isPurchasable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={items.filter(it => it.isPurchasable).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                          value={line.itemId}
+                          onChange={v => setLine(idx, 'itemId', v)}
+                          placeholder="Item…"
+                          clearLabel="— Item —"
+                          minWidth={240}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
                       <td style={{ padding: '4px 3px' }}><input className="po-line-inp" type="number" min="0" step="0.001" placeholder="0" value={line.orderedQuantity} onChange={e => setLine(idx, 'orderedQuantity', e.target.value)} style={{ textAlign: 'right' }} /></td>
