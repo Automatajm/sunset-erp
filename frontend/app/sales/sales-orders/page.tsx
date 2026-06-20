@@ -6,6 +6,7 @@ import { salesOrdersApi } from '@/lib/api/sales-orders';
 import { customersApi } from '@/lib/api/customers';
 import { itemsApi } from '@/lib/api/items';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { Customer, Item, SOStatus } from '@/lib/api/types';
 
 // ─── Real backend types ───────────────────────────────────────────────────────
@@ -462,6 +463,11 @@ export default function SalesOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<SOStatus | ''>('');
   const [createOpen,   setCreateOpen]   = useState(false);
   const [actionBusy,   setActionBusy]   = useState<string | null>(null);
+  // spec-frontend-002/003 — ship & deliver create irreversible stock movements;
+  // guard them behind a ConfirmModal. Confirm/Close stay direct (low-impact).
+  const [confirmAction, setConfirmAction] = useState<
+    { id: string; status: string; soNumber: string; label: string; description: string } | null
+  >(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -492,7 +498,7 @@ export default function SalesOrdersPage() {
     return matchSearch && matchStatus;
   });
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const runStatusChange = async (id: string, status: string) => {
     setActionBusy(id);
     try {
       await salesOrdersApi.updateStatus(id, status as 'confirmed' | 'shipped' | 'delivered' | 'closed');
@@ -500,7 +506,24 @@ export default function SalesOrdersPage() {
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(msg || 'Status update failed.');
+      throw err; // let ConfirmModal surface the error inline and stay open
     } finally { setActionBusy(null); }
+  };
+
+  const handleStatusChange = (id: string, status: string) => {
+    if (status === 'shipped' || status === 'delivered') {
+      const so = orders.find(o => o.id === id);
+      setConfirmAction({
+        id, status,
+        soNumber: so?.soNumber ?? '',
+        label: status === 'shipped' ? 'Ship Order' : 'Mark Delivered',
+        description: status === 'shipped'
+          ? 'Shipping this order creates outbound stock movements and decrements inventory. It cannot be undone.'
+          : 'Marking this order delivered finalizes fulfillment. It cannot be undone.',
+      });
+      return;
+    }
+    runStatusChange(id, status);
   };
 
   const allStatuses: SOStatus[] = ['draft', 'confirmed', 'shipped', 'delivered', 'closed'];
@@ -622,6 +645,16 @@ export default function SalesOrdersPage() {
         onSaved={fetchAll}
         customers={customers}
         items={items}
+      />
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction ? `${confirmAction.label} ${confirmAction.soNumber}?` : ''}
+        description={confirmAction?.description}
+        variant="destructive"
+        confirmLabel={confirmAction?.label}
+        onConfirm={async () => { if (confirmAction) await runStatusChange(confirmAction.id, confirmAction.status); }}
       />
     </ERPShell>
   );
