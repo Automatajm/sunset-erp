@@ -22,7 +22,12 @@
 > and the ~136 remaining are decorative **multi-stop button gradients** (blue/green/violet/amber)
 > + one-off viz accents with no semantic token home — single-use tokens for these would be sprawl.
 >
-> **Deferred (own specs):** budgets roll-forward automation; i18n of residual Spanish strings in bom/boms.
+> **bom/boms Spanish i18n — done (2026-06-20):** all residual Spanish UI strings (inline UOM
+> picker hints, table headers, the Consumption Group / Free UOM / Cons. UOM legend, an error
+> message) + matching comments translated to English in `manufacturing/bom` + `boms`. No logic
+> change; tsc 0 / build green.
+>
+> **Deferred (own spec):** budgets roll-forward automation (next-period-from-prior — backend+UI feature).
 
 ## Problem
 
