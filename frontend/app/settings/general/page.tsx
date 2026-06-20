@@ -61,7 +61,7 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
       <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,191,36,0.3)', borderRadius: 14, width: '100%', maxWidth: 500, boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }}>
 
         <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>⚠️</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning, #fbbf24)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--warning, #fbbf24)' }}>Confirm System UOM Changes</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
@@ -87,10 +87,10 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
           {/* Impact list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
-              { icon: '📦', text: 'Consumption Groups linked to changed system UOMs will need to be updated.' },
-              { icon: '🏷️', text: 'Item consumption UOMs pointing to old units will need review.' },
-              { icon: '🔄', text: 'MRP will aggregate using the new units — ensure UOM conversions exist in the conversion table.' },
-              { icon: '📋', text: 'Historical data is not changed — only future aggregations are affected.' },
+              { icon: '•', text: 'Consumption Groups linked to changed system UOMs will need to be updated.' },
+              { icon: '•', text: 'Item consumption UOMs pointing to old units will need review.' },
+              { icon: '•', text: 'MRP will aggregate using the new units — ensure UOM conversions exist in the conversion table.' },
+              { icon: '•', text: 'Historical data is not changed — only future aggregations are affected.' },
             ].map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
@@ -296,7 +296,7 @@ export default function GeneralSettingsPage() {
 
       <div className="gs-page">
         {error   && <div className="gs-alert" style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-        {success && <div className="gs-alert" style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'var(--success, #4ade80)' }}>✓ {success}</div>}
+        {success && <div className="gs-alert" style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', color:'var(--success, #4ade80)' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display:'inline', verticalAlign:'-2px', marginRight:6 }}><polyline points="20 6 9 17 4 12"/></svg>{success}</div>}
 
         {loading ? <div className="gs-spinner" /> : (
           <div className="gs-layout">
@@ -357,8 +357,8 @@ export default function GeneralSettingsPage() {
                         <div key={sys} onClick={() => handleSystemChange(sys)}
                           style={{ padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontSize: 13, fontWeight: 500, border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s', color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.35)', background: active ? 'rgba(251,146,60,0.07)' : 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{sys === 'metric' ? 'Metric (SI)' : sys === 'imperial' ? 'Imperial (US)' : '⚙ Custom Mix'}</span>
-                            {isSaved && !isDirty('defaultUomSystem') && <span className="badge-saved">✓ saved</span>}
+                            <span>{sys === 'metric' ? 'Metric (SI)' : sys === 'imperial' ? 'Imperial (US)' : 'Custom Mix'}</span>
+                            {isSaved && !isDirty('defaultUomSystem') && <span className="badge-saved">saved</span>}
                             {active && !isSaved && <span className="badge-pending">● pending</span>}
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 400, color: active ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.18)' }}>{sub}</span>
@@ -427,7 +427,7 @@ export default function GeneralSettingsPage() {
                                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: dirty ? 'rgba(74,222,128,0.7)' : color, fontWeight: 500 }}>
                                   {savedUom.code}
                                 </span>
-                                <span className="badge-saved">✓ saved</span>
+                                <span className="badge-saved">saved</span>
                               </div>
                               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>{savedUom.name}</span>
                             </div>
