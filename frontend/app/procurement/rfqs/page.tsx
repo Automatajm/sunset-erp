@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { rfqsApi } from '@/lib/api/rfqs';
 import { ConfirmModal, useModal } from '@/components/ui/modal';
@@ -360,18 +361,14 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                               ))}
                               {canAward && (
                                 <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                                  <select
+                                  <SearchSelect
+                                    options={line.offers.filter((o: any) => o.responseLineId).map((offer: any) => ({ value: offer.responseLineId, label: `${offer.supplierCode} · ${fmtAmt(offer.unitPrice)}` }))}
                                     value={awardMap[line.lineId] ?? ''}
-                                    onChange={e => setAwardMap(m => ({ ...m, [line.lineId]: e.target.value }))}
-                                    style={{ background: 'var(--surface, #0e0b1a)', border: `0.5px solid ${awardMap[line.lineId] ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 5, padding: '4px 8px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: awardMap[line.lineId] ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', outline: 'none', cursor: 'pointer' }}
-                                  >
-                                    <option value="">— No award —</option>
-                                    {line.offers.filter((o: any) => o.responseLineId).map((offer: any) => (
-                                      <option key={offer.responseLineId} value={offer.responseLineId}>
-                                        {offer.supplierCode} · {fmtAmt(offer.unitPrice)}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    onChange={v => setAwardMap(m => ({ ...m, [line.lineId]: v }))}
+                                    placeholder="— No award —"
+                                    clearLabel="— No award —"
+                                    minWidth={220}
+                                  />
                                 </td>
                               )}
                             </tr>
@@ -384,7 +381,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                       <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 12 }}>
                         <button onClick={handleAward} disabled={awardBusy || Object.values(awardMap).filter(Boolean).length === 0}
                           style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '8px 22px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: awardBusy ? 'not-allowed' : 'pointer', opacity: awardBusy || Object.values(awardMap).filter(Boolean).length === 0 ? 0.5 : 1 }}>
-                          {awardBusy ? 'Awarding…' : `🏆 Award & Generate POs (${Object.values(awardMap).filter(Boolean).length} lines)`}
+                          {awardBusy ? 'Awarding…' : `Award & Generate POs (${Object.values(awardMap).filter(Boolean).length} lines)`}
                         </button>
                       </div>
                     )}
@@ -402,13 +399,16 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Responding Supplier *</label>
-                  <select value={respSupplier} onChange={e => setRespSupplier(e.target.value)}
-                    style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any, maxWidth: 320 }}>
-                    <option value="">— Select supplier —</option>
-                    {detail.rfqSuppliers?.filter(rs => rs.status === 'sent').map(rs => (
-                      <option key={rs.id} value={rs.id}>{rs.supplier?.code} — {rs.supplier?.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ maxWidth: 320 }}>
+                    <SearchSelect
+                      options={(detail.rfqSuppliers?.filter(rs => rs.status === 'sent') ?? []).map(rs => ({ value: rs.id, label: `${rs.supplier?.code} — ${rs.supplier?.name}` }))}
+                      value={respSupplier}
+                      onChange={setRespSupplier}
+                      placeholder="Search supplier…"
+                      clearLabel="— Select supplier —"
+                      minWidth={300}
+                    />
+                  </div>
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -451,7 +451,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={handleSubmitResponse} disabled={respBusy}
                     style={{ background: 'linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: respBusy ? 'not-allowed' : 'pointer', opacity: respBusy ? 0.5 : 1 }}>
-                    {respBusy ? 'Submitting…' : '✓ Submit Response'}
+                    {respBusy ? 'Submitting…' : 'Submit Response'}
                   </button>
                 </div>
               </div>
@@ -599,9 +599,7 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Currency</label>
-                  <select value={header.currency} onChange={setH('currency')} style={{ ...INP, cursor: 'pointer' }}>
-                    {['USD','EUR','DOP','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <SearchSelect options={['USD','EUR','DOP','GBP'].map(c => ({ value: c, label: c }))} value={header.currency} onChange={v => setHeader(h => ({ ...h, currency: v }))} placeholder="Currency…" minWidth={160} />
                 </div>
               </div>
 
@@ -615,7 +613,7 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
                       <span key={s.id} className="sup-chip"
                         onClick={() => toggleSupplier(s.id)}
                         style={{ background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', borderColor: sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)', color: sel ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.45)' }}>
-                        {sel && <span style={{ fontSize: 9, fontWeight: 700 }}>✓</span>}
+                        {sel && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
                         {s.name}
                       </span>
@@ -644,10 +642,14 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
                   {lines.map((line, idx) => (
                     <tr key={idx}>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="rfq-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                          <option value="">— Catalog item —</option>
-                          {items.filter(it => it.isPurchasable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={items.filter(it => it.isPurchasable).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                          value={line.itemId}
+                          onChange={v => setLine(idx, 'itemId', v)}
+                          placeholder="Catalog item…"
+                          clearLabel="— Catalog item —"
+                          minWidth={260}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
                         <input className="rfq-inp" placeholder="Or free-text…" value={line.genericDescription} onChange={e => setLine(idx, 'genericDescription', e.target.value)} disabled={!!line.itemId} style={{ opacity: line.itemId ? 0.4 : 1 }} />
