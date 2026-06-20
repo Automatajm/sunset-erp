@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { productionPlansApi } from '@/lib/api/production-plans';
 import { itemsApi } from '@/lib/api/items';
@@ -252,7 +253,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                           <td style={{ padding: '8px 6px', width: 24 }}>
                             {isPending && (
                               <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue, #60a5fa)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {isSelected && <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>✓</span>}
+                                {isSelected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                               </div>
                             )}
                           </td>
@@ -297,7 +298,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                     </div>
                     <button onClick={handleGenerateMos} disabled={genBusy}
                       style={{ background: 'linear-gradient(135deg,#166534,#15803d,#16a34a)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: genBusy ? 'not-allowed' : 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-                      {genBusy ? 'Generating…' : '⚡ Generate MOs'}
+                      {genBusy ? 'Generating…' : 'Generate MOs'}
                     </button>
                   </div>
                 )}
@@ -392,14 +393,16 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canConfirm && (
                 <button onClick={() => handleStatus('confirmed')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✓ Confirm Plan
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Confirm Plan
                 </button>
               )}
               {detail?.status === 'in_progress' && (
                 <button onClick={() => handleStatus('completed')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✓ Mark Completed
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Mark Completed
                 </button>
               )}
               {canCancel && (
@@ -530,18 +533,11 @@ function CreatePlanModal({ open, onClose, onSaved, items, boms }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Horizon *</label>
-                  <select value={header.horizon} onChange={setH('horizon')} style={{ ...INP, cursor: 'pointer' }}>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                  </select>
+                  <SearchSelect options={[{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }]} value={header.horizon} onChange={v => setHeader(h => ({ ...h, horizon: v }))} placeholder="Horizon…" minWidth={180} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Source</label>
-                  <select value={header.source} onChange={setH('source')} style={{ ...INP, cursor: 'pointer' }}>
-                    <option value="free">Free Plan</option>
-                    <option value="from_sales_orders">Sales Orders</option>
-                  </select>
+                  <SearchSelect options={[{ value: 'free', label: 'Free Plan' }, { value: 'from_sales_orders', label: 'Sales Orders' }]} value={header.source} onChange={v => setHeader(h => ({ ...h, source: v }))} placeholder="Source…" minWidth={200} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Period Start *</label>
@@ -576,16 +572,25 @@ function CreatePlanModal({ open, onClose, onSaved, items, boms }: {
                     return (
                       <tr key={idx}>
                         <td style={{ padding: '4px 3px' }}>
-                          <select className="pp-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                            <option value="">— Select item —</option>
-                            {mfgItems.map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                          </select>
+                          <SearchSelect
+                            options={mfgItems.map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                            value={line.itemId}
+                            onChange={v => setLine(idx, 'itemId', v)}
+                            placeholder="Select item…"
+                            clearLabel="— Select item —"
+                            minWidth={260}
+                          />
                         </td>
                         <td style={{ padding: '4px 3px' }}>
-                          <select className="pp-sel" value={line.bomId} onChange={e => setLine(idx, 'bomId', e.target.value)} disabled={!line.itemId || itemBoms.length === 0}>
-                            <option value="">— Auto or select —</option>
-                            {itemBoms.map(b => <option key={b.id} value={b.id}>{b.bomNumber} v{b.version}</option>)}
-                          </select>
+                          <SearchSelect
+                            options={itemBoms.map(b => ({ value: b.id, label: `${b.bomNumber} v${b.version}` }))}
+                            value={line.bomId}
+                            onChange={v => setLine(idx, 'bomId', v)}
+                            disabled={!line.itemId || itemBoms.length === 0}
+                            placeholder="Auto or select…"
+                            clearLabel="— Auto or select —"
+                            minWidth={200}
+                          />
                         </td>
                         <td style={{ padding: '4px 3px' }}>
                           <input className="pp-inp" type="number" min="0.001" step="0.001" placeholder="0" value={line.plannedQty} onChange={e => setLine(idx, 'plannedQty', e.target.value)} style={{ textAlign: 'right' }} />
