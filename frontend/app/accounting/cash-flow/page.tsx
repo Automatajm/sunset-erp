@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { cashFlowApi } from '@/lib/api/cash-flow';
 import { CashFlowScenario } from '@/lib/api/types';
 
@@ -296,11 +297,7 @@ function CreateProjectionModal({ open, onClose, onSaved }: {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={LABEL}>Scenario *</label>
-                <select style={INPUT} value={form.scenario} onChange={set('scenario')}>
-                  <option value="optimistic">Optimistic</option>
-                  <option value="realistic">Realistic</option>
-                  <option value="pessimistic">Pessimistic</option>
-                </select>
+                <SearchSelect options={[{ value: 'optimistic', label: 'Optimistic' }, { value: 'realistic', label: 'Realistic' }, { value: 'pessimistic', label: 'Pessimistic' }]} value={form.scenario} onChange={v => setForm(f => ({ ...f, scenario: v as CashFlowScenario }))} placeholder="Scenario…" minWidth={200} />
               </div>
             </div>
 
@@ -398,10 +395,7 @@ function AddLineModal({ open, projectionId, onClose, onSaved }: {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={LABEL}>Type *</label>
-                <select style={INPUT} value={form.lineType} onChange={set('lineType')}>
-                  <option value="inflow">Inflow</option>
-                  <option value="outflow">Outflow</option>
-                </select>
+                <SearchSelect options={[{ value: 'inflow', label: 'Inflow' }, { value: 'outflow', label: 'Outflow' }]} value={form.lineType} onChange={v => setForm(f => ({ ...f, lineType: v as 'inflow' | 'outflow' }))} placeholder="Type…" minWidth={160} />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
