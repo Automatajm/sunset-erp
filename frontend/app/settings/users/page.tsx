@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import apiClient from '@/lib/api/client';
+import { ConfirmModal } from '@/components/ui/modal';
 
 // ---- Types ------------------------------------------------------------------
 
@@ -172,6 +173,8 @@ export default function UsersPage() {
   const [search,      setSearch]      = useState('');
   const [editUser,    setEditUser]    = useState<User | null | 'new'>( null);
   const [resetUser,   setResetUser]   = useState<User | null>(null);
+  // spec-frontend-002/003 — deactivating a user was unguarded.
+  const [disableUser, setDisableUser] = useState<User | null>(null);
   const [error,       setError]       = useState('');
 
   const load = useCallback(async () => {
@@ -190,11 +193,15 @@ export default function UsersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function toggleActive(user: User) {
-    try {
-      await apiClient.patch(`/users/${user.id}/${user.isActive ? 'deactivate' : 'activate'}`);
-      await load();
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Failed'); }
+  async function runToggle(user: User) {
+    await apiClient.patch(`/users/${user.id}/${user.isActive ? 'deactivate' : 'activate'}`);
+    await load();
+  }
+
+  function toggleActive(user: User) {
+    // Deactivation is destructive — guard it; activation is restorative — direct.
+    if (user.isActive) { setDisableUser(user); return; }
+    runToggle(user).catch((e: any) => setError(e?.response?.data?.message ?? 'Failed'));
   }
 
   const filtered = users.filter(u =>
@@ -299,6 +306,16 @@ export default function UsersPage() {
           onSaved={() => { setResetUser(null); load(); }}
         />
       )}
+
+      <ConfirmModal
+        open={disableUser !== null}
+        onClose={() => setDisableUser(null)}
+        title={disableUser ? `Disable ${disableUser.fullName}?` : ''}
+        description="The user will be unable to sign in until re-enabled."
+        variant="destructive"
+        confirmLabel="Disable User"
+        onConfirm={async () => { if (disableUser) await runToggle(disableUser); }}
+      />
     </div>
   );
 }
