@@ -327,7 +327,7 @@ export default function AutomationConfigPage() {
 
         {/* Alerts */}
         {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-        {success && <div style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--success, #4ade80)' }}>✓ {success}</div>}
+        {success && <div style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--success, #4ade80)' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><polyline points="20 6 9 17 4 12"/></svg><span>{success}</span></div>}
 
         {/* Toolbar */}
         <div className="auto-toolbar">
