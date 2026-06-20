@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { rfqsApi } from '@/lib/api/rfqs';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 import { PrintButton } from '@/components/print/PrintButton';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { itemsApi } from '@/lib/api/items';
@@ -111,6 +112,10 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
   const [awardMap,    setAwardMap]    = useState<Record<string, string>>({}); // rfqLineId → rfqResponseLineId
   const [awardBusy,   setAwardBusy]   = useState(false);
   const [awardError,  setAwardError]  = useState('');
+  // spec-frontend-002/003 — send & cancel were native alert()/confirm(); guard
+  // both with the shared ConfirmModal (errors absorbed inline).
+  const sendModal   = useModal();
+  const cancelModal = useModal();
 
   useEffect(() => {
     (async () => {
@@ -135,15 +140,12 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
   const handleSend = async () => {
     setActionBusy(true);
     try { await rfqsApi.send(rfq.id); onAction(); onClose(); }
-    catch (err: any) { alert(err?.response?.data?.message || 'Failed to send'); }
     finally { setActionBusy(false); }
   };
 
   const handleCancel = async () => {
-    if (!confirm('Cancel this RFQ?')) return;
     setActionBusy(true);
     try { await rfqsApi.cancel(rfq.id); onAction(); onClose(); }
-    catch (err: any) { alert(err?.response?.data?.message || 'Failed to cancel'); }
     finally { setActionBusy(false); }
   };
 
@@ -458,13 +460,13 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canSend && (
-                <button onClick={handleSend} disabled={actionBusy}
+                <button onClick={sendModal.openModal} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: '#60a5fa', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  📤 Send to Suppliers
+                  Send to Suppliers
                 </button>
               )}
               {canCancel && (
-                <button onClick={handleCancel} disabled={actionBusy}
+                <button onClick={cancelModal.openModal} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel RFQ
                 </button>
@@ -473,6 +475,25 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={sendModal.open}
+        onClose={sendModal.closeModal}
+        title={`Send RFQ ${rfq.rfqNumber ?? ''} to suppliers?`}
+        description="This issues the RFQ to the invited suppliers and opens it for responses."
+        confirmLabel="Send to Suppliers"
+        onConfirm={handleSend}
+      />
+      <ConfirmModal
+        open={cancelModal.open}
+        onClose={cancelModal.closeModal}
+        title={`Cancel RFQ ${rfq.rfqNumber ?? ''}?`}
+        description="This cancels the request for quotation. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel RFQ"
+        cancelLabel="Keep RFQ"
+        onConfirm={handleCancel}
+      />
     </div>
   );
 }
