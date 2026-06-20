@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { automationApi } from '@/lib/api/automation';
 import { ConfirmModal } from '@/components/ui/modal';
 
@@ -107,7 +108,7 @@ export default function JeQueuePage() {
     setApproving(item.id); setError(''); setSuccess('');
     try {
       await automationApi.approveQueueItem(item.id);
-      setSuccess(`✓ JE ${item.journalEntry.entryNumber} approved and posted`);
+      setSuccess(`JE ${item.journalEntry.entryNumber} approved and posted`);
       setTimeout(() => setSuccess(''), 4000);
       fetchData();
     } catch (err) {
@@ -158,16 +159,16 @@ export default function JeQueuePage() {
 
         {/* Toolbar */}
         <div style={{ display:'flex', gap:10, marginBottom:14, alignItems:'center' }}>
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none' }}
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <div style={{ width: 180 }}>
+            <SearchSelect
+              options={[{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+              clearLabel="All Status"
+              minWidth={180}
+            />
+          </div>
           <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
         </div>
 
@@ -176,7 +177,7 @@ export default function JeQueuePage() {
 
         <div className="queue-wrap">
           {loading ? <div className="queue-empty">Loading…</div>
-            : items.length === 0 ? <div className="queue-empty">{statusFilter === 'pending' ? '✓ No pending JEs — queue is clear' : 'No items found'}</div>
+            : items.length === 0 ? <div className="queue-empty">{statusFilter === 'pending' ? 'No pending JEs — queue is clear' : 'No items found'}</div>
             : (
               <>
                 <table className="queue-table">
@@ -218,12 +219,12 @@ export default function JeQueuePage() {
                               {item.status === 'pending' && (
                                 <div style={{ display:'flex', gap:4 }}>
                                   <button onClick={() => setConfirmItem(item)} disabled={isBusy}
-                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:isBusy?0.5:1 }}>
-                                    {isBusy ? '…' : '✓ Approve'}
+                                    style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:isBusy?0.5:1 }}>
+                                    {isBusy ? '…' : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Approve</>}
                                   </button>
                                   <button onClick={() => setRejectItem(item)} disabled={isBusy}
-                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--danger, #f87171)', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.15)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
-                                    ✕ Reject
+                                    style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--danger, #f87171)', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.15)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reject
                                   </button>
                                 </div>
                               )}
