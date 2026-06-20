@@ -6,6 +6,7 @@ import { arInvoicesApi, ArInvoice, ArKpis, ArAging, CreateArInvoiceDto } from '@
 import { customersApi } from '@/lib/api/customers';
 import { itemsApi } from '@/lib/api/items';
 import { PrintButton } from '@/components/print/PrintButton';
+import { ConfirmModal } from '@/components/ui/modal';
 import { Customer, Item } from '@/lib/api/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -541,6 +542,11 @@ export default function ArInvoicesPage() {
   const [createOpen,   setCreateOpen]   = useState(false);
   const [paymentInv,   setPaymentInv]   = useState<ArInvoice | null>(null);
   const [actionBusy,   setActionBusy]   = useState<string | null>(null);
+  // spec-frontend-002/003 — send (issues the invoice) and void (irreversible)
+  // were unguarded; route both through the shared ConfirmModal.
+  const [confirmAction, setConfirmAction] = useState<
+    { id: string; action: 'send' | 'void'; invoiceNumber: string } | null
+  >(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -564,7 +570,7 @@ export default function ArInvoicesPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const handleAction = async (id: string, action: 'send' | 'void') => {
+  const runAction = async (id: string, action: 'send' | 'void') => {
     setActionBusy(id);
     try {
       if (action === 'send') await arInvoicesApi.send(id);
@@ -573,7 +579,13 @@ export default function ArInvoicesPage() {
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(msg || `${action} failed`);
+      throw err; // surface inline in ConfirmModal, keep it open
     } finally { setActionBusy(null); }
+  };
+
+  const handleAction = (id: string, action: 'send' | 'void') => {
+    const inv = invoices.find(i => i.id === id);
+    setConfirmAction({ id, action, invoiceNumber: inv?.invoiceNumber ?? '' });
   };
 
   const filtered = invoices.filter(inv => {
@@ -702,6 +714,22 @@ export default function ArInvoicesPage() {
 
       <CreateInvoiceModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={fetchAll} customers={customers} items={items} />
       <PaymentModal inv={paymentInv} onClose={() => setPaymentInv(null)} onSaved={fetchAll} />
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction
+          ? (confirmAction.action === 'send'
+              ? `Send invoice ${confirmAction.invoiceNumber}?`
+              : `Void invoice ${confirmAction.invoiceNumber}?`)
+          : ''}
+        description={confirmAction?.action === 'send'
+          ? 'This issues the invoice to the customer and posts it to accounts receivable.'
+          : 'Voiding cancels this invoice and reverses its receivable. It cannot be undone.'}
+        variant={confirmAction?.action === 'void' ? 'destructive' : 'default'}
+        confirmLabel={confirmAction?.action === 'send' ? 'Send Invoice' : 'Void Invoice'}
+        onConfirm={async () => { if (confirmAction) await runAction(confirmAction.id, confirmAction.action); }}
+      />
     </ERPShell>
   );
 }
