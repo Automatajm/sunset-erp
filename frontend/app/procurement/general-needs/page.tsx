@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { generalNeedsApi } from '@/lib/api/general-needs';
 import { ConfirmModal, useModal } from '@/components/ui/modal';
@@ -237,7 +238,7 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
                         <td style={{ padding: '8px 6px', width: 24 }}>
                           {isPending && (
                             <div style={{ width: 14, height: 14, borderRadius: 4, border: `1px solid ${isSelected ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? 'var(--accent-blue, #60a5fa)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {isSelected && <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>✓</span>}
+                              {isSelected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                             </div>
                           )}
                         </td>
@@ -304,11 +305,7 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Priority</label>
-                        <select value={priority} onChange={e => setPriority(e.target.value)} style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', colorScheme: 'dark' as any }}>
-                          <option value="normal">Normal</option>
-                          <option value="urgent">Urgent</option>
-                          <option value="critical">Critical</option>
-                        </select>
+                        <SearchSelect options={[{ value: 'normal', label: 'Normal' }, { value: 'urgent', label: 'Urgent' }, { value: 'critical', label: 'Critical' }]} value={priority} onChange={setPriority} placeholder="Priority…" minWidth={180} />
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -334,8 +331,9 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
               )}
               {canComplete && (
                 <button onClick={() => handleStatus('completed')} disabled={actionBusy}
-                  style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
-                  ✓ Mark Completed
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Mark Completed
                 </button>
               )}
               {canCancel && (
@@ -478,10 +476,7 @@ function CreateGNModal({ open, onClose, onSaved, items, suppliers }: {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={LBL}>Source</label>
-                  <select value={header.source} onChange={setH('source')} style={{ ...INP, cursor: 'pointer' }}>
-                    <option value="manual">Manual</option>
-                    <option value="mrp_explode">MRP Explode</option>
-                  </select>
+                  <SearchSelect options={[{ value: 'manual', label: 'Manual' }, { value: 'mrp_explode', label: 'MRP Explode' }]} value={header.source} onChange={v => setHeader(h => ({ ...h, source: v }))} placeholder="Source…" minWidth={200} />
                 </div>
               </div>
 
@@ -507,10 +502,14 @@ function CreateGNModal({ open, onClose, onSaved, items, suppliers }: {
                   {lines.map((line, idx) => (
                     <tr key={idx}>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="gn-sel" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                          <option value="">— Catalog item —</option>
-                          {items.filter(it => it.isPurchasable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={items.filter(it => it.isPurchasable).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                          value={line.itemId}
+                          onChange={v => setLine(idx, 'itemId', v)}
+                          placeholder="Catalog item…"
+                          clearLabel="— Catalog item —"
+                          minWidth={240}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
                         <input className="gn-inp" placeholder="Or describe generic item…" value={line.genericDescription} onChange={e => setLine(idx, 'genericDescription', e.target.value)} disabled={!!line.itemId} style={{ opacity: line.itemId ? 0.4 : 1 }} />
@@ -525,10 +524,14 @@ function CreateGNModal({ open, onClose, onSaved, items, suppliers }: {
                         <input className="gn-inp" type="date" value={line.requiredDate} onChange={e => setLine(idx, 'requiredDate', e.target.value)} style={{ colorScheme: 'dark' }} />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
-                        <select className="gn-sel" value={line.suggestedSupplierId} onChange={e => setLine(idx, 'suggestedSupplierId', e.target.value)}>
-                          <option value="">— Optional —</option>
-                          {suppliers.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
-                        </select>
+                        <SearchSelect
+                          options={suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
+                          value={line.suggestedSupplierId}
+                          onChange={v => setLine(idx, 'suggestedSupplierId', v)}
+                          placeholder="Optional…"
+                          clearLabel="— Optional —"
+                          minWidth={220}
+                        />
                       </td>
                       <td style={{ padding: '4px 3px' }}>
                         <input className="gn-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.estimatedUnitCost} onChange={e => setLine(idx, 'estimatedUnitCost', e.target.value)} style={{ textAlign: 'right' }} />
