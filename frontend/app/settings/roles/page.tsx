@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import apiClient from '@/lib/api/client';
+import { ConfirmModal } from '@/components/ui/modal';
 
 // ---- Types ------------------------------------------------------------------
 
@@ -177,6 +178,7 @@ export default function RolesPage() {
   const [grouped,    setGrouped]    = useState<Record<string, Permission[]>>({});
   const [loading,    setLoading]    = useState(true);
   const [editRole,   setEditRole]   = useState<Role | null | 'new'>(null);
+  const [deleteRole, setDeleteRole] = useState<Role | null>(null);
   const [error,      setError]      = useState('');
 
   const load = useCallback(async () => {
@@ -196,12 +198,10 @@ export default function RolesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // spec-frontend-002/003 — native confirm() replaced by the shared ConfirmModal.
   async function handleDelete(role: Role) {
-    if (!confirm(`Delete role "${role.name}"? This cannot be undone.`)) return;
-    try {
-      await apiClient.delete(`/roles/${role.id}`);
-      await load();
-    } catch (e: any) { setError(e?.response?.data?.message ?? 'Delete failed'); }
+    await apiClient.delete(`/roles/${role.id}`);
+    await load();
   }
 
   return (
@@ -259,7 +259,7 @@ export default function RolesPage() {
                     {role.isSystem ? 'View' : 'Edit'}
                   </button>
                   {!role.isSystem && (
-                    <button onClick={() => handleDelete(role)} style={{ ...BTN('danger'), padding: '6px 10px', fontSize: 11 }}>Delete</button>
+                    <button onClick={() => setDeleteRole(role)} style={{ ...BTN('danger'), padding: '6px 10px', fontSize: 11 }}>Delete</button>
                   )}
                 </div>
               </div>
@@ -282,6 +282,16 @@ export default function RolesPage() {
           onSaved={() => { setEditRole(null); load(); }}
         />
       )}
+
+      <ConfirmModal
+        open={deleteRole !== null}
+        onClose={() => setDeleteRole(null)}
+        title={deleteRole ? `Delete role "${deleteRole.name}"?` : ''}
+        description="Members of this role lose its permissions. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Delete Role"
+        onConfirm={async () => { if (deleteRole) await handleDelete(deleteRole); }}
+      />
     </div>
   );
 }
