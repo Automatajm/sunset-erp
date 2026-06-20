@@ -121,10 +121,14 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
                 <input type="number" min="1" style={INPUT} value={form.stepNumber} onChange={e => setForm(f => ({ ...f, stepNumber: e.target.value }))} />
               </Field>
               <Field label="Work Center *" color="rgba(96,165,250,0.6)">
-                <select style={{ ...INPUT, cursor: 'pointer' }} value={form.workCenterId} onChange={e => setForm(f => ({ ...f, workCenterId: e.target.value }))}>
-                  <option value="">— Select —</option>
-                  {workCenters.map(wc => <option key={wc.id} value={wc.id}>{wc.code} — {wc.name}</option>)}
-                </select>
+                <SearchSelect
+                  options={workCenters.map(wc => ({ value: wc.id, label: `${wc.code} — ${wc.name}` }))}
+                  value={form.workCenterId}
+                  onChange={v => setForm(f => ({ ...f, workCenterId: v }))}
+                  placeholder="Search work center…"
+                  clearLabel="— Select —"
+                  minWidth={260}
+                />
               </Field>
             </div>
             <Field label="Description" color="rgba(96,165,250,0.6)">
@@ -198,10 +202,10 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
     <div style={{ padding: '10px 40px 16px', background: 'rgba(251,146,60,0.015)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
         <button style={TAB(tab === 'components', 'var(--accent-strong, #fb923c)')} onClick={() => setTab('components')}>
-          📋 Components ({bom.components?.length ?? bom._count?.components ?? 0})
+          Components ({bom.components?.length ?? bom._count?.components ?? 0})
         </button>
         <button style={TAB(tab === 'routing', 'var(--accent-blue, #60a5fa)')} onClick={() => setTab('routing')}>
-          ⚙ Routing ({routingSteps.length || bom._count?.routings || 0})
+          Routing ({routingSteps.length || bom._count?.routings || 0})
         </button>
         <div style={{ marginLeft: 'auto' }}>
           <PrintButton doc="bom" id={bom.id} label="Recipe Card" style={{ padding: '4px 10px', fontSize: 11 }} />
@@ -232,7 +236,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                   <td style={{ padding: '7px 12px 7px 0' }}>
                     <UomSystemBadge uom={comp.consumptionUom ?? comp.consumptionGroup?.consumptionUom} />
                     {!comp.consumptionUom && !comp.consumptionGroup?.consumptionUom && (
-                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>⚠ no configurado</span>
+                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>no configurado</span>
                     )}
                   </td>
                   <td style={{ padding: '7px 12px 7px 0', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
@@ -433,8 +437,8 @@ function BOMModal({ items, consumptionGroups, systemUoms, onClose, onSaved }: {
 
             {/* System UOM info box */}
             {systemUoms.length === 0 && (
-              <div style={{ background: 'rgba(251,191,36,0.07)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'rgba(251,191,36,0.8)', display: 'flex', gap: 8 }}>
-                <span>⚠</span>
+              <div style={{ background: 'rgba(251,191,36,0.07)', border: '0.5px solid rgba(251,191,36,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'rgba(251,191,36,0.8)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 <span>No system UOMs configured. Go to <strong>Settings → General</strong> to configure them first. The Consumption UOM column will be empty.</span>
               </div>
             )}
@@ -499,7 +503,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, onClose, onSaved }: {
                       />
                     )}
                     {cgConsUomId && cgConsUomId === c.consumptionUomId && (
-                      <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)' }}>✓ from group</span>
+                      <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)' }}>from group</span>
                     )}
                   </div>
                   {/* Scrap % */}
