@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ModalShell } from '@/components/ui/modal/ModalShell';
 import { productionOrdersApi } from '@/lib/api/production-orders';
 import { PrintButton } from '@/components/print/PrintButton';
 import { ConfirmModal } from '@/components/ui/modal';
@@ -332,7 +335,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
     <button onClick={onClick} disabled={btnLoading || !mo.bomId || !canPost}
       title={!canPost ? 'Release MO first to load suggestions' : !mo.bomId ? 'No BOM linked' : undefined}
       style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: mo.bomId && canPost ? 'pointer' : 'not-allowed', color, background: `color-mix(in srgb, ${color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 19%, transparent)`, fontFamily: "'IBM Plex Sans',sans-serif", opacity: btnLoading || !mo.bomId || !canPost ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-      {btnLoading ? '…' : `⚡ ${label}`}
+      {btnLoading ? '…' : label}
     </button>
   );
 
@@ -342,8 +345,8 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
     <div style={{ padding: '10px 40px 16px', background: 'rgba(255,255,255,0.01)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
         <button style={TAB_STYLE(tab === 'labor',     'var(--accent-violet, #a78bfa)')} onClick={() => setTab('labor')}>⏱ Labor</button>
-        <button style={TAB_STYLE(tab === 'materials', 'var(--accent-strong, #fb923c)')} onClick={() => setTab('materials')}>📦 Materials</button>
-        <button style={TAB_STYLE(tab === 'variances', 'var(--danger, #f87171)')} onClick={() => setTab('variances')}>⚠ Variances</button>
+        <button style={TAB_STYLE(tab === 'materials', 'var(--accent-strong, #fb923c)')} onClick={() => setTab('materials')}>Materials</button>
+        <button style={TAB_STYLE(tab === 'variances', 'var(--danger, #f87171)')} onClick={() => setTab('variances')}>Variances</button>
       </div>
 
       {loading ? (
@@ -420,7 +423,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button onClick={handleConfirmRoutingSuggestions} disabled={loadingRouting || routingSelected.size === 0}
                   style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: routingSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,#4c1d95,#6d28d9)', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingRouting || routingSelected.size === 0 ? 0.5 : 1 }}>
-                  {loadingRouting ? 'Adding…' : `✓ Add ${routingSelected.size} step${routingSelected.size !== 1 ? 's' : ''}`}
+                  {loadingRouting ? 'Adding…' : `Add ${routingSelected.size} step${routingSelected.size !== 1 ? 's' : ''}`}
                 </button>
                 <button onClick={() => { setRoutingSuggestions(null); setRoutingSelected(new Set()); }}
                   style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
@@ -532,7 +535,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button onClick={handleConfirmBomSuggestions} disabled={loadingBom || bomSelected.size === 0}
                   style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: bomSelected.size > 0 ? 'pointer' : 'not-allowed', color: 'white', background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c))', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingBom || bomSelected.size === 0 ? 0.5 : 1 }}>
-                  {loadingBom ? 'Adding…' : `✓ Add ${bomSelected.size} material${bomSelected.size !== 1 ? 's' : ''}`}
+                  {loadingBom ? 'Adding…' : `Add ${bomSelected.size} material${bomSelected.size !== 1 ? 's' : ''}`}
                 </button>
                 <button onClick={() => { setBomSuggestions(null); setBomSelected(new Set()); }}
                   style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
@@ -637,91 +640,114 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
   );
 }
 
-// ─── MO Row ───────────────────────────────────────────────────────────────────
+// ─── MO columns (ERPTable) ──────────────────────────────────────────────────
 
-function MORow({ mo, boms, onStatusChange, actionBusy, onOpenLabor, onOpenDeliver, onRefresh }: {
-  mo: ProductionOrder; boms: Bom[];
+function moColumns(opts: {
+  boms: Bom[];
   onStatusChange: (id: string, status: string) => void;
   actionBusy: string | null;
   onOpenLabor: (mo: ProductionOrder) => void;
   onOpenDeliver: (mo: ProductionOrder) => void;
-  onRefresh: () => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const s = PO_STATUS[mo.status];
-  const nextStatus = STATUS_FLOW[mo.status];
-  const busy = actionBusy === mo.id;
-  const pct = mo.quantityToProduce > 0 ? Math.round((mo.quantityProduced / mo.quantityToProduce) * 100) : 0;
-  const isActive = ['released', 'in_progress', 'completed'].includes(mo.status);
-
-  return (
-    <>
-      <tr style={{ cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
-        <td>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{mo.poNumber}</span>
-          </span>
-        </td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{boms.find(b => b.id === mo.bomId)?.bomNumber ?? '—'}</span></td>
-        <td style={{ textAlign: 'right' }}><span style={MONO}>{fmtNum(mo.quantityToProduce)}</span></td>
-        <td>
+}): ERPColumn<ProductionOrder>[] {
+  const { boms, onStatusChange, actionBusy, onOpenLabor, onOpenDeliver } = opts;
+  return [
+    {
+      key: 'poNumber', header: 'MO Number', width: 150, sortable: true,
+      value: r => r.poNumber,
+      render: r => <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.poNumber}</span>,
+    },
+    {
+      key: 'bom', header: 'BOM', width: 140, sortable: true,
+      value: r => boms.find(b => b.id === r.bomId)?.bomNumber ?? '',
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{boms.find(b => b.id === r.bomId)?.bomNumber ?? '—'}</span>,
+    },
+    {
+      key: 'quantityToProduce', header: 'Qty To Produce', width: 120, align: 'right', sortable: true,
+      value: r => r.quantityToProduce,
+      render: r => <span style={MONO}>{fmtNum(r.quantityToProduce)}</span>,
+    },
+    {
+      key: 'progress', header: 'Progress', width: 170, sortable: true,
+      value: r => r.quantityToProduce > 0 ? r.quantityProduced / r.quantityToProduce : 0,
+      render: r => {
+        const pct = r.quantityToProduce > 0 ? Math.round((r.quantityProduced / r.quantityToProduce) * 100) : 0;
+        return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : 'var(--text-primary, #e2dfd8)', fontSize: 11 }}>{fmtNum(mo.quantityProduced)}/{fmtNum(mo.quantityToProduce)}</span>
+            <span style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : 'var(--text-primary, #e2dfd8)', fontSize: 11 }}>{fmtNum(r.quantityProduced)}/{fmtNum(r.quantityToProduce)}</span>
             <div style={{ width: 52, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}>
               <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: pct >= 100 ? 'var(--success, #4ade80)' : 'var(--accent-strong, #fb923c)' }} />
             </div>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{pct}%</span>
           </div>
-        </td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(mo.plannedStartDate)}</span></td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(mo.plannedEndDate)}</span></td>
-        <td>{mo.priority && <span style={{ fontSize: 11, color: PRIORITY_COLOR[mo.priority] }}>{mo.priority.charAt(0).toUpperCase() + mo.priority.slice(1)}</span>}</td>
-        <td>
+        );
+      },
+    },
+    {
+      key: 'plannedStartDate', header: 'Planned Start', width: 120, sortable: true,
+      value: r => r.plannedStartDate ?? '',
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(r.plannedStartDate)}</span>,
+    },
+    {
+      key: 'plannedEndDate', header: 'Planned End', width: 120, sortable: true,
+      value: r => r.plannedEndDate ?? '',
+      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(r.plannedEndDate)}</span>,
+    },
+    {
+      key: 'priority', header: 'Priority', width: 90, sortable: true,
+      value: r => r.priority ?? '',
+      render: r => r.priority ? <span style={{ fontSize: 11, color: PRIORITY_COLOR[r.priority] }}>{r.priority.charAt(0).toUpperCase() + r.priority.slice(1)}</span> : <span style={{ color: 'rgba(255,255,255,0.25)' }}>—</span>,
+    },
+    {
+      key: 'status', header: 'Status', width: 130, sortable: true,
+      value: r => r.status,
+      render: r => {
+        const s = PO_STATUS[r.status];
+        return (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: s.color, background: s.bg, border: `0.5px solid ${s.border}`, whiteSpace: 'nowrap' }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-            {mo.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            {r.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
           </span>
-        </td>
-        <td onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        );
+      },
+    },
+    {
+      key: '_actions', header: '', width: 240, sortable: false,
+      render: r => {
+        const nextStatus = STATUS_FLOW[r.status];
+        const busy = actionBusy === r.id;
+        const isActive = ['released', 'in_progress', 'completed'].includes(r.status);
+        return (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
             {nextStatus && (
-              <button onClick={() => onStatusChange(mo.id, nextStatus)} disabled={busy}
+              <button onClick={() => onStatusChange(r.id, nextStatus)} disabled={busy}
                 style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong, #fb923c)', border: '0.5px solid rgba(251,146,60,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 {busy ? '…' : nextStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </button>
             )}
             {isActive && (
               <>
-                <button onClick={() => onOpenLabor(mo)} disabled={busy}
+                <button onClick={() => onOpenLabor(r)} disabled={busy}
                   style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: 'var(--accent-violet, #a78bfa)', border: '0.5px solid rgba(167,139,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   + Labor
                 </button>
-                <button onClick={() => onOpenDeliver(mo)} disabled={busy}
+                <button onClick={() => onOpenDeliver(r)} disabled={busy}
                   style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: 'var(--success, #4ade80)', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   Deliver FG
                 </button>
               </>
             )}
-            {mo.status !== 'completed' && mo.status !== 'cancelled' && (
-              <button onClick={() => onStatusChange(mo.id, 'cancelled')} disabled={busy}
+            {r.status !== 'completed' && r.status !== 'cancelled' && (
+              <button onClick={() => onStatusChange(r.id, 'cancelled')} disabled={busy}
                 style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(248,113,113,0.08)', color: 'var(--danger, #f87171)', border: '0.5px solid rgba(248,113,113,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1 }}>
                 Cancel
               </button>
             )}
-            <PrintButton doc="production-order" id={mo.id} label="" style={{ padding: '3px 7px' }} />
+            <PrintButton doc="production-order" id={r.id} label="" style={{ padding: '3px 7px' }} />
           </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={9} style={{ padding: 0 }}>
-            <ActualsPanel mo={mo} onRefresh={onRefresh} />
-          </td>
-        </tr>
-      )}
-    </>
-  );
+        );
+      },
+    },
+  ];
 }
 
 // ─── Create MO Modal ──────────────────────────────────────────────────────────
@@ -755,13 +781,13 @@ function MOModal({ boms, onClose, onSaved }: { boms: Bom[]; onClose: () => void;
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-              <Field label="BOM *"><select style={INPUT} value={form.bomId} onChange={set('bomId')}><option value="">— Select BOM —</option>{boms.map(b => <option key={b.id} value={b.id}>{b.bomNumber} — {b.parentItem?.name}</option>)}</select></Field>
+              <Field label="BOM *"><SearchSelect options={boms.map(b => ({ value: b.id, label: `${b.bomNumber} — ${b.parentItem?.name ?? ''}` }))} value={form.bomId} onChange={v => setForm(f => ({ ...f, bomId: v }))} placeholder="Search BOM…" clearLabel="— Select BOM —" minWidth={300} /></Field>
               <Field label="Qty To Produce *"><input style={INPUT} type="number" min="1" placeholder="100" value={form.quantityToProduce} onChange={set('quantityToProduce')} required /></Field>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <Field label="Planned Start"><input style={INPUT} type="date" value={form.plannedStartDate} onChange={set('plannedStartDate')} /></Field>
               <Field label="Planned End"><input style={INPUT} type="date" value={form.plannedEndDate} onChange={set('plannedEndDate')} /></Field>
-              <Field label="Priority"><select style={INPUT} value={form.priority} onChange={set('priority')}><option value="">— None —</option>{['low', 'medium', 'high', 'urgent'].map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}</select></Field>
+              <Field label="Priority"><SearchSelect options={['low', 'medium', 'high', 'urgent'].map(p => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))} value={form.priority} onChange={v => setForm(f => ({ ...f, priority: v as ProductionPriority | '' }))} placeholder="Priority…" clearLabel="— None —" minWidth={200} /></Field>
             </div>
             <Field label="Notes"><input style={INPUT} placeholder="Optional notes" value={form.notes} onChange={set('notes')} /></Field>
           </div>
@@ -786,6 +812,7 @@ export default function ProductionOrdersPage() {
   const [modalOpen,    setModalOpen]    = useState(false);
   const [laborMo,      setLaborMo]      = useState<ProductionOrder | null>(null);
   const [deliverMo,    setDeliverMo]    = useState<ProductionOrder | null>(null);
+  const [detailMo,     setDetailMo]     = useState<ProductionOrder | null>(null);
   const [actionBusy,   setActionBusy]   = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
@@ -817,6 +844,11 @@ export default function ProductionOrdersPage() {
     status === 'cancelled' ? setConfirmCancelId(id) : handleStatusChange(id, status);
 
   const counts = Object.keys(PO_STATUS).reduce((acc, s) => ({ ...acc, [s]: list.filter(o => o.status === s).length }), {} as Record<string, number>);
+
+  const columns = useMemo(
+    () => moColumns({ boms, onStatusChange, actionBusy, onOpenLabor: setLaborMo, onOpenDeliver: setDeliverMo }),
+    [boms, actionBusy],
+  );
 
   return (
     <ERPShell breadcrumbs={['Home', 'Manufacturing', 'Production Orders']} title="Production Orders">
@@ -860,40 +892,44 @@ export default function ProductionOrdersPage() {
           </div>
         )}
         <div className="mo-toolbar">
-          <select className="mo-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as ProductionOrderStatus | '')}>
-            <option value="">All Status</option>
-            {(Object.keys(PO_STATUS) as ProductionOrderStatus[]).map(s => <option key={s} value={s}>{s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
-          </select>
+          <SearchSelect
+            options={(Object.keys(PO_STATUS) as ProductionOrderStatus[]).map(s => ({ value: s, label: s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) }))}
+            value={statusFilter}
+            onChange={v => setStatusFilter(v as ProductionOrderStatus | '')}
+            placeholder="All Status"
+            clearLabel="All Status"
+            minWidth={200}
+          />
           <button className="mo-btn-new" onClick={() => setModalOpen(true)}>
             <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" /></svg>
             New Production Order
           </button>
         </div>
         {error && <div className="mo-error">{error}</div>}
-        <div className="mo-wrap">
-          {loading ? <div className="mo-loading">Loading…</div>
-            : filtered.length === 0 ? <div className="mo-empty">{statusFilter ? 'No orders match.' : 'No production orders yet.'}</div>
-            : (
-              <>
-                <table className="mo-table">
-                  <thead>
-                    <tr>{['MO Number', 'BOM', 'Qty To Produce', 'Progress', 'Planned Start', 'Planned End', 'Priority', 'Status', ''].map(h => <th key={h}>{h}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(mo => (
-                      <MORow key={mo.id} mo={mo} boms={boms} onStatusChange={onStatusChange} actionBusy={actionBusy} onOpenLabor={setLaborMo} onOpenDeliver={setDeliverMo} onRefresh={fetchOrders} />
-                    ))}
-                  </tbody>
-                </table>
-                <div className="mo-footer">{filtered.length} of {list.length} order{list.length !== 1 ? 's' : ''}</div>
-              </>
-            )}
-        </div>
+        <ERPTable<ProductionOrder>
+          columns={columns}
+          data={filtered}
+          rowKey={r => r.id}
+          loading={loading}
+          exportFilename="production-orders"
+          emptyMessage={statusFilter ? 'No orders match.' : 'No production orders yet.'}
+          defaultPageSize={25}
+          onRowClick={r => setDetailMo(r)}
+        />
       </div>
 
       {modalOpen  && <MOModal    boms={boms} onClose={() => setModalOpen(false)}  onSaved={fetchOrders} />}
       {laborMo    && <LaborModal mo={laborMo}   onClose={() => setLaborMo(null)}   onSaved={fetchOrders} />}
       {deliverMo  && <DeliverModal mo={deliverMo} onClose={() => setDeliverMo(null)} onSaved={fetchOrders} />}
+
+      <ModalShell
+        open={!!detailMo}
+        onClose={() => setDetailMo(null)}
+        title={detailMo ? `${detailMo.poNumber} — Actuals` : ''}
+        width={920}
+      >
+        {detailMo && <ActualsPanel mo={detailMo} onRefresh={fetchOrders} />}
+      </ModalShell>
 
       <ConfirmModal
         open={!!confirmCancelId}
