@@ -234,17 +234,14 @@ function InlineEdit({ value, onSave, type = 'text', suffix = '', min, step, widt
   };
 
   if (editing && type === 'select' && options) return (
-    <select
-      ref={inputRef as any}
+    <SearchSelect
+      options={options.map(o => ({ value: o, label: o }))}
       value={draft}
-      onChange={e => { setDraft(e.target.value); save(e.target.value); }}
-      onBlur={() => setEditing(false)}
-      onKeyDown={onKey}
-      style={{ ...inputStyle, cursor: 'pointer' }}
-    >
-      <option value="">—</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
+      onChange={v => { setDraft(v); save(v); setEditing(false); }}
+      placeholder="—"
+      clearLabel="—"
+      minWidth={160}
+    />
   );
 
   if (editing) return (
@@ -292,11 +289,13 @@ function RatingEdit({ value, onSave }: { value?: number | null; onSave: (v: numb
       {[1, 2, 3, 4, 5].map(n => {
         const filled = hover != null ? n <= hover : value != null && n <= Number(value);
         return (
-          <span key={n} onClick={() => save(n)}
+          <svg key={n} onClick={() => save(n)}
             onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(null)}
-            style={{ fontSize: 13, cursor: 'pointer', color: filled ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.15)', lineHeight: 1, userSelect: 'none', transition: 'color 0.1s' }}>
-            ★
-          </span>
+            width="13" height="13" viewBox="0 0 24 24"
+            fill={filled ? 'var(--warning, #fbbf24)' : 'none'} stroke={filled ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.2)'} strokeWidth="1.5" strokeLinejoin="round"
+            style={{ cursor: 'pointer', flexShrink: 0, transition: 'all 0.1s' }}>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
         );
       })}
       {value != null && (
@@ -755,24 +754,18 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
                   ?
                 </button>
               </div>
-              <select value={incoterm} onChange={e => setIncoterm(e.target.value)} style={SEL}>
-                <option value="">—</option>
-                {INCOTERMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <SearchSelect options={INCOTERMS.map(t => ({ value: t, label: t }))} value={incoterm} onChange={setIncoterm} placeholder="Search incoterm…" clearLabel="—" minWidth={180} />
             </div>
             <div>
               <label style={LBL}>Payment Terms</label>
-              <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} style={SEL}>
-                <option value="">—</option>
-                {PAYMENT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <SearchSelect options={PAYMENT_TERMS.map(t => ({ value: t, label: t }))} value={paymentTerms} onChange={setPaymentTerms} placeholder="Search terms…" clearLabel="—" minWidth={200} />
             </div>
           </div>
 
           {/* Preferred toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: isPreferred ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 7, cursor: 'pointer' }} onClick={() => setIsPreferred(p => !p)}>
             <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${isPreferred ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.2)'}`, background: isPreferred ? 'var(--success, #4ade80)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
-              {isPreferred && <span style={{ fontSize: 11, color: 'var(--bg, #0a0712)', fontWeight: 700 }}>✓</span>}
+              {isPreferred && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--bg, #0a0712)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
             </div>
             <div>
               <div style={{ fontSize: 12, color: isPreferred ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.6)', fontWeight: isPreferred ? 600 : 400 }}>Set as preferred supplier for this item</div>
