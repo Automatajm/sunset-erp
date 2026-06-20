@@ -7,6 +7,7 @@ import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/compo
 import { productionPlansApi } from '@/lib/api/production-plans';
 import { itemsApi } from '@/lib/api/items';
 import { bomApi } from '@/lib/api/bom';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
   const [genBusy,     setGenBusy]     = useState(false);
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [error,       setError]       = useState('');
+  const [notice,      setNotice]      = useState('');
+  const cancelModal = useModal();
 
   useEffect(() => {
     (async () => {
@@ -115,16 +118,17 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
       onAction(); onClose();
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to update status');
+      throw err; // surface inline in ConfirmModal, keep it open
     } finally { setActionBusy(false); }
   };
 
   const handleGenerateMos = async () => {
-    setGenBusy(true); setError('');
+    setGenBusy(true); setError(''); setNotice('');
     try {
       const lineIds = selectedLines.size > 0 ? Array.from(selectedLines) : undefined;
       const result  = await productionPlansApi.generateMos(plan.id, lineIds);
       setError('');
-      alert(`✅ ${result.message}`);
+      setNotice(result.message);
       onAction();
       // Refresh detail
       const [d, a] = await Promise.all([
@@ -197,6 +201,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+            {notice && <div style={{ background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#4ade80' }}>{notice}</div>}
 
             {/* Info cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -398,7 +403,7 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
                 </button>
               )}
               {canCancel && (
-                <button onClick={() => handleStatus('cancelled')} disabled={actionBusy}
+                <button onClick={cancelModal.openModal} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel Plan
                 </button>
@@ -407,6 +412,17 @@ function PlanDetailDrawer({ plan, onClose, onAction }: {
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={cancelModal.open}
+        onClose={cancelModal.closeModal}
+        title={`Cancel plan ${plan.planNumber ?? ''}?`}
+        description="This cancels the production plan and its pending lines. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel Plan"
+        cancelLabel="Keep Plan"
+        onConfirm={() => handleStatus('cancelled')}
+      />
     </div>
   );
 }
