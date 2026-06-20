@@ -1,8 +1,18 @@
 # spec-ux-foundation — UX Foundation & Frontend Reconstruction Roadmap
 
-> Status: **Draft (awaiting review)**
+> Status: **Complete — roadmap fully shipped (F0 + tiers 2–7)**
 > Author: audit run 2026-06-20
 > Scope: all 52 pages in `frontend/app/`, all 38 components in `frontend/components/`
+>
+> **Completion (2026-06-20):** F0 token layer + all six reconstruction tiers shipped, each
+> with its own sub-spec in `specs/completed/`:
+> [[spec-ux-t2-master-data]] (7) · [[spec-ux-t3-procurement]] (8) · [[spec-ux-t4-manufacturing]] (4)
+> · [[spec-ux-t5-sales]] (3) · [[spec-ux-t6-finance]] (8) · [[spec-ux-t7-config]] (6).
+> 36 pages reconstructed across 45 commits. Net result: every page wraps `ERPShell`; lists use
+> `ERPTable`/`ERPTreeTable`; FK/enum dropdowns use `SearchSelect` (zero page-level raw `<select>`);
+> create/edit uses `FormModal`; destructive actions use `ConfirmModal`; no pictographic emoji;
+> all colors on `var(--token, #hex)`. **Deferred (own specs):** budgets roll-forward automation;
+> the F0 long-tail-hex codemod (319 grays/alpha/one-offs); i18n of residual Spanish strings in bom/boms.
 
 ## Problem
 
