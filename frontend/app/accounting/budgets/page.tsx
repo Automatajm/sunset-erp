@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
 import { budgetsApi } from '@/lib/api/budgets';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 import { chartOfAccountsApi } from '@/lib/api/chart-of-accounts';
 import { Account, BudgetStatus } from '@/lib/api/types';
 
@@ -298,6 +299,8 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
   const [mrpOpen,     setMrpOpen]     = useState(false);
   const [approving,   setApproving]   = useState(false);
   const [error,       setError]       = useState('');
+  // spec-frontend-002/003 — approve is irreversible; guard with ConfirmModal.
+  const approveModal = useModal();
 
   const loadVsActual = async () => {
     setLoadingVA(true);
@@ -307,9 +310,12 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
   };
 
   const handleApprove = async () => {
-    setApproving(true);
+    setApproving(true); setError('');
     try { await budgetsApi.approve(budget.id); onRefresh(); }
-    catch (err) { setError((err as any).response?.data?.message || 'Approval failed.'); }
+    catch (err) {
+      setError((err as any).response?.data?.message || 'Approval failed.');
+      throw err; // surface inline in ConfirmModal, keep it open
+    }
     finally { setApproving(false); }
   };
 
@@ -339,7 +345,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               + Add Line
             </button>
-            <button onClick={handleApprove} disabled={approving || budget.budgetLines.length === 0}
+            <button onClick={approveModal.openModal} disabled={approving || budget.budgetLines.length === 0}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '0.5px solid rgba(74,222,128,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: (approving || budget.budgetLines.length === 0) ? 0.5 : 1 }}>
               {approving ? 'Approving...' : 'Approve'}
             </button>
@@ -406,6 +412,15 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
 
       {mrpOpen && <MrpModal budget={budget} onClose={() => setMrpOpen(false)} onSaved={onRefresh} />}
       <AddLineModal open={addLineOpen} onClose={() => setAddLineOpen(false)} onSaved={onRefresh} budgetId={budget.id} accounts={accounts} />
+
+      <ConfirmModal
+        open={approveModal.open}
+        onClose={approveModal.closeModal}
+        title={`Approve budget ${budget.budgetCode}?`}
+        description="Once approved, the budget is locked and its lines can no longer be edited. This cannot be undone."
+        confirmLabel="Approve Budget"
+        onConfirm={handleApprove}
+      />
     </div>
   );
 }
