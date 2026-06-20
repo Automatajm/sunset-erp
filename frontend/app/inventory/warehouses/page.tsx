@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
 import { warehousesApi } from '@/lib/api/warehouses';
@@ -107,17 +108,17 @@ function CapacityPanel({ w }: { w: WarehouseEnriched }) {
       <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Capacity:</span>
       {w.capacityKg !== null && (
         <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(167,139,250,0.08)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--accent-violet, #a78bfa)', fontFamily:"'IBM Plex Mono',monospace" }}>
-          ⚖ {w.capacityKg.toLocaleString()} kg
+          {w.capacityKg.toLocaleString()} kg
         </span>
       )}
       {w.capacityLtr !== null && (
         <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(96,165,250,0.08)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--accent-blue, #60a5fa)', fontFamily:"'IBM Plex Mono',monospace" }}>
-          🧴 {w.capacityLtr.toLocaleString()} L
+          {w.capacityLtr.toLocaleString()} L
         </span>
       )}
       {w.capacityPallets !== null && (
         <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(251,191,36,0.08)', border:'0.5px solid rgba(251,191,36,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--warning, #fbbf24)', fontFamily:"'IBM Plex Mono',monospace" }}>
-          📦 {w.capacityPallets.toLocaleString()} plt
+          {w.capacityPallets.toLocaleString()} plt
         </span>
       )}
       {w.occupancyPct !== null && (
@@ -151,7 +152,7 @@ function InlineForm({ fields, values, onChange, onSave, onCancel, saving, error,
           <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:3 }}>
             <label style={LBL}>{f.label}</label>
             {f.options
-              ? <select style={INP} value={values[f.key] ?? ''} onChange={e => onChange(f.key, e.target.value)}>{f.options.map(o => <option key={o} value={o}>{o}</option>)}</select>
+              ? <SearchSelect options={f.options.map(o => ({ value: o, label: o }))} value={values[f.key] ?? ''} onChange={v => onChange(f.key, v)} placeholder={f.label} clearLabel={`All ${f.label.toLowerCase()}`} minWidth={200} />
               : <input style={INP} type={f.type ?? 'text'} placeholder={f.placeholder ?? ''} value={values[f.key] ?? ''} onChange={e => onChange(f.key, e.target.value)} />
             }
           </div>
@@ -323,7 +324,7 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
     <div style={{ display:'flex', gap:4, marginLeft:'auto', opacity:0, transition:'opacity 0.15s' }} className="loc-actions">
       {canAddChild && childLevel && <button style={BTN_ADD} onClick={e => { e.stopPropagation(); startAdd(id, childLevel); }} type="button">+ {childLabel}</button>}
       <button style={BTN_EDIT} onClick={e => { e.stopPropagation(); startEdit(id, level, editDefaults); }} type="button">Edit</button>
-      <button style={BTN_DEL}  onClick={e => { e.stopPropagation(); handleDelete(id, level); }} type="button">✕</button>
+      <button style={BTN_DEL}  onClick={e => { e.stopPropagation(); handleDelete(id, level); }} type="button" aria-label="Delete"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ display: 'block' }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
   );
 
@@ -618,9 +619,13 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                       <input style={FINP} value={initial?.code ?? 'Auto (WH-TYPE-NNN)'} disabled readOnly />
                     </div>
                     <div className="wm-field"><label style={FLBL}>Type</label>
-                      <select style={FINP} value={form.warehouseType} onChange={e => setForm(f=>({...f, warehouseType:e.target.value as any}))}>
-                        {WH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                      </select>
+                      <SearchSelect
+                        options={WH_TYPES.map(t => ({ value: t.value, label: t.label }))}
+                        value={form.warehouseType ?? ''}
+                        onChange={v => setForm(f => ({ ...f, warehouseType: v as any }))}
+                        placeholder="Select type…"
+                        minWidth={240}
+                      />
                     </div>
                   </div>
                   <div className="wm-field"><label style={FLBL}>Name *</label><input style={FINP} placeholder="Main Warehouse" value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))} required /></div>
