@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import apiClient from '@/lib/api/client';
 import { ConfirmModal } from '@/components/ui/modal';
 
@@ -85,9 +86,7 @@ function TenantSelect({ label, value, onChange, options }: SelectProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label style={LABEL_S}>{label}</label>
-      <select style={{ ...INPUT, cursor: 'pointer' }} value={value} onChange={e => onChange(e.target.value)}>
-        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-      </select>
+      <SearchSelect options={options.map(o => ({ value: o.v, label: o.l }))} value={value} onChange={onChange} placeholder={label} minWidth={220} />
     </div>
   );
 }
@@ -416,7 +415,7 @@ export default function TenantsPage() {
         <div className="tm-detail">
           {!selected ? (
             <div className="tm-empty">
-              <span style={{ fontSize: 28 }}>🏢</span>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9.01"/><line x1="9" y1="12" x2="9" y2="12.01"/><line x1="9" y1="15" x2="9" y2="15.01"/></svg>
               <span>Select a tenant to view details</span>
             </div>
           ) : detailLoad ? (
