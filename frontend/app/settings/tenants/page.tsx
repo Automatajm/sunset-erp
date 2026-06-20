@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ERPShell from '@/components/layout/ERPShell';
 import apiClient from '@/lib/api/client';
+import { ConfirmModal } from '@/components/ui/modal';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface TenantUser {
@@ -293,6 +294,8 @@ export default function TenantsPage() {
   const [modal,      setModal]      = useState<'create' | 'edit' | null>(null);
   const [addUser,    setAddUser]    = useState(false);
   const [search,     setSearch]     = useState('');
+  // spec-frontend-002/003 — removing a user from a tenant was unguarded.
+  const [removeUser, setRemoveUser] = useState<{ id: string; fullName: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -317,10 +320,8 @@ export default function TenantsPage() {
 
   const handleRemoveUser = async (userId: string) => {
     if (!selected) return;
-    try {
-      await apiClient.delete(`/tenants/${selected.id}/users/${userId}`);
-      loadDetail(selected.id);
-    } catch {}
+    await apiClient.delete(`/tenants/${selected.id}/users/${userId}`);
+    loadDetail(selected.id);
   };
 
   const handleToggleDefault = async (tenantId: string, userId: string, isDefault: boolean) => {
@@ -513,7 +514,7 @@ export default function TenantsPage() {
                             {u.isDefault ? 'Unset Default' : 'Set Default'}
                           </button>
                           <button
-                            onClick={() => handleRemoveUser(u.id)}
+                            onClick={() => setRemoveUser({ id: u.id, fullName: u.fullName })}
                             style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: '#f87171', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                             Remove
                           </button>
@@ -527,6 +528,16 @@ export default function TenantsPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={removeUser !== null}
+        onClose={() => setRemoveUser(null)}
+        title={removeUser ? `Remove ${removeUser.fullName} from this tenant?` : ''}
+        description="The user loses access to this tenant. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Remove User"
+        onConfirm={async () => { if (removeUser) await handleRemoveUser(removeUser.id); }}
+      />
     </ERPShell>
   );
 }
