@@ -214,7 +214,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
         bom.components && bom.components.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['#', 'Consumption Group', 'Qty Per', 'UOM (formulador)', 'Cons. UOM (MRP)', 'Scrap %', 'Phantom'].map(h => (
+              <tr>{['#', 'Consumption Group', 'Qty Per', 'UOM (free)', 'Cons. UOM (MRP)', 'Scrap %', 'Phantom'].map(h => (
                 <th key={h} style={{ padding: '6px 12px 6px 0', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
               ))}</tr>
             </thead>
@@ -229,12 +229,12 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                   <td style={{ padding: '7px 12px 7px 0', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{comp.quantityPer}</td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono',monospace" }}>{comp.uom}</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>libre</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>free</span>
                   </td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
                     <UomSystemBadge uom={comp.consumptionUom ?? comp.consumptionGroup?.consumptionUom} />
                     {!comp.consumptionUom && !comp.consumptionGroup?.consumptionUom && (
-                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>no configurado</span>
+                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>not configured</span>
                     )}
                   </td>
                   <td style={{ padding: '7px 12px 7px 0', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
@@ -346,7 +346,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
 interface CompRow {
   consumptionGroupId: string;
   quantityPer: string;
-  uom: string;              // formulador libre
+  uom: string;              // free UOM (formulator entry)
   consumptionUomId: string; // system UOM — auto-filled from group
   scrapPercent: string;
 }
@@ -375,7 +375,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
         const cg = consumptionGroups.find(x => x.id === v) as any;
         if (cg) {
           updated.consumptionUomId = cg.consumptionUomId ?? '';
-          updated.uom = ''; // reset formulador UOM — must match new group's dimension
+          updated.uom = ''; // reset free UOM — must match new group's dimension
         }
       }
       return updated;
@@ -469,7 +469,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
 
             {/* Components table header */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 70px 24px', gap: 6 }}>
-              {['Consumption Group', 'Qty Per *', 'UOM Formulador', 'Cons. UOM (MRP)', 'Scrap %', ''].map(h => (
+              {['Consumption Group', 'Qty Per *', 'UOM (free)', 'Cons. UOM (MRP)', 'Scrap %', ''].map(h => (
                 <span key={h} style={{ fontSize: 10, color: 'rgba(251,146,60,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 0' }}>{h}</span>
               ))}
             </div>
@@ -480,7 +480,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
               const cgConsUom = selCg?.consumptionUom ?? null;
               const cgType = cgConsUom?.type ?? null;
 
-              // UOM formulador restringido a la misma dimensión del grupo
+              // free UOM restricted to the group's dimension
               const filteredUomOpts = cgType
                 ? allUomOpts.filter(u => allUoms.find(x => x.id === u.value)?.type === cgType)
                 : allUomOpts;
@@ -504,36 +504,36 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
                     type="number" min="0" step="0.001" placeholder="1"
                     value={c.quantityPer} onChange={e => setComp(idx, 'quantityPer', e.target.value)} />
 
-                  {/* UOM formulador — SearchSelect filtrado por dimensión del grupo */}
+                  {/* free UOM — SearchSelect filtered by the group's dimension */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <SearchSelect
                       options={filteredUomOpts}
                       value={c.uom}
                       onChange={v => setComp(idx, 'uom', v)}
-                      placeholder={cgType ? `UOM (${cgType})…` : 'Selecciona grupo primero…'}
+                      placeholder={cgType ? `UOM (${cgType})…` : 'Select a group first…'}
                       clearLabel="— UOM —"
                       minWidth={140}
                     />
                     {!cgType && (
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>Selecciona un grupo para ver UOMs disponibles</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>Select a group to see available UOMs</span>
                     )}
                     {cgType && filteredUomOpts.length === 0 && (
-                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.5)' }}>No hay UOMs de tipo {cgType}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.5)' }}>No {cgType} UOMs available</span>
                     )}
                   </div>
 
-                  {/* Cons. UOM — BLOQUEADO, auto-fill del grupo */}
+                  {/* Cons. UOM — LOCKED, auto-filled from the group */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, minHeight: 34 }}>
                     {cgConsUom ? (
                       <>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: UOM_COLOR[cgConsUom.type] ?? 'var(--text-primary, #e2dfd8)', flexShrink: 0 }} />
                         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: UOM_COLOR[cgConsUom.type] ?? 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{cgConsUom.code}</span>
                         <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{cgConsUom.name}</span>
-                        <span style={{ fontSize: 9, color: 'rgba(74,222,128,0.5)', marginLeft: 'auto' }}>grupo</span>
+                        <span style={{ fontSize: 9, color: 'rgba(74,222,128,0.5)', marginLeft: 'auto' }}>group</span>
                       </>
                     ) : (
                       <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
-                        {c.consumptionGroupId ? 'grupo sin UOM' : '— selecciona grupo —'}
+                        {c.consumptionGroupId ? 'group has no UOM' : '— select a group —'}
                       </span>
                     )}
                   </div>
@@ -557,9 +557,9 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
 
             {/* Legend */}
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', lineHeight: 1.7, background: 'rgba(255,255,255,0.02)', borderRadius: 7, padding: '8px 12px', border: '0.5px solid rgba(255,255,255,0.05)' }}>
-              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>Consumption Group</strong> — representa la necesidad genérica de producción (ej: "Adhesivo Industrial KG"). Agrupa todos los items de compra que satisfacen esa necesidad.<br />
-              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>UOM libre</strong> — el formulador expresa la cantidad en cualquier unidad (GAL, KG, PCS, etc.).<br />
-              <strong style={{ color: 'var(--success, #4ade80)' }}>Cons. UOM</strong> — unidad de sistema. MRP convierte la UOM libre → Cons. UOM para agregar la demanda total del grupo.
+              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>Consumption Group</strong> — represents the generic production need (e.g. "Industrial Adhesive KG"). Groups all purchasable items that satisfy that need.<br />
+              <strong style={{ color: 'rgba(255,255,255,0.4)' }}>Free UOM</strong> — the formulator expresses the quantity in any unit (GAL, KG, PCS, etc.).<br />
+              <strong style={{ color: 'var(--success, #4ade80)' }}>Cons. UOM</strong> — system unit. MRP converts the free UOM → Cons. UOM to aggregate the group's total demand.
             </div>
           </div>
 
