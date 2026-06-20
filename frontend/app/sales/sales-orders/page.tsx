@@ -1,7 +1,15 @@
 "use client";
-
-import { useEffect, useState, useCallback } from 'react';
+// ============================================================================
+// frontend/app/sales/sales-orders/page.tsx
+// spec-ux-t5-sales T5.2 — ERPTable + ERPFilterBar + FormModal + SearchSelect + ConfirmModal.
+// Expandable-row detail → row-click ModalShell.
+// ============================================================================
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { FormModal } from '@/components/ui/modal/FormModal';
+import { ModalShell } from '@/components/ui/modal/ModalShell';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
 import { customersApi } from '@/lib/api/customers';
 import { itemsApi } from '@/lib/api/items';
@@ -9,80 +17,46 @@ import { PrintButton } from '@/components/print/PrintButton';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Customer, Item, SOStatus } from '@/lib/api/types';
 
-// ─── Real backend types ───────────────────────────────────────────────────────
-
+// ─── Types ──────────────────────────────────────────────────────────────────
 interface SOLine {
-  id: string;
-  lineNumber: number;
-  itemId: string;
+  id: string; lineNumber: number; itemId: string;
   item?: { id: string; code: string; name: string; baseUom: string };
-  description?: string;
-  orderedQuantity: string;
-  shippedQuantity: string;
-  uom: string;
-  unitPrice: string;
-  discountPercent: string;
-  lineTotal: string;
-  deliveryDate?: string;
-  status: string;
+  description?: string; orderedQuantity: string; shippedQuantity: string; uom: string;
+  unitPrice: string; discountPercent: string; lineTotal: string; deliveryDate?: string; status: string;
 }
-
 interface SO {
-  id: string;
-  soNumber: string;
-  customerId: string;
+  id: string; soNumber: string; customerId: string;
   customer?: { id: string; code: string; name: string };
-  orderDate: string;
-  customerPo?: string;
-  requestedDate?: string;
-  promisedDate?: string;
-  paymentTerms?: string;
-  currency?: string;
-  subtotal: string;
-  discountAmount: string;
-  taxAmount: string;
-  total: string;
-  status: SOStatus;
-  notes?: string;
-  lines?: SOLine[];
-  _count?: { lines: number };
-  createdAt: string;
+  orderDate: string; customerPo?: string; requestedDate?: string; promisedDate?: string;
+  paymentTerms?: string; currency?: string; subtotal: string; discountAmount: string;
+  taxAmount: string; total: string; status: SOStatus; notes?: string;
+  lines?: SOLine[]; _count?: { lines: number }; createdAt: string;
 }
-
 interface NewSOLine {
-  itemId: string;
-  description: string;
-  orderedQuantity: string;
-  uom: string;
-  unitPrice: string;
-  discountPercent: string;
-  deliveryDate: string;
+  itemId: string; description: string; orderedQuantity: string; uom: string;
+  unitPrice: string; discountPercent: string; deliveryDate: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function extractList(data: unknown): SO[] {
   if (Array.isArray(data)) return data as SO[];
   const d = data as Record<string, unknown>;
   if (d?.value && Array.isArray(d.value)) return d.value as SO[];
   return [];
 }
-
 function fmtAmt(v: string | number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(v));
 }
-
 function fmtDate(d?: string) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.CSSProperties;
+const EMPTY_LINE: NewSOLine = { itemId: '', description: '', orderedQuantity: '', uom: '', unitPrice: '', discountPercent: '0', deliveryDate: '' };
+const ALL_STATUSES: SOStatus[] = ['draft', 'confirmed', 'shipped', 'delivered', 'closed'];
 
-const EMPTY_LINE: NewSOLine = {
-  itemId: '', description: '', orderedQuantity: '', uom: '',
-  unitPrice: '', discountPercent: '0', deliveryDate: '',
-};
-
-// ─── Status config ────────────────────────────────────────────────────────────
+const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
 const STATUS_STYLE: Record<SOStatus, { color: string; bg: string; border: string }> = {
   draft:     { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
@@ -91,8 +65,6 @@ const STATUS_STYLE: Record<SOStatus, { color: string; bg: string; border: string
   delivered: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
   closed:    { color: 'rgba(255,255,255,0.35)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' },
 };
-
-// Status workflow: what actions are available per status
 const STATUS_ACTIONS: Record<SOStatus, { label: string; next: string; color: string; bg: string; border: string }[]> = {
   draft:     [{ label: 'Confirm', next: 'confirmed', color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' }],
   confirmed: [{ label: 'Ship',    next: 'shipped',   color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' }],
@@ -104,399 +76,210 @@ const STATUS_ACTIONS: Record<SOStatus, { label: string; next: string; color: str
 function StatusBadge({ status }: { status: SOStatus }) {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.draft;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-      color: s.color, background: s.bg, border: `0.5px solid ${s.border}`,
-      whiteSpace: 'nowrap',
-    }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: s.color, background: s.bg, border: `0.5px solid ${s.border}`, whiteSpace: 'nowrap' }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
 
-// ─── SO row with expandable detail ───────────────────────────────────────────
-
-function SORow({ so, onStatusChange, actionBusy }: {
-  so: SO;
-  onStatusChange: (id: string, status: string) => void;
-  actionBusy: string | null;
-}) {
-  const [expanded, setExpanded] = useState(false);
+// ─── Detail modal (lines) ─────────────────────────────────────────────────────
+function SODetailModal({ so, onClose }: { so: SO | null; onClose: () => void }) {
   const [detail, setDetail] = useState<SO | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const busy = actionBusy === so.id;
-  const lineCount = so._count?.lines ?? so.lines?.length ?? 0;
-  const actions = STATUS_ACTIONS[so.status] ?? [];
+  const [loading, setLoading] = useState(false);
 
-  const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.CSSProperties;
+  useEffect(() => {
+    if (!so) { setDetail(null); return; }
+    setLoading(true);
+    salesOrdersApi.getById(so.id).then(d => setDetail(d as SO)).finally(() => setLoading(false));
+  }, [so]);
 
-  const handleExpand = async () => {
-    if (!expanded && !detail) {
-      setLoadingDetail(true);
-      try {
-        const d = await salesOrdersApi.getById(so.id);
-        setDetail(d as SO);
-      } finally { setLoadingDetail(false); }
-    }
-    setExpanded(e => !e);
-  };
+  const TH = (h: string, right = false) =>
+    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>{h}</th>;
 
   return (
-    <>
-      <tr style={{ cursor: 'pointer' }} onClick={handleExpand}>
-        <td>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
-            <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{so.soNumber}</span>
-          </span>
-        </td>
-        <td>
-          <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{so.customer?.name ?? '—'}</span>
-          {so.customerPo && <div style={{ fontSize: 11, color: 'rgba(251,146,60,0.55)', marginTop: 1 }}>PO: {so.customerPo}</div>}
-        </td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(so.orderDate)}</span></td>
-        <td><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(so.promisedDate)}</span></td>
-        <td><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{lineCount} line{lineCount !== 1 ? 's' : ''}</span></td>
-        <td style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(so.total)}</span>
-        </td>
-        <td><span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{so.currency ?? 'USD'}</span></td>
-        <td><StatusBadge status={so.status} /></td>
-        <td onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-            {actions.map(action => (
-              <button
-                key={action.next}
-                onClick={() => onStatusChange(so.id, action.next)}
-                disabled={busy}
-                style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: action.color, background: action.bg, border: `0.5px solid ${action.border}`, fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1, whiteSpace: 'nowrap' }}
-              >
-                {busy ? '…' : action.label}
-              </button>
+    <ModalShell open={!!so} onClose={onClose} title={so ? `${so.soNumber} — Lines` : ''} width={860}>
+      {loading ? (
+        <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading lines…</div>
+      ) : detail?.lines ? (
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>{TH('#')}{TH('Item')}{TH('Description')}{TH('Ordered', true)}{TH('Shipped', true)}{TH('UOM')}{TH('Unit Price', true)}{TH('Disc%', true)}{TH('Line Total', true)}{TH('Delivery')}</tr>
+          </thead>
+          <tbody>
+            {detail.lines.map(line => (
+              <tr key={line.id}>
+                <td style={{ padding: '7px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                <td style={{ padding: '7px 10px' }}><span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span> <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{line.item?.name}</span></td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{line.orderedQuantity}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' }}>{line.shippedQuantity}</td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(line.deliveryDate)}</td>
+              </tr>
             ))}
-            <PrintButton doc="sales-order" id={so.id} label="" style={{ padding: '4px 7px' }} />
-          </div>
-        </td>
-      </tr>
-
-      {expanded && (
-        <tr>
-          <td colSpan={9} style={{ padding: 0, background: 'rgba(96,165,250,0.01)' }}>
-            {loadingDetail ? (
-              <div style={{ padding: '16px 40px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading lines…</div>
-            ) : detail?.lines ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {['#', 'Item', 'Description', 'Ordered', 'Shipped', 'UOM', 'Unit Price', 'Disc%', 'Line Total', 'Delivery'].map(h => (
-                      <th key={h} style={{ padding: '6px 14px 6px ' + (h === '#' ? '40px' : '14px'), fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Ordered','Shipped','Unit Price','Disc%','Line Total'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.lines.map(line => (
-                    <tr key={line.id}>
-                      <td style={{ padding: '7px 14px 7px 40px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                      <td style={{ padding: '7px 14px' }}>
-                        <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span>
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{line.item?.name}</span>
-                      </td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{line.orderedQuantity}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' }}>{line.shippedQuantity}</td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
-                      <td style={{ padding: '7px 14px', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
-                      <td style={{ padding: '7px 14px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(line.deliveryDate)}</td>
-                    </tr>
-                  ))}
-                  <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-                    <td colSpan={8} style={{ padding: '8px 14px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
-                    <td />
-                  </tr>
-                </tbody>
-              </table>
-            ) : null}
-          </td>
-        </tr>
-      )}
-    </>
+            <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+              <td colSpan={8} style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
+              <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
+              <td />
+            </tr>
+          </tbody>
+        </table>
+      ) : <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>No lines.</div>}
+    </ModalShell>
   );
 }
 
-// ─── Create SO modal ──────────────────────────────────────────────────────────
-
+// ─── Create modal (shared FormModal) ──────────────────────────────────────────
 function CreateSOModal({ open, onClose, onSaved, customers, items }: {
-  open: boolean; onClose: () => void; onSaved: () => void;
-  customers: Customer[]; items: Item[];
+  open: boolean; onClose: () => void; onSaved: () => void; customers: Customer[]; items: Item[];
 }) {
-  const [header, setHeader] = useState({
-    customerId: '', customerPo: '', requestedDate: '', promisedDate: '',
-    paymentTerms: '', currency: 'USD', notes: '',
-  });
+  const [header, setHeader] = useState({ customerId: '', customerPo: '', requestedDate: '', promisedDate: '', paymentTerms: '', currency: 'USD', notes: '' });
   const [lines, setLines] = useState<NewSOLine[]>([{ ...EMPTY_LINE }]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setError('');
+      setError(null);
       setHeader({ customerId: '', customerPo: '', requestedDate: '', promisedDate: '', paymentTerms: 'Net 30', currency: 'USD', notes: '' });
       setLines([{ ...EMPTY_LINE }]);
     }
   }, [open]);
 
-  const setH = (key: keyof typeof header) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setHeader(h => ({ ...h, [key]: e.target.value }));
-
   const setLine = (idx: number, key: keyof NewSOLine, value: string) =>
     setLines(ls => ls.map((l, i) => {
       if (i !== idx) return l;
       const updated = { ...l, [key]: value };
-      if (key === 'itemId') {
-        const item = items.find(it => it.id === value);
-        if (item) updated.uom = item.baseUom;
-      }
+      if (key === 'itemId') { const item = items.find(it => it.id === value); if (item) updated.uom = item.baseUom; }
       return updated;
     }));
 
-  const calcLineTotal = (line: NewSOLine) => {
-    const qty = Number(line.orderedQuantity) || 0;
-    const price = Number(line.unitPrice) || 0;
-    const disc = Number(line.discountPercent) || 0;
-    return qty * price * (1 - disc / 100);
-  };
-
+  const calcLineTotal = (line: NewSOLine) => (Number(line.orderedQuantity) || 0) * (Number(line.unitPrice) || 0) * (1 - (Number(line.discountPercent) || 0) / 100);
   const grandTotal = lines.reduce((s, l) => s + calcLineTotal(l), 0);
+  const validLines = lines.filter(l => l.itemId && l.orderedQuantity && l.unitPrice);
+  const isValid = !!header.customerId && validLines.length > 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     if (!header.customerId) { setError('Customer is required.'); return; }
-    const validLines = lines.filter(l => l.itemId && l.orderedQuantity && l.unitPrice);
     if (validLines.length === 0) { setError('At least one complete line is required.'); return; }
-    setSubmitting(true); setError('');
+    setSubmitting(true); setError(null);
     try {
       await salesOrdersApi.create({
-        customerId:    header.customerId,
-        customerPo:    header.customerPo   || undefined,
-        requestedDate: header.requestedDate || undefined,
-        promisedDate:  header.promisedDate  || undefined,
-        paymentTerms:  header.paymentTerms  || undefined,
-        currency:      header.currency,
-        notes:         header.notes         || undefined,
+        customerId: header.customerId, customerPo: header.customerPo || undefined,
+        requestedDate: header.requestedDate || undefined, promisedDate: header.promisedDate || undefined,
+        paymentTerms: header.paymentTerms || undefined, currency: header.currency, notes: header.notes || undefined,
         lines: validLines.map(l => ({
-          itemId:          l.itemId,
-          description:     l.description    || undefined,
-          orderedQuantity: Number(l.orderedQuantity),
-          uom:             l.uom,
-          unitPrice:       Number(l.unitPrice),
-          discountPercent: Number(l.discountPercent) || undefined,
-          deliveryDate:    l.deliveryDate    || undefined,
+          itemId: l.itemId, description: l.description || undefined, orderedQuantity: Number(l.orderedQuantity),
+          uom: l.uom, unitPrice: Number(l.unitPrice), discountPercent: Number(l.discountPercent) || undefined,
+          deliveryDate: l.deliveryDate || undefined,
         })),
       });
       onSaved(); onClose();
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(msg || 'Operation failed.');
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Operation failed.');
     } finally { setSubmitting(false); }
   };
 
-  if (!open) return null;
-
-  const inputCls = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' } as React.CSSProperties;
-  const labelCls = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em' as const, textTransform: 'uppercase' as const, color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) =>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}><label style={LBL}>{label}</label>{children}</div>;
 
   return (
-    <>
+    <FormModal open={open} onClose={onClose} title="New Sales Order" submitLabel="Create Sales Order" submitting={submitting} isValid={isValid} error={error} onSubmit={submit} width={820}>
       <style>{`
-        .so-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-        .so-box { background:var(--surface, #0e0b1a); border:0.5px solid rgba(251,146,60,0.2); border-radius:14px; width:100%; max-width:820px; margin:auto; position:relative; box-shadow:0 24px 60px rgba(0,0,0,0.7); }
-        .so-box::before { content:''; position:absolute; top:0; left:30px; right:30px; height:1px; background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent); }
-        .so-lines-table { width:100%; border-collapse:collapse; }
-        .so-lines-table th { font-size:10px; color:rgba(251,146,60,0.5); text-transform:uppercase; letter-spacing:0.08em; padding:5px 6px; text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.06); white-space:nowrap; }
-        .so-lines-table td { padding:4px 3px; vertical-align:middle; }
-        .so-line-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
-        .so-line-select { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:5px 7px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-strong, #f1ede8); outline:none; width:100%; }
-        .so-line-select option { background:var(--surface, #0e0b1a); }
-        .so-section { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.25); padding:6px 0 4px; border-bottom:0.5px solid rgba(255,255,255,0.06); margin-top:4px; display:flex; align-items:center; justify-content:space-between; }
-        .so-btn-add { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.1); border-radius:5px; padding:4px 10px; font-size:11px; color:rgba(255,255,255,0.5); cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
-        .so-btn-add:hover { background:rgba(255,255,255,0.08); }
-        .so-btn-rm { width:20px; height:20px; border-radius:4px; background:rgba(239,68,68,0.1); border:0.5px solid rgba(239,68,68,0.2); color:var(--danger, #f87171); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .sol-table{width:100%;border-collapse:collapse}
+        .sol-table th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap}
+        .sol-table td{padding:4px 3px;vertical-align:middle}
+        .sol-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .sol-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .sol-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .sol-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
+          <Field label="Customer *">
+            <SearchSelect options={customers.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }))} value={header.customerId} onChange={v => setHeader(h => ({ ...h, customerId: v }))} placeholder="Search customer…" clearLabel="— Select customer —" minWidth={300} />
+          </Field>
+          <Field label="Customer PO"><input placeholder="CUST-PO-001" value={header.customerPo} onChange={e => setHeader(h => ({ ...h, customerPo: e.target.value }))} style={INP} /></Field>
+          <Field label="Currency">
+            <SearchSelect options={['USD', 'EUR', 'DOP'].map(c => ({ value: c, label: c }))} value={header.currency} onChange={v => setHeader(h => ({ ...h, currency: v }))} placeholder="Currency…" minWidth={160} />
+          </Field>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          <Field label="Requested Date"><input type="date" value={header.requestedDate} onChange={e => setHeader(h => ({ ...h, requestedDate: e.target.value }))} style={INP} /></Field>
+          <Field label="Promised Date"><input type="date" value={header.promisedDate} onChange={e => setHeader(h => ({ ...h, promisedDate: e.target.value }))} style={INP} /></Field>
+          <Field label="Payment Terms"><input placeholder="Net 30" value={header.paymentTerms} onChange={e => setHeader(h => ({ ...h, paymentTerms: e.target.value }))} style={INP} /></Field>
+        </div>
+        <Field label="Notes"><input placeholder="Additional notes" value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} style={INP} /></Field>
 
-      <div className="so-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="so-box">
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface, #0e0b1a)', zIndex:1, borderRadius:'14px 14px 0 0' }}>
-            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Sans',sans-serif" }}>New Sales Order</span>
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-              {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-
-              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:10 }}>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Customer *</label>
-                  <select value={header.customerId} onChange={setH('customerId')} style={{ ...inputCls, cursor:'pointer' }}>
-                    <option value="">— Select customer —</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
-                  </select>
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Customer PO</label>
-                  <input placeholder="CUST-PO-001" value={header.customerPo} onChange={setH('customerPo')} style={inputCls} />
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Currency</label>
-                  <select value={header.currency} onChange={setH('currency')} style={{ ...inputCls, cursor:'pointer' }}>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="DOP">DOP</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Requested Date</label>
-                  <input type="date" value={header.requestedDate} onChange={setH('requestedDate')} style={inputCls} />
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Promised Date</label>
-                  <input type="date" value={header.promisedDate} onChange={setH('promisedDate')} style={inputCls} />
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={labelCls}>Payment Terms</label>
-                  <input placeholder="Net 30" value={header.paymentTerms} onChange={setH('paymentTerms')} style={inputCls} />
-                </div>
-              </div>
-
-              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                <label style={labelCls}>Notes</label>
-                <input placeholder="Additional notes" value={header.notes} onChange={setH('notes')} style={inputCls} />
-              </div>
-
-              {/* Lines */}
-              <div className="so-section">
-                <span>Order Lines</span>
-                <button type="button" className="so-btn-add" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])}>+ Add Line</button>
-              </div>
-
-              <table className="so-lines-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 220 }}>Item *</th>
-                    <th>Description</th>
-                    <th style={{ width: 80 }}>Qty *</th>
-                    <th style={{ width: 60 }}>UOM</th>
-                    <th style={{ width: 90 }}>Price *</th>
-                    <th style={{ width: 60 }}>Disc%</th>
-                    <th style={{ width: 100 }}>Total</th>
-                    <th style={{ width: 110 }}>Delivery</th>
-                    <th style={{ width: 24 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line, idx) => (
-                    <tr key={idx}>
-                      <td>
-                        <select className="so-line-select" value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                          <option value="">— Item —</option>
-                          {items.filter(it => it.isSaleable).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                        </select>
-                      </td>
-                      <td><input className="so-line-input" placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
-                      <td><input className="so-line-input" type="number" min="0" step="0.001" placeholder="0" value={line.orderedQuantity} onChange={e => setLine(idx, 'orderedQuantity', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td><input className="so-line-input" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
-                      <td><input className="so-line-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td><input className="so-line-input" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                      <td style={{ padding: '4px 6px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right' }}>
-                        {calcLineTotal(line) > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calcLineTotal(line)) : '—'}
-                      </td>
-                      <td><input className="so-line-input" type="date" value={line.deliveryDate} onChange={e => setLine(idx, 'deliveryDate', e.target.value)} /></td>
-                      <td>
-                        {lines.length > 1 && (
-                          <button type="button" className="so-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:16, padding:'8px 0', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>Grand Total</span>
-                <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:14, fontWeight:500, color:'var(--accent-strong, #fb923c)' }}>
-                  {new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(grandTotal)}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-              <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-              <button type="submit" disabled={submitting} style={{ background:'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border:'none', borderRadius:7, padding:'8px 20px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(234,88,12,0.35)', opacity:submitting?0.5:1 }}>
-                {submitting ? 'Creating…' : 'Create Sales Order'}
-              </button>
-            </div>
-          </form>
+        <div className="sol-section">
+          <span>Order Lines</span>
+          <button type="button" className="sol-btn-add" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])}>+ Add Line</button>
+        </div>
+        <table className="sol-table">
+          <thead>
+            <tr>
+              <th style={{ width: 220 }}>Item *</th><th>Description</th><th style={{ width: 80 }}>Qty *</th>
+              <th style={{ width: 60 }}>UOM</th><th style={{ width: 90 }}>Price *</th><th style={{ width: 60 }}>Disc%</th>
+              <th style={{ width: 100 }}>Total</th><th style={{ width: 110 }}>Delivery</th><th style={{ width: 24 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line, idx) => (
+              <tr key={idx}>
+                <td>
+                  <SearchSelect options={items.filter(it => it.isSaleable).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))} value={line.itemId} onChange={v => setLine(idx, 'itemId', v)} placeholder="Item…" clearLabel="— Item —" minWidth={240} />
+                </td>
+                <td><input className="sol-inp" placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
+                <td><input className="sol-inp" type="number" min="0" step="0.001" placeholder="0" value={line.orderedQuantity} onChange={e => setLine(idx, 'orderedQuantity', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                <td><input className="sol-inp" placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
+                <td><input className="sol-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                <td><input className="sol-inp" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
+                <td style={{ padding: '4px 6px', ...MONO, fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right' }}>{calcLineTotal(line) > 0 ? fmtAmt(calcLineTotal(line)) : '—'}</td>
+                <td><input className="sol-inp" type="date" value={line.deliveryDate} onChange={e => setLine(idx, 'deliveryDate', e.target.value)} /></td>
+                <td>{lines.length > 1 && <button type="button" className="sol-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
+          <span style={{ ...MONO, fontSize: 14, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{fmtAmt(grandTotal)}</span>
         </div>
       </div>
-    </>
+    </FormModal>
   );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function SalesOrdersPage() {
   const [orders,       setOrders]       = useState<SO[]>([]);
   const [customers,    setCustomers]    = useState<Customer[]>([]);
   const [items,        setItems]        = useState<Item[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
-  const [search,       setSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState<SOStatus | ''>('');
   const [createOpen,   setCreateOpen]   = useState(false);
+  const [detailSo,     setDetailSo]     = useState<SO | null>(null);
   const [actionBusy,   setActionBusy]   = useState<string | null>(null);
-  // spec-frontend-002/003 — ship & deliver create irreversible stock movements;
-  // guard them behind a ConfirmModal. Confirm/Close stay direct (low-impact).
-  const [confirmAction, setConfirmAction] = useState<
-    { id: string; status: string; soNumber: string; label: string; description: string } | null
-  >(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; soNumber: string; label: string; description: string } | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [raw, custs, its] = await Promise.all([
-        salesOrdersApi.getAll(),
-        customersApi.getAll(),
-        itemsApi.getAll(),
-      ]);
-      setOrders(extractList(raw as unknown));
-      setCustomers(custs);
-      setItems(its);
+      const [raw, custs, its] = await Promise.all([salesOrdersApi.getAll(), customersApi.getAll(), itemsApi.getAll()]);
+      setOrders(extractList(raw as unknown)); setCustomers(custs); setItems(its);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load data.';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filtered = orders.filter(o => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      o.soNumber.toLowerCase().includes(q) ||
-      (o.customer?.name ?? '').toLowerCase().includes(q) ||
-      (o.customerPo ?? '').toLowerCase().includes(q);
-    const matchStatus = !statusFilter || o.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const filtered = useMemo(() => statusFilter ? orders.filter(o => o.status === statusFilter) : orders, [orders, statusFilter]);
 
   const runStatusChange = async (id: string, status: string) => {
     setActionBusy(id);
@@ -504,9 +287,8 @@ export default function SalesOrdersPage() {
       await salesOrdersApi.updateStatus(id, status as 'confirmed' | 'shipped' | 'delivered' | 'closed');
       fetchAll();
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(msg || 'Status update failed.');
-      throw err; // let ConfirmModal surface the error inline and stay open
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Status update failed.');
+      throw err; // ConfirmModal surfaces inline + stays open
     } finally { setActionBusy(null); }
   };
 
@@ -514,8 +296,7 @@ export default function SalesOrdersPage() {
     if (status === 'shipped' || status === 'delivered') {
       const so = orders.find(o => o.id === id);
       setConfirmAction({
-        id, status,
-        soNumber: so?.soNumber ?? '',
+        id, status, soNumber: so?.soNumber ?? '',
         label: status === 'shipped' ? 'Ship Order' : 'Mark Delivered',
         description: status === 'shipped'
           ? 'Shipping this order creates outbound stock movements and decrements inventory. It cannot be undone.'
@@ -526,126 +307,120 @@ export default function SalesOrdersPage() {
     runStatusChange(id, status);
   };
 
-  const allStatuses: SOStatus[] = ['draft', 'confirmed', 'shipped', 'delivered', 'closed'];
-  const counts = Object.fromEntries(allStatuses.map(s => [s, orders.filter(o => o.status === s).length])) as Record<SOStatus, number>;
+  const counts = Object.fromEntries(ALL_STATUSES.map(s => [s, orders.filter(o => o.status === s).length])) as Record<SOStatus, number>;
+
+  const columns = useMemo<ERPColumn<SO>[]>(() => [
+    {
+      key: 'soNumber', header: 'SO Number', width: 140, sortable: true,
+      value: r => r.soNumber,
+      render: r => <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.soNumber}</span>,
+    },
+    {
+      key: 'customer', header: 'Customer / PO', sortable: true,
+      value: r => r.customer?.name ?? '',
+      render: r => (
+        <div>
+          <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.customer?.name ?? '—'}</span>
+          {r.customerPo && <div style={{ fontSize: 11, color: 'rgba(251,146,60,0.55)', marginTop: 1 }}>PO: {r.customerPo}</div>}
+        </div>
+      ),
+    },
+    { key: 'orderDate', header: 'Order Date', width: 120, sortable: true, value: r => r.orderDate ?? '', render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.orderDate)}</span> },
+    { key: 'promisedDate', header: 'Promised', width: 120, sortable: true, value: r => r.promisedDate ?? '', render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.promisedDate)}</span> },
+    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r._count?.lines ?? r.lines?.length ?? 0, render: r => { const n = r._count?.lines ?? r.lines?.length ?? 0; return <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{n}</span>; } },
+    { key: 'total', header: 'Total', width: 120, align: 'right', sortable: true, value: r => Number(r.total), render: r => <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.total)}</span> },
+    { key: 'currency', header: 'Currency', width: 90, sortable: true, value: r => r.currency ?? 'USD', render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.currency ?? 'USD'}</span> },
+    { key: 'status', header: 'Status', width: 120, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
+    {
+      key: '_actions', header: '', width: 170, sortable: false,
+      render: r => {
+        const busy = actionBusy === r.id;
+        return (
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+            {(STATUS_ACTIONS[r.status] ?? []).map(action => (
+              <button key={action.next} onClick={() => handleStatusChange(r.id, action.next)} disabled={busy}
+                style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: action.color, background: action.bg, border: `0.5px solid ${action.border}`, fontFamily: "'IBM Plex Sans',sans-serif", opacity: busy ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+                {busy ? '…' : action.label}
+              </button>
+            ))}
+            <PrintButton doc="sales-order" id={r.id} label="" style={{ padding: '4px 7px' }} />
+          </div>
+        );
+      },
+    },
+  ], [actionBusy, orders]);
 
   return (
     <ERPShell breadcrumbs={['Home', 'Sales', 'Sales Orders']} title="Sales Orders">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .so-page { padding: 0 18px 24px; }
-        .so-stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+        .so-page { padding: 0 18px 12px; display:flex; flex-direction:column; height:100%; overflow:hidden; }
+        .so-stats { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; flex-shrink:0; }
         .so-stat { background:rgba(10,7,18,0.7); border-radius:8px; padding:7px 12px; display:flex; flex-direction:column; gap:2px; min-width:80px; cursor:pointer; transition:opacity 0.15s; }
         .so-stat:hover { opacity:0.8; }
         .so-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; }
         .so-stat-value { font-size:20px; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-strong, #f1ede8); }
-        .so-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .so-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:240px; }
-        .so-search::placeholder { color:rgba(255,255,255,0.2); }
-        .so-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
-        .so-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
-        .so-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
-        .so-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); transition:opacity 0.15s, transform 0.15s; flex-shrink:0; }
-        .so-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
+        .so-btn-new { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; align-self:flex-end; }
+        .so-btn-new:hover { opacity:0.88; }
         .so-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
-        .so-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
-        .so-table { width:100%; border-collapse:collapse; }
-        .so-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; white-space:nowrap; }
-        .so-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
-        .so-table tbody tr:last-child td { border-bottom:none; }
-        .so-table tbody tr:hover td { background:rgba(251,146,60,0.03); }
-        .so-empty, .so-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
-        .so-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:so-spin 0.7s linear infinite; flex-shrink:0; }
-        @keyframes so-spin { to { transform:rotate(360deg); } }
-        .so-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
-        .so-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
+        .so-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px; color:var(--danger-subtle, #fca5a5); flex-shrink:0; }
       `}</style>
 
       <div className="so-page">
-
-        {/* Stats */}
         {orders.length > 0 && (
           <div className="so-stats">
-            {allStatuses.map(s => {
+            {ALL_STATUSES.map(s => {
               const style = STATUS_STYLE[s];
               return (
-                <div key={s} className="so-stat"
-                  style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }}
-                  onClick={() => setStatusFilter(prev => (prev === s ? '' : (s as SOStatus)))}
-                >
+                <div key={s} className="so-stat" style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter(prev => (prev === s ? '' : s))}>
                   <span className="so-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
                   <span className="so-stat-value">{counts[s]}</span>
                 </div>
               );
             })}
-            <div className="so-stat"
-              style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }}
-              onClick={() => setStatusFilter('')}
-            >
+            <div className="so-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter('')}>
               <span className="so-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
               <span className="so-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{orders.length}</span>
             </div>
           </div>
         )}
 
-        <div className="so-toolbar">
-          <input className="so-search" placeholder="Search by SO#, customer, PO#…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select className="so-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as SOStatus | '')}>
-            <option value="">All Status</option>
-            {allStatuses.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-          </select>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ width: 220 }}>
+            <SearchSelect
+              options={ALL_STATUSES.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+              value={statusFilter}
+              onChange={v => setStatusFilter(v as SOStatus | '')}
+              placeholder="All Status"
+              clearLabel="All Status"
+              minWidth={200}
+            />
+          </div>
           <button className="so-btn-new" onClick={() => setCreateOpen(true)}>
-            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" />
-            </svg>
+            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" /></svg>
             New SO
           </button>
         </div>
 
         {error && <div className="so-error">{error}</div>}
 
-        <div className="so-wrap">
-          {loading ? (
-            <div className="so-loading"><div className="so-spinner" />Loading sales orders…</div>
-          ) : filtered.length === 0 ? (
-            <div className="so-empty">{search || statusFilter ? 'No orders match your filters.' : 'No sales orders yet.'}</div>
-          ) : (
-            <>
-              <table className="so-table">
-                <thead>
-                  <tr>
-                    <th>SO Number</th>
-                    <th>Customer / PO</th>
-                    <th>Order Date</th>
-                    <th>Promised</th>
-                    <th>Lines</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                    <th>Currency</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(so => (
-                    <SORow key={so.id} so={so} onStatusChange={handleStatusChange} actionBusy={actionBusy} />
-                  ))}
-                </tbody>
-              </table>
-              <div className="so-footer">
-                {filtered.length} of {orders.length} sales order{orders.length !== 1 ? 's' : ''}
-              </div>
-            </>
-          )}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTable<SO>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="sales-orders"
+            emptyMessage={statusFilter ? 'No orders match your filters.' : 'No sales orders yet.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+            onRowClick={r => setDetailSo(r)}
+          />
         </div>
       </div>
 
-      <CreateSOModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSaved={fetchAll}
-        customers={customers}
-        items={items}
-      />
+      <CreateSOModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={fetchAll} customers={customers} items={items} />
+      <SODetailModal so={detailSo} onClose={() => setDetailSo(null)} />
 
       <ConfirmModal
         open={!!confirmAction}
