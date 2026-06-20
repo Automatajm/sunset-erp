@@ -91,7 +91,7 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
     return (
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: on ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
         <div onClick={() => setForm(f => ({ ...f, [k]: !(f as unknown as Record<string, unknown>)[k] }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: on ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${on ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
-          <div style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+          <div style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
         </div>{label}
       </label>
     );

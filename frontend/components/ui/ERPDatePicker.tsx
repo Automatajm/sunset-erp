@@ -407,7 +407,7 @@ export function ERPDatePicker({
                       onMouseLeave={() => setHoverWk(null)}
                       style={{
                         fontSize: 9, textAlign: 'center', cursor: 'pointer',
-                        color: wkState === 'active' ? '#fff' : C.orange,
+                        color: wkState === 'active' ? 'var(--white, #fff)' : C.orange,
                         background: wkState === 'active' ? C.active : wkState === 'range' ? C.range : 'transparent',
                         borderRadius: 4, padding: '2px 3px',
                         fontWeight: wkState === 'active' ? 600 : 400,
@@ -430,7 +430,7 @@ export function ERPDatePicker({
                             width: 28, height: 26, textAlign: 'center',
                             fontSize: 11, cursor: 'pointer',
                             color: !cell.currentMonth ? 'rgba(255,255,255,0.2)'
-                              : isAnchor || isDayHover ? '#fff'
+                              : isAnchor || isDayHover ? 'var(--white, #fff)'
                               : isToday ? C.orange
                               : C.text,
                             background: isAnchor || isDayHover ? C.active

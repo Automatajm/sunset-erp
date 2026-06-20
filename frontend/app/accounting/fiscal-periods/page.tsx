@@ -105,7 +105,7 @@ function PeriodModal({ open, onClose, onSaved, initial }: {
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isCurrent ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none', background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 14px' }}>
           <div onClick={() => setForm(f => ({ ...f, isCurrent: !f.isCurrent }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.isCurrent ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.isCurrent ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 2, left: form.isCurrent ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+            <div style={{ position: 'absolute', top: 2, left: form.isCurrent ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
           </div>
           Set as current period
         </label>

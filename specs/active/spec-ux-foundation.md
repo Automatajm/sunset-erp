@@ -11,8 +11,18 @@
 > 36 pages reconstructed across 45 commits. Net result: every page wraps `ERPShell`; lists use
 > `ERPTable`/`ERPTreeTable`; FK/enum dropdowns use `SearchSelect` (zero page-level raw `<select>`);
 > create/edit uses `FormModal`; destructive actions use `ConfirmModal`; no pictographic emoji;
-> all colors on `var(--token, #hex)`. **Deferred (own specs):** budgets roll-forward automation;
-> the F0 long-tail-hex codemod (319 grays/alpha/one-offs); i18n of residual Spanish strings in bom/boms.
+> all colors on `var(--token, #hex)`.
+>
+> **Long-tail-hex codemod — done (2026-06-20):** added `--white`/`--black` tokens and tokenized
+> the remaining standalone theme-color stragglers the F0 top-15 regex missed (context-aware
+> codemod, negative-lookbehind skips existing fallbacks). What's **intentionally left literal**
+> (documented, not a gap): print docs (`components/print/*`) + barcode labels (`inventory/labels`)
+> are **light-themed** print/PDF surfaces (gray-on-white, `mm` units) — dark tokens don't apply;
+> the Tremor/chart palette (`globals.css` `--tremor-*`, `ui/chart.tsx`) is a separate viz system;
+> and the ~136 remaining are decorative **multi-stop button gradients** (blue/green/violet/amber)
+> + one-off viz accents with no semantic token home — single-use tokens for these would be sprawl.
+>
+> **Deferred (own specs):** budgets roll-forward automation; i18n of residual Spanish strings in bom/boms.
 
 ## Problem
 
@@ -393,4 +403,5 @@ Every item also inherits **Dep: F0** (token system) for the color portion.
 |------|--------|
 | 2026-06-20 | Draft created from full 52-page / 38-component audit. Awaiting review before implementation. |
 | 2026-06-20 | **F0 shipped.** Token layer added to `globals.css` (value-preserving). Codemod replaced 2,267 hex literals with `var(--token)` across 67 files; 82 runtime alpha-append idioms (`${color}NN`) converted to `color-mix(in srgb, … N%, transparent)`; SVG gradient-id derivation sanitized. tsc 0 errors, prod build green (52 routes). 319 long-tail hex remain (grays `#111/#333/#fff`, alpha-hex, one-offs) — deferred to a follow-up codemod. Note: F0 deviates from the spec's draft token block in the safe direction — token values equal the de-facto literals (zero visual change) rather than the cleaned values; palette tuning happens later behind the seam. |
+| 2026-06-20 | **Long-tail-hex codemod.** Added `--white`/`--black` tokens; context-aware codemod tokenized the standalone theme-color stragglers (incl. pure-white toggle knobs) the top-15 F0 regex missed, negative-lookbehind skipping existing `var(--token, #hex)` fallbacks. Excluded print docs + barcode labels (light-themed print), Tremor/chart palettes, and decorative button gradients — all intentional literals, documented above. tsc 0 / build green. |
 | 2026-06-20 | **F0 hardening.** Two visual regressions reported (transparent modal bodies, brand mark/buttons rendering black-with-orange-glow) — both the same root cause: `var(--token)` failing to resolve in some render context (an unresolved var falls back to `transparent`, invalidating gradients). Fix: gave **all 2,267 token usages an explicit hex fallback** — `var(--surface, #0e0b1a)`, `linear-gradient(var(--accent-pressed, #c2410c), …)` — so colors render correctly even when the cascade is absent (SSR flash, stale cache, img/portal). Value-preserving; tsc 0 / build green. This permanently closes the var-resolution failure class. |

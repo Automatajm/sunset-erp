@@ -88,7 +88,7 @@ export function DocumentLayout({
         @media screen { .print-paper { box-shadow: 0 8px 40px rgba(0,0,0,0.5); margin: 24px auto; } }
         @media print {
           .no-print { display: none !important; }
-          html, body { background: #ffffff !important; margin: 0; }
+          html, body { background: var(--white, #ffffff) !important; margin: 0; }
           .print-paper { box-shadow: none; margin: 0; width: 100%; }
           thead { display: table-header-group; }  /* repeat column header per page */
           tr { page-break-inside: avoid; }
@@ -102,7 +102,7 @@ export function DocumentLayout({
         className="print-paper"
         style={{
           width: '210mm', maxWidth: '100%', minHeight: '297mm', boxSizing: 'border-box',
-          background: '#ffffff', color: '#1a1a1a', padding: '18mm 16mm',
+          background: 'var(--white, #ffffff)', color: '#1a1a1a', padding: '18mm 16mm',
           fontFamily: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12, lineHeight: 1.45,
         }}
       >

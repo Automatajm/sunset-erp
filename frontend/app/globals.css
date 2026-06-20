@@ -37,6 +37,10 @@
   --danger-subtle:    #fca5a5;
   --accent-blue:      #60a5fa;   /* info / neutral data viz  */
   --accent-violet:    #a78bfa;   /* secondary categorical    */
+
+  /* absolutes (theme-independent) */
+  --white:            #fff;       /* knobs, on-accent text   */
+  --black:            #000;
 }
 
 html, body { height: 100%; overflow: hidden; }

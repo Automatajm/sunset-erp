@@ -208,7 +208,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isActive ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
                   <div onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
                     style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, background: form.isActive ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.isActive ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
-                    <div style={{ position: 'absolute', top: 2, left: form.isActive ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                    <div style={{ position: 'absolute', top: 2, left: form.isActive ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
                   </div>
                   Active
                 </label>

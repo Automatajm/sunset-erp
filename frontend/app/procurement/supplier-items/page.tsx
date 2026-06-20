@@ -486,7 +486,7 @@ function PriceHistoryPanel({ siId, onClose }: { siId: string; onClose: () => voi
                 <div key={h.id} style={{ background: i === 0 ? 'rgba(251,191,36,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${i === 0 ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 8, padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ ...MONO, fontSize: 15, color: 'var(--warning, #fbbf24)', fontWeight: 600 }}>{fmtAmt(h.price, h.currency)}</span>
-                    <span style={{ fontSize: 10, color: srcColor[h.source] ?? '#fff', background: `${srcColor[h.source] ?? '#fff'}18`, border: `0.5px solid ${srcColor[h.source] ?? '#fff'}40`, borderRadius: 5, padding: '1px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: 10, color: srcColor[h.source] ?? 'var(--white, #fff)', background: `${srcColor[h.source] ?? 'var(--white, #fff)'}18`, border: `0.5px solid ${srcColor[h.source] ?? 'var(--white, #fff)'}40`, borderRadius: 5, padding: '1px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       {h.source}
                     </span>
                   </div>

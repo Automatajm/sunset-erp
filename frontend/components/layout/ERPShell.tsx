@@ -524,7 +524,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-wordmark {
           font-family: 'Cormorant Garamond', serif;
           font-size: 18px; font-weight: 300; letter-spacing: 0.1em;
-          color: #fff; flex-shrink: 0; cursor: pointer; white-space: nowrap;
+          color: var(--white, #fff); flex-shrink: 0; cursor: pointer; white-space: nowrap;
         }
         .shell-wordmark span { color: var(--accent-strong, #fb923c); }
 
@@ -574,7 +574,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
           background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent-mid, #f97316));
           display: flex; align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 600; color: #fff; cursor: pointer;
+          font-size: 11px; font-weight: 600; color: var(--white, #fff); cursor: pointer;
         }
         .shell-signout {
           font-size: 11px; color: rgba(251,146,60,0.5);

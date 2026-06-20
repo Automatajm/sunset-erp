@@ -152,7 +152,7 @@ export default function LoginPage() {
         .login-mark svg { width: 22px; height: 22px; }
         .login-wordmark {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 26px; font-weight: 300; letter-spacing: 0.1em; color: #fff;
+          font-size: 26px; font-weight: 300; letter-spacing: 0.1em; color: var(--white, #fff);
         }
         .login-wordmark span { color: var(--accent-strong, #fb923c); }
         .login-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.06em; }
