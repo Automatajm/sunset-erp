@@ -5,8 +5,10 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
+import { FormModal } from '@/components/ui/modal/FormModal';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { supplierItemsApi } from '@/lib/api/supplier-items';
 import { Supplier, CreateSupplierDto, SupplierItem } from '@/lib/api/types';
@@ -75,14 +77,22 @@ function ActiveBadge({ active }: { active: boolean }) {
   );
 }
 
+// Inline SVG star (design rule: no emoji glyphs). filled = solid warning color.
+function StarIcon({ size = 14, filled, onClick, style, className }: { size?: number; filled: boolean; onClick?: () => void; style?: React.CSSProperties; className?: string }) {
+  const c = filled ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.2)';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? c : 'none'} stroke={c} strokeWidth="1.5" strokeLinejoin="round" onClick={onClick} className={className} style={{ flexShrink: 0, ...style }}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
 function StarRating({ value }: { value?: number | null }) {
   if (!value) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>;
   const v = Number(value);
   return (
     <div style={{ display:'flex', alignItems:'center', gap:3 }}>
-      {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ fontSize:11, color: i <= Math.round(v) ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.15)' }}>★</span>
-      ))}
+      {[1,2,3,4,5].map(i => <StarIcon key={i} size={11} filled={i <= Math.round(v)} />)}
       <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginLeft:2 }}>{v.toFixed(1)}</span>
     </div>
   );
@@ -135,8 +145,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value === '' ? undefined : Number(e.target.value) }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!form.name.trim()) { setError('Name is required.'); return; }
     setSubmitting(true); setError('');
     try {
@@ -152,8 +161,6 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
     finally { setSubmitting(false); }
   };
 
-  if (!open) return null;
-
   const F: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const L: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
   const SL: React.CSSProperties = { fontSize:10, color:'rgba(255,255,255,0.3)', marginTop:-2 };
@@ -166,53 +173,41 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
   ];
 
   return (
-    <>
+    <FormModal
+      open={open}
+      onClose={onClose}
+      title={initial ? `Edit — ${(initial as any).code}` : 'New Supplier'}
+      submitLabel={initial ? 'Save Changes' : 'Create Supplier'}
+      submitting={submitting}
+      isValid={!!form.name.trim()}
+      error={error || null}
+      onSubmit={handleSubmit}
+      width={620}
+    >
       <style>{`
-        .sm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
-        .sm-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
-        .sm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
-        .sm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
-        .sm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;overflow-x:auto}
+        .sm-tabs{display:flex;border-bottom:0.5px solid rgba(255,255,255,0.06);overflow-x:auto;margin:-16px -24px 12px}
         .sm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap;flex-shrink:0}
         .sm-tab:hover{color:rgba(255,255,255,0.7)}
         .sm-tab-on{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
-        .sm-scroll{flex:1;overflow-y:auto;min-height:0}
-        .sm-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+        .sm-body{display:flex;flex-direction:column;gap:12px}
         .sm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .sm-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
         .sm-field{display:flex;flex-direction:column;gap:5px}
         .sm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
-        .sm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
-        .sm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
-        .sm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
-        .sm-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
-        .sm-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .sm-stars{display:flex;gap:4px;padding:4px 0}
-        .sm-star{font-size:22px;cursor:pointer;transition:transform 0.1s}
+        .sm-star{cursor:pointer;transition:transform 0.1s}
         .sm-star:hover{transform:scale(1.15)}
       `}</style>
 
-      <div className="sm-overlay">
-        <div className="sm-box">
-          <div className="sm-hdr">
-            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>
-              {initial ? `Edit — ${initial.code}` : 'New Supplier'}
-            </span>
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
-          </div>
+      <div className="sm-tabs">
+        {TABS.map(t => (
+          <button key={t.key} type="button" className={`sm-tab${tab === t.key ? ' sm-tab-on' : ''}`} onClick={() => setTab(t.key as any)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          <div className="sm-tabs">
-            {TABS.map(t => (
-              <button key={t.key} type="button" className={`sm-tab${tab === t.key ? ' sm-tab-on' : ''}`} onClick={() => setTab(t.key as any)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="sm-scroll">
-            <form onSubmit={handleSubmit}>
-              <div className="sm-body">
-                {error && <div className="sm-error">{error}</div>}
+      <div className="sm-body">
 
                 {/* ── GENERAL ── */}
                 {tab === 'general' && (
@@ -225,10 +220,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                       <div className="sm-field">
                         <label style={L}>Category</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.category} onChange={set('category')}>
-                          <option value="">— Select category —</option>
-                          {SUPPLIER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchSelect options={SUPPLIER_CATEGORIES.map(c => ({ value: c, label: c }))} value={form.category ?? ''} onChange={v => setForm(f => ({ ...f, category: v }))} placeholder="Search category…" clearLabel="— Select category —" minWidth={260} />
                       </div>
                     </div>
                     <div className="sm-field">
@@ -246,10 +238,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                       <div className="sm-field">
                         <label style={L}>Tax Type</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.taxType} onChange={set('taxType')}>
-                          <option value="">— Select —</option>
-                          {TAX_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                        <SearchSelect options={TAX_TYPES.map(t => ({ value: t, label: t }))} value={form.taxType ?? ''} onChange={v => setForm(f => ({ ...f, taxType: v }))} placeholder="Search tax type…" clearLabel="— Select —" minWidth={220} />
                       </div>
                     </div>
 
@@ -265,10 +254,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                       <div className="sm-field">
                         <label style={L}>Country</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.country} onChange={set('country')}>
-                          <option value="">— Select country —</option>
-                          {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-                        </select>
+                        <SearchSelect options={COUNTRIES.map(c => ({ value: c.code, label: c.name }))} value={form.country ?? ''} onChange={v => setForm(f => ({ ...f, country: v }))} placeholder="Search country…" clearLabel="— Select country —" minWidth={260} />
                       </div>
                     </div>
 
@@ -278,11 +264,9 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       <p style={SL}>Can be updated automatically by SupplierScore engine</p>
                       <div className="sm-stars">
                         {[1,2,3,4,5].map(i => (
-                          <span key={i} className="sm-star"
-                            onClick={() => setForm(f => ({ ...f, qualityRating: f.qualityRating === i ? undefined : i }))}
-                            style={{ color: form.qualityRating && i <= form.qualityRating ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.2)' }}>
-                            ★
-                          </span>
+                          <StarIcon key={i} size={22} className="sm-star"
+                            filled={!!form.qualityRating && i <= form.qualityRating}
+                            onClick={() => setForm(f => ({ ...f, qualityRating: f.qualityRating === i ? undefined : i }))} />
                         ))}
                         {form.qualityRating && (
                           <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)', alignSelf:'center', marginLeft:4 }}>
@@ -353,25 +337,17 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                     <div className="sm-row">
                       <div className="sm-field">
                         <label style={L}>Payment Terms</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.paymentTerms} onChange={set('paymentTerms')}>
-                          <option value="">— Select —</option>
-                          {PAYMENT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                        <SearchSelect options={PAYMENT_TERMS.map(t => ({ value: t, label: t }))} value={form.paymentTerms ?? ''} onChange={v => setForm(f => ({ ...f, paymentTerms: v }))} placeholder="Search terms…" clearLabel="— Select —" minWidth={220} />
                       </div>
                       <div className="sm-field">
                         <label style={L}>Currency</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.currency} onChange={set('currency')}>
-                          {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchSelect options={CURRENCIES.map(c => ({ value: c, label: c }))} value={form.currency ?? 'USD'} onChange={v => setForm(f => ({ ...f, currency: v }))} placeholder="Currency…" minWidth={160} />
                       </div>
                     </div>
                     <div className="sm-row">
                       <div className="sm-field">
                         <label style={L}>Incoterms</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.incoterms} onChange={set('incoterms')}>
-                          <option value="">— Select —</option>
-                          {INCOTERMS.map(i => <option key={i} value={i}>{i}</option>)}
-                        </select>
+                        <SearchSelect options={INCOTERMS.map(i => ({ value: i, label: i }))} value={form.incoterms ?? ''} onChange={v => setForm(f => ({ ...f, incoterms: v }))} placeholder="Search incoterms…" clearLabel="— Select —" minWidth={200} />
                       </div>
                       <div className="sm-field">
                         <label style={L}>Delivery Lead Time (days)</label>
@@ -393,9 +369,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                     <div className="sm-row">
                       <div className="sm-field">
                         <label style={L}>Min. Order Currency</label>
-                        <select style={{ ...F, cursor:'pointer' }} value={form.minimumOrderCurrency} onChange={set('minimumOrderCurrency')}>
-                          {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <SearchSelect options={CURRENCIES.map(c => ({ value: c, label: c }))} value={form.minimumOrderCurrency ?? 'USD'} onChange={v => setForm(f => ({ ...f, minimumOrderCurrency: v }))} placeholder="Currency…" minWidth={160} />
                       </div>
                     </div>
                   </>
@@ -421,25 +395,15 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                     </div>
                     <div style={{ background:'rgba(251,146,60,0.04)', border:'0.5px solid rgba(251,146,60,0.12)', borderRadius:8, padding:'10px 14px', marginTop:4 }}>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6 }}>
-                        🔒 Banking details are stored encrypted and only visible to users with AP access.
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:2 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>Banking details are stored encrypted and only visible to users with AP access.</span>
                       </div>
                     </div>
                   </>
                 )}
-              </div>
-
-              <div className="sm-ftr">
-                <button type="button" className="sm-btn-cancel" onClick={onClose}>Cancel</button>
-                <button type="submit" className="sm-btn-save" disabled={submitting}>
-                  {submitting ? 'Saving…' : initial ? 'Save Changes' : 'Create Supplier'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       </div>
-    </>
+    </FormModal>
   );
 }
 
@@ -615,7 +579,7 @@ function SUPPLIER_COLUMNS(
       render: r => (
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong, #fb923c)' }}>{r.code}</span>
-          {(r as any).isPreferred && <span style={{ fontSize:9, color:'var(--warning, #fbbf24)', background:'rgba(251,191,36,0.1)', border:'0.5px solid rgba(251,191,36,0.2)', padding:'1px 5px', borderRadius:10 }}>⭐</span>}
+          {(r as any).isPreferred && <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:9, color:'var(--warning, #fbbf24)', background:'rgba(251,191,36,0.1)', border:'0.5px solid rgba(251,191,36,0.2)', padding:'1px 5px', borderRadius:10 }}><StarIcon size={9} filled /> Preferred</span>}
         </div>
       ),
     },
