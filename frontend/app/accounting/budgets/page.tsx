@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { ERPTreeTable, ERPTreeColumn } from '@/components/ui/ERPTreeTable';
+import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
+import { FormModal } from '@/components/ui/modal/FormModal';
 import { budgetsApi } from '@/lib/api/budgets';
 import { ConfirmModal, useModal } from '@/components/ui/modal';
 import { chartOfAccountsApi } from '@/lib/api/chart-of-accounts';
@@ -178,70 +182,52 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
 function CreateBudgetModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({ budgetCode: '', budgetName: '', fiscalYear: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) { setError(''); setForm({ budgetCode: '', budgetName: '', fiscalYear: new Date().getFullYear().toString(), description: '' }); }
+    if (open) { setError(null); setForm({ budgetCode: '', budgetName: '', fiscalYear: new Date().getFullYear().toString(), description: '' }); }
   }, [open]);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const valid = !!form.budgetCode.trim() && !!form.budgetName.trim() && !!form.fiscalYear.trim();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.budgetCode.trim() || !form.budgetName.trim() || !form.fiscalYear.trim()) { setError('Code, name and fiscal year are required.'); return; }
-    setSubmitting(true); setError('');
+  const submit = async () => {
+    if (!valid) { setError('Code, name and fiscal year are required.'); return; }
+    setSubmitting(true); setError(null);
     try { await budgetsApi.create(form); onSaved(); onClose(); }
     catch (err) { setError((err as any).response?.data?.message || 'Operation failed.'); }
     finally { setSubmitting(false); }
   };
 
-  if (!open) return null;
-
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Budget</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>x</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-            {[
-              { key: 'budgetCode',  label: 'Budget Code *',  placeholder: 'BUDGET-2026' },
-              { key: 'budgetName',  label: 'Budget Name *',  placeholder: '2026 Annual Budget' },
-              { key: 'fiscalYear',  label: 'Fiscal Year *',  placeholder: '2026' },
-              { key: 'description', label: 'Description',    placeholder: 'Annual operating budget' },
-            ].map(f => (
-              <Field key={f.key} label={f.label}>
-                <input placeholder={f.placeholder} value={form[f.key as keyof typeof form]} onChange={set(f.key as keyof typeof form)} style={INPUT} />
-              </Field>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}>
-              {submitting ? 'Creating...' : 'Create Budget'}
-            </button>
-          </div>
-        </form>
+    <FormModal open={open} onClose={onClose} title="New Budget" submitLabel="Create Budget" submitting={submitting} isValid={valid} error={error} onSubmit={submit} width={460}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {[
+          { key: 'budgetCode',  label: 'Budget Code *',  placeholder: 'BUDGET-2026' },
+          { key: 'budgetName',  label: 'Budget Name *',  placeholder: '2026 Annual Budget' },
+          { key: 'fiscalYear',  label: 'Fiscal Year *',  placeholder: '2026' },
+          { key: 'description', label: 'Description',     placeholder: 'Annual operating budget' },
+        ].map(f => (
+          <Field key={f.key} label={f.label}>
+            <input placeholder={f.placeholder} value={form[f.key as keyof typeof form]} onChange={set(f.key as keyof typeof form)} style={INPUT} />
+          </Field>
+        ))}
       </div>
-    </div>
+    </FormModal>
   );
 }
 
 function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: boolean; onClose: () => void; onSaved: () => void; budgetId: string; accounts: Account[] }) {
   const [form, setForm] = useState({ accountId: '', fiscalPeriod: '', budgetAmount: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (open) { setError(''); setForm({ accountId: '', fiscalPeriod: '', budgetAmount: '', notes: '' }); } }, [open]);
+  useEffect(() => { if (open) { setError(null); setForm({ accountId: '', fiscalPeriod: '', budgetAmount: '', notes: '' }); } }, [open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.accountId || !form.fiscalPeriod.trim() || !form.budgetAmount.trim()) { setError('Account, period and amount are required.'); return; }
-    setSubmitting(true); setError('');
+  const valid = !!form.accountId && !!form.fiscalPeriod.trim() && !!form.budgetAmount.trim();
+  const submit = async () => {
+    if (!valid) { setError('Account, period and amount are required.'); return; }
+    setSubmitting(true); setError(null);
     try {
       await budgetsApi.addLine(budgetId, { accountId: form.accountId, fiscalPeriod: form.fiscalPeriod, budgetAmount: Number(form.budgetAmount), notes: form.notes || undefined });
       onSaved(); onClose();
@@ -249,45 +235,19 @@ function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: bo
     finally { setSubmitting(false); }
   };
 
-  if (!open) return null;
-
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>Add Budget Line</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>x</button>
+    <FormModal open={open} onClose={onClose} title="Add Budget Line" submitLabel="Add Line" submitting={submitting} isValid={valid} error={error} onSubmit={submit} width={460}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Field label="Account *">
+          <SearchSelect options={accounts.map(a => ({ value: a.id, label: `${a.accountNumber} — ${a.name}` }))} value={form.accountId} onChange={v => setForm(f => ({ ...f, accountId: v }))} placeholder="Select account…" clearLabel="— Select account —" minWidth={320} />
+        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Fiscal Period *"><input placeholder="2026-03" value={form.fiscalPeriod} onChange={e => setForm(f => ({ ...f, fiscalPeriod: e.target.value }))} style={INPUT} /></Field>
+          <Field label="Budget Amount *"><input type="number" min="0" placeholder="50000" value={form.budgetAmount} onChange={e => setForm(f => ({ ...f, budgetAmount: e.target.value }))} style={INPUT} /></Field>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-            <Field label="Account *">
-              <select value={form.accountId} onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))} style={{ ...INPUT, cursor: 'pointer' }}>
-                <option value="">Select account</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.accountNumber} - {a.name}</option>)}
-              </select>
-            </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Field label="Fiscal Period *">
-                <input placeholder="2026-03" value={form.fiscalPeriod} onChange={e => setForm(f => ({ ...f, fiscalPeriod: e.target.value }))} style={INPUT} />
-              </Field>
-              <Field label="Budget Amount *">
-                <input type="number" min="0" placeholder="50000" value={form.budgetAmount} onChange={e => setForm(f => ({ ...f, budgetAmount: e.target.value }))} style={INPUT} />
-              </Field>
-            </div>
-            <Field label="Notes">
-              <input placeholder="Optional notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={INPUT} />
-            </Field>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}>
-              {submitting ? 'Adding...' : 'Add Line'}
-            </button>
-          </div>
-        </form>
+        <Field label="Notes"><input placeholder="Optional notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={INPUT} /></Field>
       </div>
-    </div>
+    </FormModal>
   );
 }
 
@@ -430,10 +390,7 @@ export default function BudgetsPage() {
   const [accounts,     setAccounts]     = useState<Account[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
-  const [yearFilter,   setYearFilter]   = useState('');
-  const [statusFilter, setStatusFilter] = useState<BudgetStatus | ''>('');
   const [createOpen,   setCreateOpen]   = useState(false);
-  const [expanded,     setExpanded]     = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -447,19 +404,29 @@ export default function BudgetsPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filtered = budgets.filter(b => {
-    const matchYear   = !yearFilter   || b.fiscalYear === yearFilter;
-    const matchStatus = !statusFilter || b.status     === statusFilter;
-    return matchYear && matchStatus;
-  });
+  const years = useMemo(() => [...new Set(budgets.map(b => b.fiscalYear))].sort((a, b) => b.localeCompare(a)), [budgets]);
 
-  const years = [...new Set(budgets.map(b => b.fiscalYear))].sort((a, b) => b.localeCompare(a));
+  const filterDefs = useMemo<ERPFilter<Budget>[]>(() => [
+    { key: 'fiscalYear', label: 'Year', type: 'searchselect', placeholder: 'All years', options: years.map(y => ({ value: y, label: y })) },
+    { key: 'status', label: 'Status', type: 'multiselect', options: [{ value: 'draft', label: 'Draft', color: 'var(--warning, #fbbf24)' }, { value: 'approved', label: 'Approved', color: 'var(--success, #4ade80)' }] },
+  ], [years]);
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+  const filtered = useMemo(() => applyERPFilters(budgets, filterDefs, filterVals), [budgets, filterDefs, filterVals]);
+
+  const columns = useMemo<ERPTreeColumn<Budget>[]>(() => [
+    { key: 'budgetCode', header: 'Code', width: 150, sortable: true, value: r => r.budgetCode, render: r => <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.budgetCode}</span> },
+    { key: 'budgetName', header: 'Name', sortable: true, value: r => r.budgetName, render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.budgetName}</span> },
+    { key: 'fiscalYear', header: 'FY', width: 80, sortable: true, value: r => r.fiscalYear, render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{r.fiscalYear}</span> },
+    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r.budgetLines.length, render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{r.budgetLines.length}</span> },
+    { key: 'total', header: 'Total', width: 140, align: 'right', sortable: true, value: r => r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0), render: r => <span style={{ ...MONO, color: 'rgba(255,255,255,0.6)' }}>{fmtAmt(r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0))}</span> },
+    { key: 'status', header: 'Status', width: 110, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
+  ], []);
 
   return (
     <ERPShell breadcrumbs={['Home', 'Financial', 'Budgets']} title="Budgets">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
-        .bg-page { padding: 0 18px 24px; }
+        .bg-page { padding: 0 18px 12px; display:flex; flex-direction:column; height:100%; overflow:hidden; }
         .bg-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:nowrap; }
         .bg-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
         .bg-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
@@ -476,58 +443,36 @@ export default function BudgetsPage() {
       `}</style>
 
       <div className="bg-page">
-        <div className="bg-toolbar">
-          <select className="bg-filter" value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
-            <option value="">All Years</option>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select className="bg-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as BudgetStatus | '')}>
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="approved">Approved</option>
-          </select>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
+          </div>
           <button className="bg-btn-new" onClick={() => setCreateOpen(true)}>
-            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" />
-            </svg>
+            <svg viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="6.5" y1="1" x2="6.5" y2="12" /><line x1="1" y1="6.5" x2="12" y2="6.5" /></svg>
             New Budget
           </button>
         </div>
 
         {error && <div className="bg-error">{error}</div>}
 
-        {loading ? (
-          <div className="bg-loading"><div className="bg-spinner" />Loading budgets...</div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-empty">{yearFilter || statusFilter ? 'No budgets match your filters.' : 'No budgets yet.'}</div>
-        ) : (
-          <div className="bg-list">
-            {filtered.map(budget => {
-              const isOpen = expanded === budget.id;
-              const totalBudget = budget.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0);
-              return (
-                <div key={budget.id} className="bg-card">
-                  <div className="bg-card-hdr" onClick={() => setExpanded(isOpen ? null : budget.id)}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', transform: isOpen ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>&#9658;</span>
-                    <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, flexShrink: 0 }}>{budget.budgetCode}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{budget.budgetName}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>FY {budget.fiscalYear} · {budget.budgetLines.length} line{budget.budgetLines.length !== 1 ? 's' : ''}</div>
-                    </div>
-                    <span style={{ ...MONO, fontSize: 13, color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>{fmtAmt(totalBudget)}</span>
-                    <StatusBadge status={budget.status} />
-                  </div>
-                  {isOpen && (
-                    <div className="bg-card-body" style={{ paddingTop: 12 }}>
-                      {budget.description && <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.5 }}>{budget.description}</p>}
-                      <BudgetDetail budget={budget} accounts={accounts} onRefresh={fetchAll} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTreeTable<Budget>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="budgets"
+            emptyMessage={filterCount ? 'No budgets match your filters.' : 'No budgets yet.'}
+            defaultPageSize={25}
+            canExpand={() => true}
+            expandedRow={budget => (
+              <div style={{ padding: '12px 16px' }}>
+                {budget.description && <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.5 }}>{budget.description}</p>}
+                <BudgetDetail budget={budget} accounts={accounts} onRefresh={fetchAll} />
+              </div>
+            )}
+          />
+        </div>
       </div>
 
       <CreateBudgetModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={fetchAll} />
