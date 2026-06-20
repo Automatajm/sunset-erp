@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import ERPShell from '@/components/layout/ERPShell';
+import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
+import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import apiClient from '@/lib/api/client';
 import { ConfirmModal } from '@/components/ui/modal';
 
@@ -204,73 +207,84 @@ export default function RolesPage() {
     await load();
   }
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#06040f', color: 'var(--text-primary, #e2dfd8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
-      {/* Header */}
-      <div style={{ padding: '20px 28px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}><button onClick={() => window.history.back()} style={{ background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "6px 12px", fontSize: 12, color: "rgba(255,255,255,0.5)", cursor: "pointer", fontFamily: "IBM Plex Sans,sans-serif" }}>Back</button><div style={{ fontSize: 20, fontWeight: 700 }}>Roles & Permissions</div></div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Define what each role can access in the system</div>
+  const moduleChips = (role: Role) => Object.entries(
+    role.permissions.reduce((acc, p) => { acc[p.module] = (acc[p.module] ?? 0) + 1; return acc; }, {} as Record<string, number>),
+  );
+
+  const filterDefs = useMemo<ERPFilter<Role>[]>(() => [
+    {
+      key: 'search', label: 'Search', type: 'search', placeholder: 'Search name or code…',
+      filterFn: (row, val) => { const q = String(val).toLowerCase(); return row.name.toLowerCase().includes(q) || row.code.toLowerCase().includes(q); },
+    },
+    { key: 'isSystem', label: 'System only', type: 'boolean', placeholder: 'System only', filterFn: (row, val) => val === true ? row.isSystem : true },
+  ], []);
+  const { values: filterVals, setValue: setFilterVal, reset: resetFilters, activeCount: filterCount } = useERPFilters(filterDefs);
+  const filtered = useMemo(() => applyERPFilters(roles, filterDefs, filterVals), [roles, filterDefs, filterVals]);
+
+  const columns = useMemo<ERPColumn<Role>[]>(() => [
+    {
+      key: 'name', header: 'Name', sortable: true, value: r => r.name,
+      render: r => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary, #e2dfd8)' }}>{r.name}</span>
+          {r.isSystem && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue, #60a5fa)', border: '0.5px solid rgba(96,165,250,0.2)' }}>SYSTEM</span>}
         </div>
-        <button onClick={() => setEditRole('new')} style={BTN('primary')}>+ New Role</button>
-      </div>
-
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.3)' }}>Loading...</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-            {roles.map(role => (
-              <div key={role.id} style={{ background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Role header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary, #e2dfd8)' }}>{role.name}</span>
-                      {role.isSystem && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue, #60a5fa)', border: '0.5px solid rgba(96,165,250,0.2)' }}>SYSTEM</span>}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace", marginTop: 2 }}>{role.code}</div>
-                    {role.description && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>{role.description}</div>}
-                  </div>
-                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>{role.userCount} user{role.userCount !== 1 ? 's' : ''}</span>
-                </div>
-
-                {/* Permission summary by module */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {Object.entries(
-                    role.permissions.reduce((acc, p) => {
-                      if (!acc[p.module]) acc[p.module] = 0;
-                      acc[p.module]++;
-                      return acc;
-                    }, {} as Record<string, number>)
-                  ).map(([mod, count]) => (
-                    <span key={mod} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${MODULE_COLOR[mod] ?? 'var(--text-primary, #e2dfd8)'}15`, color: MODULE_COLOR[mod] ?? 'var(--text-primary, #e2dfd8)', border: `0.5px solid ${MODULE_COLOR[mod] ?? 'var(--text-primary, #e2dfd8)'}30` }}>
-                      {mod} ({count})
-                    </span>
-                  ))}
-                  {role.permissions.length === 0 && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>No permissions assigned</span>}
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                  <button onClick={() => setEditRole(role)} style={{ ...BTN('ghost'), flex: 1, padding: '6px 0', fontSize: 11 }}>
-                    {role.isSystem ? 'View' : 'Edit'}
-                  </button>
-                  {!role.isSystem && (
-                    <button onClick={() => setDeleteRole(role)} style={{ ...BTN('danger'), padding: '6px 10px', fontSize: 11 }}>Delete</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {roles.length === 0 && (
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
-                No roles yet. Create your first role to control access.
-              </div>
-            )}
+      ),
+    },
+    { key: 'code', header: 'Code', width: 200, sortable: true, value: r => r.code, render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.code}</span> },
+    {
+      key: 'permissions', header: 'Permissions', sortable: false,
+      render: r => {
+        const chips = moduleChips(r);
+        if (chips.length === 0) return <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>None</span>;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {chips.map(([mod, count]) => {
+              const c = MODULE_COLOR[mod] ?? 'var(--text-primary, #e2dfd8)';
+              return <span key={mod} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `color-mix(in srgb, ${c} 8%, transparent)`, color: c, border: `0.5px solid color-mix(in srgb, ${c} 19%, transparent)` }}>{mod} ({count})</span>;
+            })}
           </div>
-        )}
+        );
+      },
+    },
+    { key: 'userCount', header: 'Users', width: 90, align: 'center', sortable: true, value: r => r.userCount, render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{r.userCount}</span> },
+    {
+      key: '_actions', header: '', width: 150, sortable: false,
+      render: r => (
+        <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+          <button onClick={() => setEditRole(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{r.isSystem ? 'View' : 'Edit'}</button>
+          {!r.isSystem && <button onClick={() => setDeleteRole(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>}
+        </div>
+      ),
+    },
+  ], []);
+
+  return (
+    <ERPShell breadcrumbs={['Home', 'Settings', 'Roles']} title="Roles & Permissions">
+      <style>{`
+        .roles-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+        .roles-err{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
+      `}</style>
+      <div className="roles-page">
+        {error && <div className="roles-err">{error}</div>}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <ERPFilterBar filters={filterDefs} values={filterVals} onChange={setFilterVal} onReset={resetFilters} activeCount={filterCount} />
+          </div>
+          <button onClick={() => setEditRole('new')} style={{ ...BTN('primary'), flexShrink: 0, alignSelf: 'flex-end' }}>+ New Role</button>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ERPTable<Role>
+            columns={columns}
+            data={filtered}
+            rowKey={r => r.id}
+            loading={loading}
+            exportFilename="roles"
+            emptyMessage={filterCount ? 'No roles match your filters.' : 'No roles yet. Create your first role to control access.'}
+            defaultPageSize={25}
+            maxHeight="100%"
+          />
+        </div>
       </div>
 
       {editRole !== null && (
@@ -292,6 +306,6 @@ export default function RolesPage() {
         confirmLabel="Delete Role"
         onConfirm={async () => { if (deleteRole) await handleDelete(deleteRole); }}
       />
-    </div>
+    </ERPShell>
   );
 }
