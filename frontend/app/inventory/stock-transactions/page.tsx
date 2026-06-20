@@ -39,16 +39,16 @@ interface LedgerRow {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TX_TYPES = [
-  { value: 'receipt',    label: 'Receipt',    color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   sign: '+' },
-  { value: 'issue',      label: 'Issue',      color: '#f87171', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  sign: '−' },
-  { value: 'transfer',   label: 'Transfer',   color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   sign: '⇄' },
-  { value: 'adjustment', label: 'Adjustment', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   sign: '±' },
+  { value: 'receipt',    label: 'Receipt',    color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   sign: '+' },
+  { value: 'issue',      label: 'Issue',      color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)',  sign: '−' },
+  { value: 'transfer',   label: 'Transfer',   color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   sign: '⇄' },
+  { value: 'adjustment', label: 'Adjustment', color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   sign: '±' },
 ];
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: '#4ade80', label: 'Finished Good' },
-  raw_material:  { color: '#60a5fa', label: 'Raw Material'  },
-  consumable:    { color: '#fbbf24', label: 'Consumable'    },
+  finished_good: { color: 'var(--success)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
   service:       { color: 'rgba(255,255,255,0.35)', label: 'Service' },
 };
 
@@ -87,7 +87,7 @@ function getEffectiveSign(r: LedgerRow): number {
 }
 
 function TxBadge({ type }: { type: string }) {
-  const c = TX_TYPES.find(t => t.value === type) ?? { color: '#e2dfd8', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
+  const c = TX_TYPES.find(t => t.value === type) ?? { color: 'var(--text-primary)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 500, color: c.color, background: c.bg, border: `0.5px solid ${c.border}`, whiteSpace: 'nowrap' }}>
       <span style={{ fontSize: 11 }}>{c.sign}</span>{c.label}
@@ -125,7 +125,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
   const I: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
     borderRadius: 7, padding: '8px 12px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans', sans-serif", color: '#f1ede8',
+    fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-strong)',
     outline: 'none', width: '100%',
   };
   const L: React.CSSProperties = {
@@ -175,7 +175,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
               </select>
               {selectedItem && (
                 <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
-                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, color: ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? '#e2dfd8', background: `${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? '#e2dfd8'}15`, border: `0.5px solid ${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? '#e2dfd8'}30` }}>
+                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, color: ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary)', background: `${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary)'}15`, border: `0.5px solid ${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary)'}30` }}>
                     {ITEM_TYPE_CFG[selectedItem.itemType]?.label ?? selectedItem.itemType}
                   </span>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Base UOM: {selectedItem.baseUom}</span>
@@ -254,7 +254,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'movementNumber', header: 'Movement #', width: 130, sortable: true,
     value: r => r.movementNumber,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: '#fb923c' }}>{r.movementNumber}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)' }}>{r.movementNumber}</span>,
   },
   {
     key: 'movementType', header: 'Type', width: 120, sortable: true,
@@ -271,7 +271,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.item?.code ?? '',
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: '#f1ede8', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong)', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.item?.name}</div>
       </div>
     ),
@@ -282,7 +282,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     render: r => {
       const cfg = ITEM_TYPE_CFG[r.item?.itemType ?? ''];
       return cfg ? (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `${cfg.color}15`, border: `0.5px solid ${cfg.color}30`, whiteSpace: 'nowrap' }}>{cfg.label}</span>
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${cfg.color} 19%, transparent)`, whiteSpace: 'nowrap' }}>{cfg.label}</span>
       ) : null;
     },
   },
@@ -301,7 +301,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.signedQuantity,
     render: r => {
       const sign  = getEffectiveSign(r);
-      const color = sign > 0 ? '#4ade80' : sign < 0 ? '#f87171' : '#fbbf24';
+      const color = sign > 0 ? 'var(--success)' : sign < 0 ? 'var(--danger)' : 'var(--warning)';
       const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
@@ -320,7 +320,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
       const pQty = r.purchaseQty ?? r.quantity;
       const pUom = r.purchaseUom ?? r.uom;
       const sign  = getEffectiveSign(r);
-      const color = sign > 0 ? '#4ade80' : sign < 0 ? '#f87171' : '#fbbf24';
+      const color = sign > 0 ? 'var(--success)' : sign < 0 ? 'var(--danger)' : 'var(--warning)';
       const prefix = sign > 0 ? '+' : sign < 0 ? '−' : '±';
       return (
         <div style={{ textAlign: 'right' }}>
@@ -328,7 +328,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
             {prefix}{fmtQty(pQty)}
           </span>
           <div style={{ marginTop: 2 }}>
-            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, color: '#fb923c', background: 'rgba(251,146,60,0.1)', border: '0.5px solid rgba(251,146,60,0.2)', ...MONO }}>{pUom}</span>
+            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, color: 'var(--accent-strong)', background: 'rgba(251,146,60,0.1)', border: '0.5px solid rgba(251,146,60,0.2)', ...MONO }}>{pUom}</span>
           </div>
         </div>
       );
@@ -346,7 +346,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
       const val   = r.movementValue ?? r.totalValue;
       const isPos = val > 0;
       const isNeg = val < 0;
-      const color = isPos ? '#4ade80' : isNeg ? '#f87171' : '#fbbf24';
+      const color = isPos ? 'var(--success)' : isNeg ? 'var(--danger)' : 'var(--warning)';
       return (
         <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color }}>
           {val !== 0 ? (isPos ? '+' : '−') + fmtAmt(Math.abs(val)) : '—'}
@@ -366,7 +366,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
               {r.referenceType.replace(/_/g, ' ')}
             </div>
           )}
-          <span style={{ ...MONO, fontSize: 11, color: ref !== '—' ? '#fb923c' : 'rgba(255,255,255,0.2)' }}>{ref}</span>
+          <span style={{ ...MONO, fontSize: 11, color: ref !== '—' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.2)' }}>{ref}</span>
         </div>
       );
     },
@@ -452,15 +452,15 @@ export default function StockTransactionsPage() {
         .st-pills  { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
         .st-pill   { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 6px 12px; display: flex; flex-direction: column; gap: 1px; cursor: pointer; transition: all 0.15s; min-width: 76px; }
         .st-pill-l { font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
-        .st-pill-v { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: #f1ede8; }
+        .st-pill-v { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--text-strong); }
         .st-totals { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; flex-shrink: 0; }
         .st-total  { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 8px 12px; }
         .st-total-l{ font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
         .st-total-v{ font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .st-filters{ display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .st-table  { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .st-error  { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
-        .st-btn-new{ display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg,#c2410c,#ea580c,#f97316); border: none; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; box-shadow: 0 3px 12px rgba(234,88,12,0.3); }
+        .st-error  { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
+        .st-btn-new{ display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border: none; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; box-shadow: 0 3px 12px rgba(234,88,12,0.3); }
       `}</style>
 
       <div className="st-page">
@@ -476,7 +476,7 @@ export default function StockTransactionsPage() {
             ))}
             <div className="st-pill" style={{ border: `0.5px solid ${!typeCard ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setTypeCard('')}>
               <span className="st-pill-l" style={{ color: 'rgba(251,146,60,0.6)' }}>All</span>
-              <span className="st-pill-v" style={{ color: '#fb923c' }}>{rows.length}</span>
+              <span className="st-pill-v" style={{ color: 'var(--accent-strong)' }}>{rows.length}</span>
             </div>
           </div>
         )}
@@ -484,11 +484,11 @@ export default function StockTransactionsPage() {
         {rows.length > 0 && (
           <div className="st-totals">
             {[
-              { label: 'Total IN (qty)',  value: `+${new Intl.NumberFormat('en-US',{maximumFractionDigits:3}).format(totals.totalIn)}`,  color: '#4ade80', border: 'rgba(74,222,128,0.15)'  },
-              { label: 'Total OUT (qty)', value: `−${new Intl.NumberFormat('en-US',{maximumFractionDigits:3}).format(totals.totalOut)}`, color: '#f87171', border: 'rgba(248,113,113,0.15)' },
-              { label: 'IN Value',        value: fmtAmt(totals.totalInValue),  color: '#4ade80', border: 'rgba(74,222,128,0.1)'   },
-              { label: 'OUT Value',       value: fmtAmt(totals.totalOutValue), color: '#f87171', border: 'rgba(248,113,113,0.1)'  },
-              { label: 'Net Value',       value: fmtAmt(totals.netValue), color: totals.netValue >= 0 ? '#4ade80' : '#f87171', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Total IN (qty)',  value: `+${new Intl.NumberFormat('en-US',{maximumFractionDigits:3}).format(totals.totalIn)}`,  color: 'var(--success)', border: 'rgba(74,222,128,0.15)'  },
+              { label: 'Total OUT (qty)', value: `−${new Intl.NumberFormat('en-US',{maximumFractionDigits:3}).format(totals.totalOut)}`, color: 'var(--danger)', border: 'rgba(248,113,113,0.15)' },
+              { label: 'IN Value',        value: fmtAmt(totals.totalInValue),  color: 'var(--success)', border: 'rgba(74,222,128,0.1)'   },
+              { label: 'OUT Value',       value: fmtAmt(totals.totalOutValue), color: 'var(--danger)', border: 'rgba(248,113,113,0.1)'  },
+              { label: 'Net Value',       value: fmtAmt(totals.netValue), color: totals.netValue >= 0 ? 'var(--success)' : 'var(--danger)', border: 'rgba(255,255,255,0.06)' },
             ].map(t => (
               <div key={t.label} className="st-total" style={{ border: `0.5px solid ${t.border}` }}>
                 <div className="st-total-l">{t.label}</div>

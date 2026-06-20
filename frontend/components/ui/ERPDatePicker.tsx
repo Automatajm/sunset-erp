@@ -308,10 +308,10 @@ export function ERPDatePicker({
 
   // ── Styles ──────────────────────────────────────────────────────────────────
   const C = {
-    bg:      '#0a0712',
+    bg:      'var(--bg)',
     border:  'rgba(251,146,60,0.2)',
-    orange:  '#fb923c',
-    text:    '#e2dfd8',
+    orange:  'var(--accent-strong)',
+    text:    'var(--text-primary)',
     muted:   'rgba(255,255,255,0.25)',
     active:  '#1e40af',
     range:   'rgba(59,130,246,0.25)',
@@ -341,7 +341,7 @@ export function ERPDatePicker({
         }}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: '#0e0b1a', border: `0.5px solid ${open ? C.orange : 'rgba(255,255,255,0.12)'}`,
+          background: 'var(--surface)', border: `0.5px solid ${open ? C.orange : 'rgba(255,255,255,0.12)'}`,
           borderRadius: 7, padding: '8px 12px', cursor: disabled ? 'not-allowed' : 'pointer',
           fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif",
           color: value ? C.text : C.muted, opacity: disabled ? 0.5 : 1,

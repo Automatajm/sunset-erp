@@ -71,16 +71,16 @@ function getRisk(row: AgingRow): RiskLevel {
 }
 
 const RISK_CFG: Record<RiskLevel, { color: string; bg: string; border: string; label: string }> = {
-  dead:     { color: '#f87171', bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', label: 'Dead Stock'    },
-  critical: { color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)', label: 'Critical Slow' },
-  slow:     { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)', label: 'Slow Moving'   },
-  watch:    { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)', label: 'Watch'         },
+  dead:     { color: 'var(--danger)', bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', label: 'Dead Stock'    },
+  critical: { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)', label: 'Critical Slow' },
+  slow:     { color: 'var(--warning)', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)', label: 'Slow Moving'   },
+  watch:    { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)', label: 'Watch'         },
 };
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: '#4ade80', label: 'Finished Good' },
-  raw_material:  { color: '#60a5fa', label: 'Raw Material'  },
-  consumable:    { color: '#fbbf24', label: 'Consumable'    },
+  finished_good: { color: 'var(--success)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
 };
 
 // ─── Columns ─────────────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
       const c = RISK_CFG[getRisk(r)];
       return r.daysSinceLastMovement !== null
         ? <span style={{ ...MONO, fontSize: 14, fontWeight: 700, color: c.color }}>{r.daysSinceLastMovement}d</span>
-        : <span style={{ fontSize: 10, color: '#f87171' }}>Never</span>;
+        : <span style={{ fontSize: 10, color: 'var(--danger)' }}>Never</span>;
     },
   },
   {
@@ -113,7 +113,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.itemCode,
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: '#fb923c', fontWeight: 500 }}>{r.itemCode}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.itemCode}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
@@ -124,7 +124,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => {
       const cfg = ITEM_TYPE_CFG[r.itemType];
       return cfg ? (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `${cfg.color}15`, border: `0.5px solid ${cfg.color}30`, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${cfg.color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
           {cfg.label}
         </span>
       ) : null;
@@ -145,7 +145,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.storageQty,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: '#e2dfd8' }}>{fmtQty(r.storageQty)}</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary)' }}>{fmtQty(r.storageQty)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
       </div>
     ),
@@ -155,7 +155,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.purchaseQty,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: '#fb923c' }}>{fmtQty(r.purchaseQty)}</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong)' }}>{fmtQty(r.purchaseQty)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.purchaseUom}</div>
       </div>
     ),
@@ -182,7 +182,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.lastMovementDate ?? '',
     render: r => r.lastMovementDate
       ? <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtDateShort(r.lastMovementDate)}</span>
-      : <span style={{ fontSize: 10, color: '#f87171', fontWeight: 500 }}>Never moved</span>,
+      : <span style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 500 }}>Never moved</span>,
   },
 ];
 
@@ -283,7 +283,7 @@ export default function SlowMovingPage() {
         .sm-alert-banner { background: rgba(248,113,113,0.08); border: 0.5px solid rgba(248,113,113,0.2); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .sm-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .sm-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .sm-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
+        .sm-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
         .sm-note    { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
         .sm-refresh { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.09); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.45); cursor: pointer; }
         .sm-refresh:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
@@ -294,11 +294,11 @@ export default function SlowMovingPage() {
         {/* KPI bar */}
         <div className="sm-kpis">
           {[
-            { label: 'Items at Risk',   value: String(slowRows.length),                   color: '#f87171', border: 'rgba(248,113,113,0.2)'  },
-            { label: 'Capital Tied Up', value: fmtAmt(totalAtRisk),                       color: '#f87171', border: 'rgba(248,113,113,0.2)'  },
-            { label: '% of Inventory',  value: atRiskPct + '%',                           color: '#fb923c', border: 'rgba(251,146,60,0.2)'   },
-            { label: 'Dead Stock Items',value: String(data?.summary.deadStockCount ?? 0), color: '#f87171', border: 'rgba(248,113,113,0.15)' },
-            { label: 'Dead Stock Value',value: fmtAmt(data?.summary.deadStockValue ?? 0), color: '#f87171', border: 'rgba(248,113,113,0.15)' },
+            { label: 'Items at Risk',   value: String(slowRows.length),                   color: 'var(--danger)', border: 'rgba(248,113,113,0.2)'  },
+            { label: 'Capital Tied Up', value: fmtAmt(totalAtRisk),                       color: 'var(--danger)', border: 'rgba(248,113,113,0.2)'  },
+            { label: '% of Inventory',  value: atRiskPct + '%',                           color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.2)'   },
+            { label: 'Dead Stock Items',value: String(data?.summary.deadStockCount ?? 0), color: 'var(--danger)', border: 'rgba(248,113,113,0.15)' },
+            { label: 'Dead Stock Value',value: fmtAmt(data?.summary.deadStockValue ?? 0), color: 'var(--danger)', border: 'rgba(248,113,113,0.15)' },
           ].map(k => (
             <div key={k.label} className="sm-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="sm-kpi-l">{k.label}</div>
@@ -337,9 +337,9 @@ export default function SlowMovingPage() {
         {/* Alert banner */}
         {(data?.summary.deadStockCount ?? 0) > 0 && !cardFilter && (
           <div className="sm-alert-banner">
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', flexShrink: 0 }} />
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#f87171' }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--danger)' }}>
                 {data!.summary.deadStockCount} item{data!.summary.deadStockCount !== 1 ? 's' : ''} with no movement in 180+ days
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
@@ -361,7 +361,7 @@ export default function SlowMovingPage() {
             Refresh
           </button>
           {cardFilter && (
-            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f87171', cursor: 'pointer' }}>
+            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger)', cursor: 'pointer' }}>
               ↺ Clear risk filter
             </button>
           )}

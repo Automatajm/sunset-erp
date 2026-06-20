@@ -55,11 +55,11 @@ function fmtAmt(v: number) {
 }
 
 const UOM_COLOR: Record<string, string> = {
-  volume: '#60a5fa', mass: '#a78bfa', count: '#4ade80', length: '#fbbf24', area: '#fb923c',
+  volume: 'var(--accent-blue)', mass: 'var(--accent-violet)', count: 'var(--success)', length: 'var(--warning)', area: 'var(--accent-strong)',
 };
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
-const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%' };
+const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%' };
 
 function Field({ label, color, children }: { label: string; color?: string; children: React.ReactNode }) {
   return (
@@ -72,9 +72,9 @@ function Field({ label, color, children }: { label: string; color?: string; chil
 
 function UomSystemBadge({ uom }: { uom?: { code: string; name: string; type: string } | null }) {
   if (!uom) return <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>—</span>;
-  const color = UOM_COLOR[uom.type] ?? '#e2dfd8';
+  const color = UOM_COLOR[uom.type] ?? 'var(--text-primary)';
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, color, background: `${color}15`, border: `0.5px solid ${color}35` }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, color, background: `color-mix(in srgb, ${color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 21%, transparent)` }}>
       {uom.code}
     </span>
   );
@@ -108,14 +108,14 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#f1ede8' }}>Add Routing Step</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>Add Routing Step</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '7px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
               <Field label="Step #" color="rgba(96,165,250,0.6)">
                 <input type="number" min="1" style={INPUT} value={form.stepNumber} onChange={e => setForm(f => ({ ...f, stepNumber: e.target.value }))} />
@@ -192,16 +192,16 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
     padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 500,
     cursor: 'pointer', border: 'none', fontFamily: "'IBM Plex Sans',sans-serif",
     color: active ? color : 'rgba(255,255,255,0.35)',
-    background: active ? `${color}18` : 'transparent',
+    background: active ? `color-mix(in srgb, ${color} 9%, transparent)` : 'transparent',
   });
 
   return (
     <div style={{ padding: '10px 40px 16px', background: 'rgba(251,146,60,0.015)', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-        <button style={TAB(tab === 'components', '#fb923c')} onClick={() => setTab('components')}>
+        <button style={TAB(tab === 'components', 'var(--accent-strong)')} onClick={() => setTab('components')}>
           📋 Components ({bom.components?.length ?? bom._count?.components ?? 0})
         </button>
-        <button style={TAB(tab === 'routing', '#60a5fa')} onClick={() => setTab('routing')}>
+        <button style={TAB(tab === 'routing', 'var(--accent-blue)')} onClick={() => setTab('routing')}>
           ⚙ Routing ({routingSteps.length || bom._count?.routings || 0})
         </button>
       </div>
@@ -219,10 +219,10 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                 <tr key={comp.id}>
                   <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{comp.lineNumber}</td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
-                    <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{comp.consumptionGroup?.code}</span>
+                    <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{comp.consumptionGroup?.code}</span>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{comp.consumptionGroup?.name}</span>
                   </td>
-                  <td style={{ padding: '7px 12px 7px 0', ...MONO, color: '#e2dfd8' }}>{comp.quantityPer}</td>
+                  <td style={{ padding: '7px 12px 7px 0', ...MONO, color: 'var(--text-primary)' }}>{comp.quantityPer}</td>
                   <td style={{ padding: '7px 12px 7px 0' }}>
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: "'IBM Plex Mono',monospace" }}>{comp.uom}</span>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 6 }}>libre</span>
@@ -233,8 +233,8 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                       <span style={{ fontSize: 10, color: 'rgba(251,191,36,0.6)', marginLeft: 6 }}>⚠ no configurado</span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 12px 7px 0', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? '#fbbf24' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
-                  <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: comp.isPhantom ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>{comp.isPhantom ? 'Yes' : 'No'}</td>
+                  <td style={{ padding: '7px 12px 7px 0', fontSize: 12, color: (comp.scrapPercent ?? 0) > 0 ? 'var(--warning)' : 'rgba(255,255,255,0.25)' }}>{comp.scrapPercent ? `${comp.scrapPercent}%` : '—'}</td>
+                  <td style={{ padding: '7px 12px 7px 0', fontSize: 11, color: comp.isPhantom ? 'var(--accent-blue)' : 'rgba(255,255,255,0.25)' }}>{comp.isPhantom ? 'Yes' : 'No'}</td>
                 </tr>
               ))}
             </tbody>
@@ -249,7 +249,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Production steps for this BOM</span>
             <button onClick={() => setAddRoutingOpen(true)}
-              style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+              style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               + Add Step
             </button>
           </div>
@@ -265,10 +265,10 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
               <tbody>
                 {routingSteps.map(step => (
                   <tr key={step.id}>
-                    <td style={{ padding: '6px 10px', ...MONO, color: '#60a5fa', textAlign: 'center', width: 40 }}>{step.stepNumber}</td>
-                    <td style={{ padding: '6px 10px', fontSize: 12, color: '#e2dfd8' }}>{step.description || '—'}</td>
+                    <td style={{ padding: '6px 10px', ...MONO, color: 'var(--accent-blue)', textAlign: 'center', width: 40 }}>{step.stepNumber}</td>
+                    <td style={{ padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)' }}>{step.description || '—'}</td>
                     <td style={{ padding: '6px 10px' }}>
-                      <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{step.workCenter?.code}</span>
+                      <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{step.workCenter?.code}</span>
                       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginLeft: 6 }}>{step.workCenter?.name}</span>
                     </td>
                     <td style={{ padding: '6px 10px', ...MONO, textAlign: 'right' }}>{step.setupTime}</td>
@@ -278,7 +278,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
                     </td>
                     <td style={{ padding: '6px 10px' }}>
                       <button onClick={() => setDeleteStep(step)} disabled={deletingStep === step.id}
-                        style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.15)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: deletingStep === step.id ? 0.5 : 1 }}>
+                        style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', color: 'var(--danger)', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.15)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: deletingStep === step.id ? 0.5 : 1 }}>
                         {deletingStep === step.id ? '…' : 'Del'}
                       </button>
                     </td>
@@ -294,7 +294,7 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
               <input type="number" min="1" value={estimateQty} onChange={e => setEstimateQty(e.target.value)} style={{ ...INPUT, width: 120, padding: '6px 10px', fontSize: 12 }} placeholder="Quantity" />
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>units</span>
               <button onClick={handleEstimate} disabled={loadingEstimate || routingSteps.length === 0}
-                style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingEstimate ? 0.5 : 1 }}>
+                style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: loadingEstimate ? 0.5 : 1 }}>
                 {loadingEstimate ? 'Calculating…' : 'Calculate'}
               </button>
             </div>
@@ -302,9 +302,9 @@ function BomDetailPanel({ bom, workCenters, onRefresh }: {
               <div style={{ marginTop: 10, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 {[
                   { label: 'Setup Hours', value: `${estimate.totalSetupHours}h`, color: 'rgba(255,255,255,0.5)' },
-                  { label: 'Run Hours',   value: `${estimate.totalRunHours}h`,   color: '#a78bfa' },
-                  { label: 'Total Hours', value: `${estimate.totalLaborHours}h`, color: '#60a5fa' },
-                  { label: 'Est. Cost',   value: fmtAmt(estimate.estimatedLaborCost), color: '#4ade80' },
+                  { label: 'Run Hours',   value: `${estimate.totalRunHours}h`,   color: 'var(--accent-violet)' },
+                  { label: 'Total Hours', value: `${estimate.totalLaborHours}h`, color: 'var(--accent-blue)' },
+                  { label: 'Est. Cost',   value: fmtAmt(estimate.estimatedLaborCost), color: 'var(--success)' },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
@@ -422,15 +422,15 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 800, margin: 'auto', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 800, margin: 'auto', position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: '#0e0b1a', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Bill of Materials</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Bill of Materials</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
               <Field label="Parent Item *">
@@ -522,8 +522,8 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, minHeight: 34 }}>
                     {cgConsUom ? (
                       <>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: UOM_COLOR[cgConsUom.type] ?? '#e2dfd8', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: UOM_COLOR[cgConsUom.type] ?? '#e2dfd8', fontWeight: 500 }}>{cgConsUom.code}</span>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: UOM_COLOR[cgConsUom.type] ?? 'var(--text-primary)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: UOM_COLOR[cgConsUom.type] ?? 'var(--text-primary)', fontWeight: 500 }}>{cgConsUom.code}</span>
                         <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{cgConsUom.name}</span>
                         <span style={{ fontSize: 9, color: 'rgba(74,222,128,0.5)', marginLeft: 'auto' }}>✓ grupo</span>
                       </>
@@ -543,7 +543,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
                   {components.length > 1 && (
                     <button type="button"
                       onClick={() => setComponents(cs => cs.filter((_, i) => i !== idx))}
-                      style={{ width: 22, height: 22, borderRadius: 4, background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
+                      style={{ width: 22, height: 22, borderRadius: 4, background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
                       ×
                     </button>
                   )}
@@ -555,13 +555,13 @@ function BOMModal({ items, consumptionGroups, systemUoms, allUoms, onClose, onSa
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', lineHeight: 1.7, background: 'rgba(255,255,255,0.02)', borderRadius: 7, padding: '8px 12px', border: '0.5px solid rgba(255,255,255,0.05)' }}>
               <strong style={{ color: 'rgba(255,255,255,0.4)' }}>Consumption Group</strong> — representa la necesidad genérica de producción (ej: "Adhesivo Industrial KG"). Agrupa todos los items de compra que satisfacen esa necesidad.<br />
               <strong style={{ color: 'rgba(255,255,255,0.4)' }}>UOM libre</strong> — el formulador expresa la cantidad en cualquier unidad (GAL, KG, PCS, etc.).<br />
-              <strong style={{ color: '#4ade80' }}>Cons. UOM</strong> — unidad de sistema. MRP convierte la UOM libre → Cons. UOM para agregar la demanda total del grupo.
+              <strong style={{ color: 'var(--success)' }}>Cons. UOM</strong> — unidad de sistema. MRP convierte la UOM libre → Cons. UOM para agregar la demanda total del grupo.
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
             <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>
+            <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>
               {busy ? 'Creating…' : 'Create BOM'}
             </button>
           </div>
@@ -619,14 +619,14 @@ export default function BOMPage() {
     {
       key: 'bomNumber', header: 'BOM Number', sortable: true,
       value: r => r.bomNumber,
-      render: r => <span style={{ ...MONO, color: '#fb923c', fontWeight: 500 }}>{r.bomNumber}</span>,
+      render: r => <span style={{ ...MONO, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.bomNumber}</span>,
     },
     {
       key: 'parentItem', header: 'Parent Item', sortable: true,
       value: r => r.parentItem?.name ?? '',
       render: r => (
         <span>
-          <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{r.parentItem?.code}</span>
+          <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{r.parentItem?.code}</span>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{r.parentItem?.name}</span>
         </span>
       ),
@@ -649,14 +649,14 @@ export default function BOMPage() {
       value: r => r._count?.routings ?? 0,
       render: r => {
         const n = r._count?.routings ?? 0;
-        return <span style={{ fontSize: 12, color: n > 0 ? '#60a5fa' : 'rgba(255,255,255,0.25)' }}>{n > 0 ? `${n} steps` : 'No routing'}</span>;
+        return <span style={{ fontSize: 12, color: n > 0 ? 'var(--accent-blue)' : 'rgba(255,255,255,0.25)' }}>{n > 0 ? `${n} steps` : 'No routing'}</span>;
       },
     },
     {
       key: 'isActive', header: 'Status', width: 90, sortable: true,
       value: r => r.isActive ? 'Active' : 'Inactive',
       render: r => (
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, color: r.isActive ? '#4ade80' : '#f87171', background: r.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, color: r.isActive ? 'var(--success)' : 'var(--danger)', background: r.isActive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
           {r.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
@@ -665,7 +665,7 @@ export default function BOMPage() {
       key: '_actions', header: '', width: 80, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setDeleteBom(r); }}
-          style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Delete
         </button>
       ),
@@ -678,8 +678,8 @@ export default function BOMPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .bom-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden;gap:0}
         .bom-toolbar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-shrink:0}
-        .bom-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3)}
-        .bom-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
+        .bom-btn-new{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3)}
+        .bom-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
       `}</style>
 
       <div className="bom-page">

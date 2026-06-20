@@ -30,18 +30,18 @@ interface WarehouseEnriched extends Warehouse {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const WH_TYPES: { value: WarehouseType; label: string; color: string; bg: string; border: string }[] = [
-  { value: 'regular',     label: 'Regular',     color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
-  { value: 'consignment', label: 'Consignment', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
-  { value: 'transit',     label: 'Transit',     color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  { value: 'regular',     label: 'Regular',     color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
+  { value: 'consignment', label: 'Consignment', color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)' },
+  { value: 'transit',     label: 'Transit',     color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
 ];
 
 const ZONE_TYPES = [
-  { value: 'storage',    label: 'Storage',    color: '#60a5fa' },
-  { value: 'receiving',  label: 'Receiving',  color: '#4ade80' },
-  { value: 'shipping',   label: 'Shipping',   color: '#fbbf24' },
-  { value: 'quarantine', label: 'Quarantine', color: '#f87171' },
-  { value: 'production', label: 'Production', color: '#a78bfa' },
-  { value: 'returns',    label: 'Returns',    color: '#fb923c' },
+  { value: 'storage',    label: 'Storage',    color: 'var(--accent-blue)' },
+  { value: 'receiving',  label: 'Receiving',  color: 'var(--success)' },
+  { value: 'shipping',   label: 'Shipping',   color: 'var(--warning)' },
+  { value: 'quarantine', label: 'Quarantine', color: 'var(--danger)' },
+  { value: 'production', label: 'Production', color: 'var(--accent-violet)' },
+  { value: 'returns',    label: 'Returns',    color: 'var(--accent-strong)' },
 ];
 
 const BIN_TYPES = ['standard', 'pallet', 'big_bag', 'tank', 'silo', 'ibc', 'container', 'bulk'];
@@ -52,27 +52,27 @@ const EMPTY_WH_FORM: CreateWarehouseDto = {
 };
 
 function getTypeConfig(t?: string) { return WH_TYPES.find(x => x.value === t) ?? WH_TYPES[0]; }
-function zoneColor(t: string) { return ZONE_TYPES.find(z => z.value === t)?.color ?? '#e2dfd8'; }
+function zoneColor(t: string) { return ZONE_TYPES.find(z => z.value === t)?.color ?? 'var(--text-primary)'; }
 
 // Occupancy color ramp
 function occupancyColor(pct: number): string {
-  if (pct >= 90) return '#f87171'; // red
-  if (pct >= 70) return '#fbbf24'; // yellow
-  if (pct >= 40) return '#4ade80'; // green
-  return '#60a5fa';                 // blue (low)
+  if (pct >= 90) return 'var(--danger)'; // red
+  if (pct >= 70) return 'var(--warning)'; // yellow
+  if (pct >= 40) return 'var(--success)'; // green
+  return 'var(--accent-blue)';                 // blue (low)
 }
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
-const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'6px 10px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'6px 10px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
 const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.55)' };
-const BTN_ADD: React.CSSProperties = { background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:6, padding:'4px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'#fb923c', cursor:'pointer' };
+const BTN_ADD: React.CSSProperties = { background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:6, padding:'4px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--accent-strong)', cursor:'pointer' };
 const BTN_SAVE: React.CSSProperties = { background:'rgba(234,88,12,0.8)', border:'none', borderRadius:6, padding:'5px 12px', fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer' };
 const BTN_CANCEL: React.CSSProperties = { background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' };
 const BTN_EDIT: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.3)', cursor:'pointer', borderRadius:4 };
 const BTN_DEL: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(239,68,68,0.5)', cursor:'pointer', borderRadius:4 };
 
 // ─── Capacity Value — absolute, no % ────────────────────────────────────────
-function CapacityValue({ value, unit, color = '#a78bfa' }: { value: number | null; unit: string; color?: string }) {
+function CapacityValue({ value, unit, color = 'var(--accent-violet)' }: { value: number | null; unit: string; color?: string }) {
   if (value === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
   return (
     <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color }}>
@@ -84,7 +84,7 @@ function CapacityValue({ value, unit, color = '#a78bfa' }: { value: number | nul
 // ─── Occupancy Bar — pallets estimate only, clearly labelled ─────────────────
 function OccupancyBar({ pct }: { pct: number | null }) {
   if (pct === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
-  const color = pct >= 90 ? '#f87171' : pct >= 70 ? '#fbbf24' : pct >= 40 ? '#4ade80' : '#60a5fa';
+  const color = pct >= 90 ? 'var(--danger)' : pct >= 70 ? 'var(--warning)' : pct >= 40 ? 'var(--success)' : 'var(--accent-blue)';
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
       <div style={{ display:'flex', alignItems:'center', gap:5 }}>
@@ -106,17 +106,17 @@ function CapacityPanel({ w }: { w: WarehouseEnriched }) {
     <div style={{ display:'flex', gap:10, padding:'8px 20px', flexWrap:'wrap', alignItems:'center', borderBottom:'0.5px solid rgba(255,255,255,0.04)', background:'rgba(167,139,250,0.03)' }}>
       <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Capacity:</span>
       {w.capacityKg !== null && (
-        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(167,139,250,0.08)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#a78bfa', fontFamily:"'IBM Plex Mono',monospace" }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(167,139,250,0.08)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--accent-violet)', fontFamily:"'IBM Plex Mono',monospace" }}>
           ⚖ {w.capacityKg.toLocaleString()} kg
         </span>
       )}
       {w.capacityLtr !== null && (
-        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(96,165,250,0.08)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#60a5fa', fontFamily:"'IBM Plex Mono',monospace" }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(96,165,250,0.08)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--accent-blue)', fontFamily:"'IBM Plex Mono',monospace" }}>
           🧴 {w.capacityLtr.toLocaleString()} L
         </span>
       )}
       {w.capacityPallets !== null && (
-        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(251,191,36,0.08)', border:'0.5px solid rgba(251,191,36,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'#fbbf24', fontFamily:"'IBM Plex Mono',monospace" }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(251,191,36,0.08)', border:'0.5px solid rgba(251,191,36,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--warning)', fontFamily:"'IBM Plex Mono',monospace" }}>
           📦 {w.capacityPallets.toLocaleString()} plt
         </span>
       )}
@@ -145,7 +145,7 @@ interface InlineFormProps {
 function InlineForm({ fields, values, onChange, onSave, onCancel, saving, error, saveLabel = 'Add' }: InlineFormProps) {
   return (
     <div style={{ background:'rgba(251,146,60,0.04)', border:'0.5px solid rgba(251,146,60,0.15)', borderRadius:7, padding:10, display:'flex', flexDirection:'column', gap:8 }}>
-      {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:5, padding:'5px 9px', fontSize:11, color:'#fca5a5' }}>{error}</div>}
+      {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:5, padding:'5px 9px', fontSize:11, color:'var(--danger-subtle)' }}>{error}</div>}
       <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(fields.length, 3)}, 1fr)`, gap:8 }}>
         {fields.map(f => (
           <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:3 }}>
@@ -190,7 +190,7 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
           <div onClick={() => toggle(zone.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 20px 6px 32px', cursor:'pointer', userSelect:'none' }}>
             <span style={{ fontSize:10, color:zoneColor(zone.zoneType), display:'inline-block', transition:'transform 0.15s', transform:expanded.has(zone.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
             <span style={{ fontSize:11, color:zoneColor(zone.zoneType), fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, minWidth:55 }}>{zone.code}</span>
-            <span style={{ fontSize:11, color:'#e2dfd8', flex:1 }}>{zone.name}</span>
+            <span style={{ fontSize:11, color:'var(--text-primary)', flex:1 }}>{zone.name}</span>
             <span style={{ fontSize:9, color:zoneColor(zone.zoneType), background:`${zoneColor(zone.zoneType)}18`, border:`0.5px solid ${zoneColor(zone.zoneType)}35`, padding:'1px 6px', borderRadius:20 }}>{zone.zoneType}</span>
             <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)' }}>{zone.aisles?.length ?? 0} aisles</span>
           </div>
@@ -221,7 +221,7 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
                         <span style={{ fontSize:9, color:'rgba(255,255,255,0.35)', flex:1 }}>{level.name ?? `Level ${level.code}`}</span>
                         {level.maxWeightKg && <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
                         {(level._count?.bins ?? 0) > 0 && <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{level._count!.bins} bins</span>}
-                        {(level._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'#4ade80', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{level._count!.stock} lines</span>}
+                        {(level._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'var(--success)', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{level._count!.stock} lines</span>}
                       </div>
                       {expanded.has(level.id) && level.bins?.map(bin => (
                         <div key={bin.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 20px 3px 100px', borderTop:'0.5px solid rgba(255,255,255,0.01)' }}>
@@ -230,7 +230,7 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
                           <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', flex:1 }}>{bin.name ?? `Bin ${bin.code}`}</span>
                           <span style={{ fontSize:8, color:'rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.03)', padding:'1px 5px', borderRadius:20 }}>{bin.binType}</span>
                           {bin.maxWeightKg && <span style={{ fontSize:9, color:'rgba(255,255,255,0.15)' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
-                          {(bin._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'#4ade80', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
+                          {(bin._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'var(--success)', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
                         </div>
                       ))}
                     </div>
@@ -342,7 +342,7 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
             : <div className="loc-row" onClick={() => toggle(zone.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'rgba(255,255,255,0.02)', cursor:'pointer', userSelect:'none', borderRadius:expanded.has(zone.id)?'8px 8px 0 0':8 }}>
                 <span style={{ fontSize:11, color:zoneColor(zone.zoneType), display:'inline-block', transition:'transform 0.15s', transform:expanded.has(zone.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                 <span style={{ fontSize:12, color:zoneColor(zone.zoneType), fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, minWidth:60 }}>{zone.code}</span>
-                <span style={{ fontSize:12, color:'#e2dfd8', flex:1 }}>{zone.name}</span>
+                <span style={{ fontSize:12, color:'var(--text-primary)', flex:1 }}>{zone.name}</span>
                 <span style={{ fontSize:10, color:zoneColor(zone.zoneType), background:`${zoneColor(zone.zoneType)}18`, border:`0.5px solid ${zoneColor(zone.zoneType)}35`, padding:'1px 7px', borderRadius:20 }}>{zone.zoneType}</span>
                 <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>{zone.aisles?.length??zone._count?.aisles??0} aisles</span>
                 {nodeActions(zone.id,'zone',{code:zone.code,name:zone.name,zoneType:zone.zoneType,description:zone.description??''},true,'aisle','Aisle')}
@@ -388,7 +388,7 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
                             <span style={{ fontSize:10, color:'rgba(255,255,255,0.45)', flex:1 }}>{level.name??`Level ${level.code}`}</span>
                             {level.maxWeightKg && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
                             {level.maxPallets  && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{level.maxPallets}plt</span>}
-                            {(level._count?.stock??0)>0 && <span style={{ fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{level._count!.stock} lines</span>}
+                            {(level._count?.stock??0)>0 && <span style={{ fontSize:10, color:'var(--success)', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{level._count!.stock} lines</span>}
                             {(level._count?.bins??0)>0  && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{level._count!.bins} bins</span>}
                             {nodeActions(level.id,'level',{code:level.code,name:level.name??'',maxWeightKg:level.maxWeightKg?String(level.maxWeightKg):'',maxVolumeLtr:level.maxVolumeLtr?String(level.maxVolumeLtr):'',maxPallets:level.maxPallets?String(level.maxPallets):''},true,'bin','Bin')}
                           </div>
@@ -404,7 +404,7 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
                                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)', flex:1 }}>{bin.name??`Bin ${bin.code}`}</span>
                                 <span style={{ fontSize:9, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.04)', padding:'1px 6px', borderRadius:20 }}>{bin.binType}</span>
                                 {bin.maxWeightKg && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
-                                {(bin._count?.stock??0)>0 && <span style={{ fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
+                                {(bin._count?.stock??0)>0 && <span style={{ fontSize:10, color:'var(--success)', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
                                 {nodeActions(bin.id,'bin',{code:bin.code,name:bin.name??'',binType:bin.binType,maxWeightKg:bin.maxWeightKg?String(bin.maxWeightKg):'',maxVolumeLtr:bin.maxVolumeLtr?String(bin.maxVolumeLtr):'',maxPallets:bin.maxPallets?String(bin.maxPallets):'',notes:bin.notes??''},false)}
                               </div>
                           }
@@ -418,7 +418,7 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
           ))}
         </div>
       ))}
-      {formError && !addingTo && !editingId && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:6, padding:'7px 12px', fontSize:12, color:'#fca5a5' }}>{formError}</div>}
+      {formError && !addingTo && !editingId && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:6, padding:'7px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{formError}</div>}
     </div>
   );
 }
@@ -429,10 +429,10 @@ function TypeBadge({ type }: { type?: string }) {
   return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:c.color, background:c.bg, border:`0.5px solid ${c.border}`, whiteSpace:'nowrap' }}><span style={{ width:5, height:5, borderRadius:'50%', background:c.color, flexShrink:0 }} />{c.label}</span>;
 }
 function ActiveBadge({ active }: { active: boolean }) {
-  return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active?'#4ade80':'rgba(255,255,255,0.35)', background:active?'rgba(74,222,128,0.1)':'rgba(255,255,255,0.04)', border:`0.5px solid ${active?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.08)'}` }}><span style={{ width:5, height:5, borderRadius:'50%', background:active?'#4ade80':'rgba(255,255,255,0.2)', flexShrink:0 }} />{active?'Active':'Inactive'}</span>;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active?'var(--success)':'rgba(255,255,255,0.35)', background:active?'rgba(74,222,128,0.1)':'rgba(255,255,255,0.04)', border:`0.5px solid ${active?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.08)'}` }}><span style={{ width:5, height:5, borderRadius:'50%', background:active?'var(--success)':'rgba(255,255,255,0.2)', flexShrink:0 }} />{active?'Active':'Inactive'}</span>;
 }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked?'#e2dfd8':'rgba(255,255,255,0.4)', userSelect:'none' }}><div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked?'rgba(234,88,12,0.8)':'rgba(255,255,255,0.1)', border:`0.5px solid ${checked?'rgba(251,146,60,0.5)':'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}><div style={{ position:'absolute', top:2, left:checked?16:2, width:13, height:13, borderRadius:'50%', background:'#fff', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} /></div>{label}</label>;
+  return <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked?'var(--text-primary)':'rgba(255,255,255,0.4)', userSelect:'none' }}><div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked?'rgba(234,88,12,0.8)':'rgba(255,255,255,0.1)', border:`0.5px solid ${checked?'rgba(251,146,60,0.5)':'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}><div style={{ position:'absolute', top:2, left:checked?16:2, width:13, height:13, borderRadius:'50%', background:'#fff', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} /></div>{label}</label>;
 }
 
 // ─── Stats Bar ────────────────────────────────────────────────────────────────
@@ -442,12 +442,12 @@ function StatsBar({ warehouses, activeType, onTypeClick }: { warehouses: Warehou
   return (
     <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap', flexShrink:0 }}>
       {WH_TYPES.map(t => { const count = warehouses.filter(w => w.warehouseType === t.value).length; const isActive = activeType === t.value;
-        return <div key={t.value} onClick={() => onTypeClick(isActive?null:t.value)} style={{ background:isActive?t.bg:'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive?t.color:t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:'pointer', transition:'all 0.15s', boxShadow:isActive?`0 0 12px ${t.bg}`:'none' }}><span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span><span style={{ fontSize:22, fontWeight:500, color:isActive?t.color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span></div>;
+        return <div key={t.value} onClick={() => onTypeClick(isActive?null:t.value)} style={{ background:isActive?t.bg:'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive?t.color:t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:'pointer', transition:'all 0.15s', boxShadow:isActive?`0 0 12px ${t.bg}`:'none' }}><span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span><span style={{ fontSize:22, fontWeight:500, color:isActive?t.color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span></div>;
       })}
-      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Active</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{active}</span></div>
-      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Location</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{tracked}</span></div>
-      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'#a78bfa', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Cap. Config</span><span style={{ fontSize:22, fontWeight:500, color:'#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{withCapacity}</span></div>
-      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}><span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span><span style={{ fontSize:22, fontWeight:500, color:'#fb923c', fontFamily:"'IBM Plex Mono',monospace" }}>{total}</span></div>
+      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'var(--success)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Active</span><span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{active}</span></div>
+      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'var(--accent-blue)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Location</span><span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{tracked}</span></div>
+      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:80 }}><span style={{ fontSize:10, color:'var(--accent-violet)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Cap. Config</span><span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{withCapacity}</span></div>
+      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}><span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span><span style={{ fontSize:22, fontWeight:500, color:'var(--accent-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{total}</span></div>
     </div>
   );
 }
@@ -461,12 +461,12 @@ function buildColumns(
     {
       key:'code', header:'Code', width:110, sortable:true,
       value: r => r.code,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#fb923c' }}>{r.code}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-strong)' }}>{r.code}</span>,
     },
     {
       key:'name', header:'Name', sortable:true,
       value: r => r.name,
-      render: r => <div><div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.name}</div>{r.address && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.address}</div>}</div>,
+      render: r => <div><div style={{ color:'var(--text-primary)', fontWeight:500 }}>{r.name}</div>{r.address && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.address}</div>}</div>,
     },
     {
       key:'warehouseType', header:'Type', width:130, sortable:true,
@@ -476,27 +476,27 @@ function buildColumns(
     {
       key:'zoneCount', header:'Zones', width:80, sortable:true, align:'center',
       value: r => r.zoneCount ?? 0,
-      render: r => r.zoneCount > 0 ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'#60a5fa' }}>{r.zoneCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      render: r => r.zoneCount > 0 ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-blue)' }}>{r.zoneCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
       key:'stockCount', header:'Stock Lines', width:100, sortable:true, align:'center',
       value: r => r.stockCount ?? 0,
-      render: r => r.stockCount > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'#4ade80', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{r.stockCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      render: r => r.stockCount > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'var(--success)', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{r.stockCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
     },
     {
       key:'capacityKg', header:'Cap. kg', width:90, sortable:true, align:'center',
       value: r => r.capacityKg ?? -1,
-      render: r => <CapacityValue value={r.capacityKg} unit="kg" color="#a78bfa" />,
+      render: r => <CapacityValue value={r.capacityKg} unit="kg" color="var(--accent-violet)" />,
     },
     {
       key:'capacityLtr', header:'Cap. L', width:85, sortable:true, align:'center',
       value: r => r.capacityLtr ?? -1,
-      render: r => <CapacityValue value={r.capacityLtr} unit="L" color="#60a5fa" />,
+      render: r => <CapacityValue value={r.capacityLtr} unit="L" color="var(--accent-blue)" />,
     },
     {
       key:'capacityPallets', header:'Cap. Plt', width:85, sortable:true, align:'center',
       value: r => r.capacityPallets ?? -1,
-      render: r => <CapacityValue value={r.capacityPallets} unit="plt" color="#fbbf24" />,
+      render: r => <CapacityValue value={r.capacityPallets} unit="plt" color="var(--warning)" />,
     },
     {
       key:'occupancyPct', header:'Occ. (est.)', width:130, sortable:true, align:'center',
@@ -506,7 +506,7 @@ function buildColumns(
     {
       key:'locationTrackingEnabled', header:'Locations', width:90, sortable:true, align:'center',
       value: r => r.locationTrackingEnabled ? 1 : 0,
-      render: r => r.locationTrackingEnabled ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'#60a5fa' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'#60a5fa' }} />On</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>Off</span>,
+      render: r => r.locationTrackingEnabled ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'var(--accent-blue)' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent-blue)' }} />On</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>Off</span>,
     },
     {
       key:'isActive', header:'Status', width:100, sortable:true,
@@ -518,7 +518,7 @@ function buildColumns(
       render: r => (
         <div style={{ display:'flex', gap:6 }}>
           <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.55)', border:'0.5px solid rgba(255,255,255,0.1)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onEdit(r); }}>Edit</button>
-          <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(239,68,68,0.08)', color:'#f87171', border:'0.5px solid rgba(239,68,68,0.2)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onDelete(r); }}>Delete</button>
+          <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(239,68,68,0.08)', color:'var(--danger)', border:'0.5px solid rgba(239,68,68,0.2)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onDelete(r); }}>Delete</button>
         </div>
       ),
     },
@@ -564,37 +564,37 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
 
   if (!open) return null;
   const TABS = [{ key:'general', label:'General' }, ...(initial ? [{ key:'locations', label:'Location Tree' }] : [])];
-  const FINP: React.CSSProperties = { background:'#0e0b1a', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const FINP: React.CSSProperties = { background:'var(--surface)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
   const FLBL: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
 
   return (
     <>
       <style>{`
         .wm-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
-        .wm-box{background:#0e0b1a;border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
+        .wm-box{background:var(--surface);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.7);position:relative}
         .wm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .wm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
-        .wm-title{font-size:14px;font-weight:500;color:#f1ede8}
+        .wm-title{font-size:14px;font-weight:500;color:var(--text-strong)}
         .wm-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
-        .wm-close:hover{background:rgba(255,255,255,0.12);color:#f1ede8}
+        .wm-close:hover{background:rgba(255,255,255,0.12);color:var(--text-strong)}
         .wm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
         .wm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s}
         .wm-tab:hover{color:rgba(255,255,255,0.7)}
-        .wm-tab-active{color:#fb923c !important;border-bottom-color:#fb923c !important}
+        .wm-tab-active{color:var(--accent-strong) !important;border-bottom-color:var(--accent-strong) !important}
         .wm-scroll{flex:1;overflow-y:auto;min-height:0}
         .wm-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
         .wm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .wm-field{display:flex;flex-direction:column;gap:5px}
-        .wm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:#fca5a5}
+        .wm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle)}
         .wm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
         .wm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
-        .wm-btn-save{background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
+        .wm-btn-save{background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .wm-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .wm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
         .wm-stat-row{display:flex;gap:10px;flex-wrap:wrap}
         .wm-stat{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:2;min-width:80px}
         .wm-stat-lbl{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em}
-        .wm-stat-val{font-size:16px;font-family:'IBM Plex Mono',monospace;color:#f1ede8;font-weight:500}
+        .wm-stat-val{font-size:16px;font-family:'IBM Plex Mono',monospace;color:var(--text-strong);font-weight:500}
       `}</style>
       {/* ── NO onClick on overlay — modal only closes with X button ── */}
       <div className="wm-overlay">
@@ -668,12 +668,12 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
 function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: WarehouseEnriched; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', marginBottom:10 }}>Delete warehouse?</div>
-        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}><strong style={{ color:'#f1ede8' }}>{warehouse.name}</strong> ({warehouse.code}) will be soft-deleted.</div>
+      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', marginBottom:10 }}>Delete warehouse?</div>
+        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}><strong style={{ color:'var(--text-strong)' }}>{warehouse.name}</strong> ({warehouse.code}) will be soft-deleted.</div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
-          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f87171', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
+          <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
         </div>
       </div>
     </div>
@@ -767,9 +767,9 @@ export default function WarehousesPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .wh-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
         .wh-toolbar{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-        .wh-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,#c2410c,#ea580c,#f97316);border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s;flex-shrink:0}
+        .wh-btn-new{display:flex;align-items:center;gap:6px;margin-left:auto;background:linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid));border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.3);transition:opacity 0.15s;flex-shrink:0}
         .wh-btn-new:hover{opacity:0.88}
-        .wh-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5}
+        .wh-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle)}
       `}</style>
       <div className="wh-page">
         <StatsBar warehouses={warehouses} activeType={typeFilter} onTypeClick={setTypeFilter} />

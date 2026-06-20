@@ -102,18 +102,18 @@ const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fon
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  draft:   { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft'   },
-  posted:  { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Posted'  },
-  partial: { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Partial' },
-  paid:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Paid'    },
+  draft:   { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: 'Draft'   },
+  posted:  { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)',  label: 'Posted'  },
+  partial: { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Partial' },
+  paid:    { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: 'Paid'    },
   void:    { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Void' },
 };
 
 const MATCH_CFG = {
   no_match:          { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'No Match' },
-  two_way:           { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: '2-Way'   },
-  three_way_matched: { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: '3-Way ✓' },
-  three_way_failed:  { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: '3-Way ✗' },
+  two_way:           { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: '2-Way'   },
+  three_way_matched: { color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: '3-Way ✓' },
+  three_way_failed:  { color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: '3-Way ✗' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -182,29 +182,29 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
       {match && (
         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
           <MatchBadge status={match.matchStatus} />
-          {match.purchaseOrder && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>PO: <span style={{ ...MONO, color:'#fb923c' }}>{match.purchaseOrder.poNumber}</span></span>}
-          {match.goodsReceipt  && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>GRN: <span style={{ ...MONO, color:'#4ade80' }}>{match.goodsReceipt.grnNumber}</span><span style={{ color:'rgba(255,255,255,0.25)', marginLeft:6 }}>({fmtDateShort(match.goodsReceipt.receivedDate)})</span></span>}
+          {match.purchaseOrder && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>PO: <span style={{ ...MONO, color:'var(--accent-strong)' }}>{match.purchaseOrder.poNumber}</span></span>}
+          {match.goodsReceipt  && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>GRN: <span style={{ ...MONO, color:'var(--success)' }}>{match.goodsReceipt.grnNumber}</span><span style={{ color:'rgba(255,255,255,0.25)', marginLeft:6 }}>({fmtDateShort(match.goodsReceipt.receivedDate)})</span></span>}
           <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)' }}>Tolerance: {match.priceTolerance}</span>
-          <span style={{ fontSize:10, color: match.summary.failed > 0 ? '#f87171' : '#4ade80', marginLeft:'auto' }}>{match.summary.matched}/{match.summary.total} lines matched</span>
+          <span style={{ fontSize:10, color: match.summary.failed > 0 ? 'var(--danger)' : 'var(--success)', marginLeft:'auto' }}>{match.summary.matched}/{match.summary.total} lines matched</span>
         </div>
       )}
-      {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 10px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+      {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'7px 10px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
       {invoiceStatus === 'draft' && (
         <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
           {currentGrnId ? (
             <button onClick={handleUnlink} disabled={unlinking}
-              style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif", opacity:unlinking?0.5:1 }}>
+              style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.2)', color:'var(--danger)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:unlinking?0.5:1 }}>
               {unlinking ? 'Unlinking…' : 'Unlink GRN'}
             </button>
           ) : (
             <>
               <select value={selectedGrn} onChange={e => setSelectedGrn(e.target.value)}
-                style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', outline:'none', minWidth:220 }}>
+                style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary)', outline:'none', minWidth:220 }}>
                 <option value="">— Select GRN to link —</option>
                 {grns.map(g => <option key={g.id} value={g.id}>{g.grnNumber} · {g.supplierName ?? g.warehouseCode} · {fmtDateShort(g.receivedDate)}</option>)}
               </select>
               <button onClick={handleLink} disabled={linking || !selectedGrn}
-                style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor: linking||!selectedGrn?'not-allowed':'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'#4ade80', fontFamily:"'IBM Plex Sans',sans-serif", opacity: linking||!selectedGrn?0.5:1 }}>
+                style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor: linking||!selectedGrn?'not-allowed':'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'var(--success)', fontFamily:"'IBM Plex Sans',sans-serif", opacity: linking||!selectedGrn?0.5:1 }}>
                 {linking ? 'Linking…' : 'Link GRN'}
               </button>
             </>
@@ -226,18 +226,18 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
                 <tr key={line.lineNumber} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)', background: !line.lineMatches ? 'rgba(248,113,113,0.03)' : 'transparent' }}>
                   <td style={{ padding:'6px 8px', color:'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
                   <td style={{ padding:'6px 8px' }}>
-                    <div style={{ ...MONO, color:'#a78bfa', fontSize:10 }}>{line.itemCode ?? '—'}</div>
+                    <div style={{ ...MONO, color:'var(--accent-violet)', fontSize:10 }}>{line.itemCode ?? '—'}</div>
                     <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10, marginTop:1, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{line.itemName}</div>
                   </td>
                   <td style={{ padding:'6px 8px', textAlign:'right', ...MONO }}>{line.invoiceQty}</td>
-                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.poQtyOk === false ? '#f87171' : line.poQtyOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.poQty ?? '—'}</span></td>
-                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.grnQtyOk === false ? '#f87171' : line.grnQtyOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.grnQty ?? '—'}</span></td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.poQtyOk === false ? 'var(--danger)' : line.poQtyOk === true ? 'var(--success)' : 'rgba(255,255,255,0.3)' }}>{line.poQty ?? '—'}</span></td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ ...MONO, color: line.grnQtyOk === false ? 'var(--danger)' : line.grnQtyOk === true ? 'var(--success)' : 'rgba(255,255,255,0.3)' }}>{line.grnQty ?? '—'}</span></td>
                   <td style={{ padding:'6px 8px', textAlign:'right', ...MONO }}>{fmtAmt(line.invoicePrice)}</td>
                   <td style={{ padding:'6px 8px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.poPrice ? fmtAmt(line.poPrice) : '—'}</td>
-                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ fontSize:10, color: line.priceOk === false ? '#f87171' : line.priceOk === true ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{line.priceDiffPct !== null ? `${line.priceDiffPct}%` : '—'}</span></td>
+                  <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ fontSize:10, color: line.priceOk === false ? 'var(--danger)' : line.priceOk === true ? 'var(--success)' : 'rgba(255,255,255,0.3)' }}>{line.priceDiffPct !== null ? `${line.priceDiffPct}%` : '—'}</span></td>
                   <td style={{ padding:'6px 8px' }}>
-                    {line.lineMatches ? <span style={{ fontSize:10, color:'#4ade80' }}>✓</span> : (
-                      <div><span style={{ fontSize:10, color:'#f87171' }}>✗</span>{line.issues.map((iss, i) => <div key={i} style={{ fontSize:9, color:'rgba(248,113,113,0.7)', marginTop:1, maxWidth:160, lineHeight:1.3 }}>{iss}</div>)}</div>
+                    {line.lineMatches ? <span style={{ fontSize:10, color:'var(--success)' }}>✓</span> : (
+                      <div><span style={{ fontSize:10, color:'var(--danger)' }}>✗</span>{line.issues.map((iss, i) => <div key={i} style={{ fontSize:9, color:'rgba(248,113,113,0.7)', marginTop:1, maxWidth:160, lineHeight:1.3 }}>{iss}</div>)}</div>
                     )}
                   </td>
                 </tr>
@@ -247,12 +247,12 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
         </div>
       )}
       {match?.matchStatus === 'three_way_matched' && (
-        <div style={{ background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#4ade80' }}>
+        <div style={{ background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--success)' }}>
           ✓ All {match.summary.total} lines pass 3-way match. Invoice is ready to post.
         </div>
       )}
       {match?.matchStatus === 'three_way_failed' && (
-        <div style={{ background:'rgba(248,113,113,0.05)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#f87171' }}>
+        <div style={{ background:'rgba(248,113,113,0.05)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger)' }}>
           ✗ {match.summary.failed} line{match.summary.failed !== 1 ? 's' : ''} failed. Resolve discrepancies before posting.
         </div>
       )}
@@ -295,11 +295,11 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
-      <div style={{ width:780, background:'#0a0712', borderLeft:'0.5px solid rgba(167,139,250,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+      <div style={{ width:780, background:'var(--bg)', borderLeft:'0.5px solid rgba(167,139,250,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
         {/* Header */}
         <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
-            <div style={{ fontSize:14, fontWeight:500, color:'#f1ede8', ...MONO }}>{inv.invoiceNumber}</div>
+            <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)', ...MONO }}>{inv.invoiceNumber}</div>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
               {inv.supplier?.name}
               {inv.purchaseOrder && <span style={{ color:'rgba(167,139,250,0.5)', marginLeft:8 }}>· PO {inv.purchaseOrder.poNumber}</span>}
@@ -317,19 +317,19 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
-            {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+            {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
 
             {/* Info grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
               {[
                 { label:'Invoice Date', value: fmtDate(detail.invoiceDate) },
-                { label:'Due Date',     value: fmtDate(detail.dueDate), extra: inv.status !== 'paid' && inv.status !== 'void' ? (days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`) : undefined, extraColor: days < 0 ? '#f87171' : '#fbbf24' },
-                { label:'Outstanding',  value: outstanding > 0.01 ? fmtAmt(outstanding) : '—', valueColor: outstanding > 0.01 ? '#f87171' : '#4ade80' },
+                { label:'Due Date',     value: fmtDate(detail.dueDate), extra: inv.status !== 'paid' && inv.status !== 'void' ? (days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`) : undefined, extraColor: days < 0 ? 'var(--danger)' : 'var(--warning)' },
+                { label:'Outstanding',  value: outstanding > 0.01 ? fmtAmt(outstanding) : '—', valueColor: outstanding > 0.01 ? 'var(--danger)' : 'var(--success)' },
                 { label:'Currency',     value: detail.currency },
               ].map(item => (
                 <div key={item.label} style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 12px' }}>
                   <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{item.label}</div>
-                  <div style={{ fontSize:13, color:(item as any).valueColor ?? '#e2dfd8' }}>{item.value}</div>
+                  <div style={{ fontSize:13, color:(item as any).valueColor ?? 'var(--text-primary)' }}>{item.value}</div>
                   {(item as any).extra && <div style={{ fontSize:10, color:(item as any).extraColor, marginTop:2 }}>{(item as any).extra}</div>}
                 </div>
               ))}
@@ -340,7 +340,7 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
               <div style={{ display:'flex', alignItems:'flex-start', gap:10, background:'rgba(251,191,36,0.06)', border:'0.5px solid rgba(251,191,36,0.25)', borderRadius:8, padding:'10px 14px' }}>
                 <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
                 <div>
-                  <div style={{ fontSize:12, fontWeight:500, color:'#fbbf24', marginBottom:3 }}>No GRN linked</div>
+                  <div style={{ fontSize:12, fontWeight:500, color:'var(--warning)', marginBottom:3 }}>No GRN linked</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
                     This invoice has a linked PO but no Goods Receipt. For a full 3-way match, receive the goods first via <strong style={{ color:'rgba(255,255,255,0.6)' }}>Procurement → Goods Receipts</strong>, then link the GRN in the Match tab before posting.
                   </div>
@@ -356,7 +356,7 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
                 { key:'payments', label:`Payments (${detail.payments?.length ?? 0})` },
               ] as { key: typeof activeTab; label: string }[]).map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)}
-                  style={{ padding:'6px 16px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', border:'none', background: activeTab === t.key ? 'rgba(167,139,250,0.15)' : 'transparent', color: activeTab === t.key ? '#a78bfa' : 'rgba(255,255,255,0.4)', borderRight:'0.5px solid rgba(255,255,255,0.07)', transition:'all 0.15s' }}>
+                  style={{ padding:'6px 16px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', border:'none', background: activeTab === t.key ? 'rgba(167,139,250,0.15)' : 'transparent', color: activeTab === t.key ? 'var(--accent-violet)' : 'rgba(255,255,255,0.4)', borderRight:'0.5px solid rgba(255,255,255,0.07)', transition:'all 0.15s' }}>
                   {t.label}
                 </button>
               ))}
@@ -376,20 +376,20 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
                     return (
                       <tr key={line.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
                         <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                        <td style={{ padding:'7px 8px' }}><span style={{ ...MONO, color:'#a78bfa', fontSize:11 }}>{line.item?.code ?? '—'}</span></td>
+                        <td style={{ padding:'7px 8px' }}><span style={{ ...MONO, color:'var(--accent-violet)', fontSize:11 }}>{line.item?.code ?? '—'}</span></td>
                         <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.45)', fontSize:11 }}>{line.description || '—'}</td>
                         <td style={{ padding:'7px 8px', textAlign:'right', ...MONO }}>{line.quantity}</td>
                         <td style={{ padding:'7px 8px', color:'rgba(255,255,255,0.4)' }}>{line.uom ?? '—'}</td>
                         <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.originalPoPrice ? fmtAmt(line.originalPoPrice) : '—'}</td>
                         <td style={{ padding:'7px 8px', textAlign:'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                        <td style={{ padding:'7px 8px', textAlign:'right', fontSize:11, color: variance > 0 ? '#f87171' : variance < 0 ? '#4ade80' : 'rgba(255,255,255,0.3)' }}>{variance !== 0 ? `${variance > 0 ? '+' : ''}${fmtAmt(variance)}` : '—'}</td>
-                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'#e2dfd8', fontWeight:500 }}>{fmtAmt(line.lineTotal)}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', fontSize:11, color: variance > 0 ? 'var(--danger)' : variance < 0 ? 'var(--success)' : 'rgba(255,255,255,0.3)' }}>{variance !== 0 ? `${variance > 0 ? '+' : ''}${fmtAmt(variance)}` : '—'}</td>
+                        <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'var(--text-primary)', fontWeight:500 }}>{fmtAmt(line.lineTotal)}</td>
                       </tr>
                     );
                   })}
                   <tr style={{ background:'rgba(255,255,255,0.02)' }}>
                     <td colSpan={8} style={{ padding:'7px 8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL</td>
-                    <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'#a78bfa', fontWeight:600, fontSize:13 }}>{fmtAmt(detail.totalAmount)}</td>
+                    <td style={{ padding:'7px 8px', textAlign:'right', ...MONO, color:'var(--accent-violet)', fontWeight:600, fontSize:13 }}>{fmtAmt(detail.totalAmount)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -412,7 +412,7 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
                 {detail.payments && detail.payments.length > 0 ? (
                   detail.payments.map(p => (
                     <div key={p.id} style={{ display:'flex', alignItems:'center', gap:12, background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'10px 14px' }}>
-                      <span style={{ ...MONO, color:'#4ade80', fontSize:14, fontWeight:500 }}>{fmtAmt(p.amount)}</span>
+                      <span style={{ ...MONO, color:'var(--success)', fontSize:14, fontWeight:500 }}>{fmtAmt(p.amount)}</span>
                       <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{fmtDate(p.paymentDate)}</span>
                       {p.paymentMethod && <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)', padding:'1px 6px', borderRadius:4, background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.08)' }}>{p.paymentMethod}</span>}
                       <span style={{ ...MONO, fontSize:10, color:'rgba(255,255,255,0.25)', marginLeft:'auto' }}>{p.paymentNumber}</span>
@@ -433,19 +433,19 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
             <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)', flexWrap:'wrap' }}>
               {detail.status === 'draft' && (
                 <button onClick={() => handleAction('post')} disabled={actionBusy}
-                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.25)', color:'#60a5fa', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.25)', color:'var(--accent-blue)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
                   {actionBusy ? '…' : '✓ Post Invoice'}
                 </button>
               )}
               {['posted','partial'].includes(detail.status) && (
                 <button onClick={() => setPayOpen(true)}
-                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'#4ade80', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'var(--success)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
                   $ Apply Payment
                 </button>
               )}
               {['draft','posted'].includes(detail.status) && (
                 <button onClick={() => handleAction('void')} disabled={actionBusy}
-                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
+                  style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
                   Void
                 </button>
               )}
@@ -469,7 +469,7 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
-  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
   const isValid = Number(form.amount) > 0;
@@ -546,9 +546,9 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState('');
 
-  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(167,139,250,0.7)', fontFamily:"'IBM Plex Sans',sans-serif" };
-  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
 
   const searchPo = async () => {
     if (!poSearch.trim()) return;
@@ -631,7 +631,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
     <>
       <style>{`
         .apci-overlay{position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
-        .apci-box{background:#0e0b1a;border:0.5px solid rgba(167,139,250,0.22);border-radius:14px;width:100%;max-width:920px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.75)}
+        .apci-box{background:var(--surface);border:0.5px solid rgba(167,139,250,0.22);border-radius:14px;width:100%;max-width:920px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.75)}
         .apci-box::before{content:\'\';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,0.45),transparent);pointer-events:none}
         .apci-th{font-size:10px;color:rgba(167,139,250,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
         .apci-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
@@ -640,13 +640,13 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
         <div className="apci-box">
 
           {/* Header */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'#0e0b1a', zIndex:1, borderRadius:'14px 14px 0 0' }}>
-            <span style={{ fontSize:14, fontWeight:500, color:'#f1ede8' }}>New AP Invoice</span>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', position:'sticky', top:0, background:'var(--surface)', zIndex:1, borderRadius:'14px 14px 0 0' }}>
+            <span style={{ fontSize:14, fontWeight:500, color:'var(--text-strong)' }}>New AP Invoice</span>
             <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
 
           <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
-            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
 
             {/* ── Mode chooser ── */}
             {mode === 'choose' && (
@@ -657,7 +657,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   onMouseEnter={e => (e.currentTarget.style.background='rgba(251,146,60,0.1)')}
                   onMouseLeave={e => (e.currentTarget.style.background='rgba(251,146,60,0.05)')}>
                   <div style={{ fontSize:22 }}>📋</div>
-                  <div style={{ fontSize:14, fontWeight:500, color:'#fb923c' }}>From Purchase Order</div>
+                  <div style={{ fontSize:14, fontWeight:500, color:'var(--accent-strong)' }}>From Purchase Order</div>
                   <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
                     Auto-generate an AP Invoice from a confirmed PO. Lines, prices and supplier are pre-filled automatically.
                   </div>
@@ -669,7 +669,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   onMouseEnter={e => (e.currentTarget.style.background='rgba(167,139,250,0.1)')}
                   onMouseLeave={e => (e.currentTarget.style.background='rgba(167,139,250,0.05)')}>
                   <div style={{ fontSize:22 }}>✏️</div>
-                  <div style={{ fontSize:14, fontWeight:500, color:'#a78bfa' }}>Manual Entry</div>
+                  <div style={{ fontSize:14, fontWeight:500, color:'var(--accent-violet)' }}>Manual Entry</div>
                   <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
                     Create an AP Invoice manually. Use for services, expenses or invoices without a linked Purchase Order.
                   </div>
@@ -695,7 +695,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), searchPo())} />
                   </div>
                   <button type="button" onClick={searchPo} disabled={poLoading}
-                    style={{ padding:'8px 18px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', color:'#fb923c', fontFamily:"'IBM Plex Sans',sans-serif", whiteSpace:'nowrap', opacity:poLoading?0.5:1 }}>
+                    style={{ padding:'8px 18px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', color:'var(--accent-strong)', fontFamily:"'IBM Plex Sans',sans-serif", whiteSpace:'nowrap', opacity:poLoading?0.5:1 }}>
                     {poLoading ? 'Searching…' : 'Find PO'}
                   </button>
                 </div>
@@ -705,10 +705,10 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                     {/* PO summary */}
                     <div style={{ background:'rgba(251,146,60,0.05)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'12px 16px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:500, color:'#fb923c', fontFamily:"'IBM Plex Mono',monospace" }}>{selectedPo.poNumber}</div>
+                        <div style={{ fontSize:13, fontWeight:500, color:'var(--accent-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{selectedPo.poNumber}</div>
                         <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', marginTop:2 }}>{selectedPo.supplier?.name} · {selectedPo.lines?.length} line{selectedPo.lines?.length !== 1 ? 's' : ''}</div>
                       </div>
-                      <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(74,222,128,0.1)', color:'#4ade80', border:'0.5px solid rgba(74,222,128,0.2)' }}>{selectedPo.status}</span>
+                      <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(74,222,128,0.1)', color:'var(--success)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{selectedPo.status}</span>
                       <div style={{ marginLeft:'auto', fontSize:11, color:'rgba(255,255,255,0.35)' }}>Invoice will be created in draft with all PO lines pre-filled.</div>
                     </div>
 
@@ -726,13 +726,13 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                           {selectedPo.lines?.map(l => (
                             <tr key={l.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
                               <td style={{ padding:'7px 10px' }}>
-                                <div style={{ fontFamily:"'IBM Plex Mono',monospace", color:'#fb923c', fontSize:11 }}>{l.item?.code}</div>
+                                <div style={{ fontFamily:"'IBM Plex Mono',monospace", color:'var(--accent-strong)', fontSize:11 }}>{l.item?.code}</div>
                                 <div style={{ color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:1 }}>{l.item?.name}</div>
                               </td>
                               <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace" }}>{Number(l.orderedQuantity).toLocaleString()}</td>
                               <td style={{ padding:'7px 10px', color:'rgba(255,255,255,0.4)' }}>{l.uom}</td>
                               <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace" }}>{fmtAmt(l.unitPrice)}</td>
-                              <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, color:'#e2dfd8' }}>
+                              <td style={{ padding:'7px 10px', textAlign:'right', fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, color:'var(--text-primary)' }}>
                                 {fmtAmt(Number(l.orderedQuantity) * Number(l.unitPrice) * (1 - Number(l.discountPercent || 0)/100))}
                               </td>
                             </tr>
@@ -744,7 +744,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                     <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
                       <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
                       <button onClick={fromPoSubmit} disabled={submitting}
-                        style={{ background:'linear-gradient(135deg,#92400e,#d97706,#fb923c)', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(251,146,60,0.3)', opacity:submitting?0.5:1 }}>
+                        style={{ background:'linear-gradient(135deg,#92400e,#d97706,var(--accent-strong))', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(251,146,60,0.3)', opacity:submitting?0.5:1 }}>
                         {submitting ? 'Creating…' : '📋 Create from PO'}
                       </button>
                     </div>
@@ -825,13 +825,13 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                         <td style={{ padding:'4px 3px' }}><input style={LINE_INP} placeholder="PCS" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
                         <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right', borderColor: line.unitPrice ? 'rgba(167,139,250,0.3)':'rgba(255,255,255,0.1)' }} type="number" min="0" step="0.0001" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} /></td>
                         <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right' }} type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} /></td>
-                        <td style={{ padding:'4px 6px', fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'#e2dfd8', textAlign:'right' }}>
+                        <td style={{ padding:'4px 6px', fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-primary)', textAlign:'right' }}>
                           {lineTotal(line) > 0 ? fmtAmt(lineTotal(line)) : '—'}
                         </td>
                         <td style={{ padding:'4px 3px' }}>
                           {lines.length > 1 && (
                             <button type="button"
-                              style={{ width:20, height:20, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'#f87171', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
+                              style={{ width:20, height:20, borderRadius:4, background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}
                               onClick={() => setLines(ls => ls.filter((_,i) => i !== idx))}>×</button>
                           )}
                         </td>
@@ -842,7 +842,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
 
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                   <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Grand Total</span>
-                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:15, fontWeight:500, color:'#a78bfa' }}>{fmtAmt(grandTotal)}</span>
+                  <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:15, fontWeight:500, color:'var(--accent-violet)' }}>{fmtAmt(grandTotal)}</span>
                 </div>
 
                 <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
@@ -912,9 +912,9 @@ export default function ApInvoicesPage() {
       key: 'matchStatus', label: 'Match', type: 'multiselect',
       options: [
         { value: 'no_match',          label: 'No Match', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' },
-        { value: 'two_way',           label: '2-Way',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
-        { value: 'three_way_matched', label: '3-Way ✓',  color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  },
-        { value: 'three_way_failed',  label: '3-Way ✗',  color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
+        { value: 'two_way',           label: '2-Way',    color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
+        { value: 'three_way_matched', label: '3-Way ✓',  color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  },
+        { value: 'three_way_failed',  label: '3-Way ✗',  color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
       ],
       filterFn: (row, val) => {
         const arr = val as string[];
@@ -995,14 +995,14 @@ export default function ApInvoicesPage() {
     {
       key: 'invoiceNumber', header: 'Invoice #', width: 150, sortable: true,
       value: r => r.invoiceNumber,
-      render: r => <span style={{ ...MONO, color:'#a78bfa', fontWeight:500 }}>{r.invoiceNumber}</span>,
+      render: r => <span style={{ ...MONO, color:'var(--accent-violet)', fontWeight:500 }}>{r.invoiceNumber}</span>,
     },
     {
       key: 'supplier', header: 'Supplier', sortable: true,
       value: r => r.supplier?.name ?? '',
       render: r => (
         <div>
-          <div style={{ color:'#e2dfd8', fontWeight:500 }}>{r.supplier?.name ?? '—'}</div>
+          <div style={{ color:'var(--text-primary)', fontWeight:500 }}>{r.supplier?.name ?? '—'}</div>
           {r.purchaseOrder && <div style={{ fontSize:11, color:'rgba(167,139,250,0.5)', marginTop:1 }}>PO: {r.purchaseOrder.poNumber}</div>}
           {r.supplierRef   && <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:1 }}>Ref: {r.supplierRef}</div>}
         </div>
@@ -1029,9 +1029,9 @@ export default function ApInvoicesPage() {
         const overdue = days < 0 && r.status !== 'paid' && r.status !== 'void';
         return (
           <div>
-            <span style={{ fontSize:12, color: overdue ? '#f87171' : 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.dueDate)}</span>
+            <span style={{ fontSize:12, color: overdue ? 'var(--danger)' : 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.dueDate)}</span>
             {r.status !== 'paid' && r.status !== 'void' && days <= 7 && (
-              <div style={{ fontSize:10, color: days < 0 ? '#f87171' : '#fbbf24', marginTop:1 }}>
+              <div style={{ fontSize:10, color: days < 0 ? 'var(--danger)' : 'var(--warning)', marginTop:1 }}>
                 {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : `${days}d`}
               </div>
             )}
@@ -1042,7 +1042,7 @@ export default function ApInvoicesPage() {
     {
       key: 'totalAmount', header: 'Total', width: 120, align: 'right', sortable: true,
       value: r => Number(r.totalAmount),
-      render: r => <span style={{ ...MONO, fontWeight:500, color:'#e2dfd8' }}>{fmtAmt(r.totalAmount)}</span>,
+      render: r => <span style={{ ...MONO, fontWeight:500, color:'var(--text-primary)' }}>{fmtAmt(r.totalAmount)}</span>,
     },
     {
       key: 'outstanding', header: 'Outstanding', width: 120, align: 'right', sortable: true,
@@ -1050,7 +1050,7 @@ export default function ApInvoicesPage() {
       render: r => {
         const out = Number(r.totalAmount) - Number(r.paidAmount);
         return out > 0.01
-          ? <span style={{ ...MONO, fontSize:12, color:'#f87171' }}>{fmtAmt(out)}</span>
+          ? <span style={{ ...MONO, fontSize:12, color:'var(--danger)' }}>{fmtAmt(out)}</span>
           : <span style={{ fontSize:12, color:'rgba(74,222,128,0.5)' }}>—</span>;
       },
     },
@@ -1078,7 +1078,7 @@ export default function ApInvoicesPage() {
     <ERPShell breadcrumbs={['Home','Procurement','AP Invoices']} title="Accounts Payable Invoices">
       <style>{`
         .ap-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-        .ap-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#fca5a5;flex-shrink:0}
+        .ap-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle);flex-shrink:0}
       `}</style>
 
       <div className="ap-page">
@@ -1087,11 +1087,11 @@ export default function ApInvoicesPage() {
         {kpis && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:10, flexShrink:0 }}>
             {[
-              { label:'Total Invoiced', value: fmtAmt(kpis.totalInvoiced), color:'#a78bfa' },
-              { label:'Total Paid',     value: fmtAmt(kpis.totalPaid),     color:'#4ade80' },
-              { label:'Pending',        value: fmtAmt(kpis.totalPending),  color:'#fbbf24' },
-              { label:'Overdue',        value: fmtAmt(kpis.totalOverdue),  color:'#f87171' },
-              { label:'Payment Rate',   value: `${kpis.paymentRate.toFixed(1)}%`, color: kpis.paymentRate >= 80 ? '#4ade80' : '#fbbf24' },
+              { label:'Total Invoiced', value: fmtAmt(kpis.totalInvoiced), color:'var(--accent-violet)' },
+              { label:'Total Paid',     value: fmtAmt(kpis.totalPaid),     color:'var(--success)' },
+              { label:'Pending',        value: fmtAmt(kpis.totalPending),  color:'var(--warning)' },
+              { label:'Overdue',        value: fmtAmt(kpis.totalOverdue),  color:'var(--danger)' },
+              { label:'Payment Rate',   value: `${kpis.paymentRate.toFixed(1)}%`, color: kpis.paymentRate >= 80 ? 'var(--success)' : 'var(--warning)' },
             ].map(k => (
               <div key={k.label} style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.12)', borderRadius:9, padding:'10px 14px' }}>
                 <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(167,139,250,0.5)', marginBottom:4 }}>{k.label}</div>
@@ -1109,14 +1109,14 @@ export default function ApInvoicesPage() {
               <div key={s} onClick={() => setStatusFilter(prev => prev === s ? null : s)}
                 style={{ background: isActive ? style.bg : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? style.color : style.border}`, borderRadius:8, padding:'6px 12px', display:'flex', flexDirection:'column', gap:2, minWidth:70, cursor:'pointer', transition:'all 0.15s' }}>
                 <span style={{ fontSize:10, color:style.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{style.label}</span>
-                <span style={{ fontSize:18, fontWeight:500, color: isActive ? style.color : '#f1ede8', fontFamily:"'IBM Plex Mono',monospace" }}>{counts[s] ?? 0}</span>
+                <span style={{ fontSize:18, fontWeight:500, color: isActive ? style.color : 'var(--text-strong)', fontFamily:"'IBM Plex Mono',monospace" }}>{counts[s] ?? 0}</span>
               </div>
             );
           })}
           <div onClick={() => setStatusFilter(null)}
             style={{ background: !statusFilter ? 'rgba(167,139,250,0.08)' : 'rgba(10,7,18,0.7)', border:`0.5px solid ${!statusFilter ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius:8, padding:'6px 12px', display:'flex', flexDirection:'column', gap:2, minWidth:60, cursor:'pointer', transition:'all 0.15s' }}>
             <span style={{ fontSize:10, color:'rgba(167,139,250,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>All</span>
-            <span style={{ fontSize:18, fontWeight:500, color:'#a78bfa', fontFamily:"'IBM Plex Mono',monospace" }}>{invoices.length}</span>
+            <span style={{ fontSize:18, fontWeight:500, color:'var(--accent-violet)', fontFamily:"'IBM Plex Mono',monospace" }}>{invoices.length}</span>
           </div>
         </div>
 

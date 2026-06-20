@@ -65,18 +65,18 @@ function fmtDate(d: string) {
 
 const STATUS_CFG: Record<SessionStatus, { color: string; bg: string; border: string; label: string }> = {
   draft:            { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Draft'            },
-  in_progress:      { color: '#60a5fa',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
-  pending_approval: { color: '#fbbf24',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
-  approved:         { color: '#a78bfa',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
-  posted:           { color: '#4ade80',               bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)', label: 'Posted'           },
-  cancelled:        { color: '#f87171',               bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled'        },
+  in_progress:      { color: 'var(--accent-blue)',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
+  pending_approval: { color: 'var(--warning)',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
+  approved:         { color: 'var(--accent-violet)',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
+  posted:           { color: 'var(--success)',               bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)', label: 'Posted'           },
+  cancelled:        { color: 'var(--danger)',               bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled'        },
 };
 
 const LINE_CFG: Record<LineStatus, { color: string; label: string }> = {
   pending:   { color: 'rgba(255,255,255,0.3)', label: 'Pending'  },
-  counted:   { color: '#60a5fa',               label: 'Counted'  },
-  confirmed: { color: '#a78bfa',               label: 'Confirmed'},
-  adjusted:  { color: '#4ade80',               label: 'Adjusted' },
+  counted:   { color: 'var(--accent-blue)',               label: 'Counted'  },
+  confirmed: { color: 'var(--accent-violet)',               label: 'Confirmed'},
+  adjusted:  { color: 'var(--success)',               label: 'Adjusted' },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
   const [saving,        setSaving]        = useState(false);
 
   const hasVariance   = line.variancePurchaseQty !== null && line.variancePurchaseQty !== 0;
-  const varColor      = !hasVariance ? '#4ade80' : (line.variancePurchaseQty ?? 0) > 0 ? '#fbbf24' : '#f87171';
+  const varColor      = !hasVariance ? 'var(--success)' : (line.variancePurchaseQty ?? 0) > 0 ? 'var(--warning)' : 'var(--danger)';
 
   function startEditing() {
     setStorageInput(line.countedStorageQty  !== null ? String(line.countedStorageQty)  : '');
@@ -139,7 +139,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
     border: '0.5px solid rgba(96,165,250,0.4)',
     borderRadius: 5, padding: '4px 8px', fontSize: 12,
     fontFamily: "'IBM Plex Mono',monospace",
-    color: '#e2dfd8', outline: 'none', width: 88,
+    color: 'var(--text-primary)', outline: 'none', width: 88,
     textAlign: 'right' as const,
   };
   const INP_OFF: React.CSSProperties = {
@@ -170,7 +170,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
 
       {/* Item */}
       <td style={{ padding: '8px 12px' }}>
-        <div style={{ ...MONO, fontSize: 11, color: '#fb923c' }}>{line.item.code}</div>
+        <div style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)' }}>{line.item.code}</div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{line.item.name}</div>
         {line.lotNumber && (
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 1 }}>Lot: {line.lotNumber}</div>
@@ -179,12 +179,12 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
 
       {/* System storage */}
       <td style={{ padding: '8px 12px' }}>
-        <QtyCell qty={line.systemStorageQty} uom={line.storageUom} color="#e2dfd8" />
+        <QtyCell qty={line.systemStorageQty} uom={line.storageUom} color="var(--text-primary)" />
       </td>
 
       {/* System purchase */}
       <td style={{ padding: '8px 12px' }}>
-        <QtyCell qty={line.systemPurchaseQty} uom={line.purchaseUom} color="#fb923c" />
+        <QtyCell qty={line.systemPurchaseQty} uom={line.purchaseUom} color="var(--accent-strong)" />
       </td>
 
       {/* Counted storage */}
@@ -205,12 +205,12 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
               />
             </div>
-            <span style={{ fontSize: 9, color: activeField === 'storage' ? '#60a5fa' : 'rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: 9, color: activeField === 'storage' ? 'var(--accent-blue)' : 'rgba(255,255,255,0.2)' }}>
               {line.storageUom}{activeField !== 'storage' ? ' (auto)' : ''}
             </span>
           </div>
         ) : (
-          <QtyCell qty={line.countedStorageQty} uom={line.storageUom} color="#60a5fa" />
+          <QtyCell qty={line.countedStorageQty} uom={line.storageUom} color="var(--accent-blue)" />
         )}
       </td>
 
@@ -232,12 +232,12 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
               />
             </div>
-            <span style={{ fontSize: 9, color: activeField === 'purchase' ? '#fb923c' : 'rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: 9, color: activeField === 'purchase' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.2)' }}>
               {line.purchaseUom}{activeField !== 'purchase' ? ' (auto)' : ''}
             </span>
           </div>
         ) : (
-          <QtyCell qty={line.countedPurchaseQty} uom={line.purchaseUom} color="#fb923c" />
+          <QtyCell qty={line.countedPurchaseQty} uom={line.purchaseUom} color="var(--accent-strong)" />
         )}
       </td>
 
@@ -274,7 +274,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
             <button
               onClick={handleSave}
               disabled={saving}
-              style={{ background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: '#4ade80', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+              style={{ background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: 'var(--success)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               {saving ? '…' : 'Save'}
             </button>
             <button
@@ -286,7 +286,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
         ) : (
           <button
             onClick={startEditing}
-            style={{ background: 'rgba(96,165,250,0.08)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 5, padding: '3px 10px', fontSize: 10, color: '#60a5fa', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+            style={{ background: 'rgba(96,165,250,0.08)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 5, padding: '3px 10px', fontSize: 10, color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
             {line.countedStorageQty !== null ? 'Edit' : 'Count'}
           </button>
         ))}
@@ -310,15 +310,15 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
   const INP: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
     borderRadius: 7, padding: '8px 12px', fontSize: 13,
-    fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8',
+    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)',
     outline: 'none', width: '100%', boxSizing: 'border-box' as const,
     minHeight: 80, resize: 'vertical' as const,
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#0a0712', border: '0.5px solid rgba(167,139,250,0.3)', borderRadius: 12, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: '#e2dfd8', marginBottom: 16 }}>Approve Session</div>
+      <div style={{ background: 'var(--bg)', border: '0.5px solid rgba(167,139,250,0.3)', borderRadius: 12, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
+        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>Approve Session</div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Approval Notes (optional)</div>
         <textarea style={INP} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for the audit trail…" />
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
@@ -410,7 +410,7 @@ export default function StockReconciliationDetailPage() {
   const SEL: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8',
+    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)',
     outline: 'none', cursor: 'pointer',
   };
 
@@ -429,7 +429,7 @@ export default function StockReconciliationDetailPage() {
         .srd-tbl   { width:100%; border-collapse:collapse; }
         .srd-th    { padding:8px 12px; font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.3); text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.08); background:rgba(10,7,18,0.8); position:sticky; top:0; z-index:1; white-space:nowrap; }
         .srd-th.r  { text-align:right; }
-        .srd-err   { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; font-size:13px; color:#fca5a5; flex-shrink:0; }
+        .srd-err   { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--danger-subtle); flex-shrink:0; }
         .srd-btn   { border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; }
         .srd-hint  { font-size:10px; color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.03); border:0.5px solid rgba(255,255,255,0.07); border-radius:6px; padding:5px 10px; flex-shrink:0; }
       `}</style>
@@ -446,7 +446,7 @@ export default function StockReconciliationDetailPage() {
           <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: sc.color, background: sc.bg, border: `0.5px solid ${sc.border}` }}>
             {sc.label}
           </span>
-          <span style={{ fontSize: 13, color: '#e2dfd8', fontWeight: 500 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
             {session.warehouse.code} — {session.warehouse.name}
           </span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
@@ -465,11 +465,11 @@ export default function StockReconciliationDetailPage() {
         {/* KPIs */}
         <div className="srd-kpis">
           {[
-            { label: 'Total Items',      value: String(session.lines.length), color: '#f1ede8', border: 'rgba(255,255,255,0.07)' },
-            { label: 'Counted',          value: String(countedCount),         color: '#60a5fa', border: 'rgba(96,165,250,0.15)'  },
-            { label: 'Pending',          value: String(pendingCount),         color: pendingCount > 0 ? '#fbbf24' : '#4ade80', border: pendingCount > 0 ? 'rgba(251,191,36,0.15)' : 'rgba(74,222,128,0.15)' },
-            { label: 'Lines w/ Variance',value: String(session.linesWithVariance ?? displayLines.filter(l => (l.variancePurchaseQty ?? 0) !== 0).length), color: '#fbbf24', border: 'rgba(251,191,36,0.15)' },
-            { label: 'Total Variance',   value: fmtAmt(session.totalVarianceValue ?? totalVar), color: totalVar < 0 ? '#f87171' : totalVar > 0 ? '#fbbf24' : '#4ade80', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Items',      value: String(session.lines.length), color: 'var(--text-strong)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Counted',          value: String(countedCount),         color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)'  },
+            { label: 'Pending',          value: String(pendingCount),         color: pendingCount > 0 ? 'var(--warning)' : 'var(--success)', border: pendingCount > 0 ? 'rgba(251,191,36,0.15)' : 'rgba(74,222,128,0.15)' },
+            { label: 'Lines w/ Variance',value: String(session.linesWithVariance ?? displayLines.filter(l => (l.variancePurchaseQty ?? 0) !== 0).length), color: 'var(--warning)', border: 'rgba(251,191,36,0.15)' },
+            { label: 'Total Variance',   value: fmtAmt(session.totalVarianceValue ?? totalVar), color: totalVar < 0 ? 'var(--danger)' : totalVar > 0 ? 'var(--warning)' : 'var(--success)', border: 'rgba(255,255,255,0.07)' },
           ].map(k => (
             <div key={k.label} className="srd-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="srd-kpi-l">{k.label}</div>
@@ -508,7 +508,7 @@ export default function StockReconciliationDetailPage() {
             <button
               className="srd-btn"
               onClick={() => router.push(`/inventory/stock-reconciliation/${session.id}/count`)}
-              style={{ background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: '#4ade80' }}>
+              style={{ background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: 'var(--success)' }}>
               📱 Mobile Count
             </button>
           )}
@@ -517,7 +517,7 @@ export default function StockReconciliationDetailPage() {
             <button
               className="srd-btn"
               onClick={() => setShowAssign(true)}
-              style={{ background: 'rgba(167,139,250,0.08)', border: '0.5px solid rgba(167,139,250,0.2)', color: '#a78bfa' }}>
+              style={{ background: 'rgba(167,139,250,0.08)', border: '0.5px solid rgba(167,139,250,0.2)', color: 'var(--accent-violet)' }}>
               👥 Assign Lines
             </button>
           )}
@@ -539,7 +539,7 @@ export default function StockReconciliationDetailPage() {
           {!['posted', 'cancelled'].includes(session.status) && (
             <button className="srd-btn" disabled={actionLoading}
               onClick={cancelModal.openModal}
-              style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
+              style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger)' }}>
               Cancel
             </button>
           )}

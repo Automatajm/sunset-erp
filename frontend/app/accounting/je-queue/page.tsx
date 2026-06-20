@@ -19,9 +19,9 @@ interface QueueStats { pending: number; approved: number; rejected: number; tota
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
 
 const EVENT_COLORS: Record<string, string> = {
-  ar_invoice: '#60a5fa', ar_payment: '#60a5fa', ar_reversal: '#f87171',
-  fg_delivery: '#4ade80', production_variance: '#fbbf24',
-  po_receipt: '#a78bfa', mo_issue: '#a78bfa',
+  ar_invoice: 'var(--accent-blue)', ar_payment: 'var(--accent-blue)', ar_reversal: 'var(--danger)',
+  fg_delivery: 'var(--success)', production_variance: 'var(--warning)',
+  po_receipt: 'var(--accent-violet)', mo_issue: 'var(--accent-violet)',
 };
 
 function fmtAmt(v: number) { return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(v); }
@@ -44,18 +44,18 @@ function RejectModal({ item, onClose, onRejected }: { item: JeQueueItem; onClose
     finally { setBusy(false); }
   };
 
-  const INPUT_S: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'#f1ede8', outline:'none', width:'100%' };
+  const INPUT_S: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong)', outline:'none', width:'100%' };
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#0e0b1a', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:14, width:'100%', maxWidth:440, boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background:'var(--surface)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:14, width:'100%', maxWidth:440, boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ padding:'14px 18px 10px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <span style={{ fontSize:13, fontWeight:500, color:'#f1ede8' }}>Reject — {item.journalEntry.entryNumber}</span>
+          <span style={{ fontSize:13, fontWeight:500, color:'var(--text-strong)' }}>Reject — {item.journalEntry.entryNumber}</span>
           <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16 }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:10 }}>
-            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'7px 12px', fontSize:12, color:'#fca5a5' }}>{error}</div>}
+            {error && <div style={{ background:'rgba(239,68,68,0.1)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:7, padding:'7px 12px', fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
             <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
               <label style={{ fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(248,113,113,0.6)' }}>Rejection Reason *</label>
               <input placeholder="e.g. Wrong account used — needs correction" style={INPUT_S} value={reason} onChange={e => setReason(e.target.value)} />
@@ -141,16 +141,16 @@ export default function JeQueuePage() {
         {stats && (
           <div className="queue-stats">
             {[
-              { label: 'Pending',  value: stats.pending,  color: '#fbbf24', filter: 'pending' },
-              { label: 'Approved', value: stats.approved, color: '#4ade80', filter: 'approved' },
-              { label: 'Rejected', value: stats.rejected, color: '#f87171', filter: 'rejected' },
-              { label: 'Total',    value: stats.total,    color: '#fb923c', filter: '' },
+              { label: 'Pending',  value: stats.pending,  color: 'var(--warning)', filter: 'pending' },
+              { label: 'Approved', value: stats.approved, color: 'var(--success)', filter: 'approved' },
+              { label: 'Rejected', value: stats.rejected, color: 'var(--danger)', filter: 'rejected' },
+              { label: 'Total',    value: stats.total,    color: 'var(--accent-strong)', filter: '' },
             ].map(s => (
               <div key={s.label} className="queue-stat"
-                style={{ border:`0.5px solid ${statusFilter === s.filter ? `${s.color}40` : 'rgba(255,255,255,0.07)'}` }}
+                style={{ border:`0.5px solid ${statusFilter === s.filter ? `color-mix(in srgb, ${s.color} 25%, transparent)` : 'rgba(255,255,255,0.07)'}` }}
                 onClick={() => setStatusFilter(prev => prev === s.filter ? '' : s.filter)}>
                 <span style={{ fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:s.color }}>{s.label}</span>
-                <span style={{ fontSize:20, fontWeight:500, fontFamily:"'IBM Plex Mono',monospace", color:'#f1ede8' }}>{s.value}</span>
+                <span style={{ fontSize:20, fontWeight:500, fontFamily:"'IBM Plex Mono',monospace", color:'var(--text-strong)' }}>{s.value}</span>
               </div>
             ))}
           </div>
@@ -161,7 +161,7 @@ export default function JeQueuePage() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'#e2dfd8', outline:'none' }}
+            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary)', outline:'none' }}
           >
             <option value="">All Status</option>
             <option value="pending">Pending</option>
@@ -171,8 +171,8 @@ export default function JeQueuePage() {
           <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
         </div>
 
-        {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#fca5a5' }}>{error}</div>}
-        {success && <div style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#4ade80' }}>{success}</div>}
+        {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
+        {success && <div style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--success)' }}>{success}</div>}
 
         <div className="queue-wrap">
           {loading ? <div className="queue-empty">Loading…</div>
@@ -186,7 +186,7 @@ export default function JeQueuePage() {
                   <tbody>
                     {items.map(item => {
                       const totalDr   = item.journalEntry.lines.reduce((s, l) => s + l.debitAmount, 0);
-                      const evtColor  = EVENT_COLORS[item.eventType] ?? '#e2dfd8';
+                      const evtColor  = EVENT_COLORS[item.eventType] ?? 'var(--text-primary)';
                       const isExp     = expanded === item.id;
                       const isBusy    = approving === item.id;
 
@@ -196,20 +196,20 @@ export default function JeQueuePage() {
                             <td style={{ width:24 }}>
                               <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', transform:isExp?'rotate(90deg)':'none', display:'inline-block', transition:'transform 0.15s' }}>▶</span>
                             </td>
-                            <td><span style={{ ...MONO, color:'#fb923c', fontWeight:500 }}>{item.journalEntry.entryNumber}</span></td>
+                            <td><span style={{ ...MONO, color:'var(--accent-strong)', fontWeight:500 }}>{item.journalEntry.entryNumber}</span></td>
                             <td>
-                              <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, color:evtColor, background:`${evtColor}15`, border:`0.5px solid ${evtColor}30` }}>
+                              <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, color:evtColor, background:`color-mix(in srgb, ${evtColor} 8%, transparent)`, border:`0.5px solid color-mix(in srgb, ${evtColor} 19%, transparent)` }}>
                                 {item.eventType.replace(/_/g, ' ')}
                               </span>
                             </td>
                             <td><span style={{ ...MONO, fontSize:11, color:'rgba(255,255,255,0.5)' }}>{item.sourceRef ?? '—'}</span></td>
                             <td><span style={{ fontSize:12, color:'rgba(255,255,255,0.55)' }}>{item.journalEntry.description}</span></td>
-                            <td><span style={{ ...MONO, color:'#e2dfd8' }}>{fmtAmt(totalDr)}</span></td>
+                            <td><span style={{ ...MONO, color:'var(--text-primary)' }}>{fmtAmt(totalDr)}</span></td>
                             <td><span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{fmtDate(item.createdAt)}</span></td>
                             <td>
                               <span style={{
                                 fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:500,
-                                color:      item.status==='pending' ? '#fbbf24' : item.status==='approved' ? '#4ade80' : '#f87171',
+                                color:      item.status==='pending' ? 'var(--warning)' : item.status==='approved' ? 'var(--success)' : 'var(--danger)',
                                 background: item.status==='pending' ? 'rgba(251,191,36,0.1)' : item.status==='approved' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
                                 border:     `0.5px solid ${item.status==='pending' ? 'rgba(251,191,36,0.2)' : item.status==='approved' ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`,
                               }}>{item.status}</span>
@@ -218,11 +218,11 @@ export default function JeQueuePage() {
                               {item.status === 'pending' && (
                                 <div style={{ display:'flex', gap:4 }}>
                                   <button onClick={() => setConfirmItem(item)} disabled={isBusy}
-                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#4ade80', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:isBusy?0.5:1 }}>
+                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--success)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:isBusy?0.5:1 }}>
                                     {isBusy ? '…' : '✓ Approve'}
                                   </button>
                                   <button onClick={() => setRejectItem(item)} disabled={isBusy}
-                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'#f87171', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.15)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+                                    style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--danger)', background:'rgba(248,113,113,0.08)', border:'0.5px solid rgba(248,113,113,0.15)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
                                     ✕ Reject
                                   </button>
                                 </div>
@@ -249,14 +249,14 @@ export default function JeQueuePage() {
                                         <tr key={line.id}>
                                           <td style={{ padding:'5px 10px', ...MONO, color:'rgba(255,255,255,0.3)', width:30 }}>{line.lineNumber}</td>
                                           <td style={{ padding:'5px 10px' }}>
-                                            <span style={{ ...MONO, color:'#fb923c', fontSize:11 }}>{line.account.accountNumber}</span>
+                                            <span style={{ ...MONO, color:'var(--accent-strong)', fontSize:11 }}>{line.account.accountNumber}</span>
                                             <span style={{ fontSize:12, color:'rgba(255,255,255,0.55)', marginLeft:8 }}>{line.account.name}</span>
                                           </td>
                                           <td style={{ padding:'5px 10px', fontSize:12, color:'rgba(255,255,255,0.4)' }}>{line.description}</td>
-                                          <td style={{ padding:'5px 10px', ...MONO, color: line.debitAmount > 0 ? '#e2dfd8' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
+                                          <td style={{ padding:'5px 10px', ...MONO, color: line.debitAmount > 0 ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
                                             {line.debitAmount > 0 ? fmtAmt(line.debitAmount) : '—'}
                                           </td>
-                                          <td style={{ padding:'5px 10px', ...MONO, color: line.creditAmount > 0 ? '#a78bfa' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
+                                          <td style={{ padding:'5px 10px', ...MONO, color: line.creditAmount > 0 ? 'var(--accent-violet)' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
                                             {line.creditAmount > 0 ? fmtAmt(line.creditAmount) : '—'}
                                           </td>
                                         </tr>
@@ -265,10 +265,10 @@ export default function JeQueuePage() {
                                     <tfoot>
                                       <tr>
                                         <td colSpan={3} style={{ padding:'6px 10px', fontSize:10, color:'rgba(255,255,255,0.25)', textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Totals</td>
-                                        <td style={{ padding:'6px 10px', ...MONO, color:'#e2dfd8', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--text-primary)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                                           {fmtAmt(item.journalEntry.lines.reduce((s, l) => s + l.debitAmount, 0))}
                                         </td>
-                                        <td style={{ padding:'6px 10px', ...MONO, color:'#a78bfa', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--accent-violet)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
                                           {fmtAmt(item.journalEntry.lines.reduce((s, l) => s + l.creditAmount, 0))}
                                         </td>
                                       </tr>

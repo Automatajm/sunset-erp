@@ -53,15 +53,15 @@ function fmtDate(d: string) {
 }
 
 const ABC_CFG = {
-  A: { color: '#4ade80', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.25)',  label: 'Class A — Critical' },
-  B: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: 'Class B — Important' },
-  C: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)',  label: 'Class C — Low Priority' },
+  A: { color: 'var(--success)', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.25)',  label: 'Class A — Critical' },
+  B: { color: 'var(--warning)', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: 'Class B — Important' },
+  C: { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)',  label: 'Class C — Low Priority' },
 };
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: '#4ade80', label: 'Finished Good' },
-  raw_material:  { color: '#60a5fa', label: 'Raw Material'  },
-  consumable:    { color: '#fbbf24', label: 'Consumable'    },
+  finished_good: { color: 'var(--success)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
 };
 
 // ─── Pareto bar ───────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
       value: r => r.itemCode,
       render: r => (
         <div>
-          <span style={{ ...MONO, fontSize: 11, color: '#fb923c', fontWeight: 500 }}>{r.itemCode}</span>
+          <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.itemCode}</span>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
         </div>
       ),
@@ -118,7 +118,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
       render: r => {
         const cfg = ITEM_TYPE_CFG[r.itemType];
         return cfg ? (
-          <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `${cfg.color}15`, border: `0.5px solid ${cfg.color}30`, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${cfg.color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
             {cfg.label}
           </span>
         ) : null;
@@ -127,7 +127,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
     {
       key: 'totalPurchaseQty', header: 'Purchase Qty', width: 120, align: 'right', sortable: true,
       value: r => r.totalPurchaseQty,
-      render: r => <span style={{ ...MONO, fontSize: 12, color: '#e2dfd8' }}>{fmtQty(r.totalPurchaseQty)}</span>,
+      render: r => <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary)' }}>{fmtQty(r.totalPurchaseQty)}</span>,
     },
     {
       key: 'unitCost', header: 'WAC Cost', width: 110, align: 'right', sortable: true,
@@ -176,9 +176,9 @@ function buildFilters(warehouses: Warehouse[]): ERPFilter<AbcRow>[] {
     {
       key: 'abcClass', label: 'Class', type: 'multiselect',
       options: [
-        { value: 'A', label: 'A — Critical',     color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
-        { value: 'B', label: 'B — Important',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
-        { value: 'C', label: 'C — Low Priority', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
+        { value: 'A', label: 'A — Critical',     color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
+        { value: 'B', label: 'B — Important',    color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
+        { value: 'C', label: 'C — Low Priority', color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
       ],
       filterFn: (row, val) => (val as string[]).includes(row.abcClass),
     },
@@ -239,7 +239,7 @@ export default function AbcAnalysisPage() {
   const SEL: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans', sans-serif", color: '#e2dfd8', outline: 'none', cursor: 'pointer',
+    fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', cursor: 'pointer',
   };
 
   return (
@@ -261,8 +261,8 @@ export default function AbcAnalysisPage() {
         .abc-bar-wrap   { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .abc-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .abc-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .abc-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
-        .abc-btn-apply { background: linear-gradient(135deg,#c2410c,#ea580c,#f97316); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
+        .abc-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
+        .abc-btn-apply { background: linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
         .abc-note { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
       `}</style>
 
@@ -271,10 +271,10 @@ export default function AbcAnalysisPage() {
         {/* KPI bar */}
         <div className="abc-kpis">
           {[
-            { label: 'Total Value',  value: fmtAmt(data?.summary.grandTotal ?? 0), color: '#fb923c', border: 'rgba(251,146,60,0.2)'   },
-            { label: 'Total Items',  value: String(data?.summary.totalItems ?? 0),  color: '#f1ede8', border: 'rgba(255,255,255,0.07)' },
-            { label: 'Filtered',     value: String(filtered.length),                 color: '#a78bfa', border: 'rgba(167,139,250,0.15)' },
-            { label: 'Filtered Value', value: fmtAmt(filtered.reduce((s,r)=>s+r.totalValue,0)), color: '#60a5fa', border: 'rgba(96,165,250,0.15)' },
+            { label: 'Total Value',  value: fmtAmt(data?.summary.grandTotal ?? 0), color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.2)'   },
+            { label: 'Total Items',  value: String(data?.summary.totalItems ?? 0),  color: 'var(--text-strong)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Filtered',     value: String(filtered.length),                 color: 'var(--accent-violet)', border: 'rgba(167,139,250,0.15)' },
+            { label: 'Filtered Value', value: fmtAmt(filtered.reduce((s,r)=>s+r.totalValue,0)), color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)' },
           ].map(k => (
             <div key={k.label} className="abc-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="abc-kpi-l">{k.label}</div>
@@ -342,7 +342,7 @@ export default function AbcAnalysisPage() {
         <div className="abc-filters">
           <ERPFilterBar filters={filters} values={values} onChange={setValue} onReset={reset} activeCount={activeCount + (cardFilter ? 1 : 0)} />
           {cardFilter && (
-            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f87171', cursor: 'pointer' }}>
+            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger)', cursor: 'pointer' }}>
               ↺ Clear class filter
             </button>
           )}

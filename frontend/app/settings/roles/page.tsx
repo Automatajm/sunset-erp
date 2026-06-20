@@ -14,23 +14,23 @@ interface Role {
 }
 
 // ---- Styles -----------------------------------------------------------------
-const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
+const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
 const LBL: React.CSSProperties = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)', marginBottom: 5, display: 'block' };
 const BTN = (variant: 'primary'|'ghost'|'danger' = 'ghost'): React.CSSProperties => ({
   border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 600,
   cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif",
-  background: variant === 'primary' ? 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)'
+  background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))'
     : variant === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)',
-  color: variant === 'primary' ? 'white' : variant === 'danger' ? '#f87171' : 'rgba(255,255,255,0.6)',
+  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger)' : 'rgba(255,255,255,0.6)',
   outline: variant === 'danger' ? '0.5px solid rgba(239,68,68,0.2)' : 'none',
 });
 
 const MODULE_COLOR: Record<string, string> = {
-  inventory:   '#60a5fa',
-  procurement: '#fb923c',
-  sales:       '#4ade80',
-  accounting:  '#a78bfa',
-  admin:       '#f87171',
+  inventory:   'var(--accent-blue)',
+  procurement: 'var(--accent-strong)',
+  sales:       'var(--success)',
+  accounting:  'var(--accent-violet)',
+  admin:       'var(--danger)',
 };
 
 // ---- Role Modal ------------------------------------------------------------
@@ -91,9 +91,9 @@ function RoleModal({ role, allPermissions, grouped, onClose, onSaved }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#0a0712', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#e2dfd8' }}>{isEdit ? `Edit Role — ${role!.name}` : 'New Role'}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{isEdit ? `Edit Role — ${role!.name}` : 'New Role'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18 }}>x</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -120,7 +120,7 @@ function RoleModal({ role, allPermissions, grouped, onClose, onSaved }: {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <label style={{ ...LBL, marginBottom: 0 }}>Permissions ({form.permissionIds.length} selected)</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setForm(f => ({...f, permissionIds: allPermissions.map(p => p.id)}))} style={{ fontSize: 10, color: '#fb923c', background: 'none', border: 'none', cursor: 'pointer' }}>All</button>
+                <button onClick={() => setForm(f => ({...f, permissionIds: allPermissions.map(p => p.id)}))} style={{ fontSize: 10, color: 'var(--accent-strong)', background: 'none', border: 'none', cursor: 'pointer' }}>All</button>
                 <button onClick={() => setForm(f => ({...f, permissionIds: []}))} style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer' }}>None</button>
               </div>
             </div>
@@ -128,7 +128,7 @@ function RoleModal({ role, allPermissions, grouped, onClose, onSaved }: {
             {/* Permissions grouped by module */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {Object.entries(grouped).map(([module, perms]) => {
-                const moduleColor  = MODULE_COLOR[module] ?? '#e2dfd8';
+                const moduleColor  = MODULE_COLOR[module] ?? 'var(--text-primary)';
                 const allSelected  = perms.every(p => form.permissionIds.includes(p.id));
                 const someSelected = perms.some(p => form.permissionIds.includes(p.id));
                 return (
@@ -144,7 +144,7 @@ function RoleModal({ role, allPermissions, grouped, onClose, onSaved }: {
                       {perms.map(perm => {
                         const selected = form.permissionIds.includes(perm.id);
                         return (
-                          <label key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', background: selected ? `${moduleColor}18` : 'rgba(255,255,255,0.03)', border: `0.5px solid ${selected ? `${moduleColor}40` : 'rgba(255,255,255,0.08)'}` }}>
+                          <label key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', background: selected ? `color-mix(in srgb, ${moduleColor} 9%, transparent)` : 'rgba(255,255,255,0.03)', border: `0.5px solid ${selected ? `color-mix(in srgb, ${moduleColor} 25%, transparent)` : 'rgba(255,255,255,0.08)'}` }}>
                             <input type="checkbox" checked={selected} onChange={() => togglePerm(perm.id)} style={{ accentColor: moduleColor }} />
                             <span style={{ fontSize: 11, color: selected ? moduleColor : 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Mono',monospace" }}>{perm.code.split(':')[1]}</span>
                           </label>
@@ -157,7 +157,7 @@ function RoleModal({ role, allPermissions, grouped, onClose, onSaved }: {
             </div>
           </div>
 
-          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+          {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
         </div>
         <div style={{ padding: '12px 20px', borderTop: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={BTN('ghost')}>Cancel</button>
@@ -205,7 +205,7 @@ export default function RolesPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#06040f', color: '#e2dfd8', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#06040f', color: 'var(--text-primary)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
       {/* Header */}
       <div style={{ padding: '20px 28px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
@@ -216,7 +216,7 @@ export default function RolesPage() {
       </div>
 
       <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+        {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.3)' }}>Loading...</div>
@@ -228,8 +228,8 @@ export default function RolesPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#e2dfd8' }}>{role.name}</span>
-                      {role.isSystem && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '0.5px solid rgba(96,165,250,0.2)' }}>SYSTEM</span>}
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{role.name}</span>
+                      {role.isSystem && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue)', border: '0.5px solid rgba(96,165,250,0.2)' }}>SYSTEM</span>}
                     </div>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace", marginTop: 2 }}>{role.code}</div>
                     {role.description && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>{role.description}</div>}
@@ -246,7 +246,7 @@ export default function RolesPage() {
                       return acc;
                     }, {} as Record<string, number>)
                   ).map(([mod, count]) => (
-                    <span key={mod} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${MODULE_COLOR[mod] ?? '#e2dfd8'}15`, color: MODULE_COLOR[mod] ?? '#e2dfd8', border: `0.5px solid ${MODULE_COLOR[mod] ?? '#e2dfd8'}30` }}>
+                    <span key={mod} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${MODULE_COLOR[mod] ?? 'var(--text-primary)'}15`, color: MODULE_COLOR[mod] ?? 'var(--text-primary)', border: `0.5px solid ${MODULE_COLOR[mod] ?? 'var(--text-primary)'}30` }}>
                       {mod} ({count})
                     </span>
                   ))}

@@ -103,8 +103,8 @@ function SectionRow({ label, total, color, indent }: { label: string; total: num
 function AcctRow({ a, color, indent }: { a: ReportAccount; color: string; indent?: boolean }) {
   return (
     <tr>
-      <td style={{ ...TD, ...MONO, color: '#fb923c', paddingLeft: indent ? 28 : 14 }}>{a.accountNumber}</td>
-      <td style={{ ...TD, color: '#e2dfd8', paddingLeft: indent ? 28 : 14 }}>{a.accountName}</td>
+      <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)', paddingLeft: indent ? 28 : 14 }}>{a.accountNumber}</td>
+      <td style={{ ...TD, color: 'var(--text-primary)', paddingLeft: indent ? 28 : 14 }}>{a.accountName}</td>
       <td style={{ ...TD, textAlign: 'right', ...MONO, color }}>{fmtAmt(a.amount ?? 0)}</td>
     </tr>
   );
@@ -125,12 +125,12 @@ function DividerRow({ label }: { label: string }) {
 function SubtotalRow({ label, value, color, pct }: { label: string; value: number; color?: string; pct?: string }) {
   return (
     <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-      <td colSpan={2} style={{ ...TD, fontWeight: 700, fontSize: 13, color: color ?? '#f1ede8',
+      <td colSpan={2} style={{ ...TD, fontWeight: 700, fontSize: 13, color: color ?? 'var(--text-strong)',
         borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
         {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)', marginLeft: 8 }}>{pct}</span>}
       </td>
       <td style={{ ...TD, textAlign: 'right', fontWeight: 700, ...MONO, fontSize: 13,
-        color: color ?? (value >= 0 ? '#4ade80' : '#f87171'),
+        color: color ?? (value >= 0 ? 'var(--success)' : 'var(--danger)'),
         borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
         {fmtAmt(value, true)}
       </td>
@@ -142,13 +142,13 @@ function TotalRow({ label, value, highlight, pct }: { label: string; value: numb
   return (
     <tr style={{ background: highlight ? 'rgba(251,146,60,0.05)' : 'rgba(255,255,255,0.02)' }}>
       <td colSpan={2} style={{ ...TD, fontWeight: 700, fontSize: 14,
-        color: highlight ? '#fb923c' : '#f1ede8',
+        color: highlight ? 'var(--accent-strong)' : 'var(--text-strong)',
         borderTop: '0.5px solid rgba(255,255,255,0.15)',
         borderBottom: highlight ? 'none' : '0.5px solid rgba(255,255,255,0.04)' }}>
         {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)', marginLeft: 8 }}>{pct}</span>}
       </td>
       <td style={{ ...TD, textAlign: 'right', fontWeight: 700, ...MONO, fontSize: 14,
-        color: value >= 0 ? (highlight ? '#fb923c' : '#4ade80') : '#f87171',
+        color: value >= 0 ? (highlight ? 'var(--accent-strong)' : 'var(--success)') : 'var(--danger)',
         borderTop: '0.5px solid rgba(255,255,255,0.15)',
         borderBottom: highlight ? 'none' : '0.5px solid rgba(255,255,255,0.04)' }}>
         {fmtAmt(value, true)}
@@ -175,41 +175,41 @@ function PLView({ data }: { data: PLReport }) {
         <tbody>
 
           {/* REVENUE */}
-          <SectionRow label="Revenue" total={data.revenue.total} color="#4ade80" />
-          {data.revenue.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#4ade80" />)}
+          <SectionRow label="Revenue" total={data.revenue.total} color="var(--success)" />
+          {data.revenue.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--success)" />)}
 
           {/* COST OF SALES */}
-          <SectionRow label="Cost of Sales" total={data.costOfSales.total} color="#fbbf24" />
+          <SectionRow label="Cost of Sales" total={data.costOfSales.total} color="var(--warning)" />
           {structured ? (
             <>
               {(data.costOfSales.foodCost?.accounts.length ?? 0) > 0 && (
                 <><DividerRow label="Food Costs" />
-                {data.costOfSales.foodCost!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#fbbf24" indent />)}</>
+                {data.costOfSales.foodCost!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--warning)" indent />)}</>
               )}
               {(data.costOfSales.laborCost?.accounts.length ?? 0) > 0 && (
                 <><DividerRow label="Direct Labor" />
-                {data.costOfSales.laborCost!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#fb923c" indent />)}</>
+                {data.costOfSales.laborCost!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--accent-strong)" indent />)}</>
               )}
             </>
           ) : (
-            data.costOfSales.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#fbbf24" />)
+            data.costOfSales.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--warning)" />)
           )}
 
-          <SubtotalRow label="Gross Profit" value={data.grossProfit} color="#4ade80" pct={fmtPct(data.grossMarginPct)} />
+          <SubtotalRow label="Gross Profit" value={data.grossProfit} color="var(--success)" pct={fmtPct(data.grossMarginPct)} />
 
           {/* SG&A */}
           {structured ? (
             <>
-              <SectionRow label="SG&A — Selling, General & Administrative" total={data.sga!.total} color="#f87171" />
+              <SectionRow label="SG&A — Selling, General & Administrative" total={data.sga!.total} color="var(--danger)" />
               {(data.sga!.selling?.accounts.length ?? 0) > 0 && (
                 <><DividerRow label="Selling Expenses" />
-                {data.sga!.selling!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#f87171" indent />)}</>
+                {data.sga!.selling!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--danger)" indent />)}</>
               )}
               {(data.sga!.admin?.accounts.length ?? 0) > 0 && (
                 <><DividerRow label="General & Administrative" />
-                {data.sga!.admin!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#f87171" indent />)}</>
+                {data.sga!.admin!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--danger)" indent />)}</>
               )}
-              <SubtotalRow label="EBIT — Operating Income" value={data.ebit ?? 0} color="#60a5fa" pct={fmtPct(data.ebitMarginPct)} />
+              <SubtotalRow label="EBIT — Operating Income" value={data.ebit ?? 0} color="var(--accent-blue)" pct={fmtPct(data.ebitMarginPct)} />
 
               {(data.depreciation?.total ?? 0) > 0 && (
                 <>
@@ -217,27 +217,27 @@ function PLView({ data }: { data: PLReport }) {
                   {data.depreciation!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="rgba(255,255,255,0.5)" />)}
                 </>
               )}
-              <SubtotalRow label="EBITDA" value={data.ebitda ?? 0} color="#a78bfa" pct={fmtPct(data.ebitdaMarginPct)} />
+              <SubtotalRow label="EBITDA" value={data.ebitda ?? 0} color="var(--accent-violet)" pct={fmtPct(data.ebitdaMarginPct)} />
 
               {(data.financial?.total ?? 0) > 0 && (
                 <>
-                  <SectionRow label="Financial Expenses" total={data.financial!.total} color="#f87171" />
-                  {data.financial!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#f87171" />)}
+                  <SectionRow label="Financial Expenses" total={data.financial!.total} color="var(--danger)" />
+                  {data.financial!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--danger)" />)}
                 </>
               )}
-              <SubtotalRow label="EBT — Earnings Before Tax" value={data.ebt ?? 0} color="#60a5fa" />
+              <SubtotalRow label="EBT — Earnings Before Tax" value={data.ebt ?? 0} color="var(--accent-blue)" />
 
               {(data.tax?.total ?? 0) > 0 && (
                 <>
-                  <SectionRow label="Income Tax" total={data.tax!.total} color="#f87171" />
-                  {data.tax!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#f87171" />)}
+                  <SectionRow label="Income Tax" total={data.tax!.total} color="var(--danger)" />
+                  {data.tax!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--danger)" />)}
                 </>
               )}
             </>
           ) : (
             <>
-              <SectionRow label="Operating Expenses" total={data.expenses.total} color="#f87171" />
-              {data.expenses.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="#f87171" />)}
+              <SectionRow label="Operating Expenses" total={data.expenses.total} color="var(--danger)" />
+              {data.expenses.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--danger)" />)}
             </>
           )}
 
@@ -254,7 +254,7 @@ function BSView({ data }: { data: BalanceSheetReport }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>As of {fmtDate(data.asOfDate)}</span>
         <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20,
-          color: data.isBalanced ? '#4ade80' : '#f87171',
+          color: data.isBalanced ? 'var(--success)' : 'var(--danger)',
           background: data.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
           border: `0.5px solid ${data.isBalanced ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
           {data.isBalanced ? '✓ Balanced' : '✗ Not balanced'}
@@ -267,33 +267,33 @@ function BSView({ data }: { data: BalanceSheetReport }) {
           <th style={{ ...TH, textAlign: 'right' }}>Amount</th>
         </tr></thead>
         <tbody>
-          <SectionRow label="Assets" total={data.assets.total} color="#60a5fa" />
+          <SectionRow label="Assets" total={data.assets.total} color="var(--accent-blue)" />
           {data.assets.accounts.map(a => (
             <tr key={a.accountNumber}>
-              <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
-              <td style={{ ...TD, color: '#e2dfd8' }}>{a.accountName}</td>
-              <td style={{ ...TD, textAlign: 'right', ...MONO, color: '#60a5fa' }}>{fmtAmt(a.amount ?? 0)}</td>
+              <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)' }}>{a.accountNumber}</td>
+              <td style={{ ...TD, color: 'var(--text-primary)' }}>{a.accountName}</td>
+              <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--accent-blue)' }}>{fmtAmt(a.amount ?? 0)}</td>
             </tr>
           ))}
-          <SectionRow label="Liabilities" total={data.liabilities.total} color="#f87171" />
+          <SectionRow label="Liabilities" total={data.liabilities.total} color="var(--danger)" />
           {data.liabilities.accounts.length === 0
             ? <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No liability accounts</td></tr>
             : data.liabilities.accounts.map(a => (
               <tr key={a.accountNumber}>
-                <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
-                <td style={{ ...TD, color: '#e2dfd8' }}>{a.accountName}</td>
-                <td style={{ ...TD, textAlign: 'right', ...MONO, color: '#f87171' }}>{fmtAmt(a.amount ?? 0)}</td>
+                <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)' }}>{a.accountNumber}</td>
+                <td style={{ ...TD, color: 'var(--text-primary)' }}>{a.accountName}</td>
+                <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--danger)' }}>{fmtAmt(a.amount ?? 0)}</td>
               </tr>
             ))
           }
-          <SectionRow label="Equity" total={data.equity.total} color="#a78bfa" />
+          <SectionRow label="Equity" total={data.equity.total} color="var(--accent-violet)" />
           {data.equity.accounts.length === 0
             ? <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No equity accounts</td></tr>
             : data.equity.accounts.map(a => (
               <tr key={`${a.accountNumber}-${a.accountName}`}>
-                <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
-                <td style={{ ...TD, color: '#e2dfd8' }}>{a.accountName}</td>
-                <td style={{ ...TD, textAlign: 'right', ...MONO, color: '#a78bfa' }}>{fmtAmt(a.amount ?? 0)}</td>
+                <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)' }}>{a.accountNumber}</td>
+                <td style={{ ...TD, color: 'var(--text-primary)' }}>{a.accountName}</td>
+                <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--accent-violet)' }}>{fmtAmt(a.amount ?? 0)}</td>
               </tr>
             ))
           }
@@ -310,7 +310,7 @@ function TBView({ data }: { data: TrialBalanceReport }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>As of {fmtDate(data.asOfDate)}</span>
         <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20,
-          color: data.totals.isBalanced ? '#4ade80' : '#f87171',
+          color: data.totals.isBalanced ? 'var(--success)' : 'var(--danger)',
           background: data.totals.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
           border: `0.5px solid ${data.totals.isBalanced ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}` }}>
           {data.totals.isBalanced ? '✓ Balanced' : '✗ Not balanced'}
@@ -328,25 +328,25 @@ function TBView({ data }: { data: TrialBalanceReport }) {
         <tbody>
           {data.accounts.map(a => (
             <tr key={a.accountNumber}>
-              <td style={{ ...TD, ...MONO, color: '#fb923c' }}>{a.accountNumber}</td>
-              <td style={{ ...TD, color: '#e2dfd8' }}>{a.accountName}</td>
+              <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)' }}>{a.accountNumber}</td>
+              <td style={{ ...TD, color: 'var(--text-primary)' }}>{a.accountName}</td>
               <td style={{ ...TD, color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
                 {a.accountType ? a.accountType.charAt(0).toUpperCase() + a.accountType.slice(1) : '—'}
               </td>
-              <td style={{ ...TD, textAlign: 'right', ...MONO, color: '#e2dfd8' }}>{fmtAmt(a.totalDebits ?? 0)}</td>
+              <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--text-primary)' }}>{fmtAmt(a.totalDebits ?? 0)}</td>
               <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.55)' }}>{fmtAmt(a.totalCredits ?? 0)}</td>
               <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500,
-                color: (a.netBalance ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>
+                color: (a.netBalance ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                 {fmtAmt(a.netBalance ?? 0, true)}
               </td>
             </tr>
           ))}
           <tr style={{ background: 'rgba(251,146,60,0.05)', borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
-            <td colSpan={3} style={{ ...TD, fontWeight: 600, color: '#fb923c', borderTop: 'none' }}>TOTALS</td>
-            <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: '#e2dfd8', borderTop: 'none' }}>{fmtAmt(data.totals.totalDebits, true)}</td>
+            <td colSpan={3} style={{ ...TD, fontWeight: 600, color: 'var(--accent-strong)', borderTop: 'none' }}>TOTALS</td>
+            <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--text-primary)', borderTop: 'none' }}>{fmtAmt(data.totals.totalDebits, true)}</td>
             <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>{fmtAmt(data.totals.totalCredits, true)}</td>
             <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, borderTop: 'none',
-              color: data.totals.difference === 0 ? '#4ade80' : '#f87171' }}>
+              color: data.totals.difference === 0 ? 'var(--success)' : 'var(--danger)' }}>
               {fmtAmt(data.totals.difference, true)}
             </td>
           </tr>
@@ -373,8 +373,8 @@ function GLView({ data }: { data: GLReport }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, padding: '6px 14px',
               background: 'rgba(251,146,60,0.06)', borderRadius: '8px 8px 0 0',
               border: '0.5px solid rgba(251,146,60,0.15)', borderBottom: 'none' }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: '#fb923c', fontWeight: 500 }}>{acctNum}</span>
-              <span style={{ fontSize: 13, color: '#f1ede8', fontWeight: 500 }}>{group.name}</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: 'var(--accent-strong)', fontWeight: 500 }}>{acctNum}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-strong)', fontWeight: 500 }}>{group.name}</span>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr>
@@ -388,15 +388,15 @@ function GLView({ data }: { data: GLReport }) {
                 {group.entries.map((e, idx) => (
                   <tr key={idx}>
                     <td style={{ ...TD, color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{fmtDate(e.date)}</td>
-                    <td style={{ ...TD, ...MONO, color: '#fb923c', fontSize: 11 }}>{e.entryNumber}</td>
-                    <td style={{ ...TD, color: '#e2dfd8' }}>{e.description}</td>
-                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.debit > 0 ? '#e2dfd8' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(e.debit)}</td>
+                    <td style={{ ...TD, ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{e.entryNumber}</td>
+                    <td style={{ ...TD, color: 'var(--text-primary)' }}>{e.description}</td>
+                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.debit > 0 ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(e.debit)}</td>
                     <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.credit > 0 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(e.credit)}</td>
                   </tr>
                 ))}
                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
                   <td colSpan={3} style={{ ...TD, fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500, borderTop: 'none' }}>Account Total</td>
-                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: '#e2dfd8', borderTop: 'none' }}>{fmtAmt(totalDebit, true)}</td>
+                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--text-primary)', borderTop: 'none' }}>{fmtAmt(totalDebit, true)}</td>
                   <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>{fmtAmt(totalCredit, true)}</td>
                 </tr>
               </tbody>
@@ -457,17 +457,17 @@ export default function FinancialReportsPage() {
           border-bottom:2px solid transparent; transition:color 0.15s,border-color 0.15s; user-select:none;
           font-family:'IBM Plex Sans',sans-serif; white-space:nowrap; }
         .fr-tab:hover { color:rgba(255,255,255,0.7); }
-        .fr-tab-active { color:#fb923c !important; border-bottom-color:#fb923c !important; }
+        .fr-tab-active { color:var(--accent-strong) !important; border-bottom-color:var(--accent-strong) !important; }
         .fr-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12);
           border-radius:10px; overflow:hidden; padding:16px; width:100%; box-sizing:border-box; }
         .fr-empty { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px;
           display:flex; flex-direction:column; align-items:center; gap:10px; }
         .fr-spinner { width:18px; height:18px; border-radius:50%;
-          border:2px solid rgba(251,146,60,0.2); border-top-color:#fb923c;
+          border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong);
           animation:fr-spin 0.7s linear infinite; }
         @keyframes fr-spin { to { transform:rotate(360deg); } }
         .fr-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2);
-          border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#fca5a5; }
+          border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle); }
         tbody tr:hover td { background: rgba(251,146,60,0.025); }
       `}</style>
 
@@ -493,11 +493,11 @@ export default function FinancialReportsPage() {
                 onChange={e => setFilters(p => ({ ...p, [f.key]: e.target.value }))}
                 style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
                   borderRadius: 7, padding: '7px 12px', fontSize: 12,
-                  fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8', outline: 'none', width: 140 }} />
+                  fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)', outline: 'none', width: 140 }} />
             </div>
           ))}
           <button onClick={runReport} disabled={loading} style={{
-            background: 'linear-gradient(135deg,#c2410c,#ea580c,#f97316)', border: 'none',
+            background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid))', border: 'none',
             borderRadius: 7, padding: '7px 16px', fontSize: 12, fontWeight: 500,
             fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer',
             boxShadow: '0 3px 12px rgba(234,88,12,0.3)', opacity: loading ? 0.6 : 1, alignSelf: 'flex-end' }}>

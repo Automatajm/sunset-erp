@@ -50,14 +50,14 @@ function fmtDate(d: string | null) {
 }
 
 const ALERT_CONFIG = {
-  critical:  { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)', label: 'Critical',  icon: '⚠' },
-  warning:   { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: 'Warning',   icon: '△' },
-  overstock: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)',  label: 'Overstock', icon: '▲' },
-  ok:        { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)',   label: 'OK',        icon: '✓' },
+  critical:  { color: 'var(--danger)', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)', label: 'Critical',  icon: '⚠' },
+  warning:   { color: 'var(--warning)', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: 'Warning',   icon: '△' },
+  overstock: { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)',  label: 'Overstock', icon: '▲' },
+  ok:        { color: 'var(--success)', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)',   label: 'OK',        icon: '✓' },
 };
 
 const ITEM_TYPE_COLOR: Record<string, string> = {
-  finished_good: '#4ade80', raw_material: '#60a5fa', consumable: '#fbbf24',
+  finished_good: 'var(--success)', raw_material: 'var(--accent-blue)', consumable: 'var(--warning)',
 };
 
 // ─── Gauge bar ────────────────────────────────────────────────────────────────
@@ -86,12 +86,12 @@ function ExpandedDetail({ row }: { row: PlanningRow }) {
           Stock Position
         </div>
         {[
-          { label: 'On Hand (storage)',      value: `${fmtQty(row.onHandQty)} ${row.uom}`,           color: '#f1ede8' },
-          { label: 'Purchase Qty (financial)', value: `${fmtQty(row.purchaseQty)} ${row.purchaseUom}`, color: '#fb923c' },
-          { label: 'Reserved',               value: `${fmtQty(row.reservedQty)} ${row.uom}`,         color: '#fbbf24' },
-          { label: 'Available',              value: `${fmtQty(row.availableQty)} ${row.uom}`,        color: '#4ade80' },
+          { label: 'On Hand (storage)',      value: `${fmtQty(row.onHandQty)} ${row.uom}`,           color: 'var(--text-strong)' },
+          { label: 'Purchase Qty (financial)', value: `${fmtQty(row.purchaseQty)} ${row.purchaseUom}`, color: 'var(--accent-strong)' },
+          { label: 'Reserved',               value: `${fmtQty(row.reservedQty)} ${row.uom}`,         color: 'var(--warning)' },
+          { label: 'Available',              value: `${fmtQty(row.availableQty)} ${row.uom}`,        color: 'var(--success)' },
           { label: 'WAC Unit Cost',          value: `$${row.unitCost.toFixed(4)} / ${row.purchaseUom}`, color: 'rgba(255,255,255,0.5)' },
-          { label: 'Stock Value',            value: fmtAmt(row.stockValue),                          color: '#60a5fa' },
+          { label: 'Stock Value',            value: fmtAmt(row.stockValue),                          color: 'var(--accent-blue)' },
         ].map(r => (
           <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.label}</span>
@@ -106,8 +106,8 @@ function ExpandedDetail({ row }: { row: PlanningRow }) {
             <span>ROP ({fmtQty(row.reorderPoint)})</span>
           </div>
           <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: `${Math.min(100, (row.safetyStock / maxStock) * 100)}%`, top: 0, bottom: 0, width: 1, background: '#f87171', opacity: 0.6 }} />
-            <div style={{ position: 'absolute', left: `${Math.min(100, (row.reorderPoint / maxStock) * 100)}%`, top: 0, bottom: 0, width: 1, background: '#fbbf24', opacity: 0.6 }} />
+            <div style={{ position: 'absolute', left: `${Math.min(100, (row.safetyStock / maxStock) * 100)}%`, top: 0, bottom: 0, width: 1, background: 'var(--danger)', opacity: 0.6 }} />
+            <div style={{ position: 'absolute', left: `${Math.min(100, (row.reorderPoint / maxStock) * 100)}%`, top: 0, bottom: 0, width: 1, background: 'var(--warning)', opacity: 0.6 }} />
             <div style={{ width: `${Math.min(100, Math.max(0, (row.atpQty / maxStock) * 100))}%`, height: '100%', background: alert.color, opacity: 0.7, borderRadius: 4 }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
@@ -125,9 +125,9 @@ function ExpandedDetail({ row }: { row: PlanningRow }) {
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>No pending purchase orders</div>
         ) : row.openPOs.slice(0, 8).map((po, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ ...MONO, fontSize: 11, color: '#4ade80' }}>{po.poNumber}</span>
+            <span style={{ ...MONO, fontSize: 11, color: 'var(--success)' }}>{po.poNumber}</span>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ ...MONO, fontSize: 11, color: '#f1ede8' }}>+{fmtQty(po.pending)}</span>
+              <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong)' }}>+{fmtQty(po.pending)}</span>
               <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>{fmtDate(po.expectedDate)}</div>
             </div>
           </div>
@@ -146,9 +146,9 @@ function ExpandedDetail({ row }: { row: PlanningRow }) {
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginBottom: 12 }}>No open sales orders</div>
         ) : row.openSOs.slice(0, 5).map((so, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ ...MONO, fontSize: 11, color: '#f87171' }}>{so.soNumber}</span>
+            <span style={{ ...MONO, fontSize: 11, color: 'var(--danger)' }}>{so.soNumber}</span>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ ...MONO, fontSize: 11, color: '#f1ede8' }}>−{fmtQty(so.demand)}</span>
+              <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong)' }}>−{fmtQty(so.demand)}</span>
               <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>{fmtDate(so.promisedDate)}</div>
             </div>
           </div>
@@ -189,7 +189,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
             {a.label}
           </span>
           {r.doubleOrderRisk && (
-            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', border: '0.5px solid rgba(251,191,36,0.3)', color: '#fbbf24', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', border: '0.5px solid rgba(251,191,36,0.3)', color: 'var(--warning)', whiteSpace: 'nowrap' }}>
               2×
             </span>
           )}
@@ -202,7 +202,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     value: r => r.itemCode,
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: '#f1ede8', fontWeight: 500 }}>{r.itemCode}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong)', fontWeight: 500 }}>{r.itemCode}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
@@ -213,7 +213,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     render: r => {
       const color = ITEM_TYPE_COLOR[r.itemType] ?? 'rgba(255,255,255,0.4)';
       return (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color, background: `${color}15`, border: `0.5px solid ${color}30`, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color, background: `color-mix(in srgb, ${color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
           {r.itemType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
         </span>
       );
@@ -227,7 +227,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
       const maxStock = Math.max(r.onHandQty + r.poSupplyQty, r.reorderPoint * 2, 1);
       return (
         <div style={{ textAlign: 'right' }}>
-          <span style={{ ...MONO, fontSize: 12, color: '#f1ede8', fontWeight: 500 }}>{fmtQty(r.onHandQty)}</span>
+          <span style={{ ...MONO, fontSize: 12, color: 'var(--text-strong)', fontWeight: 500 }}>{fmtQty(r.onHandQty)}</span>
           <GaugeBar value={r.onHandQty} max={maxStock} color={a.color} />
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
         </div>
@@ -239,7 +239,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     value: r => r.poSupplyQty,
     render: r => r.poSupplyQty > 0 ? (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 11, color: '#4ade80' }}>+{fmtQty(r.poSupplyQty)}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--success)' }}>+{fmtQty(r.poSupplyQty)}</span>
         {r.nextReceiptDate && (
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>by {fmtDate(r.nextReceiptDate)}</div>
         )}
@@ -250,14 +250,14 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     key: 'soDemandQty', header: 'SO Demand', width: 110, align: 'right', sortable: true,
     value: r => r.soDemandQty,
     render: r => r.soDemandQty > 0
-      ? <span style={{ ...MONO, fontSize: 11, color: '#f87171' }}>−{fmtQty(r.soDemandQty)}</span>
+      ? <span style={{ ...MONO, fontSize: 11, color: 'var(--danger)' }}>−{fmtQty(r.soDemandQty)}</span>
       : <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>—</span>,
   },
   {
     key: 'atpQty', header: 'ATP ↗', width: 100, align: 'right', sortable: true,
     value: r => r.atpQty,
     render: r => (
-      <span style={{ ...MONO, fontSize: 13, fontWeight: 700, color: r.atpQty < 0 ? '#f87171' : r.atpQty <= r.safetyStock ? '#fbbf24' : '#4ade80' }}>
+      <span style={{ ...MONO, fontSize: 13, fontWeight: 700, color: r.atpQty < 0 ? 'var(--danger)' : r.atpQty <= r.safetyStock ? 'var(--warning)' : 'var(--success)' }}>
         {fmtQty(r.atpQty)}
       </span>
     ),
@@ -266,7 +266,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     key: 'coverageDays', header: 'Coverage', width: 90, align: 'right', sortable: true,
     value: r => r.coverageDays ?? 9999,
     render: r => r.coverageDays !== null
-      ? <span style={{ ...MONO, fontSize: 11, color: r.coverageDays <= r.leadTimeDays ? '#f87171' : r.coverageDays <= 30 ? '#fbbf24' : '#4ade80' }}>{r.coverageDays}d</span>
+      ? <span style={{ ...MONO, fontSize: 11, color: r.coverageDays <= r.leadTimeDays ? 'var(--danger)' : r.coverageDays <= 30 ? 'var(--warning)' : 'var(--success)' }}>{r.coverageDays}d</span>
       : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>∞</span>,
   },
   {
@@ -288,7 +288,7 @@ const COLUMNS: ERPTreeColumn<PlanningRow>[] = [
     value: r => r.suggestedOrderQty,
     render: r => r.suggestedOrderQty > 0 ? (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, fontWeight: 600, color: '#fb923c' }}>{fmtQty(r.suggestedOrderQty)}</span>
+        <span style={{ ...MONO, fontSize: 12, fontWeight: 600, color: 'var(--accent-strong)' }}>{fmtQty(r.suggestedOrderQty)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom} · LT {r.leadTimeDays}d</div>
       </div>
     ) : <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)' }}>✓ Covered</span>,
@@ -329,19 +329,19 @@ function buildFilters(warehouses: Warehouse[]): ERPFilter<PlanningRow>[] {
     {
       key: 'itemType', label: 'Category', type: 'multiselect',
       options: [
-        { value: 'finished_good', label: 'Finished Good', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
-        { value: 'raw_material',  label: 'Raw Material',  color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
-        { value: 'consumable',    label: 'Consumable',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
+        { value: 'finished_good', label: 'Finished Good', color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
+        { value: 'raw_material',  label: 'Raw Material',  color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
+        { value: 'consumable',    label: 'Consumable',    color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
       ],
       filterFn: (row, val) => (val as string[]).includes(row.itemType),
     },
     {
       key: 'alertLevel', label: 'Alert', type: 'multiselect',
       options: [
-        { value: 'critical',  label: '⚠ Critical',  color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
-        { value: 'warning',   label: '△ Warning',   color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
-        { value: 'overstock', label: '▲ Overstock', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
-        { value: 'ok',        label: '✓ OK',        color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
+        { value: 'critical',  label: '⚠ Critical',  color: 'var(--danger)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
+        { value: 'warning',   label: '△ Warning',   color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
+        { value: 'overstock', label: '▲ Overstock', color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
+        { value: 'ok',        label: '✓ OK',        color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)'  },
       ],
       filterFn: (row, val) => (val as string[]).includes(row.alertLevel),
     },
@@ -404,7 +404,7 @@ export default function StockPlanningPage() {
         .sp-sum-value { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sp-legend  { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; flex-shrink: 0; font-size: 11px; }
         .sp-filters { flex-shrink: 0; display: flex; align-items: flex-end; gap: 10; flex-wrap: wrap; }
-        .sp-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
+        .sp-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
         .sp-refresh { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.09); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.45); cursor: pointer; }
         .sp-refresh:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
         .sp-table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -416,16 +416,16 @@ export default function StockPlanningPage() {
         {summary && (
           <div className="sp-summary">
             {[
-              { label: 'Critical',    value: summary.critical,        color: '#f87171', border: 'rgba(248,113,113,0.2)', filter: 'critical'  },
-              { label: 'Warning',     value: summary.warning,         color: '#fbbf24', border: 'rgba(251,191,36,0.2)',  filter: 'warning'   },
-              { label: '2× Risk',     value: summary.doubleOrderRisk, color: '#fb923c', border: 'rgba(251,146,60,0.2)',  filter: null        },
-              { label: 'Overstock',   value: summary.overstock,       color: '#60a5fa', border: 'rgba(96,165,250,0.2)',  filter: 'overstock' },
-              { label: 'OK',          value: summary.ok,              color: '#4ade80', border: 'rgba(74,222,128,0.2)',  filter: 'ok'        },
-              { label: 'Total Items', value: summary.total,           color: '#f1ede8', border: 'rgba(255,255,255,0.1)', filter: null        },
-              { label: 'Stock Value', value: fmtAmt(summary.totalStockValue), color: '#a78bfa', border: 'rgba(167,139,250,0.2)', filter: null, isAmt: true },
+              { label: 'Critical',    value: summary.critical,        color: 'var(--danger)', border: 'rgba(248,113,113,0.2)', filter: 'critical'  },
+              { label: 'Warning',     value: summary.warning,         color: 'var(--warning)', border: 'rgba(251,191,36,0.2)',  filter: 'warning'   },
+              { label: '2× Risk',     value: summary.doubleOrderRisk, color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.2)',  filter: null        },
+              { label: 'Overstock',   value: summary.overstock,       color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.2)',  filter: 'overstock' },
+              { label: 'OK',          value: summary.ok,              color: 'var(--success)', border: 'rgba(74,222,128,0.2)',  filter: 'ok'        },
+              { label: 'Total Items', value: summary.total,           color: 'var(--text-strong)', border: 'rgba(255,255,255,0.1)', filter: null        },
+              { label: 'Stock Value', value: fmtAmt(summary.totalStockValue), color: 'var(--accent-violet)', border: 'rgba(167,139,250,0.2)', filter: null, isAmt: true },
             ].map(c => (
               <div key={c.label} className="sp-sum"
-                style={{ border: `0.5px solid ${cardFilter === c.filter && c.filter ? c.border : 'rgba(255,255,255,0.08)'}`, background: cardFilter === c.filter && c.filter ? `${c.color}08` : 'rgba(10,7,18,0.7)' }}
+                style={{ border: `0.5px solid ${cardFilter === c.filter && c.filter ? c.border : 'rgba(255,255,255,0.08)'}`, background: cardFilter === c.filter && c.filter ? `color-mix(in srgb, ${c.color} 3%, transparent)` : 'rgba(10,7,18,0.7)' }}
                 onClick={() => c.filter && setCardFilter(prev => prev === c.filter ? null : c.filter)}>
                 <div className="sp-sum-label" style={{ color: c.color }}>{c.label}</div>
                 <div className="sp-sum-value" style={{ color: c.color, fontSize: c.isAmt ? 14 : 22 }}>{c.value}</div>

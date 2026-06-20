@@ -54,13 +54,13 @@ function PrintDocumentInner({
   }, [spec, id, query]);
 
   if (!spec) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>Unknown document type &quot;{doc}&quot;</div>;
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Unknown document type &quot;{doc}&quot;</div>;
   }
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Loading document…</div>;
   }
   if (error) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>{error}</div>;
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{error}</div>;
   }
   const qp = new URLSearchParams(query?.toString() ?? '');
   return <>{spec.render(data, qp)}</>;

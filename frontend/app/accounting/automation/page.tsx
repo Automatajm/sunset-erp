@@ -12,24 +12,24 @@ interface AutomationConfig {
 const MODULE_REGISTRY: Record<string, {
   label: string; description: string; color: string; group: string; groupColor: string;
 }> = {
-  ar_invoice:          { label: 'AR Invoice',          description: 'JE when invoice is sent to customer',                   color: '#60a5fa', group: 'Accounts Receivable', groupColor: '#60a5fa' },
-  ar_payment:          { label: 'AR Payment',          description: 'JE when payment is received on invoice',                color: '#60a5fa', group: 'Accounts Receivable', groupColor: '#60a5fa' },
-  ar_reversal:         { label: 'AR Reversal',         description: 'JE when invoice is voided',                             color: '#f87171', group: 'Accounts Receivable', groupColor: '#60a5fa' },
-  ap_invoice:          { label: 'AP Invoice',          description: 'JE when AP invoice is posted (Inventory DR / AP CR)',   color: '#a78bfa', group: 'Accounts Payable',    groupColor: '#a78bfa' },
-  ap_payment:          { label: 'AP Payment',          description: 'JE when supplier payment is applied (AP DR / Cash CR)', color: '#a78bfa', group: 'Accounts Payable',    groupColor: '#a78bfa' },
-  ap_reversal:         { label: 'AP Reversal',         description: 'JE when AP invoice is voided',                         color: '#f87171', group: 'Accounts Payable',    groupColor: '#a78bfa' },
-  fg_delivery:         { label: 'FG Delivery',         description: 'JE when finished goods are delivered from MO',         color: '#4ade80', group: 'Manufacturing',        groupColor: '#4ade80' },
-  production_variance: { label: 'Production Variance', description: 'JE when merma or surplus variance is posted',          color: '#fbbf24', group: 'Manufacturing',        groupColor: '#4ade80' },
-  po_receipt:          { label: 'PO Receipt',          description: 'JE when purchase order is received',                   color: '#fb923c', group: 'Procurement',          groupColor: '#fb923c' },
-  mo_issue:            { label: 'MO Material Issue',   description: 'JE when materials are issued to production',           color: '#fb923c', group: 'Procurement',          groupColor: '#fb923c' },
+  ar_invoice:          { label: 'AR Invoice',          description: 'JE when invoice is sent to customer',                   color: 'var(--accent-blue)', group: 'Accounts Receivable', groupColor: 'var(--accent-blue)' },
+  ar_payment:          { label: 'AR Payment',          description: 'JE when payment is received on invoice',                color: 'var(--accent-blue)', group: 'Accounts Receivable', groupColor: 'var(--accent-blue)' },
+  ar_reversal:         { label: 'AR Reversal',         description: 'JE when invoice is voided',                             color: 'var(--danger)', group: 'Accounts Receivable', groupColor: 'var(--accent-blue)' },
+  ap_invoice:          { label: 'AP Invoice',          description: 'JE when AP invoice is posted (Inventory DR / AP CR)',   color: 'var(--accent-violet)', group: 'Accounts Payable',    groupColor: 'var(--accent-violet)' },
+  ap_payment:          { label: 'AP Payment',          description: 'JE when supplier payment is applied (AP DR / Cash CR)', color: 'var(--accent-violet)', group: 'Accounts Payable',    groupColor: 'var(--accent-violet)' },
+  ap_reversal:         { label: 'AP Reversal',         description: 'JE when AP invoice is voided',                         color: 'var(--danger)', group: 'Accounts Payable',    groupColor: 'var(--accent-violet)' },
+  fg_delivery:         { label: 'FG Delivery',         description: 'JE when finished goods are delivered from MO',         color: 'var(--success)', group: 'Manufacturing',        groupColor: 'var(--success)' },
+  production_variance: { label: 'Production Variance', description: 'JE when merma or surplus variance is posted',          color: 'var(--warning)', group: 'Manufacturing',        groupColor: 'var(--success)' },
+  po_receipt:          { label: 'PO Receipt',          description: 'JE when purchase order is received',                   color: 'var(--accent-strong)', group: 'Procurement',          groupColor: 'var(--accent-strong)' },
+  mo_issue:            { label: 'MO Material Issue',   description: 'JE when materials are issued to production',           color: 'var(--accent-strong)', group: 'Procurement',          groupColor: 'var(--accent-strong)' },
 };
 
 const GROUP_ORDER = ['Accounts Receivable', 'Accounts Payable', 'Procurement', 'Manufacturing'];
 
 const MODE_OPTIONS = [
-  { value: 'full_auto',       label: 'Full Auto',       desc: 'Post JE immediately',        color: '#4ade80' },
-  { value: 'review_required', label: 'Review Required', desc: 'Draft + finance queue',      color: '#fbbf24' },
-  { value: 'manual',          label: 'Manual',          desc: 'No auto-JE — finance posts', color: '#f87171' },
+  { value: 'full_auto',       label: 'Full Auto',       desc: 'Post JE immediately',        color: 'var(--success)' },
+  { value: 'review_required', label: 'Review Required', desc: 'Draft + finance queue',      color: 'var(--warning)' },
+  { value: 'manual',          label: 'Manual',          desc: 'No auto-JE — finance posts', color: 'var(--danger)' },
 ];
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 11 };
@@ -37,9 +37,9 @@ const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fon
 function modeStyle(mode: string): React.CSSProperties {
   const opt = MODE_OPTIONS.find(o => o.value === mode);
   return {
-    color: opt?.color ?? '#e2dfd8',
-    background: `${opt?.color ?? '#e2dfd8'}15`,
-    border: `0.5px solid ${opt?.color ?? '#e2dfd8'}35`,
+    color: opt?.color ?? 'var(--text-primary)',
+    background: `${opt?.color ?? 'var(--text-primary)'}15`,
+    border: `0.5px solid ${opt?.color ?? 'var(--text-primary)'}35`,
     padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500,
     display: 'inline-flex', alignItems: 'center', gap: 4,
   };
@@ -86,9 +86,9 @@ function GroupNode({
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '8px 14px', cursor: 'pointer',
-          background: `${groupColor}08`,
-          borderTop: `0.5px solid ${groupColor}20`,
-          borderBottom: expanded ? `0.5px solid ${groupColor}15` : `0.5px solid ${groupColor}20`,
+          background: `color-mix(in srgb, ${groupColor} 3%, transparent)`,
+          borderTop: `0.5px solid color-mix(in srgb, ${groupColor} 13%, transparent)`,
+          borderBottom: expanded ? `0.5px solid color-mix(in srgb, ${groupColor} 8%, transparent)` : `0.5px solid color-mix(in srgb, ${groupColor} 13%, transparent)`,
           transition: 'background 0.15s',
           userSelect: 'none',
         }}
@@ -102,7 +102,7 @@ function GroupNode({
         </svg>
 
         {/* Dot */}
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: groupColor, flexShrink: 0, boxShadow: `0 0 6px ${groupColor}80` }} />
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: groupColor, flexShrink: 0, boxShadow: `0 0 6px color-mix(in srgb, ${groupColor} 50%, transparent)` }} />
 
         {/* Name */}
         <span style={{ fontSize: 12, fontWeight: 600, color: groupColor, letterSpacing: '0.04em', flex: 1 }}>
@@ -115,7 +115,7 @@ function GroupNode({
         </span>
 
         {/* Group status summary */}
-        <span style={{ fontSize: 10, color: allEnabled ? '#4ade80' : 'rgba(255,255,255,0.25)', background: allEnabled ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', padding: '1px 7px', borderRadius: 10, border: `0.5px solid ${allEnabled ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+        <span style={{ fontSize: 10, color: allEnabled ? 'var(--success)' : 'rgba(255,255,255,0.25)', background: allEnabled ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', padding: '1px 7px', borderRadius: 10, border: `0.5px solid ${allEnabled ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
           {allEnabled ? 'All enabled' : 'Partially enabled'}
         </span>
       </div>
@@ -144,13 +144,13 @@ function GroupNode({
               >
                 {/* Tree line */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                  <div style={{ width: 1, height: '50%', background: `${groupColor}20`, position: 'absolute', transform: 'translateX(-50%)' }} />
-                  <div style={{ width: 10, height: 1, background: `${groupColor}20`, marginLeft: 10 }} />
+                  <div style={{ width: 1, height: '50%', background: `color-mix(in srgb, ${groupColor} 13%, transparent)`, position: 'absolute', transform: 'translateX(-50%)' }} />
+                  <div style={{ width: 10, height: 1, background: `color-mix(in srgb, ${groupColor} 13%, transparent)`, marginLeft: 10 }} />
                 </div>
 
                 {/* Module label + code */}
                 <div style={{ paddingLeft: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: meta?.color ?? '#e2dfd8' }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: meta?.color ?? 'var(--text-primary)' }}>
                     {meta?.label ?? cfg.module}
                   </div>
                   <div style={{ ...MONO, color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>{cfg.module}</div>
@@ -164,7 +164,7 @@ function GroupNode({
                 {/* Current mode badge */}
                 <div style={{ marginRight: 12 }}>
                   <span style={modeStyle(cfg.mode)}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: MODE_OPTIONS.find(o => o.value === cfg.mode)?.color ?? '#e2dfd8', flexShrink: 0 }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: MODE_OPTIONS.find(o => o.value === cfg.mode)?.color ?? 'var(--text-primary)', flexShrink: 0 }} />
                     {MODE_OPTIONS.find(o => o.value === cfg.mode)?.label ?? cfg.mode}
                   </span>
                 </div>
@@ -180,7 +180,7 @@ function GroupNode({
                         padding: '4px 8px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
                         fontFamily: "'IBM Plex Sans',sans-serif",
                         color:       cfg.mode === opt.value ? opt.color : 'rgba(255,255,255,0.3)',
-                        background:  cfg.mode === opt.value ? `${opt.color}18` : 'rgba(255,255,255,0.03)',
+                        background:  cfg.mode === opt.value ? `color-mix(in srgb, ${opt.color} 9%, transparent)` : 'rgba(255,255,255,0.03)',
                         border:      `0.5px solid ${cfg.mode === opt.value ? opt.color + '40' : 'rgba(255,255,255,0.07)'}`,
                         opacity:     isBusy ? 0.5 : 1,
                         transition:  'all 0.15s',
@@ -200,7 +200,7 @@ function GroupNode({
                     style={{
                       padding: '4px 10px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
                       fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500,
-                      color:      cfg.isEnabled ? '#4ade80' : 'rgba(255,255,255,0.25)',
+                      color:      cfg.isEnabled ? 'var(--success)' : 'rgba(255,255,255,0.25)',
                       background: cfg.isEnabled ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
                       border:     `0.5px solid ${cfg.isEnabled ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`,
                       opacity:    isBusy ? 0.5 : 1,
@@ -292,7 +292,7 @@ export default function AutomationConfigPage() {
         .auto-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:3px; }
         .auto-stat-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; }
         .auto-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .auto-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:#e2dfd8; outline:none; width:260px; }
+        .auto-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary); outline:none; width:260px; }
         .auto-search::placeholder { color:rgba(255,255,255,0.2); }
         .auto-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
         .auto-toggle-all { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:6px 12px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; color:rgba(255,255,255,0.45); cursor:pointer; transition:all 0.15s; }
@@ -301,7 +301,7 @@ export default function AutomationConfigPage() {
         .auto-wrap { background:rgba(10,7,18,0.75); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .auto-tree-hdr { display:grid; grid-template-columns:28px 200px 1fr auto auto auto; gap:0; padding:7px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.45); background:rgba(251,146,60,0.04); border-bottom:0.5px solid rgba(255,255,255,0.06); }
         .auto-loading { text-align:center; padding:52px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; align-items:center; justify-content:center; gap:10px; }
-        .auto-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:#fb923c; animation:auto-spin 0.7s linear infinite; }
+        .auto-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong); animation:auto-spin 0.7s linear infinite; }
         @keyframes auto-spin { to { transform:rotate(360deg); } }
       `}</style>
 
@@ -311,11 +311,11 @@ export default function AutomationConfigPage() {
         {!loading && (
           <div className="auto-stats">
             {[
-              { label: 'Total Modules',    value: configs.length,  color: '#f1ede8' },
-              { label: 'Enabled',          value: totalEnabled,    color: '#4ade80' },
-              { label: 'Full Auto',        value: totalAuto,       color: '#4ade80' },
-              { label: 'Review Required',  value: totalReview,     color: '#fbbf24' },
-              { label: 'Manual',           value: configs.length - totalAuto - totalReview, color: '#f87171' },
+              { label: 'Total Modules',    value: configs.length,  color: 'var(--text-strong)' },
+              { label: 'Enabled',          value: totalEnabled,    color: 'var(--success)' },
+              { label: 'Full Auto',        value: totalAuto,       color: 'var(--success)' },
+              { label: 'Review Required',  value: totalReview,     color: 'var(--warning)' },
+              { label: 'Manual',           value: configs.length - totalAuto - totalReview, color: 'var(--danger)' },
             ].map(s => (
               <div key={s.label} className="auto-stat">
                 <div className="auto-stat-label">{s.label}</div>
@@ -326,8 +326,8 @@ export default function AutomationConfigPage() {
         )}
 
         {/* Alerts */}
-        {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#fca5a5' }}>{error}</div>}
-        {success && <div style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#4ade80' }}>✓ {success}</div>}
+        {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--danger-subtle)' }}>{error}</div>}
+        {success && <div style={{ background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--success)' }}>✓ {success}</div>}
 
         {/* Toolbar */}
         <div className="auto-toolbar">
@@ -363,7 +363,7 @@ export default function AutomationConfigPage() {
               {/* Groups */}
               {GROUP_ORDER.map(groupName => {
                 const meta = MODULE_REGISTRY[configs.find(c => MODULE_REGISTRY[c.module]?.group === groupName)?.module ?? ''];
-                const groupColor = meta?.groupColor ?? '#fb923c';
+                const groupColor = meta?.groupColor ?? 'var(--accent-strong)';
                 return (
                   <GroupNode
                     key={groupName}
@@ -382,7 +382,7 @@ export default function AutomationConfigPage() {
               {ungrouped.length > 0 && (
                 <GroupNode
                   groupName="Other"
-                  groupColor="#6b7280"
+                  groupColor="var(--text-secondary)"
                   configs={ungrouped}
                   saving={saving}
                   onModeChange={handleModeChange}

@@ -276,7 +276,7 @@ function CommandPalette({ open, onClose, hasPermission }: {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search pages, modules…"
-            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: '#f1ede8', fontFamily: "'IBM Plex Sans',sans-serif" }}
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-strong)', fontFamily: "'IBM Plex Sans',sans-serif" }}
           />
           <kbd style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '2px 6px', fontFamily: 'monospace' }}>ESC</kbd>
         </div>
@@ -307,7 +307,7 @@ function CommandPalette({ open, onClose, hasPermission }: {
                         {GROUP_ICONS[item.group] ?? '📄'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: isSelected ? '#fb923c' : '#e2dfd8', fontWeight: isSelected ? 500 : 400 }}>{item.label}</div>
+                        <div style={{ fontSize: 13, color: isSelected ? 'var(--accent-strong)' : 'var(--text-primary)', fontWeight: isSelected ? 500 : 400 }}>{item.label}</div>
                         {item.group && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{item.group}</div>}
                       </div>
                       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>
@@ -501,7 +501,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           background-image:
             radial-gradient(ellipse 80% 40% at 50% 100%, rgba(234,88,12,0.16) 0%, transparent 60%),
             linear-gradient(to bottom, #0c0a1a 0%, #110c1c 50%, #18100a 100%);
-          color: #e2dfd8;
+          color: var(--text-primary);
           display: flex; flex-direction: column;
         }
 
@@ -516,7 +516,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         }
         .shell-mark {
           width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
-          background: linear-gradient(145deg,#c2410c,#ea580c,#f97316);
+          background: linear-gradient(145deg,var(--accent-pressed),var(--accent),var(--accent-mid));
           box-shadow: 0 2px 10px rgba(234,88,12,0.38);
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
@@ -526,7 +526,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           font-size: 18px; font-weight: 300; letter-spacing: 0.1em;
           color: #fff; flex-shrink: 0; cursor: pointer; white-space: nowrap;
         }
-        .shell-wordmark span { color: #fb923c; }
+        .shell-wordmark span { color: var(--accent-strong); }
 
         /* ── Command palette trigger button ── */
         .shell-search-btn {
@@ -572,7 +572,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-urole { font-size: 10px; color: rgba(255,255,255,0.3); }
         .shell-avatar {
           width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-          background: linear-gradient(135deg,#c2410c,#f97316);
+          background: linear-gradient(135deg,var(--accent-pressed),var(--accent-mid));
           display: flex; align-items: center; justify-content: center;
           font-size: 11px; font-weight: 600; color: #fff; cursor: pointer;
         }
@@ -583,7 +583,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           padding: 3px 7px; border-radius: 4px;
           transition: color 0.2s, background 0.2s; white-space: nowrap;
         }
-        .shell-signout:hover { color: #fb923c; background: rgba(251,146,60,0.08); }
+        .shell-signout:hover { color: var(--accent-strong); background: rgba(251,146,60,0.08); }
 
         .shell-nav {
           height: 34px;
@@ -604,7 +604,7 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           user-select: none; position: relative;
         }
         .ni:hover, .ni-open { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
-        .ni-active { color: #fb923c !important; border-bottom-color: #fb923c !important; background: rgba(251,146,60,0.05) !important; }
+        .ni-active { color: var(--accent-strong) !important; border-bottom-color: var(--accent-strong) !important; background: rgba(251,146,60,0.05) !important; }
         /* bridge div handles gap — no ::after needed */
 
         .dd-panel {
@@ -634,19 +634,19 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           transition: background 0.1s, color 0.1s;
         }
         .dd-group:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
-        .dd-group-on { background: rgba(251,146,60,0.1) !important; color: #fb923c !important; border: 0.5px solid rgba(251,146,60,0.22); }
+        .dd-group-on { background: rgba(251,146,60,0.1) !important; color: var(--accent-strong) !important; border: 0.5px solid rgba(251,146,60,0.22); }
         .dd-right { flex: 1; padding: 8px 8px 8px 6px; display: flex; flex-direction: column; gap: 1px; min-width: 200px; border-radius: 0 10px 10px 0; }
         .dd-right-hdr { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(251,146,60,0.5); padding: 4px 10px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.06); margin-bottom: 3px; }
         .dd-leaf { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; font-size: 12px; color: rgba(255,255,255,0.6); cursor: pointer; transition: background 0.1s, color 0.1s; }
-        .dd-leaf:hover { background: rgba(255,255,255,0.06); color: #f1ede8; }
+        .dd-leaf:hover { background: rgba(255,255,255,0.06); color: var(--text-strong); }
 
         .shell-sub { display: flex; align-items: center; padding: 10px 18px 6px; flex-shrink: 0; }
         .shell-bc  { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.3); }
         .shell-bc-sep  { color: rgba(255,255,255,0.15); }
         .shell-bc-link { color: rgba(251,146,60,0.55); cursor: pointer; transition: color 0.15s; }
-        .shell-bc-link:hover { color: #fb923c; }
+        .shell-bc-link:hover { color: var(--accent-strong); }
         .shell-bc-cur  { color: rgba(255,255,255,0.6); }
-        .shell-title   { font-size: 15px; font-weight: 500; color: #f1ede8; padding: 0 18px 8px; }
+        .shell-title   { font-size: 15px; font-weight: 500; color: var(--text-strong); padding: 0 18px 8px; }
         .shell-content { flex: 1; overflow: hidden; min-height: 0; }
       `}</style>
 

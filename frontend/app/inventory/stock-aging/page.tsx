@@ -65,20 +65,20 @@ function fmtTimestamp(d: string) {
 }
 
 const BUCKET_CFG: Record<AgingBucket, { color: string; bg: string; border: string; label: string; risk: string }> = {
-  'no_movement': { color: '#f87171', bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', label: 'No Movement', risk: 'Dead'  },
-  '180+':        { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)', label: '180+ days',  risk: 'Dead'  },
-  '91-180':      { color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)',  label: '91–180 days', risk: 'Slow' },
-  '61-90':       { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: '61–90 days',  risk: 'Watch' },
-  '31-60':       { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)',  label: '31–60 days',  risk: 'Watch' },
-  '0-30':        { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)',   label: '0–30 days',   risk: 'Fresh' },
+  'no_movement': { color: 'var(--danger)', bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', label: 'No Movement', risk: 'Dead'  },
+  '180+':        { color: 'var(--danger)', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)', label: '180+ days',  risk: 'Dead'  },
+  '91-180':      { color: 'var(--accent-strong)', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)',  label: '91–180 days', risk: 'Slow' },
+  '61-90':       { color: 'var(--warning)', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)',  label: '61–90 days',  risk: 'Watch' },
+  '31-60':       { color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)',  label: '31–60 days',  risk: 'Watch' },
+  '0-30':        { color: 'var(--success)', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)',   label: '0–30 days',   risk: 'Fresh' },
 };
 
 const BUCKET_ORDER: AgingBucket[] = ['no_movement', '180+', '91-180', '61-90', '31-60', '0-30'];
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: '#4ade80', label: 'Finished Good' },
-  raw_material:  { color: '#60a5fa', label: 'Raw Material'  },
-  consumable:    { color: '#fbbf24', label: 'Consumable'    },
+  finished_good: { color: 'var(--success)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
 };
 
 // ─── Columns ─────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.itemCode,
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: '#fb923c', fontWeight: 500 }}>{r.itemCode}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.itemCode}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
@@ -122,7 +122,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => {
       const cfg = ITEM_TYPE_CFG[r.itemType];
       return cfg ? (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `${cfg.color}15`, border: `0.5px solid ${cfg.color}30`, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${cfg.color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
           {cfg.label}
         </span>
       ) : null;
@@ -143,7 +143,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.storageQty,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: r.storageQty > 0 ? '#e2dfd8' : '#f87171' }}>{fmtQty(r.storageQty)}</span>
+        <span style={{ ...MONO, fontSize: 12, color: r.storageQty > 0 ? 'var(--text-primary)' : 'var(--danger)' }}>{fmtQty(r.storageQty)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
       </div>
     ),
@@ -153,7 +153,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.purchaseQty,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: '#fb923c' }}>{fmtQty(r.purchaseQty)}</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong)' }}>{fmtQty(r.purchaseQty)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.purchaseUom}</div>
       </div>
     ),
@@ -176,7 +176,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.lastMovementDate ?? '',
     render: r => r.lastMovementDate
       ? <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtDateShort(r.lastMovementDate)}</span>
-      : <span style={{ fontSize: 10, color: '#f87171' }}>Never moved</span>,
+      : <span style={{ fontSize: 10, color: 'var(--danger)' }}>Never moved</span>,
   },
 ];
 
@@ -266,7 +266,7 @@ export default function StockAgingPage() {
         .ag-bucket-value { font-size: 11px; color: rgba(255,255,255,0.4); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
         .ag-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .ag-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .ag-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
+        .ag-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
         .ag-note    { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
         .ag-refresh { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.09); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.45); cursor: pointer; }
         .ag-refresh:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
@@ -277,11 +277,11 @@ export default function StockAgingPage() {
         {/* KPI bar */}
         <div className="ag-kpis">
           {[
-            { label: 'Total Items',    value: String(data?.summary.totalItems ?? 0),           color: '#f1ede8', border: 'rgba(255,255,255,0.07)' },
-            { label: 'Total Value',    value: fmtAmt(data?.summary.totalValue ?? 0),            color: '#fb923c', border: 'rgba(251,146,60,0.2)'   },
-            { label: 'Slow Moving',    value: String(data?.summary.slowMovingCount ?? 0),       color: '#fb923c', border: 'rgba(251,146,60,0.15)'   },
-            { label: 'Slow Mov. Value', value: fmtAmt(data?.summary.slowMovingValue ?? 0),     color: '#fb923c', border: 'rgba(251,146,60,0.15)'   },
-            { label: 'Dead Stock',     value: fmtAmt(data?.summary.deadStockValue ?? 0),       color: '#f87171', border: 'rgba(248,113,113,0.2)'   },
+            { label: 'Total Items',    value: String(data?.summary.totalItems ?? 0),           color: 'var(--text-strong)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Value',    value: fmtAmt(data?.summary.totalValue ?? 0),            color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.2)'   },
+            { label: 'Slow Moving',    value: String(data?.summary.slowMovingCount ?? 0),       color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.15)'   },
+            { label: 'Slow Mov. Value', value: fmtAmt(data?.summary.slowMovingValue ?? 0),     color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.15)'   },
+            { label: 'Dead Stock',     value: fmtAmt(data?.summary.deadStockValue ?? 0),       color: 'var(--danger)', border: 'rgba(248,113,113,0.2)'   },
           ].map(k => (
             <div key={k.label} className="ag-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="ag-kpi-l">{k.label}</div>
@@ -322,7 +322,7 @@ export default function StockAgingPage() {
             Refresh
           </button>
           {cardFilter && (
-            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f87171', cursor: 'pointer' }}>
+            <button onClick={() => setCardFilter(null)} style={{ alignSelf: 'flex-end', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '6px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger)', cursor: 'pointer' }}>
               ↺ Clear bucket filter
             </button>
           )}
@@ -351,7 +351,7 @@ export default function StockAgingPage() {
 
         {/* Footer note */}
         <div className="ag-note">
-          <span style={{ color: '#f87171' }}>⚠</span>
+          <span style={{ color: 'var(--danger)' }}>⚠</span>
           <span>Slow Moving = no movement in 60+ days · Dead Stock = 180+ days · Value at Risk = purchaseQty × WAC (ADR-019)</span>
         </div>
 

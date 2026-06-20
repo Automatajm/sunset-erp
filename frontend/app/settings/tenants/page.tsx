@@ -32,7 +32,7 @@ const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fon
 const INPUT: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
   borderRadius: 7, padding: '8px 12px', fontSize: 13,
-  fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8', outline: 'none', width: '100%',
+  fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)', outline: 'none', width: '100%',
 };
 const LABEL_S: React.CSSProperties = {
   fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
@@ -41,7 +41,7 @@ const LABEL_S: React.CSSProperties = {
 const BTN_PRI: React.CSSProperties = {
   padding: '8px 20px', borderRadius: 7, fontSize: 12, fontWeight: 500,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', border: 'none', cursor: 'pointer',
-  background: 'linear-gradient(135deg,#92400e,#d97706,#fbbf24)',
+  background: 'linear-gradient(135deg,#92400e,#d97706,var(--warning))',
   boxShadow: '0 3px 12px rgba(217,119,6,0.3)',
 };
 const BTN_SEC: React.CSSProperties = {
@@ -50,10 +50,10 @@ const BTN_SEC: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', cursor: 'pointer',
 };
 const PLAN_COLOR: Record<string, string> = {
-  free: '#6b7280', starter: '#60a5fa', professional: '#a78bfa', enterprise: '#f97316',
+  free: 'var(--text-secondary)', starter: 'var(--accent-blue)', professional: 'var(--accent-violet)', enterprise: 'var(--accent-mid)',
 };
 const STATUS_COLOR: Record<string, string> = {
-  active: '#4ade80', suspended: '#f87171', cancelled: '#6b7280',
+  active: 'var(--success)', suspended: 'var(--danger)', cancelled: 'var(--text-secondary)',
 };
 
 // ── Field components defined OUTSIDE modal to prevent focus loss ───────────
@@ -134,12 +134,12 @@ function TenantModal({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.25)', borderRadius: 14, width: '100%', maxWidth: 620, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,0.7)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.25)', borderRadius: 14, width: '100%', maxWidth: 620, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,0.7)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#f1ede8' }}>{isEdit ? `Edit Tenant — ${tenant!.name}` : 'New Tenant'}</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong)' }}>{isEdit ? `Edit Tenant — ${tenant!.name}` : 'New Tenant'}</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
 
@@ -186,7 +186,7 @@ function TenantModal({
             )}
           </div>
           {error && (
-            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>
           )}
         </div>
 
@@ -239,9 +239,9 @@ function AddUserModal({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0e0b1a', border: '0.5px solid rgba(96,165,250,0.25)', borderRadius: 14, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+      <div style={{ background: 'var(--surface)', border: '0.5px solid rgba(96,165,250,0.25)', borderRadius: 14, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#f1ede8' }}>Add User to Tenant</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>Add User to Tenant</span>
           <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
         </div>
         <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -258,7 +258,7 @@ function AddUserModal({
               {results.map(u => (
                 <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.06)' }}>
                   <div>
-                    <div style={{ fontSize: 13, color: '#e2dfd8' }}>{u.firstName} {u.lastName}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{u.firstName} {u.lastName}</div>
                     <div style={{ ...MONO, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{u.email}</div>
                   </div>
                   <button
@@ -277,7 +277,7 @@ function AddUserModal({
             </div>
           )}
           {error && (
-            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#fca5a5' }}>{error}</div>
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--danger-subtle)' }}>{error}</div>
           )}
         </div>
       </div>
@@ -398,13 +398,13 @@ export default function TenantsPage() {
                 className={`tm-row${selected?.id === t.id ? ' tm-row-active' : ''}`}
                 onClick={() => loadDetail(t.id)}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: selected?.id === t.id ? '#fb923c' : '#e2dfd8' }}>{t.name}</span>
-                  <span className="tm-badge" style={{ background: `${STATUS_COLOR[t.status] ?? '#6b7280'}18`, color: STATUS_COLOR[t.status] ?? '#6b7280', border: `0.5px solid ${STATUS_COLOR[t.status] ?? '#6b7280'}30` }}>{t.status}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: selected?.id === t.id ? 'var(--accent-strong)' : 'var(--text-primary)' }}>{t.name}</span>
+                  <span className="tm-badge" style={{ background: `${STATUS_COLOR[t.status] ?? 'var(--text-secondary)'}18`, color: STATUS_COLOR[t.status] ?? 'var(--text-secondary)', border: `0.5px solid ${STATUS_COLOR[t.status] ?? 'var(--text-secondary)'}30` }}>{t.status}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{t.code}</span>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>
-                  <span className="tm-badge" style={{ background: `${PLAN_COLOR[t.subscriptionPlan] ?? '#6b7280'}18`, color: PLAN_COLOR[t.subscriptionPlan] ?? '#6b7280', border: `0.5px solid ${PLAN_COLOR[t.subscriptionPlan] ?? '#6b7280'}30`, padding: '1px 6px' }}>{t.subscriptionPlan}</span>
+                  <span className="tm-badge" style={{ background: `${PLAN_COLOR[t.subscriptionPlan] ?? 'var(--text-secondary)'}18`, color: PLAN_COLOR[t.subscriptionPlan] ?? 'var(--text-secondary)', border: `0.5px solid ${PLAN_COLOR[t.subscriptionPlan] ?? 'var(--text-secondary)'}30`, padding: '1px 6px' }}>{t.subscriptionPlan}</span>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{t.userCount} user{t.userCount !== 1 ? 's' : ''}</span>
                 </div>
               </div>
@@ -426,12 +426,12 @@ export default function TenantsPage() {
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#f1ede8', marginBottom: 4 }}>{selected.name}</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-strong)', marginBottom: 4 }}>{selected.name}</div>
                   {selected.legalName && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{selected.legalName}</div>}
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <span className="tm-badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(255,255,255,0.08)' }}>{selected.code}</span>
-                    <span className="tm-badge" style={{ background: `${STATUS_COLOR[selected.status] ?? '#6b7280'}18`, color: STATUS_COLOR[selected.status] ?? '#6b7280', border: `0.5px solid ${STATUS_COLOR[selected.status] ?? '#6b7280'}30` }}>{selected.status}</span>
-                    <span className="tm-badge" style={{ background: `${PLAN_COLOR[selected.subscriptionPlan] ?? '#6b7280'}18`, color: PLAN_COLOR[selected.subscriptionPlan] ?? '#6b7280', border: `0.5px solid ${PLAN_COLOR[selected.subscriptionPlan] ?? '#6b7280'}30` }}>{selected.subscriptionPlan}</span>
+                    <span className="tm-badge" style={{ background: `${STATUS_COLOR[selected.status] ?? 'var(--text-secondary)'}18`, color: STATUS_COLOR[selected.status] ?? 'var(--text-secondary)', border: `0.5px solid ${STATUS_COLOR[selected.status] ?? 'var(--text-secondary)'}30` }}>{selected.status}</span>
+                    <span className="tm-badge" style={{ background: `${PLAN_COLOR[selected.subscriptionPlan] ?? 'var(--text-secondary)'}18`, color: PLAN_COLOR[selected.subscriptionPlan] ?? 'var(--text-secondary)', border: `0.5px solid ${PLAN_COLOR[selected.subscriptionPlan] ?? 'var(--text-secondary)'}30` }}>{selected.subscriptionPlan}</span>
                     <span className="tm-badge" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)', border: '0.5px solid rgba(255,255,255,0.08)' }}>{selected.country} · {selected.defaultCurrency}</span>
                   </div>
                 </div>
@@ -448,7 +448,7 @@ export default function TenantsPage() {
                 ].map(s => (
                   <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px' }}>
                     <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
-                    <div style={{ fontSize: 12, color: '#e2dfd8' }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{s.value}</div>
                   </div>
                 ))}
               </div>
@@ -469,31 +469,31 @@ export default function TenantsPage() {
                     {selected.users.map(u => (
                       <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.05)' }}>
                         {/* Avatar */}
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: u.isActive ? 'linear-gradient(135deg,#c2410c,#f97316)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: u.isActive ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent-mid))' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'white', flexShrink: 0 }}>
                           {u.firstName.charAt(0)}
                         </div>
 
                         {/* Info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, color: '#e2dfd8', fontWeight: 500 }}>{u.fullName}</span>
+                            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{u.fullName}</span>
                             {u.isDefault && (
                               <span
                                 className="tm-badge"
                                 title="This tenant is the default for this user — they log in here automatically"
-                                style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c', border: '0.5px solid rgba(251,146,60,0.25)', fontSize: 9, cursor: 'help' }}>
+                                style={{ background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong)', border: '0.5px solid rgba(251,146,60,0.25)', fontSize: 9, cursor: 'help' }}>
                                 MY DEFAULT
                               </span>
                             )}
                             {!u.isActive && (
-                              <span className="tm-badge" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '0.5px solid rgba(248,113,113,0.25)', fontSize: 9 }}>INACTIVE</span>
+                              <span className="tm-badge" style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', border: '0.5px solid rgba(248,113,113,0.25)', fontSize: 9 }}>INACTIVE</span>
                             )}
                           </div>
                           <div style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{u.email}</div>
                           {u.roles.length > 0 && (
                             <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                               {u.roles.map(r => (
-                                <span key={r.id} className="tm-badge" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '0.5px solid rgba(167,139,250,0.2)', fontSize: 9 }}>{r.name}</span>
+                                <span key={r.id} className="tm-badge" style={{ background: 'rgba(167,139,250,0.1)', color: 'var(--accent-violet)', border: '0.5px solid rgba(167,139,250,0.2)', fontSize: 9 }}>{r.name}</span>
                               ))}
                             </div>
                           )}
@@ -509,13 +509,13 @@ export default function TenantsPage() {
                               fontFamily: "'IBM Plex Sans',sans-serif",
                               background: u.isDefault ? 'rgba(107,114,128,0.08)' : 'rgba(251,146,60,0.08)',
                               border: u.isDefault ? '0.5px solid rgba(107,114,128,0.25)' : '0.5px solid rgba(251,146,60,0.2)',
-                              color: u.isDefault ? '#6b7280' : '#fb923c',
+                              color: u.isDefault ? 'var(--text-secondary)' : 'var(--accent-strong)',
                             }}>
                             {u.isDefault ? 'Unset Default' : 'Set Default'}
                           </button>
                           <button
                             onClick={() => setRemoveUser({ id: u.id, fullName: u.fullName })}
-                            style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: '#f87171', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                            style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', color: 'var(--danger)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                             Remove
                           </button>
                         </div>

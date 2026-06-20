@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Semantic design tokens (spec-ux-foundation, F0)
+
+   Dark-only today. Values are VALUE-PRESERVING — each token equals the
+   de-facto literal it replaced across the app, so introducing the token layer
+   is a pure refactor with zero visual change. Tune the palette here, once,
+   instead of across 2,500+ inline literals. A future light theme adds a
+   `:root.light { ... }` override block; no page code changes.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* surfaces */
+  --bg:               #0a0712;   /* page background          */
+  --surface:          #0e0b1a;   /* cards, table, modal body */
+  --surface-raised:   #15101f;   /* hover rows, popovers     */
+  --border:           #2a2535;   /* hairlines, dividers      */
+  --border-strong:    #3a3447;   /* input borders, focus     */
+
+  /* text */
+  --text-strong:      #f1ede8;   /* headings                 */
+  --text-primary:     #e2dfd8;   /* body                     */
+  --text-secondary:   #6b7280;   /* labels, captions         */
+
+  /* accent — orange is the ONLY expressive brand color */
+  --accent:           #ea580c;   /* canonical brand          */
+  --accent-mid:       #f97316;   /* orange-500               */
+  --accent-strong:    #fb923c;   /* hover / highlight        */
+  --accent-pressed:   #c2410c;   /* active                   */
+
+  /* semantic status */
+  --success:          #4ade80;
+  --warning:          #fbbf24;
+  --danger:           #f87171;
+  --danger-subtle:    #fca5a5;
+  --accent-blue:      #60a5fa;   /* info / neutral data viz  */
+  --accent-violet:    #a78bfa;   /* secondary categorical    */
+}
+
 html, body { height: 100%; overflow: hidden; }
 body {
   background-color: #0f172a;

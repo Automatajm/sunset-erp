@@ -145,7 +145,7 @@ export default function LoginPage() {
         }
         .login-mark {
           width: 44px; height: 44px; border-radius: 12px; margin: 0 auto 14px;
-          background: linear-gradient(145deg,#c2410c,#ea580c,#f97316);
+          background: linear-gradient(145deg,var(--accent-pressed),var(--accent),var(--accent-mid));
           box-shadow: 0 4px 20px rgba(234,88,12,0.4);
           display: flex; align-items: center; justify-content: center;
         }
@@ -154,7 +154,7 @@ export default function LoginPage() {
           font-family: 'Cormorant Garamond', serif;
           font-size: 26px; font-weight: 300; letter-spacing: 0.1em; color: #fff;
         }
-        .login-wordmark span { color: #fb923c; }
+        .login-wordmark span { color: var(--accent-strong); }
         .login-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.06em; }
         .login-field { display: flex; flex-direction: column; gap: 5px; }
         .login-label {
@@ -164,7 +164,7 @@ export default function LoginPage() {
         .login-input {
           background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1);
           border-radius: 8px; padding: 10px 14px; font-size: 13px;
-          font-family: 'IBM Plex Sans', sans-serif; color: #f1ede8; outline: none;
+          font-family: 'IBM Plex Sans', sans-serif; color: var(--text-strong); outline: none;
           transition: border-color 0.2s, box-shadow 0.2s;
         }
         .login-input:focus { border-color: rgba(251,146,60,0.4); box-shadow: 0 0 0 2px rgba(234,88,12,0.1); }
@@ -172,7 +172,7 @@ export default function LoginPage() {
         .login-btn {
           padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 500;
           font-family: 'IBM Plex Sans', sans-serif; color: white; border: none; cursor: pointer;
-          background: linear-gradient(135deg,#92400e,#c2410c,#ea580c);
+          background: linear-gradient(135deg,#92400e,var(--accent-pressed),var(--accent));
           box-shadow: 0 4px 16px rgba(234,88,12,0.35);
           transition: opacity 0.2s, transform 0.1s;
         }
@@ -180,7 +180,7 @@ export default function LoginPage() {
         .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .login-err {
           background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2);
-          border-radius: 7px; padding: 8px 12px; font-size: 12px; color: #fca5a5;
+          border-radius: 7px; padding: 8px 12px; font-size: 12px; color: var(--danger-subtle);
         }
         .login-step {
           display: flex; align-items: center; gap: 8px;
@@ -254,19 +254,19 @@ export default function LoginPage() {
             <div className="login-step">
               <div className="login-step-dot" style={{
                 background: step === 'credentials' ? 'rgba(251,146,60,0.2)' : 'rgba(74,222,128,0.2)',
-                color:      step === 'credentials' ? '#fb923c' : '#4ade80',
+                color:      step === 'credentials' ? 'var(--accent-strong)' : 'var(--success)',
                 border:     `0.5px solid ${step === 'credentials' ? 'rgba(251,146,60,0.3)' : 'rgba(74,222,128,0.3)'}`,
               }}>
                 {step === 'credentials' ? '1' : '✓'}
               </div>
-              <span style={{ color: step === 'credentials' ? '#fb923c' : 'rgba(255,255,255,0.3)' }}>Credentials</span>
+              <span style={{ color: step === 'credentials' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.3)' }}>Credentials</span>
               <div className="login-step-line" />
               <div className="login-step-dot" style={{
                 background: step === 'tenant' ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.04)',
-                color:      step === 'tenant' ? '#fb923c' : 'rgba(255,255,255,0.2)',
+                color:      step === 'tenant' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.2)',
                 border:     `0.5px solid ${step === 'tenant' ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.08)'}`,
               }}>2</div>
-              <span style={{ color: step === 'tenant' ? '#fb923c' : 'rgba(255,255,255,0.25)' }}>Company</span>
+              <span style={{ color: step === 'tenant' ? 'var(--accent-strong)' : 'rgba(255,255,255,0.25)' }}>Company</span>
             </div>
 
             {/* Step 1 */}
@@ -304,7 +304,7 @@ export default function LoginPage() {
                     onClick={() => setDdOpen(o => !o)}>
                     {tenantSel ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#f1ede8' }}>{tenantSel.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)' }}>{tenantSel.name}</span>
                         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'rgba(251,146,60,0.6)' }}>{tenantSel.code}</span>
                       </div>
                     ) : (
@@ -333,12 +333,12 @@ export default function LoginPage() {
                             className={`td-item${tenantSel?.id === t.id ? ' td-item-sel' : ''}`}
                             onClick={() => { setTenantSel(t); setDdOpen(false); setTenantQ(''); }}>
                             <div>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: tenantSel?.id === t.id ? '#fb923c' : '#e2dfd8' }}>{t.name}</div>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: tenantSel?.id === t.id ? 'var(--accent-strong)' : 'var(--text-primary)' }}>{t.name}</div>
                               {t.industry && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{t.industry}</div>}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.08)', padding: '1px 6px', borderRadius: 4 }}>{t.code}</span>
-                              {tenantSel?.id === t.id && <span style={{ fontSize: 9, color: '#4ade80' }}>✓ selected</span>}
+                              {tenantSel?.id === t.id && <span style={{ fontSize: 9, color: 'var(--success)' }}>✓ selected</span>}
                             </div>
                           </div>
                         ))}

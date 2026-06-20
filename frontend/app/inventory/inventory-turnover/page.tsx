@@ -74,17 +74,17 @@ function fmtTimestamp(d: string) {
 }
 
 const PERF_CFG: Record<Performance, { color: string; bg: string; border: string; label: string; desc: string }> = {
-  excellent:   { color: '#4ade80', bg: 'rgba(74,222,128,0.12)',   border: 'rgba(74,222,128,0.25)',   label: 'Excellent',   desc: '≥ 12× / year' },
-  good:        { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   border: 'rgba(96,165,250,0.25)',   label: 'Good',        desc: '6–12× / year' },
-  fair:        { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',   border: 'rgba(251,191,36,0.25)',   label: 'Fair',        desc: '3–6× / year'  },
-  poor:        { color: '#f87171', bg: 'rgba(248,113,113,0.12)',  border: 'rgba(248,113,113,0.25)',  label: 'Poor',        desc: '< 3× / year'  },
+  excellent:   { color: 'var(--success)', bg: 'rgba(74,222,128,0.12)',   border: 'rgba(74,222,128,0.25)',   label: 'Excellent',   desc: '≥ 12× / year' },
+  good:        { color: 'var(--accent-blue)', bg: 'rgba(96,165,250,0.12)',   border: 'rgba(96,165,250,0.25)',   label: 'Good',        desc: '6–12× / year' },
+  fair:        { color: 'var(--warning)', bg: 'rgba(251,191,36,0.12)',   border: 'rgba(251,191,36,0.25)',   label: 'Fair',        desc: '3–6× / year'  },
+  poor:        { color: 'var(--danger)', bg: 'rgba(248,113,113,0.12)',  border: 'rgba(248,113,113,0.25)',  label: 'Poor',        desc: '< 3× / year'  },
   no_movement: { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', label: 'No Movement', desc: 'No issues'    },
 };
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
-  finished_good: { color: '#4ade80', label: 'Finished Good' },
-  raw_material:  { color: '#60a5fa', label: 'Raw Material'  },
-  consumable:    { color: '#fbbf24', label: 'Consumable'    },
+  finished_good: { color: 'var(--success)', label: 'Finished Good' },
+  raw_material:  { color: 'var(--accent-blue)', label: 'Raw Material'  },
+  consumable:    { color: 'var(--warning)', label: 'Consumable'    },
 };
 
 // ─── Turnover gauge ───────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ function TurnoverGauge({ ratio }: { ratio: number | null }) {
   if (ratio === null) return <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>;
   // Scale: 0–20× mapped to 0–100%
   const pct   = Math.min(100, (ratio / 20) * 100);
-  const color = ratio >= 12 ? '#4ade80' : ratio >= 6 ? '#60a5fa' : ratio >= 3 ? '#fbbf24' : '#f87171';
+  const color = ratio >= 12 ? 'var(--success)' : ratio >= 6 ? 'var(--accent-blue)' : ratio >= 3 ? 'var(--warning)' : 'var(--danger)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
@@ -126,7 +126,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     value: r => r.itemCode,
     render: r => (
       <div>
-        <span style={{ ...MONO, fontSize: 11, color: '#fb923c', fontWeight: 500 }}>{r.itemCode}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong)', fontWeight: 500 }}>{r.itemCode}</span>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
@@ -137,7 +137,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     render: r => {
       const cfg = ITEM_TYPE_CFG[r.itemType];
       return cfg ? (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `${cfg.color}15`, border: `0.5px solid ${cfg.color}30`, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${cfg.color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
           {cfg.label}
         </span>
       ) : null;
@@ -148,7 +148,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     value: r => r.avgInventory,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: '#e2dfd8' }}>{fmtAmt(r.avgInventory)}</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary)' }}>{fmtAmt(r.avgInventory)}</span>
         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>
           O: {fmtAmt(r.openingValue)} → C: {fmtAmt(r.closingValue)}
         </div>
@@ -160,7 +160,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     value: r => r.cogs,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: r.cogs > 0 ? '#f87171' : 'rgba(255,255,255,0.25)' }}>
+        <span style={{ ...MONO, fontSize: 12, color: r.cogs > 0 ? 'var(--danger)' : 'rgba(255,255,255,0.25)' }}>
           {r.cogs > 0 ? fmtAmt(r.cogs) : '—'}
         </span>
       </div>
@@ -185,10 +185,10 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     value: r => r.daysOnHand ?? 9999,
     render: r => {
       const color = r.daysOnHand === null ? 'rgba(255,255,255,0.2)'
-        : r.daysOnHand <= 30  ? '#4ade80'
-        : r.daysOnHand <= 60  ? '#60a5fa'
-        : r.daysOnHand <= 120 ? '#fbbf24'
-        : '#f87171';
+        : r.daysOnHand <= 30  ? 'var(--success)'
+        : r.daysOnHand <= 60  ? 'var(--accent-blue)'
+        : r.daysOnHand <= 120 ? 'var(--warning)'
+        : 'var(--danger)';
       return (
         <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color }}>
           {fmtDays(r.daysOnHand)}
@@ -345,7 +345,7 @@ export default function InventoryTurnoverPage() {
   const SEL: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans', sans-serif", color: '#e2dfd8', outline: 'none', cursor: 'pointer',
+    fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', cursor: 'pointer',
   };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)', marginBottom: 4 };
 
@@ -368,9 +368,9 @@ export default function InventoryTurnoverPage() {
         .it-period { background: rgba(96,165,250,0.06); border: 0.5px solid rgba(96,165,250,0.15); border-radius: 8px; padding: 10px 16px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
         .it-filters{ display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .it-table  { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .it-error  { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #fca5a5; flex-shrink: 0; }
+        .it-error  { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle); flex-shrink: 0; }
         .it-note   { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
-        .it-btn-apply { background: linear-gradient(135deg,#c2410c,#ea580c,#f97316); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
+        .it-btn-apply { background: linear-gradient(135deg,var(--accent-pressed),var(--accent),var(--accent-mid)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
       `}</style>
 
       <div className="it-page">
@@ -387,16 +387,16 @@ export default function InventoryTurnoverPage() {
                 data.summary.overallTurnover >= 3  ? 'fair'      : 'poor'
               ].label : '—',
               color: data?.summary.overallTurnover
-                ? data.summary.overallTurnover >= 12 ? '#4ade80'
-                : data.summary.overallTurnover >= 6  ? '#60a5fa'
-                : data.summary.overallTurnover >= 3  ? '#fbbf24' : '#f87171'
+                ? data.summary.overallTurnover >= 12 ? 'var(--success)'
+                : data.summary.overallTurnover >= 6  ? 'var(--accent-blue)'
+                : data.summary.overallTurnover >= 3  ? 'var(--warning)' : 'var(--danger)'
                 : 'rgba(255,255,255,0.3)',
               border: 'rgba(251,146,60,0.2)',
             },
-            { label: 'Days on Hand',    value: fmtDays(data?.summary.overallDaysOnHand ?? null), sub: 'avg across items', color: '#a78bfa', border: 'rgba(167,139,250,0.15)' },
-            { label: 'Total COGS',      value: fmtAmt(data?.summary.totalCogs ?? 0),             sub: 'period issues',   color: '#f87171', border: 'rgba(248,113,113,0.15)' },
-            { label: 'Avg Inventory',   value: fmtAmt(data?.summary.totalAvgInventory ?? 0),     sub: '(open + close)/2', color: '#60a5fa', border: 'rgba(96,165,250,0.15)' },
-            { label: 'Closing Value',   value: fmtAmt(data?.summary.totalClosingValue ?? 0),     sub: 'current stock',   color: '#fb923c', border: 'rgba(251,146,60,0.15)' },
+            { label: 'Days on Hand',    value: fmtDays(data?.summary.overallDaysOnHand ?? null), sub: 'avg across items', color: 'var(--accent-violet)', border: 'rgba(167,139,250,0.15)' },
+            { label: 'Total COGS',      value: fmtAmt(data?.summary.totalCogs ?? 0),             sub: 'period issues',   color: 'var(--danger)', border: 'rgba(248,113,113,0.15)' },
+            { label: 'Avg Inventory',   value: fmtAmt(data?.summary.totalAvgInventory ?? 0),     sub: '(open + close)/2', color: 'var(--accent-blue)', border: 'rgba(96,165,250,0.15)' },
+            { label: 'Closing Value',   value: fmtAmt(data?.summary.totalClosingValue ?? 0),     sub: 'current stock',   color: 'var(--accent-strong)', border: 'rgba(251,146,60,0.15)' },
           ].map(k => (
             <div key={k.label} className="it-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="it-kpi-l">{k.label}</div>
@@ -459,7 +459,7 @@ export default function InventoryTurnoverPage() {
           {hasAnyFilter && (
             <button
               onClick={handleResetAll}
-              style={{ alignSelf: 'flex-end', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: '#f87171', cursor: 'pointer' }}>
+              style={{ alignSelf: 'flex-end', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--danger)', cursor: 'pointer' }}>
               ↺ Clear All
             </button>
           )}
@@ -468,7 +468,7 @@ export default function InventoryTurnoverPage() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
                 {data.period.days} days
                 {data.period.isAnnualized && (
-                  <span style={{ marginLeft: 6, fontSize: 10, color: '#fbbf24', background: 'rgba(251,191,36,0.1)', padding: '1px 6px', borderRadius: 4 }}>
+                  <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--warning)', background: 'rgba(251,191,36,0.1)', padding: '1px 6px', borderRadius: 4 }}>
                     COGS annualized
                   </span>
                 )}

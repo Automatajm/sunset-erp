@@ -125,16 +125,16 @@ function fmtDate(d?: string | null) {
 function ExpiryBadge({ status, days }: { status?: string; days?: number | null }) {
   if (!status || status === 'no_price') return <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>No price</span>;
   if (status === 'no_expiry')           return <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>No expiry</span>;
-  if (status === 'ok')                  return <span style={{ ...MONO, fontSize: 10, color: '#4ade80' }}>{days}d</span>;
+  if (status === 'ok')                  return <span style={{ ...MONO, fontSize: 10, color: 'var(--success)' }}>{days}d</span>;
   const cfg: Record<string, { color: string; bg: string; label: string }> = {
-    warning:      { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  label: `${days}d`             },
-    critical:     { color: '#f97316', bg: 'rgba(249,115,22,0.15)', label: `${days}d`             },
+    warning:      { color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',  label: `${days}d`             },
+    critical:     { color: 'var(--accent-mid)', bg: 'rgba(249,115,22,0.15)', label: `${days}d`             },
     expires_today:{ color: '#ef4444', bg: 'rgba(239,68,68,0.15)',  label: 'Today'                },
     expired:      { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: `${Math.abs(days ?? 0)}d ago` },
   };
   const c = cfg[status] ?? cfg.warning;
   return (
-    <span style={{ ...MONO, fontSize: 10, color: c.color, background: c.bg, border: `0.5px solid ${c.color}40`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+    <span style={{ ...MONO, fontSize: 10, color: c.color, background: c.bg, border: `0.5px solid color-mix(in srgb, ${c.color} 25%, transparent)`, borderRadius: 6, padding: '2px 7px', whiteSpace: 'nowrap' }}>
       {c.label}
     </span>
   );
@@ -142,8 +142,8 @@ function ExpiryBadge({ status, days }: { status?: string; days?: number | null }
 
 function Btn({ children, onClick, variant = 'ghost' }: { children: React.ReactNode; onClick: () => void; variant?: 'primary' | 'ghost' }) {
   const styles: Record<string, React.CSSProperties> = {
-    primary: { background: 'linear-gradient(135deg,#c2410c,#f97316)', border: 'none', color: 'white', fontWeight: 600 },
-    ghost:   { background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.3)', color: '#fb923c' },
+    primary: { background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent-mid))', border: 'none', color: 'white', fontWeight: 600 },
+    ghost:   { background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.3)', color: 'var(--accent-strong)' },
   };
   return (
     <button onClick={onClick} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap', ...styles[variant] }}>
@@ -182,7 +182,7 @@ function PreferredToggle({ si, onSaved }: { si: SupplierItem; onSaved: (newId: s
         fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, whiteSpace: 'nowrap',
         border: `0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.1)'}`,
         background: si.isPreferred ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.03)',
-        color: si.isPreferred ? '#4ade80' : 'rgba(255,255,255,0.3)',
+        color: si.isPreferred ? 'var(--success)' : 'rgba(255,255,255,0.3)',
         opacity: saving ? 0.5 : 1, transition: 'all 0.15s',
       }}>
       {si.isPreferred ? 'Preferred' : saving ? '...' : 'Set preferred'}
@@ -227,7 +227,7 @@ function InlineEdit({ value, onSave, type = 'text', suffix = '', min, step, widt
     background: 'rgba(251,146,60,0.08)',
     border: '0.5px solid rgba(251,146,60,0.4)',
     borderRadius: 5, padding: '3px 7px', fontSize: 12,
-    color: '#fbbf24', outline: 'none',
+    color: 'var(--warning)', outline: 'none',
     fontFamily: "'IBM Plex Mono',monospace",
     opacity: saving ? 0.5 : 1,
     width,
@@ -264,7 +264,7 @@ function InlineEdit({ value, onSave, type = 'text', suffix = '', min, step, widt
       style={{ cursor: 'text', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 4px', borderRadius: 4, transition: 'background 0.1s' }}
       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,146,60,0.06)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-      <span style={{ ...MONO, fontSize: 12, color: hasValue ? '#e2dfd8' : 'rgba(255,255,255,0.2)' }}>
+      <span style={{ ...MONO, fontSize: 12, color: hasValue ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)' }}>
         {displayValue}
       </span>
       <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ opacity: 0.3, flexShrink: 0 }}>
@@ -294,7 +294,7 @@ function RatingEdit({ value, onSave }: { value?: number | null; onSave: (v: numb
         return (
           <span key={n} onClick={() => save(n)}
             onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(null)}
-            style={{ fontSize: 13, cursor: 'pointer', color: filled ? '#fbbf24' : 'rgba(255,255,255,0.15)', lineHeight: 1, userSelect: 'none', transition: 'color 0.1s' }}>
+            style={{ fontSize: 13, cursor: 'pointer', color: filled ? 'var(--warning)' : 'rgba(255,255,255,0.15)', lineHeight: 1, userSelect: 'none', transition: 'color 0.1s' }}>
             ★
           </span>
         );
@@ -356,21 +356,21 @@ function BlockToggle({ si, onSaved }: { si: SupplierItem; onSaved: () => void })
       <button
         ref={btnRef}
         onClick={handleOpen}
-        style={{ padding: '3px 9px', borderRadius: 5, fontSize: 10, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, whiteSpace: 'nowrap', border: `0.5px solid ${si.isBlocked ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.12)'}`, background: si.isBlocked ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)', color: si.isBlocked ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
+        style={{ padding: '3px 9px', borderRadius: 5, fontSize: 10, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, whiteSpace: 'nowrap', border: `0.5px solid ${si.isBlocked ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.12)'}`, background: si.isBlocked ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)', color: si.isBlocked ? 'var(--danger)' : 'rgba(255,255,255,0.4)' }}>
         {si.isBlocked ? 'Blocked' : 'Active'}
       </button>
 
       {open && (
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 12px 16px', width: 260, boxShadow: '0 8px 32px rgba(0,0,0,0.85)' }}>
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 12px 16px', width: 260, boxShadow: '0 8px 32px rgba(0,0,0,0.85)' }}>
           {si.isBlocked ? (
             <>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>
-                Reason: <span style={{ color: '#f87171', fontStyle: si.blockedReason ? 'normal' : 'italic' }}>{si.blockedReason || 'None given'}</span>
+                Reason: <span style={{ color: 'var(--danger)', fontStyle: si.blockedReason ? 'normal' : 'italic' }}>{si.blockedReason || 'None given'}</span>
               </div>
               <button onClick={() => toggle(false)} disabled={saving}
-                style={{ width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', color: '#4ade80', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                style={{ width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', color: 'var(--success)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                 {saving ? 'Saving...' : 'Unblock supplier for this item'}
               </button>
             </>
@@ -378,9 +378,9 @@ function BlockToggle({ si, onSaved }: { si: SupplierItem; onSaved: () => void })
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Block reason (optional)</div>
               <input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Quality issues"
-                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 9px', fontSize: 11, color: '#f1ede8', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box' }} />
+                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 9px', fontSize: 11, color: 'var(--text-strong)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box' }} />
               <button onClick={() => toggle(true)} disabled={saving}
-                style={{ width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.3)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                style={{ width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.3)', color: 'var(--danger)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                 {saving ? 'Saving...' : 'Block supplier for this item'}
               </button>
             </div>
@@ -401,7 +401,7 @@ function PriceModal({ si, onClose, onSaved }: { si: SupplierItem; onClose: () =>
   const [saving,     setSaving]     = useState(false);
   const [err,        setErr]        = useState('');
 
-  const INP: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, color: '#f1ede8', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box', colorScheme: 'dark' as any };
+  const INP: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 13, color: 'var(--text-strong)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box', colorScheme: 'dark' as any };
   const LBL: React.CSSProperties = { fontSize: 11, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 5 };
 
   const save = async () => {
@@ -419,9 +419,9 @@ function PriceModal({ si, onClose, onSaved }: { si: SupplierItem; onClose: () =>
       <div style={{ background: '#0c0a18', border: '0.5px solid rgba(251,146,60,0.3)', borderRadius: 14, width: 420, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#f1ede8' }}>Update Price</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-strong)' }}>Update Price</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
-              <span style={{ ...MONO, color: '#fb923c' }}>{si.item.code}</span> &middot; {si.supplier.name}
+              <span style={{ ...MONO, color: 'var(--accent-strong)' }}>{si.item.code}</span> &middot; {si.supplier.name}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
@@ -430,7 +430,7 @@ function PriceModal({ si, onClose, onSaved }: { si: SupplierItem; onClose: () =>
           <div>
             <label style={LBL}>New Price ({si.currency}) *</label>
             <input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)}
-              style={{ ...INP, ...MONO, color: '#fbbf24', border: '0.5px solid rgba(251,146,60,0.3)' }} />
+              style={{ ...INP, ...MONO, color: 'var(--warning)', border: '0.5px solid rgba(251,146,60,0.3)' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
@@ -446,7 +446,7 @@ function PriceModal({ si, onClose, onSaved }: { si: SupplierItem; onClose: () =>
             <label style={LBL}>Notes</label>
             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Q2-2026 quotation" style={INP} />
           </div>
-          {err && <div style={{ fontSize: 11, color: '#f87171', background: 'rgba(248,113,113,0.08)', borderRadius: 6, padding: '6px 10px' }}>{err}</div>}
+          {err && <div style={{ fontSize: 11, color: 'var(--danger)', background: 'rgba(248,113,113,0.08)', borderRadius: 6, padding: '6px 10px' }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
             <Btn onClick={onClose}>Cancel</Btn>
             <Btn onClick={save} variant="primary">{saving ? 'Saving...' : 'Update Price'}</Btn>
@@ -467,13 +467,13 @@ function PriceHistoryPanel({ siId, onClose }: { siId: string; onClose: () => voi
     supplierItemsApi.priceHistory(siId).then(setHistory).catch(console.error).finally(() => setLoading(false));
   }, [siId]);
 
-  const srcColor: Record<string, string> = { rfq: '#a78bfa', manual: '#fbbf24', import: '#4ade80', grn: '#38bdf8' };
+  const srcColor: Record<string, string> = { rfq: 'var(--accent-violet)', manual: 'var(--warning)', import: 'var(--success)', grn: '#38bdf8' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#0c0a18', border: '0.5px solid rgba(167,139,250,0.3)', borderRadius: 14, width: 520, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#f1ede8' }}>Price History</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)' }}>Price History</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer' }}>×</button>
         </div>
         <div style={{ overflowY: 'auto', padding: '12px 20px 20px' }}>
@@ -486,7 +486,7 @@ function PriceHistoryPanel({ siId, onClose }: { siId: string; onClose: () => voi
               {history.map((h, i) => (
                 <div key={h.id} style={{ background: i === 0 ? 'rgba(251,191,36,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${i === 0 ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 8, padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ ...MONO, fontSize: 15, color: '#fbbf24', fontWeight: 600 }}>{fmtAmt(h.price, h.currency)}</span>
+                    <span style={{ ...MONO, fontSize: 15, color: 'var(--warning)', fontWeight: 600 }}>{fmtAmt(h.price, h.currency)}</span>
                     <span style={{ fontSize: 10, color: srcColor[h.source] ?? '#fff', background: `${srcColor[h.source] ?? '#fff'}18`, border: `0.5px solid ${srcColor[h.source] ?? '#fff'}40`, borderRadius: 5, padding: '1px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       {h.source}
                     </span>
@@ -515,7 +515,7 @@ function PriceHistoryPanel({ siId, onClose }: { siId: string; onClose: () => voi
 
 function IncotermInfoModal({ onClose }: { onClose: () => void }) {
   const groups = [
-    { label: 'Any Mode of Transport', keys: ['EXW','FCA','CPT','CIP','DAP','DPU','DDP'], color: '#60a5fa' },
+    { label: 'Any Mode of Transport', keys: ['EXW','FCA','CPT','CIP','DAP','DPU','DDP'], color: 'var(--accent-blue)' },
     { label: 'Sea & Inland Waterway Only', keys: ['FAS','FOB','CFR','CIF'], color: '#34d399' },
   ];
   return (
@@ -523,7 +523,7 @@ function IncotermInfoModal({ onClose }: { onClose: () => void }) {
       <div style={{ background: '#0c0a18', border: '0.5px solid rgba(96,165,250,0.25)', borderRadius: 14, width: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#f1ede8' }}>Incoterms 2020 — Reference Guide</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-strong)' }}>Incoterms 2020 — Reference Guide</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>International Commercial Terms published by ICC · Defines delivery, risk and cost responsibilities</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -532,9 +532,9 @@ function IncotermInfoModal({ onClose }: { onClose: () => void }) {
           {groups.map(group => (
             <div key={group.label}>
               <div style={{ fontSize: 10, fontWeight: 600, color: group.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ flex: 1, height: '0.5px', background: `${group.color}40` }} />
+                <div style={{ flex: 1, height: '0.5px', background: `color-mix(in srgb, ${group.color} 25%, transparent)` }} />
                 {group.label}
-                <div style={{ flex: 1, height: '0.5px', background: `${group.color}40` }} />
+                <div style={{ flex: 1, height: '0.5px', background: `color-mix(in srgb, ${group.color} 25%, transparent)` }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {group.keys.map(key => {
@@ -546,7 +546,7 @@ function IncotermInfoModal({ onClose }: { onClose: () => void }) {
                         <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{info.mode.includes('Sea') ? 'Sea only' : 'Any mode'}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, color: '#e2dfd8', fontWeight: 500, marginBottom: 4 }}>{info.full}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, marginBottom: 4 }}>{info.full}</div>
                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{info.responsibility}</div>
                         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>Risk: {info.risk}</div>
                       </div>
@@ -639,7 +639,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
     } finally { setSaving(false); }
   };
 
-  const INP: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#f1ede8', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box', colorScheme: 'dark' as any };
+  const INP: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--text-strong)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box', colorScheme: 'dark' as any };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 };
   const SEL: React.CSSProperties = { ...INP, cursor: 'pointer' };
 
@@ -651,14 +651,14 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#f1ede8' }}>Add Item to Supplier</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-strong)' }}>Add Item to Supplier</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{supplierName}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {err && <div style={{ fontSize: 11, color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '8px 12px' }}>{err}</div>}
+          {err && <div style={{ fontSize: 11, color: 'var(--danger)', background: 'rgba(248,113,113,0.08)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '8px 12px' }}>{err}</div>}
 
           {/* Item selector */}
           <div>
@@ -668,17 +668,17 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
                 style={{ ...INP, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px 12px', minHeight: 38 }}>
                 {selectedItem ? (
                   <span>
-                    <span style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{selectedItem.code}</span>
+                    <span style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{selectedItem.code}</span>
                     <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: 8, fontSize: 12 }}>{selectedItem.name}</span>
                   </span>
                 ) : <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>Search and select item...</span>}
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', flexShrink: 0, marginLeft: 8 }}>{itemOpen ? '▲' : '▼'}</span>
               </div>
               {itemOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 700, background: '#0e0b1a', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 7, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', marginTop: 2, overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 700, background: 'var(--surface)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 7, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', marginTop: 2, overflow: 'hidden' }}>
                   <div style={{ padding: '6px 8px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
                     <input autoFocus value={itemSearch} onChange={e => setItemSearch(e.target.value)} placeholder="Search by code or name…" onClick={e => e.stopPropagation()}
-                      style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '5px 8px', fontSize: 12, color: '#f1ede8', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif" }} />
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '5px 8px', fontSize: 12, color: 'var(--text-strong)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif" }} />
                   </div>
                   <div style={{ maxHeight: 220, overflowY: 'auto' }}>
                     {availableItems.length === 0 ? (
@@ -691,7 +691,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
                         onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(255,255,255,0.04)'}
                         onMouseLeave={e => (e.currentTarget as any).style.background = 'transparent'}>
                         <div>
-                          <div style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{it.code}</div>
+                          <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{it.code}</div>
                           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{it.name}</div>
                         </div>
                         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
@@ -705,8 +705,8 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
             </div>
             {selectedItem && (
               <div style={{ marginTop: 5, fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                Purchase UOM: <span style={{ color: '#fb923c', ...MONO }}>{selectedItem.purchaseUom?.code ?? selectedItem.baseUom}</span>
-                {!selectedItem.purchaseUomId && <span style={{ color: '#f87171', marginLeft: 8 }}>No Purchase UOM configured — set it in Items first</span>}
+                Purchase UOM: <span style={{ color: 'var(--accent-strong)', ...MONO }}>{selectedItem.purchaseUom?.code ?? selectedItem.baseUom}</span>
+                {!selectedItem.purchaseUomId && <span style={{ color: 'var(--danger)', marginLeft: 8 }}>No Purchase UOM configured — set it in Items first</span>}
               </div>
             )}
           </div>
@@ -721,7 +721,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <div>
               <label style={LBL}>Initial Price</label>
-              <input type="number" min="0" step="0.01" value={lastPrice} onChange={e => setLastPrice(e.target.value)} placeholder="0.00" style={{ ...INP, ...MONO, color: '#fbbf24' }} />
+              <input type="number" min="0" step="0.01" value={lastPrice} onChange={e => setLastPrice(e.target.value)} placeholder="0.00" style={{ ...INP, ...MONO, color: 'var(--warning)' }} />
             </div>
             <div>
               <label style={LBL}>Valid From</label>
@@ -751,7 +751,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                 <label style={{ ...LBL, marginBottom: 0 }}>Incoterm</label>
                 <button type="button" onClick={() => setShowIncotermInfo(true)}
-                  style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(96,165,250,0.15)', border: '0.5px solid rgba(96,165,250,0.3)', color: '#60a5fa', cursor: 'pointer', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, fontFamily: 'serif' }}>
+                  style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(96,165,250,0.15)', border: '0.5px solid rgba(96,165,250,0.3)', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, fontFamily: 'serif' }}>
                   ?
                 </button>
               </div>
@@ -771,11 +771,11 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
 
           {/* Preferred toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: isPreferred ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 7, cursor: 'pointer' }} onClick={() => setIsPreferred(p => !p)}>
-            <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${isPreferred ? '#4ade80' : 'rgba(255,255,255,0.2)'}`, background: isPreferred ? '#4ade80' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
-              {isPreferred && <span style={{ fontSize: 11, color: '#0a0712', fontWeight: 700 }}>✓</span>}
+            <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${isPreferred ? 'var(--success)' : 'rgba(255,255,255,0.2)'}`, background: isPreferred ? 'var(--success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+              {isPreferred && <span style={{ fontSize: 11, color: 'var(--bg)', fontWeight: 700 }}>✓</span>}
             </div>
             <div>
-              <div style={{ fontSize: 12, color: isPreferred ? '#4ade80' : 'rgba(255,255,255,0.6)', fontWeight: isPreferred ? 600 : 400 }}>Set as preferred supplier for this item</div>
+              <div style={{ fontSize: 12, color: isPreferred ? 'var(--success)' : 'rgba(255,255,255,0.6)', fontWeight: isPreferred ? 600 : 400 }}>Set as preferred supplier for this item</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>Will demote any existing preferred supplier for this item</div>
             </div>
           </div>
@@ -784,7 +784,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
             <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
             <button onClick={handleSave} disabled={saving || !itemId}
-              style={{ padding: '7px 18px', borderRadius: 7, fontSize: 12, fontWeight: 600, background: itemId ? 'linear-gradient(135deg,#c2410c,#f97316)' : 'rgba(255,255,255,0.05)', border: 'none', color: itemId ? 'white' : 'rgba(255,255,255,0.3)', cursor: itemId ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.6 : 1 }}>
+              style={{ padding: '7px 18px', borderRadius: 7, fontSize: 12, fontWeight: 600, background: itemId ? 'linear-gradient(135deg,var(--accent-pressed),var(--accent-mid))' : 'rgba(255,255,255,0.05)', border: 'none', color: itemId ? 'white' : 'rgba(255,255,255,0.3)', cursor: itemId ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Adding...' : 'Add Item'}
             </button>
           </div>
@@ -802,9 +802,9 @@ const BY_SUPPLIER_FILTERS: ERPFilter<SupplierItem>[] = [
     key: 'priceExpiryStatus', label: 'Price Status', type: 'multiselect',
     options: [
       { value: 'expired',   label: 'Expired',   color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'    },
-      { value: 'critical',  label: 'Critical',  color: '#f97316', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.3)'   },
-      { value: 'warning',   label: 'Warning',   color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)'   },
-      { value: 'ok',        label: 'OK',        color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.3)'   },
+      { value: 'critical',  label: 'Critical',  color: 'var(--accent-mid)', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.3)'   },
+      { value: 'warning',   label: 'Warning',   color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)'   },
+      { value: 'ok',        label: 'OK',        color: 'var(--success)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.3)'   },
       { value: 'no_expiry', label: 'No Expiry', color: 'rgba(255,255,255,0.5)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' },
     ],
     filterFn: (row, val) => (val as string[]).includes(row.priceExpiryStatus ?? 'no_price'),
@@ -846,7 +846,7 @@ function TabBySupplier({ allItems, suppliers, purchasableItems, counts }: { allI
       key: 'item', header: 'Item', width: 220,
       render: row => (
         <div>
-          <div style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{row.item.code}</div>
+          <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{row.item.code}</div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 1 }}>{row.item.name}</div>
         </div>
       ),
@@ -868,7 +868,7 @@ function TabBySupplier({ allItems, suppliers, purchasableItems, counts }: { allI
     { key: 'purchaseUom', header: 'UOM', width: 70, align: 'center', render: row => <span style={{ fontSize: 11 }}>{row.purchaseUom.code}</span>, value: row => row.purchaseUom.code },
     {
       key: 'lastPrice', header: 'Price', width: 120, align: 'right',
-      render: row => <span style={{ ...MONO, color: row.lastPrice ? '#fbbf24' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: row.lastPrice ? 600 : 400 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
+      render: row => <span style={{ ...MONO, color: row.lastPrice ? 'var(--warning)' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: row.lastPrice ? 600 : 400 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
       value: row => row.lastPrice ?? 0,
     },
     { key: 'priceValidUntil', header: 'Valid Until', width: 110, render: row => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(row.priceValidUntil)}</span> },
@@ -980,7 +980,7 @@ function TabBySupplier({ allItems, suppliers, purchasableItems, counts }: { allI
         <ERPFilterBar filters={BY_SUPPLIER_FILTERS} values={values} onChange={setValue} onReset={reset} activeCount={activeCount} />
         {selectedId && (
           <button onClick={() => setAddModal(true)}
-            style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: 'linear-gradient(135deg,#c2410c,#f97316)', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(234,88,12,0.3)' }}>
+            style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: 'linear-gradient(135deg,var(--accent-pressed),var(--accent-mid))', border: 'none', color: 'white', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(234,88,12,0.3)' }}>
             + Add Item
           </button>
         )}
@@ -1034,10 +1034,10 @@ function TabByItem({ allItems, items, counts }: { allItems: SupplierItem[]; item
       render: row => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div>
-            <div style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{row.supplier.code}</div>
+            <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{row.supplier.code}</div>
             <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{row.supplier.name}</div>
           </div>
-          {row.id === cheapest?.id && <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '1px 7px' }}>Lowest</span>}
+          {row.id === cheapest?.id && <span style={{ fontSize: 10, color: 'var(--success)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '1px 7px' }}>Lowest</span>}
         </div>
       ),
       value: row => `${row.supplier.code} ${row.supplier.name}`,
@@ -1056,7 +1056,7 @@ function TabByItem({ allItems, items, counts }: { allItems: SupplierItem[]; item
     },
     {
       key: 'lastPrice', header: 'Price', width: 120, align: 'right',
-      render: row => <span style={{ ...MONO, color: row.lastPrice ? '#fbbf24' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: row.lastPrice ? 600 : 400 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
+      render: row => <span style={{ ...MONO, color: row.lastPrice ? 'var(--warning)' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: row.lastPrice ? 600 : 400 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
       value: row => row.lastPrice ?? 0,
     },
     {
@@ -1146,9 +1146,9 @@ function TabByItem({ allItems, items, counts }: { allItems: SupplierItem[]; item
       {cheapest && selectedId && (
         <div style={{ background: 'rgba(74,222,128,0.04)', border: '0.5px solid rgba(74,222,128,0.15)', borderRadius: 8, padding: '9px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>Lowest price:</span>
-          <span style={{ ...MONO, color: '#4ade80', fontWeight: 600, fontSize: 13 }}>{fmtAmt(cheapest.lastPrice, cheapest.currency)}</span>
+          <span style={{ ...MONO, color: 'var(--success)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(cheapest.lastPrice, cheapest.currency)}</span>
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>
-          <span style={{ color: '#f1ede8' }}>{cheapest.supplier.name}</span>
+          <span style={{ color: 'var(--text-strong)' }}>{cheapest.supplier.name}</span>
         </div>
       )}
 
@@ -1168,9 +1168,9 @@ const ALERT_FILTERS: ERPFilter<any>[] = [
     key: 'expiryStatus', label: 'Severity', type: 'multiselect',
     options: [
       { value: 'expired',       label: 'Expired',  color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'   },
-      { value: 'expires_today', label: 'Today',    color: '#f97316', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.3)'  },
-      { value: 'critical',      label: 'Critical', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)'  },
-      { value: 'warning',       label: 'Warning',  color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.3)' },
+      { value: 'expires_today', label: 'Today',    color: 'var(--accent-mid)', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.3)'  },
+      { value: 'critical',      label: 'Critical', color: 'var(--warning)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)'  },
+      { value: 'warning',       label: 'Warning',  color: 'var(--accent-violet)', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.3)' },
     ],
     filterFn: (row, val) => (val as string[]).includes(row.expiryStatus),
   },
@@ -1208,7 +1208,7 @@ function TabAlerts() {
       key: 'item', header: 'Item', width: 200,
       render: row => (
         <div>
-          <div style={{ ...MONO, color: '#fb923c', fontSize: 11 }}>{row.item.code}</div>
+          <div style={{ ...MONO, color: 'var(--accent-strong)', fontSize: 11 }}>{row.item.code}</div>
           <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 1 }}>{row.item.name}</div>
         </div>
       ),
@@ -1226,11 +1226,11 @@ function TabAlerts() {
     },
     {
       key: 'lastPrice', header: 'Current Price', width: 130, align: 'right',
-      render: row => <span style={{ ...MONO, color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
+      render: row => <span style={{ ...MONO, color: 'var(--warning)', fontSize: 13, fontWeight: 600 }}>{fmtAmt(row.lastPrice, row.currency)}</span>,
       value: row => row.lastPrice ?? 0,
     },
     { key: 'priceValidFrom',  header: 'Valid From', width: 110, render: row => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtDate(row.priceValidFrom)}</span> },
-    { key: 'priceValidUntil', header: 'Expires',    width: 110, render: row => <span style={{ fontSize: 11, color: row.expiryStatus === 'expired' ? '#f87171' : '#fbbf24' }}>{fmtDate(row.priceValidUntil)}</span> },
+    { key: 'priceValidUntil', header: 'Expires',    width: 110, render: row => <span style={{ fontSize: 11, color: row.expiryStatus === 'expired' ? 'var(--danger)' : 'var(--warning)' }}>{fmtDate(row.priceValidUntil)}</span> },
     { key: 'expiryStatus',    header: 'Status',     width: 100, render: row => <ExpiryBadge status={row.expiryStatus} days={row.daysUntilExpiry} /> },
     {
       key: 'actions', header: '', width: 160, sortable: false,
@@ -1253,12 +1253,12 @@ function TabAlerts() {
           <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Alert window</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={() => setDays(null)}
-            style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', ...MONO, border: `0.5px solid ${days === null ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.1)'}`, background: days === null ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.03)', color: days === null ? '#fb923c' : 'rgba(255,255,255,0.4)' }}>
+            style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', ...MONO, border: `0.5px solid ${days === null ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.1)'}`, background: days === null ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.03)', color: days === null ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)' }}>
             All
           </button>
           {[15, 30, 60, 90].map(d => (
             <button key={d} onClick={() => setDays(d)}
-              style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', ...MONO, border: `0.5px solid ${days === d ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.1)'}`, background: days === d ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.03)', color: days === d ? '#fb923c' : 'rgba(255,255,255,0.4)' }}>
+              style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', ...MONO, border: `0.5px solid ${days === d ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.1)'}`, background: days === d ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.03)', color: days === d ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)' }}>
               {d}d
             </button>
           ))}
@@ -1268,9 +1268,9 @@ function TabAlerts() {
         <div style={{ display: 'flex', gap: 20, marginLeft: 'auto' }}>
           {[
             { label: 'Expired',  count: counts.expired,       color: '#ef4444' },
-            { label: 'Today',    count: counts.expires_today, color: '#f97316' },
-            { label: 'Critical', count: counts.critical,      color: '#fbbf24' },
-            { label: 'Warning',  count: counts.warning,       color: '#a78bfa' },
+            { label: 'Today',    count: counts.expires_today, color: 'var(--accent-mid)' },
+            { label: 'Critical', count: counts.critical,      color: 'var(--warning)' },
+            { label: 'Warning',  count: counts.warning,       color: 'var(--accent-violet)' },
           ].map(({ label, count, color }) => (
             <div key={label} style={{ textAlign: 'center' }}>
               <div style={{ ...MONO, fontSize: 20, fontWeight: 700, color }}>{count}</div>
@@ -1336,10 +1336,10 @@ export default function SupplierItemsPage() {
         ::-webkit-scrollbar-thumb { background: rgba(251,146,60,0.2); border-radius: 2px; }
       `}</style>
 
-      <div style={{ padding: '24px 28px', minHeight: '100vh', background: '#08061a', fontFamily: "'IBM Plex Sans',sans-serif", color: '#f1ede8' }}>
+      <div style={{ padding: '24px 28px', minHeight: '100vh', background: '#08061a', fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong)' }}>
 
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#f1ede8', letterSpacing: '-0.02em' }}>Supplier Price List</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--text-strong)', letterSpacing: '-0.02em' }}>Supplier Price List</h1>
           <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
             Manage prices, validity dates and commercial conditions per item–supplier combination
           </p>
@@ -1348,7 +1348,7 @@ export default function SupplierItemsPage() {
         <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: '10px 20px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: tab === t.id ? 600 : 400, cursor: 'pointer', background: 'none', border: 'none', color: tab === t.id ? '#fb923c' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.id ? '2px solid #fb923c' : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
+              style={{ padding: '10px 20px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: tab === t.id ? 600 : 400, cursor: 'pointer', background: 'none', border: 'none', color: tab === t.id ? 'var(--accent-strong)' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.id ? '2px solid var(--accent-strong)' : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
               {t.label}
             </button>
           ))}

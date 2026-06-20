@@ -382,3 +382,4 @@ Every item also inherits **Dep: F0** (token system) for the color portion.
 | Date | Change |
 |------|--------|
 | 2026-06-20 | Draft created from full 52-page / 38-component audit. Awaiting review before implementation. |
+| 2026-06-20 | **F0 shipped.** Token layer added to `globals.css` (value-preserving). Codemod replaced 2,267 hex literals with `var(--token)` across 67 files; 82 runtime alpha-append idioms (`${color}NN`) converted to `color-mix(in srgb, … N%, transparent)`; SVG gradient-id derivation sanitized. tsc 0 errors, prod build green (52 routes). 319 long-tail hex remain (grays `#111/#333/#fff`, alpha-hex, one-offs) — deferred to a follow-up codemod. Note: F0 deviates from the spec's draft token block in the safe direction — token values equal the de-facto literals (zero visual change) rather than the cleaned values; palette tuning happens later behind the seam. |

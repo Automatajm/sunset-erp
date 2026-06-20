@@ -54,7 +54,7 @@ export function DetailRow({ label, value }: { label: string; value: ReactNode })
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '6px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
       <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{label}</span>
-      <span style={{ fontSize: 12, color: '#e2dfd8', textAlign: 'right' }}>{value}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-primary)', textAlign: 'right' }}>{value}</span>
     </div>
   );
 }

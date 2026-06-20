@@ -167,9 +167,9 @@ export function ERPFilterBar<T>({
   );
 
   const SEL: React.CSSProperties = {
-    background: '#0e0b1a', border: '0.5px solid rgba(255,255,255,0.12)',
+    background: 'var(--surface)', border: '0.5px solid rgba(255,255,255,0.12)',
     borderRadius: 6, padding: '6px 8px', fontSize: 12,
-    fontFamily: "'IBM Plex Sans',sans-serif", color: '#e2dfd8',
+    fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary)',
     outline: 'none', cursor: 'pointer', colorScheme: 'dark' as any,
   };
   const INP: React.CSSProperties = {
@@ -186,7 +186,7 @@ export function ERPFilterBar<T>({
   const BADGE: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 10px',
     borderRadius: 20, fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
-    color: '#fb923c', background: 'rgba(251,146,60,0.1)',
+    color: 'var(--accent-strong)', background: 'rgba(251,146,60,0.1)',
     border: '0.5px solid rgba(251,146,60,0.25)', cursor: 'pointer',
   };
 
@@ -222,7 +222,7 @@ export function ERPFilterBar<T>({
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); clearOne(f.key); }}
-                style={{ background: 'rgba(251,146,60,0.15)', border: 'none', borderRadius: '50%', width: 15, height: 15, cursor: 'pointer', color: '#fb923c', fontSize: 10, lineHeight: 1, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ background: 'rgba(251,146,60,0.15)', border: 'none', borderRadius: '50%', width: 15, height: 15, cursor: 'pointer', color: 'var(--accent-strong)', fontSize: 10, lineHeight: 1, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >×</button>
             </span>
           );
@@ -234,7 +234,7 @@ export function ERPFilterBar<T>({
             style={{
               padding: '6px 12px', borderRadius: 6, fontSize: 11,
               fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-              color: '#f87171', background: 'rgba(239,68,68,0.08)',
+              color: 'var(--danger)', background: 'rgba(239,68,68,0.08)',
               border: '0.5px solid rgba(239,68,68,0.2)', whiteSpace: 'nowrap',
             }}
           >Clear all ({activeCount})</button>
@@ -326,7 +326,7 @@ export function ERPFilterBar<T>({
                         padding: '4px 10px', borderRadius: 20, fontSize: 11,
                         fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
                         fontWeight: active ? 500 : 400,
-                        color:      active ? (o.color  ?? '#fb923c') : 'rgba(255,255,255,0.4)',
+                        color:      active ? (o.color  ?? 'var(--accent-strong)') : 'rgba(255,255,255,0.4)',
                         background: active ? (o.bg     ?? 'rgba(251,146,60,0.12)') : 'rgba(255,255,255,0.04)',
                         border: `0.5px solid ${active ? (o.border ?? 'rgba(251,146,60,0.3)') : 'rgba(255,255,255,0.09)'}`,
                         transition: 'all 0.15s', whiteSpace: 'nowrap',
@@ -351,7 +351,7 @@ export function ERPFilterBar<T>({
               style={{
                 padding: '6px 12px', borderRadius: 6, fontSize: 11,
                 fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-                color:      val === true ? '#4ade80' : 'rgba(255,255,255,0.4)',
+                color:      val === true ? 'var(--success)' : 'rgba(255,255,255,0.4)',
                 background: val === true ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
                 border: `0.5px solid ${val === true ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.09)'}`,
                 transition: 'all 0.15s', whiteSpace: 'nowrap',
