@@ -232,7 +232,7 @@ function EntitySelector({ entity, onSelect }: { entity: Entity; onSelect: (e: En
                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 14px', background: entity === e.value ? `color-mix(in srgb, ${e.color} 7%, transparent)` : 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textAlign: 'left' }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: e.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: entity === e.value ? e.color : 'var(--text-primary, #e2dfd8)', fontWeight: entity === e.value ? 600 : 400, flex: 1 }}>{e.label}</span>
-                    {entity === e.value && <span style={{ fontSize: 10, color: e.color }}>✓</span>}
+                    {entity === e.value && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={e.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>}
                   </button>
                 ))}
               </div>
