@@ -5,6 +5,7 @@ import ERPShell from '@/components/layout/ERPShell';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import { ERPFilterBar, ERPFilter, useERPFilters, applyERPFilters } from '@/components/ui/ERPFilterBar';
 import { generalNeedsApi } from '@/lib/api/general-needs';
+import { ConfirmModal, useModal } from '@/components/ui/modal';
 import { itemsApi } from '@/lib/api/items';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { Supplier, Item } from '@/lib/api/types';
@@ -86,6 +87,10 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
   const [priority,    setPriority]    = useState('normal');
   const [convertBusy, setConvertBusy] = useState(false);
   const [convertErr,  setConvertErr]  = useState('');
+  // spec-frontend-002/003 — cancel guarded by ConfirmModal; status errors
+  // absorbed inline instead of relayed via alert().
+  const [statusError, setStatusError] = useState('');
+  const cancelModal = useModal();
 
   useEffect(() => {
     (async () => {
@@ -99,12 +104,13 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
   }, [gn.id]);
 
   const handleStatus = async (status: string) => {
-    setActionBusy(true);
+    setActionBusy(true); setStatusError('');
     try {
       await generalNeedsApi.updateStatus(gn.id, status);
       onAction(); onClose();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to update status');
+      setStatusError(err?.response?.data?.message || 'Failed to update status');
+      throw err; // surface inline in ConfirmModal for the cancel path
     } finally { setActionBusy(false); }
   };
 
@@ -316,6 +322,8 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
               </div>
             ) : null}
 
+            {statusError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#fca5a5' }}>{statusError}</div>}
+
             {/* Status actions */}
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
               {canProgress && (
@@ -331,7 +339,7 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
                 </button>
               )}
               {canCancel && (
-                <button onClick={() => handleStatus('cancelled')} disabled={actionBusy}
+                <button onClick={cancelModal.openModal} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: '#f87171', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>
                   Cancel GN
                 </button>
@@ -340,6 +348,17 @@ function GNDetailDrawer({ gn, onClose, onAction }: {
           </div>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={cancelModal.open}
+        onClose={cancelModal.closeModal}
+        title={`Cancel general need ${gn.gnNumber}?`}
+        description="This cancels the general need. It cannot be undone."
+        variant="destructive"
+        confirmLabel="Cancel GN"
+        cancelLabel="Keep GN"
+        onConfirm={() => handleStatus('cancelled')}
+      />
     </div>
   );
 }
