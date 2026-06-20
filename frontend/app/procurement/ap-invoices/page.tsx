@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ERPShell from '@/components/layout/ERPShell';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { ERPTable, ERPColumn } from '@/components/ui/ERPTable';
 import {
   ERPFilterBar, ERPFilter, ERPFilterValues,
@@ -112,8 +113,8 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string; 
 const MATCH_CFG = {
   no_match:          { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'No Match' },
   two_way:           { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)',  label: '2-Way'   },
-  three_way_matched: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: '3-Way ✓' },
-  three_way_failed:  { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: '3-Way ✗' },
+  three_way_matched: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)',  label: '3-Way Match' },
+  three_way_failed:  { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: '3-Way Fail' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -198,11 +199,16 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
             </button>
           ) : (
             <>
-              <select value={selectedGrn} onChange={e => setSelectedGrn(e.target.value)}
-                style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', minWidth:220 }}>
-                <option value="">— Select GRN to link —</option>
-                {grns.map(g => <option key={g.id} value={g.id}>{g.grnNumber} · {g.supplierName ?? g.warehouseCode} · {fmtDateShort(g.receivedDate)}</option>)}
-              </select>
+              <div style={{ minWidth:220 }}>
+                <SearchSelect
+                  options={grns.map(g => ({ value: g.id, label: `${g.grnNumber} · ${g.supplierName ?? g.warehouseCode} · ${fmtDateShort(g.receivedDate)}` }))}
+                  value={selectedGrn}
+                  onChange={setSelectedGrn}
+                  placeholder="Select GRN to link…"
+                  clearLabel="— Select GRN to link —"
+                  minWidth={280}
+                />
+              </div>
               <button onClick={handleLink} disabled={linking || !selectedGrn}
                 style={{ padding:'5px 12px', borderRadius:6, fontSize:11, cursor: linking||!selectedGrn?'not-allowed':'pointer', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.25)', color:'var(--success, #4ade80)', fontFamily:"'IBM Plex Sans',sans-serif", opacity: linking||!selectedGrn?0.5:1 }}>
                 {linking ? 'Linking…' : 'Link GRN'}
@@ -236,8 +242,8 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
                   <td style={{ padding:'6px 8px', textAlign:'right', ...MONO, color:'rgba(255,255,255,0.4)' }}>{line.poPrice ? fmtAmt(line.poPrice) : '—'}</td>
                   <td style={{ padding:'6px 8px', textAlign:'right' }}><span style={{ fontSize:10, color: line.priceOk === false ? 'var(--danger, #f87171)' : line.priceOk === true ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' }}>{line.priceDiffPct !== null ? `${line.priceDiffPct}%` : '—'}</span></td>
                   <td style={{ padding:'6px 8px' }}>
-                    {line.lineMatches ? <span style={{ fontSize:10, color:'var(--success, #4ade80)' }}>✓</span> : (
-                      <div><span style={{ fontSize:10, color:'var(--danger, #f87171)' }}>✗</span>{line.issues.map((iss, i) => <div key={i} style={{ fontSize:9, color:'rgba(248,113,113,0.7)', marginTop:1, maxWidth:160, lineHeight:1.3 }}>{iss}</div>)}</div>
+                    {line.lineMatches ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--success, #4ade80)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : (
+                      <div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--danger, #f87171)" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{line.issues.map((iss, i) => <div key={i} style={{ fontSize:9, color:'rgba(248,113,113,0.7)', marginTop:1, maxWidth:160, lineHeight:1.3 }}>{iss}</div>)}</div>
                     )}
                   </td>
                 </tr>
@@ -247,13 +253,15 @@ function ThreeWayMatchPanel({ invoiceId, invoiceStatus, currentGrnId, onLinked, 
         </div>
       )}
       {match?.matchStatus === 'three_way_matched' && (
-        <div style={{ background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--success, #4ade80)' }}>
-          ✓ All {match.summary.total} lines pass 3-way match. Invoice is ready to post.
+        <div style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(74,222,128,0.05)', border:'0.5px solid rgba(74,222,128,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--success, #4ade80)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><polyline points="20 6 9 17 4 12"/></svg>
+          <span>All {match.summary.total} lines pass 3-way match. Invoice is ready to post.</span>
         </div>
       )}
       {match?.matchStatus === 'three_way_failed' && (
-        <div style={{ background:'rgba(248,113,113,0.05)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger, #f87171)' }}>
-          ✗ {match.summary.failed} line{match.summary.failed !== 1 ? 's' : ''} failed. Resolve discrepancies before posting.
+        <div style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(248,113,113,0.05)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger, #f87171)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>{match.summary.failed} line{match.summary.failed !== 1 ? 's' : ''} failed. Resolve discrepancies before posting.</span>
         </div>
       )}
     </div>
@@ -338,7 +346,7 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
             {/* 3-Way Match warning — draft with PO but no GRN */}
             {detail.status === 'draft' && (detail as any).poId && !(detail as any).grnId && (
               <div style={{ display:'flex', alignItems:'flex-start', gap:10, background:'rgba(251,191,36,0.06)', border:'0.5px solid rgba(251,191,36,0.25)', borderRadius:8, padding:'10px 14px' }}>
-                <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning, #fbbf24)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 <div>
                   <div style={{ fontSize:12, fontWeight:500, color:'var(--warning, #fbbf24)', marginBottom:3 }}>No GRN linked</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
@@ -434,7 +442,7 @@ function APDrawer({ inv, onClose, onAction }: { inv: APInvoice; onClose: () => v
               {detail.status === 'draft' && (
                 <button onClick={() => handleAction('post')} disabled={actionBusy}
                   style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer', background:'rgba(96,165,250,0.1)', border:'0.5px solid rgba(96,165,250,0.25)', color:'var(--accent-blue, #60a5fa)', fontFamily:"'IBM Plex Sans',sans-serif", opacity:actionBusy?0.5:1 }}>
-                  {actionBusy ? '…' : '✓ Post Invoice'}
+                  {actionBusy ? '…' : 'Post Invoice'}
                 </button>
               )}
               {['posted','partial'].includes(detail.status) && (
@@ -502,9 +510,7 @@ function PaymentModal({ inv, onClose, onSaved }: { inv: APInvoice; onClose: () =
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={LBL}>Method</label>
-                <select style={INP} value={form.paymentMethod} onChange={set('paymentMethod')}>
-                  {['wire','ach','check','transfer','cash'].map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase()+m.slice(1)}</option>)}
-                </select>
+                <SearchSelect options={['wire','ach','check','transfer','cash'].map(m => ({ value: m, label: m.charAt(0).toUpperCase()+m.slice(1) }))} value={form.paymentMethod} onChange={v => setForm(f => ({ ...f, paymentMethod: v }))} placeholder="Method…" minWidth={180} />
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}><label style={LBL}>Reference</label><input style={INP} placeholder="WIRE-2026-001" value={form.reference} onChange={set('reference')} /></div>
             </div>
@@ -656,7 +662,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   style={{ background:'rgba(251,146,60,0.05)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:10, padding:'20px 22px', cursor:'pointer', transition:'all 0.15s', display:'flex', flexDirection:'column', gap:8 }}
                   onMouseEnter={e => (e.currentTarget.style.background='rgba(251,146,60,0.1)')}
                   onMouseLeave={e => (e.currentTarget.style.background='rgba(251,146,60,0.05)')}>
-                  <div style={{ fontSize:22 }}>📋</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-strong, #fb923c)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2h6a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v0a2 2 0 0 1 2-2z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
                   <div style={{ fontSize:14, fontWeight:500, color:'var(--accent-strong, #fb923c)' }}>From Purchase Order</div>
                   <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
                     Auto-generate an AP Invoice from a confirmed PO. Lines, prices and supplier are pre-filled automatically.
@@ -668,7 +674,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   style={{ background:'rgba(167,139,250,0.05)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:10, padding:'20px 22px', cursor:'pointer', transition:'all 0.15s', display:'flex', flexDirection:'column', gap:8 }}
                   onMouseEnter={e => (e.currentTarget.style.background='rgba(167,139,250,0.1)')}
                   onMouseLeave={e => (e.currentTarget.style.background='rgba(167,139,250,0.05)')}>
-                  <div style={{ fontSize:22 }}>✏️</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-violet, #a78bfa)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   <div style={{ fontSize:14, fontWeight:500, color:'var(--accent-violet, #a78bfa)' }}>Manual Entry</div>
                   <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
                     Create an AP Invoice manually. Use for services, expenses or invoices without a linked Purchase Order.
@@ -745,7 +751,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                       <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
                       <button onClick={fromPoSubmit} disabled={submitting}
                         style={{ background:'linear-gradient(135deg,#92400e,#d97706,var(--accent-strong, #fb923c))', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(251,146,60,0.3)', opacity:submitting?0.5:1 }}>
-                        {submitting ? 'Creating…' : '📋 Create from PO'}
+                        {submitting ? 'Creating…' : 'Create from PO'}
                       </button>
                     </div>
                   </>
@@ -765,10 +771,14 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                 <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                     <label style={LBL}>Supplier *</label>
-                    <select value={supplierId} onChange={e => setSupplierId(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
-                      <option value="">— Select supplier —</option>
-                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
-                    </select>
+                    <SearchSelect
+                      options={suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
+                      value={supplierId}
+                      onChange={setSupplierId}
+                      placeholder="Search supplier…"
+                      clearLabel="— Select supplier —"
+                      minWidth={280}
+                    />
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                     <label style={LBL}>Invoice Date *</label>
@@ -780,9 +790,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                     <label style={LBL}>Currency</label>
-                    <select value={currency} onChange={e => setCurrency(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
-                      {['USD','EUR','DOP','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <SearchSelect options={['USD','EUR','DOP','GBP'].map(c => ({ value: c, label: c }))} value={currency} onChange={setCurrency} placeholder="Currency…" minWidth={160} />
                   </div>
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
@@ -815,10 +823,14 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                     {lines.map((line, idx) => (
                       <tr key={idx}>
                         <td style={{ padding:'4px 3px' }}>
-                          <select style={{ ...LINE_INP, cursor:'pointer' }} value={line.itemId} onChange={e => setLine(idx, 'itemId', e.target.value)}>
-                            <option value="">— Item (opt.) —</option>
-                            {items.filter(it => it.isPurchasable !== false).map(it => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
-                          </select>
+                          <SearchSelect
+                            options={items.filter(it => it.isPurchasable !== false).map(it => ({ value: it.id, label: `${it.code} — ${it.name}` }))}
+                            value={line.itemId}
+                            onChange={v => setLine(idx, 'itemId', v)}
+                            placeholder="Item (opt.)…"
+                            clearLabel="— Item (opt.) —"
+                            minWidth={240}
+                          />
                         </td>
                         <td style={{ padding:'4px 3px' }}><input className="apci-th" style={LINE_INP} placeholder="Description" value={line.description} onChange={e => setLine(idx, 'description', e.target.value)} /></td>
                         <td style={{ padding:'4px 3px' }}><input style={{ ...LINE_INP, textAlign:'right', borderColor: line.quantity && Number(line.quantity)>0 ? 'rgba(167,139,250,0.3)':'rgba(255,255,255,0.1)' }} type="number" min="0" step="0.001" placeholder="0" value={line.quantity} onChange={e => setLine(idx, 'quantity', e.target.value)} /></td>
@@ -849,7 +861,7 @@ function CreateApInvoiceModal({ suppliers, items, onClose, onSaved }: {
                   <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
                   <button type="submit" disabled={submitting}
                     style={{ background:'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)', border:'none', borderRadius:7, padding:'8px 22px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', boxShadow:'0 3px 12px rgba(109,40,217,0.35)', opacity:submitting?0.5:1 }}>
-                    {submitting ? 'Creating…' : '✏️ Create AP Invoice'}
+                    {submitting ? 'Creating…' : 'Create AP Invoice'}
                   </button>
                 </div>
               </form>
@@ -913,8 +925,8 @@ export default function ApInvoicesPage() {
       options: [
         { value: 'no_match',          label: 'No Match', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' },
         { value: 'two_way',           label: '2-Way',    color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.25)'  },
-        { value: 'three_way_matched', label: '3-Way ✓',  color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  },
-        { value: 'three_way_failed',  label: '3-Way ✗',  color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
+        { value: 'three_way_matched', label: '3-Way Match',  color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  },
+        { value: 'three_way_failed',  label: '3-Way Fail',  color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' },
       ],
       filterFn: (row, val) => {
         const arr = val as string[];
