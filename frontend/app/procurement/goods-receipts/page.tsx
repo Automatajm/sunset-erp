@@ -582,13 +582,19 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10 }}>
                 <div>
                   <label style={LBL}>Warehouse *</label>
-                  <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)}
-                    style={{ ...INP, cursor:'pointer', borderColor: selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)' }}>
-                    <option value="">— Select warehouse —</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    options={warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }))}
+                    value={warehouseId}
+                    onChange={setWarehouseId}
+                    placeholder="Search warehouse…"
+                    clearLabel="— Select warehouse —"
+                    minWidth={260}
+                  />
                   {selectedPo?.warehouseId && warehouseId === selectedPo.warehouseId && (
-                    <span style={{ fontSize:9, color:'rgba(74,222,128,0.5)', marginTop:2, display:'block' }}>✓ auto-filled from PO</span>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:9, color:'rgba(74,222,128,0.5)', marginTop:2 }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      auto-filled from PO
+                    </span>
                   )}
                 </div>
                 <div>
@@ -598,9 +604,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
                 </div>
                 <div>
                   <label style={LBL}>Condition</label>
-                  <select value={condition} onChange={e => setCondition(e.target.value)} style={{ ...INP, cursor:'pointer' }}>
-                    {['complete','partial','damaged','rejected'].map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <SearchSelect options={['complete','partial','damaged','rejected'].map(c => ({ value: c, label: c }))} value={condition} onChange={setCondition} placeholder="Condition…" minWidth={180} />
                 </div>
                 <div>
                   <label style={LBL}>Notes</label>
@@ -751,8 +755,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
 
               {/* Skip notice */}
               {mode === 'po' && pool.some(l => l.skip) && (
-                <div style={{ fontSize:11, color:'rgba(251,146,60,0.6)', padding:'6px 10px', background:'rgba(251,146,60,0.05)', borderRadius:6, border:'0.5px solid rgba(251,146,60,0.15)', lineHeight:1.5 }}>
-                  ⚠ Skipped lines will not be received. Create a separate manual GRN for those items if needed, or raise a new PO for discrepant items.
+                <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:11, color:'rgba(251,146,60,0.6)', padding:'6px 10px', background:'rgba(251,146,60,0.05)', borderRadius:6, border:'0.5px solid rgba(251,146,60,0.15)', lineHeight:1.5 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>Skipped lines will not be received. Create a separate manual GRN for those items if needed, or raise a new PO for discrepant items.</span>
                 </div>
               )}
             </div>
