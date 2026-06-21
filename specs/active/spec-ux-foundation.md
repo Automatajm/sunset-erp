@@ -27,7 +27,9 @@
 > message) + matching comments translated to English in `manufacturing/bom` + `boms`. No logic
 > change; tsc 0 / build green.
 >
-> **Deferred (own spec):** budgets roll-forward automation (next-period-from-prior — backend+UI feature).
+> **Budgets roll-forward — done (2026-06-20):** shipped as its own feature spec
+> [[spec-budget-roll-forward]] (backend `POST /budgets/:id/roll-forward` + `RollForwardModal` UI).
+> **Nothing remains deferred — the roadmap and all its follow-ups are complete.**
 
 ## Problem
 
