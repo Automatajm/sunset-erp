@@ -76,13 +76,13 @@ function UomBadge({ unit }: { unit?: { code: string; name: string; type: string 
 }
 
 function BoolDot({ value }: { value: boolean }) {
-  return <span style={{ width:7, height:7, borderRadius:'50%', display:'inline-block', background:value ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.15)', boxShadow:value ? '0 0 4px rgba(74,222,128,0.4)' : 'none' }} />;
+  return <span style={{ width:7, height:7, borderRadius:'50%', display:'inline-block', background:value ? 'var(--success, #4ade80)' : 'var(--w20, rgba(255,255,255,0.15))', boxShadow:value ? '0 0 4px rgba(74,222,128,0.4)' : 'none' }} />;
 }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect:'none' }}>
-      <div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border:`0.5px solid ${checked ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}>
+    <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', userSelect:'none' }}>
+      <div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked ? 'rgba(234,88,12,0.8)' : 'var(--w15, rgba(255,255,255,0.15))', border:`0.5px solid ${checked ? 'rgba(251,146,60,0.5)' : 'var(--w20, rgba(255,255,255,0.2))'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}>
         <div style={{ position:'absolute', top:2, left:checked ? 16 : 2, width:13, height:13, borderRadius:'50%', background:'var(--white, #fff)', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
       </div>
       {label}
@@ -422,7 +422,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
                   {!si.isPreferred && (
                     <button type="button" onClick={() => handlePreferred(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif", whiteSpace: 'nowrap' }}>Preferred</button>
                   )}
-                  <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                  <button type="button" onClick={() => handleEdit(si)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w60, rgba(255,255,255,0.6))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
                   <button type="button" onClick={() => handleRemove(si.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', background: 'rgba(239,68,68,0.07)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Remove</button>
                 </div>
               </div>
@@ -1007,7 +1007,7 @@ export default function ItemsPage() {
         .itm-btn-new:hover{opacity:0.88}
         .itm-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger-subtle, #fca5a5)}
         .itm-btn-edit,.itm-btn-del{padding:5px 10px;border-radius:6px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;white-space:nowrap}
-        .itm-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
+        .itm-btn-edit{background:var(--l05, rgba(255,255,255,0.05));color:var(--w55, rgba(255,255,255,0.55));border-color:var(--w10, rgba(255,255,255,0.1))}
         .itm-btn-del{background:rgba(239,68,68,0.08);color:var(--danger, #f87171);border-color:rgba(239,68,68,0.2)}
       `}</style>
 
