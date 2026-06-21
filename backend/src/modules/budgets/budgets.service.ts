@@ -9,6 +9,7 @@ import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
 import { GenerateBudgetFromSoDto } from './dto/generate-budget.dto';
+import { RollForwardBudgetDto } from './dto/roll-forward-budget.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -544,5 +545,77 @@ export class BudgetsService {
       detail,
       budget: updatedBudget,
     };
+  }
+
+  // ── Roll-forward — carry a budget into the next fiscal year ─────────────────
+  async rollForward(tenantId: string, userId: string, sourceId: string, dto: RollForwardBudgetDto) {
+    const source = await this.findOne(tenantId, sourceId); // 404 if missing
+    const activeLines = source.budgetLines.filter((l) => !l.deletedAt);
+    if (activeLines.length === 0) {
+      throw new BadRequestException('Source budget has no lines to roll forward');
+    }
+
+    const existing = await this.prisma.budget.findFirst({
+      where: { tenantId, budgetCode: dto.targetBudgetCode, deletedAt: null },
+    });
+    if (existing) {
+      throw new ConflictException(`Budget code ${dto.targetBudgetCode} already exists`);
+    }
+
+    const growth = dto.growthPercent ?? 0;
+    // Decimal factor avoids float drift (5 → exactly 1.05).
+    const factor = new Decimal(1).plus(new Decimal(growth).div(100));
+    const includeNotes = dto.includeNotes ?? true;
+    // Swap the leading 4-digit year only ("2026-01" → "2027-01", "2026-Q1" → "2027-Q1").
+    const remapPeriod = (p: string) =>
+      /^\d{4}/.test(p) ? p.replace(/^\d{4}/, dto.targetFiscalYear) : p;
+    const name = dto.targetBudgetName?.trim() || `${source.budgetName} (FY${dto.targetFiscalYear})`;
+
+    try {
+      const newId = await this.prisma.$transaction(async (tx) => {
+        const budget = await tx.budget.create({
+          data: {
+            tenantId,
+            budgetCode: dto.targetBudgetCode,
+            budgetName: name,
+            fiscalYear: dto.targetFiscalYear,
+            description: source.description ?? undefined,
+            status: 'draft',
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+
+        await tx.budgetLine.createMany({
+          data: activeLines.map((l) => ({
+            tenantId,
+            budgetId: budget.id,
+            accountId: l.accountId,
+            fiscalPeriod: remapPeriod(l.fiscalPeriod),
+            budgetAmount: new Decimal(l.budgetAmount).mul(factor).toDecimalPlaces(2),
+            notes: includeNotes ? l.notes : null,
+            createdBy: userId,
+            updatedBy: userId,
+          })),
+        });
+
+        return budget.id;
+      });
+
+      const budget = await this.findOne(tenantId, newId);
+      return {
+        message: `Rolled ${activeLines.length} line${activeLines.length !== 1 ? 's' : ''} forward into ${dto.targetBudgetCode}`,
+        budget,
+        linesCopied: activeLines.length,
+        growthPercent: growth,
+      };
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        throw new ConflictException(
+          `Budget code ${dto.targetBudgetCode} was just taken by a concurrent request. Please retry.`,
+        );
+      }
+      throw e;
+    }
   }
 }

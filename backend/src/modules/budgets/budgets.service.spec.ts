@@ -21,6 +21,7 @@ describe('BudgetsService', () => {
     account: Record<string, jest.Mock>;
     journalEntryLine: Record<string, jest.Mock>;
     salesOrder: Record<string, jest.Mock>;
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -45,6 +46,7 @@ describe('BudgetsService', () => {
       account: { findFirst: jest.fn() },
       journalEntryLine: { aggregate: jest.fn() },
       salesOrder: { findMany: jest.fn() },
+      $transaction: jest.fn(),
     };
     const mod = await Test.createTestingModule({
       providers: [BudgetsService, { provide: PrismaService, useValue: prisma }],
@@ -305,6 +307,116 @@ describe('BudgetsService', () => {
           where: expect.objectContaining({ tenantId: TENANT_A, deletedAt: null }),
         }),
       );
+    });
+  });
+
+  // ── rollForward ─────────────────────────────────────────────────────────────
+  describe('rollForward', () => {
+    const source = {
+      id: 'src',
+      budgetName: '2026 Budget',
+      description: 'ops',
+      status: 'approved',
+      budgetLines: [
+        {
+          accountId: 'a1',
+          fiscalPeriod: '2026-01',
+          budgetAmount: new Decimal(1000),
+          notes: 'n1',
+          deletedAt: null,
+        },
+        {
+          accountId: 'a1',
+          fiscalPeriod: '2026-Q2',
+          budgetAmount: new Decimal(200),
+          notes: null,
+          deletedAt: null,
+        },
+        {
+          accountId: 'a2',
+          fiscalPeriod: '2026-02',
+          budgetAmount: new Decimal(999),
+          notes: null,
+          deletedAt: new Date(),
+        }, // soft-deleted → skipped
+      ],
+    };
+
+    beforeEach(() => {
+      prisma.budgetLine.createMany = jest.fn().mockResolvedValue({ count: 2 });
+      prisma.$transaction = jest.fn(async (cb: any) => cb(prisma));
+      prisma.budget.create.mockResolvedValue({ id: 'new' });
+    });
+
+    it('copies active lines, remaps the period year and scales amounts by growthPercent', async () => {
+      prisma.budget.findFirst
+        .mockResolvedValueOnce(source) // findOne(source)
+        .mockResolvedValueOnce(null) // target-code uniqueness
+        .mockResolvedValueOnce({ id: 'new', budgetLines: [] }); // findOne(result)
+
+      const res = await service.rollForward(TENANT_A, USER, 'src', {
+        targetFiscalYear: '2027',
+        targetBudgetCode: 'BUDGET-2027',
+        growthPercent: 5,
+      } as any);
+
+      expect(prisma.budget.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            fiscalYear: '2027',
+            status: 'draft',
+            budgetCode: 'BUDGET-2027',
+          }),
+        }),
+      );
+      const lines = prisma.budgetLine.createMany.mock.calls[0][0].data;
+      expect(lines).toHaveLength(2); // soft-deleted line excluded
+      expect(lines.map((l: any) => l.fiscalPeriod)).toEqual(['2027-01', '2027-Q2']);
+      expect(lines[0].budgetAmount.toString()).toBe('1050'); // 1000 * 1.05
+      expect(lines[1].budgetAmount.toString()).toBe('210'); // 200 * 1.05
+      expect(res.linesCopied).toBe(2);
+      expect(res.growthPercent).toBe(5);
+    });
+
+    it('defaults growth to 0 (amounts unchanged) and names "<source> (FY<year>)"', async () => {
+      prisma.budget.findFirst
+        .mockResolvedValueOnce(source)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'new', budgetLines: [] });
+
+      await service.rollForward(TENANT_A, USER, 'src', {
+        targetFiscalYear: '2027',
+        targetBudgetCode: 'BUDGET-2027',
+      } as any);
+
+      expect(prisma.budget.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ budgetName: '2026 Budget (FY2027)' }),
+        }),
+      );
+      const lines = prisma.budgetLine.createMany.mock.calls[0][0].data;
+      expect(lines[0].budgetAmount.toString()).toBe('1000');
+    });
+
+    it('throws ConflictException when the target code is taken', async () => {
+      prisma.budget.findFirst.mockResolvedValueOnce(source).mockResolvedValueOnce({ id: 'dup' }); // code exists
+      await expect(
+        service.rollForward(TENANT_A, USER, 'src', {
+          targetFiscalYear: '2027',
+          targetBudgetCode: 'DUP',
+        } as any),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the source has no active lines', async () => {
+      prisma.budget.findFirst.mockResolvedValueOnce({ id: 'src', budgetLines: [] });
+      await expect(
+        service.rollForward(TENANT_A, USER, 'src', {
+          targetFiscalYear: '2027',
+          targetBudgetCode: 'X',
+        } as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

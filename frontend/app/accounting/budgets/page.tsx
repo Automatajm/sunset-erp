@@ -251,12 +251,81 @@ function AddLineModal({ open, onClose, onSaved, budgetId, accounts }: { open: bo
   );
 }
 
+function RollForwardModal({ open, source, onClose, onSaved }: { open: boolean; source: Budget; onClose: () => void; onSaved: () => void }) {
+  const nextYear = (() => { const n = Number(source.fiscalYear); return Number.isFinite(n) ? String(n + 1) : ''; })();
+  const [form, setForm] = useState({ targetFiscalYear: '', targetBudgetCode: '', targetBudgetName: '', growthPercent: '0', includeNotes: true });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setError(null); setResult(null);
+      // Prefill: bump the year; derive a code by swapping the source year, else BUDGET-<year>.
+      const code = source.budgetCode.includes(source.fiscalYear) && nextYear
+        ? source.budgetCode.replace(source.fiscalYear, nextYear)
+        : (nextYear ? `BUDGET-${nextYear}` : '');
+      setForm({ targetFiscalYear: nextYear, targetBudgetCode: code, targetBudgetName: '', growthPercent: '0', includeNotes: true });
+    }
+  }, [open, source, nextYear]);
+
+  const valid = !!form.targetFiscalYear.trim() && !!form.targetBudgetCode.trim();
+  const submit = async () => {
+    if (!valid) { setError('Target fiscal year and budget code are required.'); return; }
+    setSubmitting(true); setError(null);
+    try {
+      const res = await budgetsApi.rollForward(source.id, {
+        targetFiscalYear: form.targetFiscalYear.trim(),
+        targetBudgetCode: form.targetBudgetCode.trim(),
+        targetBudgetName: form.targetBudgetName.trim() || undefined,
+        growthPercent: Number(form.growthPercent) || 0,
+        includeNotes: form.includeNotes,
+      });
+      setResult(res.message);
+      onSaved();
+    } catch (err) {
+      setError((err as any).response?.data?.message || 'Roll-forward failed.');
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <FormModal open={open} onClose={onClose} title={`Roll forward — ${source.budgetCode}`}
+      submitLabel={result ? 'Done' : 'Roll Forward'} submitting={submitting} isValid={valid && !result}
+      error={error} onSubmit={result ? onClose : submit} width={460}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {result
+          ? <div style={{ background: 'rgba(74,222,128,0.06)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--success, #4ade80)' }}>{result}</div>
+          : (
+            <>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                Creates a new <strong style={{ color: 'rgba(255,255,255,0.5)' }}>draft</strong> budget by copying {source.budgetLines.length} line{source.budgetLines.length !== 1 ? 's' : ''}, remapping each period to the target year and scaling amounts by the growth %.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <Field label="Target Fiscal Year *"><input placeholder="2027" value={form.targetFiscalYear} onChange={e => setForm(f => ({ ...f, targetFiscalYear: e.target.value }))} style={INPUT} /></Field>
+                <Field label="Growth %"><input type="number" step="0.1" placeholder="0" value={form.growthPercent} onChange={e => setForm(f => ({ ...f, growthPercent: e.target.value }))} style={INPUT} /></Field>
+              </div>
+              <Field label="New Budget Code *"><input placeholder="BUDGET-2027" value={form.targetBudgetCode} onChange={e => setForm(f => ({ ...f, targetBudgetCode: e.target.value }))} style={INPUT} /></Field>
+              <Field label="New Budget Name"><input placeholder={`${source.budgetName} (FY${form.targetFiscalYear || '…'})`} value={form.targetBudgetName} onChange={e => setForm(f => ({ ...f, targetBudgetName: e.target.value }))} style={INPUT} /></Field>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: form.includeNotes ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
+                <div onClick={() => setForm(f => ({ ...f, includeNotes: !f.includeNotes }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.includeNotes ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.includeNotes ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 2, left: form.includeNotes ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
+                </div>
+                Copy line notes
+              </label>
+            </>
+          )}
+      </div>
+    </FormModal>
+  );
+}
+
 function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; accounts: Account[]; onRefresh: () => void }) {
   const [view,        setView]        = useState<'lines' | 'vsactual'>('lines');
   const [vsActual,    setVsActual]    = useState<VsActualReport | null>(null);
   const [loadingVA,   setLoadingVA]   = useState(false);
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [mrpOpen,     setMrpOpen]     = useState(false);
+  const [rollOpen,    setRollOpen]    = useState(false);
   const [approving,   setApproving]   = useState(false);
   const [error,       setError]       = useState('');
   // spec-frontend-002/003 — approve is irreversible; guard with ConfirmModal.
@@ -310,6 +379,14 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
               {approving ? 'Approving...' : 'Approve'}
             </button>
           </>
+        )}
+
+        {/* Roll-forward — available for any budget with lines (primary use: from an approved one) */}
+        {budget.budgetLines.length > 0 && (
+          <button onClick={() => setRollOpen(true)}
+            style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(251,146,60,0.1)', color: 'var(--accent-strong, #fb923c)', border: '0.5px solid rgba(251,146,60,0.2)', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500 }}>
+            Roll Forward
+          </button>
         )}
 
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
@@ -372,6 +449,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
 
       {mrpOpen && <MrpModal budget={budget} onClose={() => setMrpOpen(false)} onSaved={onRefresh} />}
       <AddLineModal open={addLineOpen} onClose={() => setAddLineOpen(false)} onSaved={onRefresh} budgetId={budget.id} accounts={accounts} />
+      <RollForwardModal open={rollOpen} source={budget} onClose={() => setRollOpen(false)} onSaved={onRefresh} />
 
       <ConfirmModal
         open={approveModal.open}

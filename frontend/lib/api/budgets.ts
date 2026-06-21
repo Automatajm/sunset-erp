@@ -61,4 +61,14 @@ export const budgetsApi = {
     const res = await apiClient.post(`/budgets/${id}/generate-from-so`, data);
     return res.data;
   },
+  rollForward: async (id: string, data: {
+    targetFiscalYear: string;
+    targetBudgetCode: string;
+    targetBudgetName?: string;
+    growthPercent?: number;
+    includeNotes?: boolean;
+  }): Promise<{ message: string; budget: Budget; linesCopied: number; growthPercent: number }> => {
+    const res = await apiClient.post(`/budgets/${id}/roll-forward`, data);
+    return res.data;
+  },
 };

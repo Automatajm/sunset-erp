@@ -26,6 +26,7 @@ import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
 import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { GenerateBudgetFromSoDto } from './dto/generate-budget.dto';
+import { RollForwardBudgetDto } from './dto/roll-forward-budget.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -203,5 +204,22 @@ export class BudgetsController {
     @Body() dto: GenerateBudgetFromSoDto,
   ) {
     return this.budgetsService.generateFromSalesOrders(req.user.tenantId, req.user.id, id, dto);
+  }
+
+  // ── Roll-forward — carry a budget into the next fiscal year ─────────────────
+  @Post(':id/roll-forward')
+  @RequirePermissions('ACCOUNTING:CREATE')
+  @ApiOperation({
+    summary: 'Roll a budget forward into the next fiscal year',
+    description:
+      "Creates a new draft budget by copying the source budget lines, remapping each line's " +
+      'fiscal-period year to the target year and scaling amounts by an optional growth percent.',
+  })
+  @ApiParam({ name: 'id', description: 'Source budget UUID' })
+  @ApiResponse({ status: 201, description: 'Rolled-forward draft budget created' })
+  @ApiResponse({ status: 400, description: 'Source budget has no lines' })
+  @ApiResponse({ status: 409, description: 'Target budget code already exists' })
+  async rollForward(@Request() req, @Param('id') id: string, @Body() dto: RollForwardBudgetDto) {
+    return this.budgetsService.rollForward(req.user.tenantId, req.user.id, id, dto);
   }
 }
