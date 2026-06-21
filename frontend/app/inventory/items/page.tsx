@@ -283,7 +283,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
             {editingId ? `Editing — ${suppliers.find(s => s.id === addForm.supplierId)?.name ?? 'Supplier'}` : 'Add Supplier'}
           </div>
           {editingId && (
-            <button type="button" onClick={handleCancelEdit} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+            <button type="button" onClick={handleCancelEdit} style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               Cancel edit
             </button>
           )}
@@ -352,7 +352,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>
               <input type="checkbox" checked={addForm.isPreferred}
                 onChange={e => setAddForm(f => ({ ...f, isPreferred: e.target.checked }))} />
               Set as preferred supplier
@@ -548,9 +548,9 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0;border-radius:14px 14px 0 0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
         .im-title{font-size:14px;font-weight:500;color:var(--text-strong, #f1ede8)}
         .im-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
-        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
-        .im-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap}
-        .im-tab:hover{color:rgba(255,255,255,0.7)}
+        .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
+        .im-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:var(--w40, rgba(255,255,255,0.4));border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap}
+        .im-tab:hover{color:var(--w70, rgba(255,255,255,0.7))}
         .im-tab-active{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
         .im-scroll{flex:1;overflow-y:auto;min-height:0;overflow-x:visible}
         .im-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow:visible}
@@ -568,7 +568,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
         .im-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
         .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface, #0e0b1a);border-radius:0 0 14px 14px;position:relative;z-index:1}
-        .im-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
+        .im-btn-cancel{background:var(--l05, rgba(255,255,255,0.05));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer}
         .im-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .im-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .im-uom-info{background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.6}
@@ -828,7 +828,7 @@ function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCanc
           <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{item.name}</strong> ({item.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-          <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+          <button onClick={onCancel} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
           <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
             {busy ? 'Deleting…' : 'Delete'}
           </button>

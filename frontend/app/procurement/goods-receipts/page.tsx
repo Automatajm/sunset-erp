@@ -426,9 +426,9 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+  const INP: React.CSSProperties = { background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(74,222,128,0.6)', display:'block', marginBottom:4 };
-  const LINE_INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+  const LINE_INP: React.CSSProperties = { background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:5, padding:'5px 7px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
 
   const filteredSupplierItems = supplierItems.filter(si =>
     !itemSearch.trim() ||
@@ -453,7 +453,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
         .grn-th{font-size:10px;color:rgba(74,222,128,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 8px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
         .mode-tab{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid transparent;transition:all 0.15s;font-family:'IBM Plex Sans',sans-serif}
         .mode-tab-active{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:var(--success, #4ade80)}
-        .mode-tab-inactive{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:rgba(255,255,255,0.35)}
+        .mode-tab-inactive{background:var(--l03, rgba(255,255,255,0.03));border-color:var(--l08, rgba(255,255,255,0.08));color:var(--w35, rgba(255,255,255,0.35))}
         .pool-row{border-bottom:0.5px solid rgba(255,255,255,0.04)}
         .pool-row:hover{background:rgba(255,255,255,0.01)}
         .pool-row-skip{opacity:0.4}
@@ -765,7 +765,7 @@ function CreateGrnModal({ open, onClose, onSaved, warehouses, suppliers }: {
             {/* Footer */}
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'12px 20px 18px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose}
-                style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>
+                style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>
                 Cancel
               </button>
               <button type="submit" disabled={submitting}
@@ -925,7 +925,7 @@ export default function GoodsReceiptsPage() {
       key: '_actions', header: '', width: 70, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setDetailGrn(r); }}
-          style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.55)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
+          style={{ padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer', background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', color:'rgba(255,255,255,0.55)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
           View
         </button>
       ),

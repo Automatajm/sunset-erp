@@ -115,7 +115,7 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
             <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: itCfg.color, background: `color-mix(in srgb, ${itCfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${itCfg.color} 19%, transparent)` }}>
               {itCfg.label}
             </span>
-            <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: 'rgba(255,255,255,0.35)', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
               {row.warehouse?.code} — {row.warehouse?.name}
             </span>
           </div>

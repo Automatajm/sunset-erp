@@ -252,7 +252,7 @@ export default function RolesPage() {
       key: '_actions', header: '', width: 150, sortable: false,
       render: r => (
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => setEditRole(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{r.isSystem ? 'View' : 'Edit'}</button>
+          <button onClick={() => setEditRole(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{r.isSystem ? 'View' : 'Edit'}</button>
           {!r.isSystem && <button onClick={() => setDeleteRole(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>}
         </div>
       ),

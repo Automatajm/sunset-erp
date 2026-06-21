@@ -377,7 +377,7 @@ function BlockToggle({ si, onSaved }: { si: SupplierItem; onSaved: () => void })
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Block reason (optional)</div>
               <input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Quality issues"
-                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 9px', fontSize: 11, color: 'var(--text-strong, #f1ede8)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box' }} />
+                style={{ width: '100%', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 6, padding: '6px 9px', fontSize: 11, color: 'var(--text-strong, #f1ede8)', outline: 'none', fontFamily: "'IBM Plex Sans',sans-serif", boxSizing: 'border-box' }} />
               <button onClick={() => toggle(true)} disabled={saving}
                 style={{ width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.3)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                 {saving ? 'Saving...' : 'Block supplier for this item'}
@@ -775,7 +775,7 @@ function AddItemModal({ supplierId, supplierName, existingItemIds, purchasableIt
 
           {/* Footer */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
-            <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
+            <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
             <button onClick={handleSave} disabled={saving || !itemId}
               style={{ padding: '7px 18px', borderRadius: 7, fontSize: 12, fontWeight: 600, background: itemId ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent-mid, #f97316))' : 'rgba(255,255,255,0.05)', border: 'none', color: itemId ? 'white' : 'rgba(255,255,255,0.3)', cursor: itemId ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif", opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Adding...' : 'Add Item'}

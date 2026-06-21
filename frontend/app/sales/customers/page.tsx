@@ -30,7 +30,7 @@ function fmtCurrency(v?: number | null) {
 }
 
 const INP: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+  background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
   borderRadius: 7, padding: '9px 12px', fontSize: 13,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%',
 };
@@ -222,7 +222,7 @@ export default function CustomersPage() {
       render: r => (
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
           <button onClick={() => { setEditing(r); setModalOpen(true); }}
-            style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+            style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
           <button onClick={() => setDeleting(r)}
             style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
           <PrintButton doc="customer-statement" id={r.id} label="Statement" style={{ padding: '3px 9px', fontSize: 11 }} />

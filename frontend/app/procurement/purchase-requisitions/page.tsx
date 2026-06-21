@@ -388,7 +388,7 @@ function PRDetailDrawer({ pr, onClose, onAction, suppliers }: {
                   placeholder="Explain why this PR is being rejected…"
                   style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', resize: 'vertical' }} />
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button onClick={() => { setRejectOpen(false); setRejectReason(''); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
+                  <button onClick={() => { setRejectOpen(false); setRejectReason(''); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Cancel</button>
                   <button onClick={() => handleStatus('rejected', rejectReason)} disabled={!rejectReason.trim() || actionBusy}
                     style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', background: 'rgba(248,113,113,0.15)', border: '0.5px solid rgba(248,113,113,0.3)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: !rejectReason.trim() ? 0.5 : 1 }}>
                     Confirm Rejection
@@ -521,7 +521,7 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
 
   if (!open) return null;
 
-  const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
   const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
   const PRIORITY_COLORS: Record<string, string> = { normal: 'rgba(255,255,255,0.4)', urgent: 'var(--accent-strong, #fb923c)', critical: 'var(--danger, #f87171)' };
 
@@ -658,7 +658,7 @@ function CreatePRModal({ open, onClose, onSaved, items, warehouses }: {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create PR'}
               </button>
@@ -794,7 +794,7 @@ export default function PurchaseRequisitionsPage() {
       key: '_actions', header: '', width: 70, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setDetailPR(r); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           View
         </button>
       ),

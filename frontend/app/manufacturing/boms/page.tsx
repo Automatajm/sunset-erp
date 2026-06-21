@@ -59,7 +59,7 @@ const UOM_COLOR: Record<string, string> = {
 };
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
-const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+const INPUT: React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 
 function Field({ label, color, children }: { label: string; color?: string; children: React.ReactNode }) {
   return (
@@ -147,7 +147,7 @@ function AddRoutingModal({ bomId, workCenters, onClose, onSaved }: {
             </Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
               {busy ? 'Adding…' : 'Add Step'}
             </button>
@@ -447,7 +447,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, onClose, onSaved }: {
               <span>Components</span>
               <button type="button"
                 onClick={() => setComponents(cs => [...cs, { consumptionGroupId: '', quantityPer: '', uom: '', consumptionUomId: '', scrapPercent: '0' }])}
-                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                 + Add row
               </button>
             </div>
@@ -531,7 +531,7 @@ function BOMModal({ items, consumptionGroups, systemUoms, onClose, onSaved }: {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>
               {busy ? 'Creating…' : 'Create BOM'}
             </button>

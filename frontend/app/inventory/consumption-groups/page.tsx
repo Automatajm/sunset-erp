@@ -97,7 +97,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
   }));
 
   const INP: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
     borderRadius: 7, padding: '9px 12px', fontSize: 13,
     fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%',
   };
@@ -217,7 +217,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
               <button type="button" onClick={onClose}
-                style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button type="submit" disabled={submitting || systemUoms.list.length === 0}
@@ -347,7 +347,7 @@ export default function ConsumptionGroupsPage() {
       key: '_actions', header: '', width: 80, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setEditing(r); setModal(true); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Edit
         </button>
       ),

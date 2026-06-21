@@ -33,7 +33,7 @@ const MONO = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 } as React.
 type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
 const ALL_STATUSES: InvoiceStatus[] = ['draft', 'sent', 'partial', 'paid', 'overdue', 'void'];
 
-const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+const INP: React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 12px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 const LBL: React.CSSProperties = { fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" };
 
 const STATUS_STYLE: Record<InvoiceStatus, { color: string; bg: string; border: string }> = {
@@ -301,7 +301,7 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers }: {
 
         <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', padding: '6px 0 4px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Invoice Lines</span>
-          <button type="button" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '4px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Add Line</button>
+          <button type="button" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])} style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '4px 10px', fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Add Line</button>
         </div>
         <table className="invl-table">
           <thead>

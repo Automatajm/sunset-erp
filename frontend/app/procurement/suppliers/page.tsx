@@ -185,9 +185,9 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
       width={620}
     >
       <style>{`
-        .sm-tabs{display:flex;border-bottom:0.5px solid rgba(255,255,255,0.06);overflow-x:auto;margin:-16px -24px 12px}
-        .sm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap;flex-shrink:0}
-        .sm-tab:hover{color:rgba(255,255,255,0.7)}
+        .sm-tabs{display:flex;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));overflow-x:auto;margin:-16px -24px 12px}
+        .sm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:var(--w40, rgba(255,255,255,0.4));border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap;flex-shrink:0}
+        .sm-tab:hover{color:var(--w70, rgba(255,255,255,0.7))}
         .sm-tab-on{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
         .sm-body{display:flex;flex-direction:column;gap:12px}
         .sm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -285,7 +285,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       <input type="checkbox" id="pref-chk" checked={form.isPreferred ?? false}
                         onChange={e => setForm(f => ({ ...f, isPreferred: e.target.checked }))}
                         style={{ accentColor:'var(--accent-strong, #fb923c)', cursor:'pointer' }} />
-                      <label htmlFor="pref-chk" style={{ fontSize:12, color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>
+                      <label htmlFor="pref-chk" style={{ fontSize:12, color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>
                         Mark as preferred / strategic supplier
                       </label>
                     </div>
@@ -555,7 +555,7 @@ function DeleteConfirm({ supplier, onCancel, onConfirm, busy }: {
           <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{supplier.name}</strong> ({supplier.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-          <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+          <button onClick={onCancel} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
           <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy ? 'not-allowed' : 'pointer', opacity:busy ? 0.5 : 1 }}>
             {busy ? 'Deleting…' : 'Delete'}
           </button>

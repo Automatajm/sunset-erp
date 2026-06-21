@@ -452,11 +452,11 @@ export default function FinancialReportsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
         .fr-page { padding: 0 18px 24px; }
-        .fr-tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:0.5px solid rgba(255,255,255,0.08); }
-        .fr-tab { padding:8px 16px; font-size:12px; font-weight:500; cursor:pointer; color:rgba(255,255,255,0.4);
+        .fr-tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:0.5px solid var(--l08, rgba(255,255,255,0.08)); }
+        .fr-tab { padding:8px 16px; font-size:12px; font-weight:500; cursor:pointer; color:var(--w40, rgba(255,255,255,0.4));
           border-bottom:2px solid transparent; transition:color 0.15s,border-color 0.15s; user-select:none;
           font-family:'IBM Plex Sans',sans-serif; white-space:nowrap; }
-        .fr-tab:hover { color:rgba(255,255,255,0.7); }
+        .fr-tab:hover { color:var(--w70, rgba(255,255,255,0.7)); }
         .fr-tab-active { color:var(--accent-strong, #fb923c) !important; border-bottom-color:var(--accent-strong, #fb923c) !important; }
         .fr-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12);
           border-radius:10px; overflow:hidden; padding:16px; width:100%; box-sizing:border-box; }
@@ -491,7 +491,7 @@ export default function FinancialReportsPage() {
                 color: 'rgba(251,146,60,0.6)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{f.label}</label>
               <input type={f.type} placeholder={f.placeholder} value={filters[f.key] ?? ''}
                 onChange={e => setFilters(p => ({ ...p, [f.key]: e.target.value }))}
-                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+                style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
                   borderRadius: 7, padding: '7px 12px', fontSize: 12,
                   fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 140 }} />
             </div>

@@ -69,7 +69,7 @@ const STATUS_FLOW: Record<ProductionOrderStatus, string | null> = {
   draft: 'released', released: 'in_progress', in_progress: 'completed', completed: null, cancelled: null,
 };
 
-const INPUT: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+const INPUT: React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 function Field({ label, color, children }: { label: string; color?: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -141,7 +141,7 @@ function DeliverModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: 
             </Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
               {busy ? 'Delivering…' : 'Confirm Delivery'}
             </button>
@@ -212,7 +212,7 @@ function LaborModal({ mo, onClose, onSaved }: { mo: ProductionOrder; onClose: ()
             </Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,#4c1d95,#6d28d9,#7c3aed)', border: 'none', borderRadius: 7, padding: '7px 18px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
               {busy ? 'Saving…' : 'Log Labor'}
             </button>
@@ -426,7 +426,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                   {loadingRouting ? 'Adding…' : `Add ${routingSelected.size} step${routingSelected.size !== 1 ? 's' : ''}`}
                 </button>
                 <button onClick={() => { setRoutingSuggestions(null); setRoutingSelected(new Set()); }}
-                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   Dismiss
                 </button>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{routingSelected.size} of {routingSuggestions.length} selected</span>
@@ -538,7 +538,7 @@ function ActualsPanel({ mo, onRefresh }: { mo: ProductionOrder; onRefresh: () =>
                   {loadingBom ? 'Adding…' : `Add ${bomSelected.size} material${bomSelected.size !== 1 ? 's' : ''}`}
                 </button>
                 <button onClick={() => { setBomSuggestions(null); setBomSelected(new Set()); }}
-                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+                  style={{ padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.4)', background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
                   Dismiss
                 </button>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{bomSelected.size} of {bomSuggestions.length} selected</span>
@@ -792,7 +792,7 @@ function MOModal({ boms, onClose, onSaved }: { boms: Bom[]; onClose: () => void;
             <Field label="Notes"><input style={INPUT} placeholder="Optional notes" value={form.notes} onChange={set('notes')} /></Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: busy ? 0.5 : 1 }}>{busy ? 'Creating…' : 'Create'}</button>
           </div>
         </form>

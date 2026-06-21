@@ -45,7 +45,7 @@ function RejectModal({ item, onClose, onRejected }: { item: JeQueueItem; onClose
     finally { setBusy(false); }
   };
 
-  const INPUT_S: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+  const INPUT_S: React.CSSProperties = { background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -67,7 +67,7 @@ function RejectModal({ item, onClose, onRejected }: { item: JeQueueItem; onClose
             </div>
           </div>
           <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'10px 18px 16px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
-            <button type="button" onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 14px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'7px 14px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background:'linear-gradient(135deg,#7f1d1d,#dc2626)', border:'none', borderRadius:7, padding:'7px 18px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', opacity:busy?0.5:1 }}>
               {busy ? 'Rejecting…' : 'Reject & Delete JE'}
             </button>

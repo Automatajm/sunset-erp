@@ -217,7 +217,7 @@ function HelpModal({ sz, onClose }: { sz: SizeConfig; onClose: () => void }) {
 // ---- Shared styles ----------------------------------------------------------
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" };
-const INP:  React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
+const INP:  React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
 const LBL:  React.CSSProperties = { fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)', marginBottom: 5, display: 'block' };
 const CHIP  = (active: boolean, color = 'var(--accent-strong, #fb923c)'): React.CSSProperties => ({ fontSize: 10, padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: active ? `color-mix(in srgb, ${color} 13%, transparent)` : 'rgba(255,255,255,0.05)', color: active ? color : 'rgba(255,255,255,0.4)', outline: active ? `1px solid color-mix(in srgb, ${color} 27%, transparent)` : 'none' });
 const SELROW = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 6, cursor: 'pointer', background: active ? 'rgba(251,146,60,0.08)' : 'transparent', border: `0.5px solid ${active ? 'rgba(251,146,60,0.2)' : 'transparent'}` });
@@ -335,7 +335,7 @@ export default function LabelPrintPage() {
         {/* Header */}
         <div style={{ padding: '14px 24px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => window.history.back()} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 12px', fontSize: 12, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Back</button>
+            <button onClick={() => window.history.back()} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '6px 12px', fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Back</button>
             <div>
               <div style={{ fontSize: 17, fontWeight: 600 }}>Label Printing</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Barcoded labels for items and warehouse locations (levels + bins)</div>

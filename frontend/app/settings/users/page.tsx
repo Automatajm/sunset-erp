@@ -241,8 +241,8 @@ export default function UsersPage() {
       key: '_actions', header: '', width: 200, sortable: false,
       render: r => (
         <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => setEditUser(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
-          <button onClick={() => setResetUser(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Pwd</button>
+          <button onClick={() => setEditUser(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+          <button onClick={() => setResetUser(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Pwd</button>
           <button onClick={() => toggleActive(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: r.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.05)', border: `0.5px solid ${r.isActive ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)'}`, color: r.isActive ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{r.isActive ? 'Disable' : 'Enable'}</button>
         </div>
       ),

@@ -154,7 +154,7 @@ export default function UomCatalogPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .uom-page { padding: 0 18px 12px; display:flex; flex-direction:column; height:100%; overflow:hidden; }
         .uom-tabs { display:flex; gap:4px; margin-bottom:14px; flex-shrink:0; }
-        .uom-tab { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:0.5px solid transparent; transition:all 0.15s; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.04); }
+        .uom-tab { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:0.5px solid transparent; transition:all 0.15s; color:var(--w40, rgba(255,255,255,0.4)); background:var(--l04, rgba(255,255,255,0.04)); }
         .uom-tab-active { color:var(--accent-strong, #fb923c); background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); }
         .uom-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
         .uom-input:focus { border-color:rgba(251,146,60,0.4); }

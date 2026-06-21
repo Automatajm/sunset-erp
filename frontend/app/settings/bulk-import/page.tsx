@@ -177,7 +177,7 @@ function parseExcel(buffer: ArrayBuffer): Record<string, any>[] {
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
-const INPUT: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+const INPUT: React.CSSProperties = { background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
 const LABEL: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Sans',sans-serif" };
 
 // ─── Entity Selector (searchable dropdown) ────────────────────────────────────
@@ -337,7 +337,7 @@ function DryRunModal({
               {hasErrors ? 'Fix errors in your file, re-upload and validate again.' : `Ready to insert ${wouldInsert} record${wouldInsert !== 1 ? 's' : ''}.`}
             </span>
             <div style={{ display:'flex', gap:8 }}>
-              <button onClick={onClose} style={{ padding:'8px 18px', borderRadius:7, fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', cursor:'pointer' }}>Cancel</button>
+              <button onClick={onClose} style={{ padding:'8px 18px', borderRadius:7, fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', cursor:'pointer' }}>Cancel</button>
               <button onClick={onRunLive} disabled={hasErrors || liveRunning}
                 style={{ padding:'8px 22px', borderRadius:7, fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', background:hasErrors?'rgba(255,255,255,0.08)':'linear-gradient(135deg,#14532d,#16a34a,#22c55e)', border:'none', cursor:hasErrors?'not-allowed':'pointer', opacity:hasErrors||liveRunning?0.5:1, whiteSpace:'nowrap', boxShadow:hasErrors?'none':'0 3px 12px rgba(22,163,74,0.3)' }}>
                 {liveRunning ? 'Importing...' : `Run Live Import (${wouldInsert})`}
@@ -519,9 +519,9 @@ export default function BulkImportPage() {
         .bi-page { padding: 0 18px 32px; display:flex; flex-direction:column; gap:16px; }
         .bi-card { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; padding:16px 18px; }
         .bi-section-title { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:rgba(251,146,60,0.55); margin-bottom:12px; }
-        .bi-mode-tabs { display:flex; gap:0; background:rgba(255,255,255,0.04); border-radius:8px; border:0.5px solid rgba(255,255,255,0.08); overflow:hidden; width:fit-content; margin-bottom:16px; }
+        .bi-mode-tabs { display:flex; gap:0; background:var(--l04, rgba(255,255,255,0.04)); border-radius:8px; border:0.5px solid var(--l08, rgba(255,255,255,0.08)); overflow:hidden; width:fit-content; margin-bottom:16px; }
         .bi-mode-tab { padding:8px 20px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; border:none; transition:all 0.15s; }
-        .bi-channel-tabs { display:flex; gap:0; background:rgba(255,255,255,0.04); border-radius:7px; border:0.5px solid rgba(255,255,255,0.08); overflow:hidden; margin-bottom:14px; width:fit-content; }
+        .bi-channel-tabs { display:flex; gap:0; background:var(--l04, rgba(255,255,255,0.04)); border-radius:7px; border:0.5px solid var(--l08, rgba(255,255,255,0.08)); overflow:hidden; margin-bottom:14px; width:fit-content; }
         .bi-channel-tab { padding:7px 16px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; border:none; transition:all 0.15s; white-space:nowrap; }
         .bi-drop { border:1.5px dashed rgba(255,255,255,0.12); border-radius:8px; padding:28px; text-align:center; cursor:pointer; transition:all 0.15s; }
         .bi-drop:hover { border-color:rgba(251,146,60,0.3); background:rgba(251,146,60,0.02); }

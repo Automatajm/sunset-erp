@@ -26,7 +26,7 @@ const CURRENCIES = ['USD', 'EUR', 'DOP', 'GBP'];
 const getTypeConfig = (t: AccountType) => ACCOUNT_TYPES.find(x => x.value === t) ?? ACCOUNT_TYPES[0];
 const fmt = (v?: string | null) => v || '—';
 
-const INP: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+const INP: React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '9px 12px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 const LBL: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
 
 function TypeBadge({ type }: { type: AccountType }) {
@@ -187,7 +187,7 @@ export default function ChartOfAccountsPage() {
               <TypeBadge type={a.accountType} />
               <PostingBadge allowed={a.allowManualPosting} />
               <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-                <button onClick={() => { setEditing(a); setModalOpen(true); }} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                <button onClick={() => { setEditing(a); setModalOpen(true); }} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
                 <button onClick={() => setDeleting(a)} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function ChartOfAccountsPage() {
       key: '_actions', header: '', width: 130, sortable: false,
       render: r => (
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+          <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
           <button onClick={() => setDeleting(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
         </div>
       ),

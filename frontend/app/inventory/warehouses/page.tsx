@@ -68,7 +68,7 @@ const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'
 const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.55)' };
 const BTN_ADD: React.CSSProperties = { background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:6, padding:'4px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--accent-strong, #fb923c)', cursor:'pointer' };
 const BTN_SAVE: React.CSSProperties = { background:'rgba(234,88,12,0.8)', border:'none', borderRadius:6, padding:'5px 12px', fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer' };
-const BTN_CANCEL: React.CSSProperties = { background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' };
+const BTN_CANCEL: React.CSSProperties = { background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' };
 const BTN_EDIT: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.3)', cursor:'pointer', borderRadius:4 };
 const BTN_DEL: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(239,68,68,0.5)', cursor:'pointer', borderRadius:4 };
 
@@ -578,9 +578,9 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
         .wm-title{font-size:14px;font-weight:500;color:var(--text-strong, #f1ede8)}
         .wm-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
         .wm-close:hover{background:rgba(255,255,255,0.12);color:var(--text-strong, #f1ede8)}
-        .wm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
-        .wm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:rgba(255,255,255,0.4);border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s}
-        .wm-tab:hover{color:rgba(255,255,255,0.7)}
+        .wm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0}
+        .wm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:var(--w40, rgba(255,255,255,0.4));border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s}
+        .wm-tab:hover{color:var(--w70, rgba(255,255,255,0.7))}
         .wm-tab-active{color:var(--accent-strong, #fb923c) !important;border-bottom-color:var(--accent-strong, #fb923c) !important}
         .wm-scroll{flex:1;overflow-y:auto;min-height:0}
         .wm-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
@@ -677,7 +677,7 @@ function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: Wa
         <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete warehouse?</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}><strong style={{ color:'var(--text-strong, #f1ede8)' }}>{warehouse.name}</strong> ({warehouse.code}) will be soft-deleted.</div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
-          <button onClick={onCancel} style={{ background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.5)', cursor:'pointer' }}>Cancel</button>
+          <button onClick={onCancel} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
           <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>
         </div>
       </div>

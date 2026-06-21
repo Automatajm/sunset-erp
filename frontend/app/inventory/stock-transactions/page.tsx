@@ -123,7 +123,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
   };
 
   const I: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
     borderRadius: 7, padding: '8px 12px', fontSize: 12,
     fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-strong, #f1ede8)',
     outline: 'none', width: '100%',

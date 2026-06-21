@@ -31,7 +31,7 @@ const CARD: React.CSSProperties = {
 };
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12 };
 const INPUT: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+  background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
   borderRadius: 7, padding: '8px 12px', fontSize: 13,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%',
 };
@@ -48,7 +48,7 @@ const BTN_PRI: React.CSSProperties = {
 const BTN_SEC: React.CSSProperties = {
   padding: '7px 16px', borderRadius: 7, fontSize: 12,
   fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)',
-  background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+  background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', cursor: 'pointer',
 };
 const PLAN_COLOR: Record<string, string> = {
   free: 'var(--text-secondary, #6b7280)', starter: 'var(--accent-blue, #60a5fa)', professional: 'var(--accent-violet, #a78bfa)', enterprise: 'var(--accent-mid, #f97316)',

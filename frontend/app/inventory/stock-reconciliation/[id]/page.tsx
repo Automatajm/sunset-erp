@@ -279,7 +279,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
             </button>
             <button
               onClick={() => setEditing(false)}
-              style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+              style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               ✕
             </button>
           </div>
@@ -308,7 +308,7 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
   }
 
   const INP: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
     borderRadius: 7, padding: '8px 12px', fontSize: 13,
     fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', width: '100%', boxSizing: 'border-box' as const,
@@ -322,7 +322,7 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Approval Notes (optional)</div>
         <textarea style={INP} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for the audit trail…" />
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleApprove} disabled={saving} style={{ background: 'linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6)', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 12, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: saving ? 'wait' : 'pointer' }}>
             {saving ? 'Approving…' : 'Approve'}
           </button>

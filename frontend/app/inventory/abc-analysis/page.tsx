@@ -161,7 +161,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
       render: r => (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {r.warehouses.map(w => (
-            <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)' }}>{w}</span>
+            <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'rgba(255,255,255,0.4)', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>{w}</span>
           ))}
         </div>
       ),

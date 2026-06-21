@@ -325,7 +325,7 @@ export default function MobileCountPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <button
               onClick={() => router.push(`/inventory/stock-reconciliation/${id}`)}
-              style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+              style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>
               Back
             </button>
             <div style={{ textAlign: 'center' }}>
