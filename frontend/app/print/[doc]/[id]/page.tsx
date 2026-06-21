@@ -18,7 +18,7 @@ export default function PrintDocumentPage({
 }) {
   // useSearchParams requires a Suspense boundary (Next prerender contract).
   return (
-    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--w50, rgba(255,255,255,0.5))' }}>Loading…</div>}>
       <PrintDocumentInner params={params} />
     </Suspense>
   );
@@ -57,7 +57,7 @@ function PrintDocumentInner({
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Unknown document type &quot;{doc}&quot;</div>;
   }
   if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Loading document…</div>;
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--w50, rgba(255,255,255,0.5))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Loading document…</div>;
   }
   if (error) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{error}</div>;

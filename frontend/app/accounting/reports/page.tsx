@@ -74,11 +74,11 @@ function fmtDate(d: string) {
 const TH: React.CSSProperties = {
   padding: '9px 14px', fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
   textTransform: 'uppercase', color: 'rgba(251,146,60,0.55)',
-  background: 'rgba(251,146,60,0.05)', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+  background: 'rgba(251,146,60,0.05)', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
   textAlign: 'left', whiteSpace: 'nowrap',
 };
 const TD: React.CSSProperties = {
-  padding: '9px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+  padding: '9px 14px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))',
   verticalAlign: 'middle', fontSize: 13,
 };
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 };
@@ -88,12 +88,12 @@ function SectionRow({ label, total, color, indent }: { label: string; total: num
     <tr>
       <td colSpan={2} style={{ ...TD, padding: indent ? '8px 14px 4px 28px' : '12px 14px 6px', fontSize: 10,
         fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
-        color: color ?? 'rgba(255,255,255,0.35)', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+        color: color ?? 'var(--w35, rgba(255,255,255,0.35))', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
         {label}
       </td>
       <td style={{ ...TD, padding: '12px 14px 6px', textAlign: 'right', ...MONO,
-        color: color ?? 'rgba(255,255,255,0.6)', fontWeight: 500,
-        borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+        color: color ?? 'var(--w60, rgba(255,255,255,0.6))', fontWeight: 500,
+        borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
         {fmtAmt(total, true)}
       </td>
     </tr>
@@ -114,8 +114,8 @@ function DividerRow({ label }: { label: string }) {
   return (
     <tr>
       <td colSpan={3} style={{ padding: '4px 14px 4px 28px', fontSize: 9, letterSpacing: '0.1em',
-        color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
-        borderBottom: '0.5px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)' }}>
+        color: 'var(--w25, rgba(255,255,255,0.25))', textTransform: 'uppercase',
+        borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', background: 'var(--l01, rgba(255,255,255,0.01))' }}>
         {label}
       </td>
     </tr>
@@ -124,14 +124,14 @@ function DividerRow({ label }: { label: string }) {
 
 function SubtotalRow({ label, value, color, pct }: { label: string; value: number; color?: string; pct?: string }) {
   return (
-    <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+    <tr style={{ background: 'var(--l02, rgba(255,255,255,0.02))' }}>
       <td colSpan={2} style={{ ...TD, fontWeight: 700, fontSize: 13, color: color ?? 'var(--text-strong, #f1ede8)',
-        borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
-        {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)', marginLeft: 8 }}>{pct}</span>}
+        borderTop: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
+        {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--w35, rgba(255,255,255,0.35))', marginLeft: 8 }}>{pct}</span>}
       </td>
       <td style={{ ...TD, textAlign: 'right', fontWeight: 700, ...MONO, fontSize: 13,
         color: color ?? (value >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)'),
-        borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
+        borderTop: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
         {fmtAmt(value, true)}
       </td>
     </tr>
@@ -140,17 +140,17 @@ function SubtotalRow({ label, value, color, pct }: { label: string; value: numbe
 
 function TotalRow({ label, value, highlight, pct }: { label: string; value: number; highlight?: boolean; pct?: string }) {
   return (
-    <tr style={{ background: highlight ? 'rgba(251,146,60,0.05)' : 'rgba(255,255,255,0.02)' }}>
+    <tr style={{ background: highlight ? 'rgba(251,146,60,0.05)' : 'var(--l02, rgba(255,255,255,0.02))' }}>
       <td colSpan={2} style={{ ...TD, fontWeight: 700, fontSize: 14,
         color: highlight ? 'var(--accent-strong, #fb923c)' : 'var(--text-strong, #f1ede8)',
-        borderTop: '0.5px solid rgba(255,255,255,0.15)',
-        borderBottom: highlight ? 'none' : '0.5px solid rgba(255,255,255,0.04)' }}>
-        {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.35)', marginLeft: 8 }}>{pct}</span>}
+        borderTop: '0.5px solid var(--w15, rgba(255,255,255,0.15))',
+        borderBottom: highlight ? 'none' : '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
+        {label}{pct && <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--w35, rgba(255,255,255,0.35))', marginLeft: 8 }}>{pct}</span>}
       </td>
       <td style={{ ...TD, textAlign: 'right', fontWeight: 700, ...MONO, fontSize: 14,
         color: value >= 0 ? (highlight ? 'var(--accent-strong, #fb923c)' : 'var(--success, #4ade80)') : 'var(--danger, #f87171)',
-        borderTop: '0.5px solid rgba(255,255,255,0.15)',
-        borderBottom: highlight ? 'none' : '0.5px solid rgba(255,255,255,0.04)' }}>
+        borderTop: '0.5px solid var(--w15, rgba(255,255,255,0.15))',
+        borderBottom: highlight ? 'none' : '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
         {fmtAmt(value, true)}
       </td>
     </tr>
@@ -161,7 +161,7 @@ function PLView({ data }: { data: PLReport }) {
   const structured = data.sga !== undefined;
   return (
     <div>
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 12 }}>
         Period: {fmtDate(data.period.startDate)} → {fmtDate(data.period.endDate)}
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -213,8 +213,8 @@ function PLView({ data }: { data: PLReport }) {
 
               {(data.depreciation?.total ?? 0) > 0 && (
                 <>
-                  <SectionRow label="Depreciation & Amortization" total={data.depreciation!.total} color="rgba(255,255,255,0.35)" />
-                  {data.depreciation!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="rgba(255,255,255,0.5)" />)}
+                  <SectionRow label="Depreciation & Amortization" total={data.depreciation!.total} color="var(--w35, rgba(255,255,255,0.35))" />
+                  {data.depreciation!.accounts.map(a => <AcctRow key={a.accountNumber} a={a} color="var(--w50, rgba(255,255,255,0.5))" />)}
                 </>
               )}
               <SubtotalRow label="EBITDA" value={data.ebitda ?? 0} color="var(--accent-violet, #a78bfa)" pct={fmtPct(data.ebitdaMarginPct)} />
@@ -252,7 +252,7 @@ function BSView({ data }: { data: BalanceSheetReport }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>As of {fmtDate(data.asOfDate)}</span>
+        <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>As of {fmtDate(data.asOfDate)}</span>
         <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20,
           color: data.isBalanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
           background: data.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
@@ -277,7 +277,7 @@ function BSView({ data }: { data: BalanceSheetReport }) {
           ))}
           <SectionRow label="Liabilities" total={data.liabilities.total} color="var(--danger, #f87171)" />
           {data.liabilities.accounts.length === 0
-            ? <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No liability accounts</td></tr>
+            ? <tr><td colSpan={3} style={{ ...TD, color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>No liability accounts</td></tr>
             : data.liabilities.accounts.map(a => (
               <tr key={a.accountNumber}>
                 <td style={{ ...TD, ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{a.accountNumber}</td>
@@ -288,7 +288,7 @@ function BSView({ data }: { data: BalanceSheetReport }) {
           }
           <SectionRow label="Equity" total={data.equity.total} color="var(--accent-violet, #a78bfa)" />
           {data.equity.accounts.length === 0
-            ? <tr><td colSpan={3} style={{ ...TD, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No equity accounts</td></tr>
+            ? <tr><td colSpan={3} style={{ ...TD, color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>No equity accounts</td></tr>
             : data.equity.accounts.map(a => (
               <tr key={`${a.accountNumber}-${a.accountName}`}>
                 <td style={{ ...TD, ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{a.accountNumber}</td>
@@ -308,7 +308,7 @@ function TBView({ data }: { data: TrialBalanceReport }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>As of {fmtDate(data.asOfDate)}</span>
+        <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>As of {fmtDate(data.asOfDate)}</span>
         <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20,
           color: data.totals.isBalanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
           background: data.totals.isBalanced ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
@@ -330,21 +330,21 @@ function TBView({ data }: { data: TrialBalanceReport }) {
             <tr key={a.accountNumber}>
               <td style={{ ...TD, ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{a.accountNumber}</td>
               <td style={{ ...TD, color: 'var(--text-primary, #e2dfd8)' }}>{a.accountName}</td>
-              <td style={{ ...TD, color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+              <td style={{ ...TD, color: 'var(--w40, rgba(255,255,255,0.4))', fontSize: 11 }}>
                 {a.accountType ? a.accountType.charAt(0).toUpperCase() + a.accountType.slice(1) : '—'}
               </td>
               <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(a.totalDebits ?? 0)}</td>
-              <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.55)' }}>{fmtAmt(a.totalCredits ?? 0)}</td>
+              <td style={{ ...TD, textAlign: 'right', ...MONO, color: 'var(--w55, rgba(255,255,255,0.55))' }}>{fmtAmt(a.totalCredits ?? 0)}</td>
               <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500,
                 color: (a.netBalance ?? 0) >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
                 {fmtAmt(a.netBalance ?? 0, true)}
               </td>
             </tr>
           ))}
-          <tr style={{ background: 'rgba(251,146,60,0.05)', borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
+          <tr style={{ background: 'rgba(251,146,60,0.05)', borderTop: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
             <td colSpan={3} style={{ ...TD, fontWeight: 600, color: 'var(--accent-strong, #fb923c)', borderTop: 'none' }}>TOTALS</td>
             <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)', borderTop: 'none' }}>{fmtAmt(data.totals.totalDebits, true)}</td>
-            <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>{fmtAmt(data.totals.totalCredits, true)}</td>
+            <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--w55, rgba(255,255,255,0.55))', borderTop: 'none' }}>{fmtAmt(data.totals.totalCredits, true)}</td>
             <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 600, borderTop: 'none',
               color: data.totals.difference === 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
               {fmtAmt(data.totals.difference, true)}
@@ -387,17 +387,17 @@ function GLView({ data }: { data: GLReport }) {
               <tbody>
                 {group.entries.map((e, idx) => (
                   <tr key={idx}>
-                    <td style={{ ...TD, color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{fmtDate(e.date)}</td>
+                    <td style={{ ...TD, color: 'var(--w50, rgba(255,255,255,0.5))', fontSize: 12 }}>{fmtDate(e.date)}</td>
                     <td style={{ ...TD, ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{e.entryNumber}</td>
                     <td style={{ ...TD, color: 'var(--text-primary, #e2dfd8)' }}>{e.description}</td>
-                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.debit > 0 ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(e.debit)}</td>
-                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.credit > 0 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(e.credit)}</td>
+                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.debit > 0 ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))' }}>{fmtAmt(e.debit)}</td>
+                    <td style={{ ...TD, textAlign: 'right', ...MONO, color: e.credit > 0 ? 'var(--w55, rgba(255,255,255,0.55))' : 'var(--w20, rgba(255,255,255,0.2))' }}>{fmtAmt(e.credit)}</td>
                   </tr>
                 ))}
-                <tr style={{ background: 'rgba(255,255,255,0.02)', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
-                  <td colSpan={3} style={{ ...TD, fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500, borderTop: 'none' }}>Account Total</td>
+                <tr style={{ background: 'var(--l02, rgba(255,255,255,0.02))', borderTop: '0.5px solid var(--l08, rgba(255,255,255,0.08))' }}>
+                  <td colSpan={3} style={{ ...TD, fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500, borderTop: 'none' }}>Account Total</td>
                   <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)', borderTop: 'none' }}>{fmtAmt(totalDebit, true)}</td>
-                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'rgba(255,255,255,0.55)', borderTop: 'none' }}>{fmtAmt(totalCredit, true)}</td>
+                  <td style={{ ...TD, textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--w55, rgba(255,255,255,0.55))', borderTop: 'none' }}>{fmtAmt(totalCredit, true)}</td>
                 </tr>
               </tbody>
             </table>
@@ -460,7 +460,7 @@ export default function FinancialReportsPage() {
         .fr-tab-active { color:var(--accent-strong, #fb923c) !important; border-bottom-color:var(--accent-strong, #fb923c) !important; }
         .fr-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12);
           border-radius:10px; overflow:hidden; padding:16px; width:100%; box-sizing:border-box; }
-        .fr-empty { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px;
+        .fr-empty { text-align:center; padding:52px 24px; color:var(--w25, rgba(255,255,255,0.25)); font-size:13px;
           display:flex; flex-direction:column; align-items:center; gap:10px; }
         .fr-spinner { width:18px; height:18px; border-radius:50%;
           border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c);

@@ -43,7 +43,7 @@ function StatusBadge({ status }: { status: EntryStatus }) {
   );
 }
 function TypeBadge({ type }: { type: JournalType }) {
-  return <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, fontSize: 11, color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>;
+  return <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, fontSize: 11, color: 'var(--w55, rgba(255,255,255,0.55))', background: 'var(--l06, rgba(255,255,255,0.06))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', whiteSpace: 'nowrap' }}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>;
 }
 
 // ─── Detail modal (lines) ─────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry | null; onClose
   const totalDebit = entry ? entry.lines.reduce((s, l) => s + l.debitAmount, 0) : 0;
   const totalCredit = entry ? entry.lines.reduce((s, l) => s + l.creditAmount, 0) : 0;
   const TH = (h: string, right = false) =>
-    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>;
+    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>{h}</th>;
   return (
     <ModalShell open={!!entry} onClose={onClose} title={entry ? `${entry.entryNumber} — Lines` : ''} width={760}>
       {entry && (
@@ -60,15 +60,15 @@ function JEDetailModal({ entry, onClose }: { entry: JournalEntry | null; onClose
           <tbody>
             {entry.lines.map(line => (
               <tr key={line.id}>
-                <td style={{ padding: '7px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                <td style={{ padding: '7px 10px' }}><span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{line.account?.accountNumber}</span> <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{line.account?.name}</span></td>
-                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: line.debitAmount > 0 ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(line.debitAmount)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: line.creditAmount > 0 ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(line.creditAmount)}</td>
+                <td style={{ padding: '7px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>{line.lineNumber}</td>
+                <td style={{ padding: '7px 10px' }}><span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{line.account?.accountNumber}</span> <span style={{ fontSize: 12, color: 'var(--w60, rgba(255,255,255,0.6))' }}>{line.account?.name}</span></td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{line.description || '—'}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: line.debitAmount > 0 ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))' }}>{fmtAmt(line.debitAmount)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: line.creditAmount > 0 ? 'var(--w60, rgba(255,255,255,0.6))' : 'var(--w20, rgba(255,255,255,0.2))' }}>{fmtAmt(line.creditAmount)}</td>
               </tr>
             ))}
-            <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
-              <td colSpan={3} style={{ padding: '7px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTALS</td>
+            <tr style={{ borderTop: '0.5px solid var(--l08, rgba(255,255,255,0.08))' }}>
+              <td colSpan={3} style={{ padding: '7px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500 }}>TOTALS</td>
               <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(totalDebit)}</td>
               <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(totalCredit)}</td>
             </tr>
@@ -123,12 +123,12 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
     <FormModal open={open} onClose={onClose} title="New Journal Entry" submitLabel="Create Entry" submitting={submitting} isValid={isValid} error={error} onSubmit={submit} width={760}>
       <style>{`
         .jel-table{width:100%;border-collapse:collapse}
-        .jel-table th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 8px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap}
+        .jel-table th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 8px;text-align:left;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));white-space:nowrap}
         .jel-table td{padding:5px 4px;vertical-align:middle}
-        .jel-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .jel-inp{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:6px;padding:6px 8px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
         .jel-btn-rm{width:22px;height:22px;border-radius:5px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .jel-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
-        .jel-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 12px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .jel-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:6px 0 4px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .jel-btn-add{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:6px;padding:6px 12px;font-size:11px;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
       `}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -166,15 +166,15 @@ function CreateModal({ open, onClose, onSaved, accounts }: {
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Debit</span>
+            <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Debit</span>
             <span style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(debit)}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Credit</span>
-            <span style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.55)' }}>{fmtAmt(credit)}</span>
+            <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Credit</span>
+            <span style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'var(--w55, rgba(255,255,255,0.55))' }}>{fmtAmt(credit)}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Difference</span>
+            <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Difference</span>
             <span style={{ ...MONO, fontSize: 15, fontWeight: 500, color: balanced ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtAmt(Math.abs(debit - credit))}</span>
           </div>
           {debit > 0 && (
@@ -248,14 +248,14 @@ export default function JournalEntriesPage() {
   // ── Columns ────────────────────────────────────────────────────────────────
   const columns = useMemo<ERPColumn<JournalEntry>[]>(() => [
     { key: 'entryNumber', header: 'Entry #', width: 130, sortable: true, value: r => r.entryNumber, render: r => <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{r.entryNumber}</span> },
-    { key: 'entryDate', header: 'Date', width: 120, sortable: true, value: r => r.entryDate, render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{fmtDate(r.entryDate)}</span> },
+    { key: 'entryDate', header: 'Date', width: 120, sortable: true, value: r => r.entryDate, render: r => <span style={{ fontSize: 12, color: 'var(--w55, rgba(255,255,255,0.55))' }}>{fmtDate(r.entryDate)}</span> },
     { key: 'journalType', header: 'Type', width: 110, sortable: true, value: r => r.journalType, render: r => <TypeBadge type={r.journalType} /> },
     {
       key: 'description', header: 'Description / Reference', sortable: true, value: r => r.description ?? '',
       render: r => <div><span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.description || '—'}</span>{r.reference && <div style={{ fontSize: 11, color: 'rgba(251,146,60,0.6)', marginTop: 1 }}>{r.reference}</div>}</div>,
     },
     { key: 'debit', header: 'Debit', width: 120, align: 'right', sortable: true, value: r => r.lines.reduce((s, l) => s + l.debitAmount, 0), render: r => <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.lines.reduce((s, l) => s + l.debitAmount, 0))}</span> },
-    { key: 'credit', header: 'Credit', width: 120, align: 'right', sortable: true, value: r => r.lines.reduce((s, l) => s + l.creditAmount, 0), render: r => <span style={{ ...MONO, color: 'rgba(255,255,255,0.5)' }}>{fmtAmt(r.lines.reduce((s, l) => s + l.creditAmount, 0))}</span> },
+    { key: 'credit', header: 'Credit', width: 120, align: 'right', sortable: true, value: r => r.lines.reduce((s, l) => s + l.creditAmount, 0), render: r => <span style={{ ...MONO, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtAmt(r.lines.reduce((s, l) => s + l.creditAmount, 0))}</span> },
     { key: 'status', header: 'Status', width: 100, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
     {
       key: '_actions', header: '', width: 170, sortable: false,

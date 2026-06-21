@@ -40,7 +40,7 @@ function fmtDate(d: string) {
 }
 
 const STATUS_CFG: Record<SessionStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:            { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Draft'            },
+  draft:            { color: 'var(--w40, rgba(255,255,255,0.4))', bg: 'var(--l05, rgba(255,255,255,0.05))', border: 'var(--w10, rgba(255,255,255,0.1))', label: 'Draft'            },
   in_progress:      { color: 'var(--accent-blue, #60a5fa)',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
   pending_approval: { color: 'var(--warning, #fbbf24)',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
   approved:         { color: 'var(--accent-violet, #a78bfa)',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
@@ -86,7 +86,7 @@ function CreateSessionModal({
       <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 12, padding: 28, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>New Cycle Count Session</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--w40, rgba(255,255,255,0.4))', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -158,15 +158,15 @@ function buildColumns(onOpen: (id: string) => void): ERPColumn<CountSession>[] {
       value: r => r.warehouse.code,
       render: r => (
         <div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.warehouse.code}</div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouse.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.warehouse.code}</div>
+          <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouse.name}</div>
         </div>
       ),
     },
     {
       key: 'countDate', header: 'Count Date', width: 120, sortable: true,
       value: r => r.countDate,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.countDate)}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDate(r.countDate)}</span>,
     },
     {
       key: 'lines', header: 'Items', width: 80, align: 'right', sortable: true,
@@ -178,19 +178,19 @@ function buildColumns(onOpen: (id: string) => void): ERPColumn<CountSession>[] {
       value: r => r.linesWithVariance ?? 0,
       render: r => r.linesWithVariance !== null
         ? <span style={{ ...MONO, fontSize: 12, color: r.linesWithVariance > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)' }}>{r.linesWithVariance}</span>
-        : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>,
+        : <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>,
     },
     {
       key: 'totalVarianceValue', header: 'Variance Value', width: 140, align: 'right', sortable: true,
       value: r => r.totalVarianceValue ?? 0,
       render: r => r.totalVarianceValue !== null
         ? <span style={{ ...MONO, fontSize: 12, fontWeight: 500, color: r.totalVarianceValue < 0 ? 'var(--danger, #f87171)' : r.totalVarianceValue > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)' }}>{fmtAmt(r.totalVarianceValue)}</span>
-        : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>,
+        : <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>,
     },
     {
       key: 'description', header: 'Description', sortable: false,
       value: r => r.description ?? '',
-      render: r => r.description ? <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{r.description}</span> : null,
+      render: r => r.description ? <span style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))' }}>{r.description}</span> : null,
     },
   ];
 }
@@ -267,7 +267,7 @@ export default function StockReconciliationPage() {
         .sr-page  { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .sr-kpis  { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; flex-shrink: 0; }
         .sr-kpi   { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 10px 14px; }
-        .sr-kpi-l { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+        .sr-kpi-l { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 4px; }
         .sr-kpi-v { font-size: 22px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sr-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .sr-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -280,7 +280,7 @@ export default function StockReconciliationPage() {
         {/* KPI bar */}
         <div className="sr-kpis">
           {[
-            { label: 'Total Sessions',  value: String(kpis.total),      color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Sessions',  value: String(kpis.total),      color: 'var(--text-strong, #f1ede8)', border: 'var(--l07, rgba(255,255,255,0.07))' },
             { label: 'In Progress',     value: String(kpis.inProgress), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
             { label: 'Pending Approval',value: String(kpis.pending),    color: 'var(--warning, #fbbf24)', border: 'rgba(251,191,36,0.15)'  },
             { label: 'Posted',          value: String(kpis.posted),     color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.15)'  },
@@ -314,7 +314,7 @@ export default function StockReconciliationPage() {
             defaultPageSize={20}
             maxHeight="calc(100vh - 340px)"
             toolbarLeft={
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+              <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                 {filtered.length} of {sessions.length} sessions
               </span>
             }

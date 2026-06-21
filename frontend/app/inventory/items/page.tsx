@@ -66,7 +66,7 @@ function TypeBadge({ type }: { type: ItemType }) {
 }
 
 function UomBadge({ unit }: { unit?: { code: string; name: string; type: string } | null }) {
-  if (!unit) return <span style={{ color:'rgba(255,255,255,0.25)', fontSize:12 }}>—</span>;
+  if (!unit) return <span style={{ color:'var(--w25, rgba(255,255,255,0.25))', fontSize:12 }}>—</span>;
   const color = UOM_TYPE_COLOR[unit.type] ?? 'var(--text-primary, #e2dfd8)';
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500, color, background:`color-mix(in srgb, ${color} 8%, transparent)`, border:`0.5px solid color-mix(in srgb, ${color} 21%, transparent)` }}>
@@ -273,7 +273,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
   const supplierOpts = suppliers.map((s: any) => ({ value: s.id, label: `${s.code} — ${s.name}` }));
 
   const L: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.6)' };
-  const INP: React.CSSProperties = { background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
+  const INP: React.CSSProperties = { background: 'var(--surface, #0e0b1a)', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-strong, #f1ede8)', outline: 'none', width: '100%' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -313,7 +313,7 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
               {itemPurchaseUom ? (
                 <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(251,146,60,0.06)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:7, padding:'7px 12px', height:36 }}>
                   <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:13, color:'var(--accent-strong, #fb923c)', fontWeight:600 }}>{itemPurchaseUom.code}</span>
-                  <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>{itemPurchaseUom.name}</span>
+                  <span style={{ fontSize:11, color:'var(--w35, rgba(255,255,255,0.35))' }}>{itemPurchaseUom.name}</span>
                   <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:10, color:'rgba(251,146,60,0.4)', marginLeft:'auto', whiteSpace:'nowrap' }}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>from item</span>
                 </div>
               ) : (
@@ -374,49 +374,49 @@ const SuppliersTab = forwardRef<SuppliersTabHandle, { item: Item; uomUnits: UomU
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+          <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>
             {supplierItems.length} supplier{supplierItems.length !== 1 ? 's' : ''} assigned
           </div>
           {supplierItems.length > 0 && (
             <input value={supSearch} onChange={e => setSupSearch(e.target.value)} placeholder="Search supplier…"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 160 }} />
+              style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 160 }} />
           )}
         </div>
 
         <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 2 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Loading…</div>
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>Loading…</div>
           ) : filteredSuppliers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 12 }}>
               {supSearch ? `No results for "${supSearch}"` : 'No suppliers yet — use the form above.'}
             </div>
           ) : filteredSuppliers.map(si => (
-            <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '10px 14px' }}>
+            <div key={si.id} style={{ background: editingId === si.id ? 'rgba(74,222,128,0.06)' : si.isPreferred ? 'rgba(74,222,128,0.04)' : 'var(--l02, rgba(255,255,255,0.02))', border: `0.5px solid ${editingId === si.id ? 'rgba(74,222,128,0.35)' : si.isPreferred ? 'rgba(74,222,128,0.2)' : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 8, padding: '10px 14px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 120 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {si.supplier?.name}
                     {si.isPreferred && <span style={{ fontSize: 10, color: 'var(--success, #4ade80)', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '1px 7px', borderRadius: 20 }}>preferred</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 2 }}>
                     {si.supplier?.code}{(si as any).supplierItemCode && ` · ref: ${(si as any).supplierItemCode}`}
                   </div>
                 </div>
                 <div style={{ minWidth: 55, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>UOM</div>
+                  <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 2 }}>UOM</div>
                   <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong, #fb923c)' }}>{si.purchaseUom?.code ?? '—'}</span>
                 </div>
                 <div style={{ minWidth: 70, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Price</div>
+                  <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 2 }}>Price</div>
                   <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)' }}>{si.lastPrice ? `$${Number(si.lastPrice).toFixed(2)}` : '—'}</span>
                 </div>
                 <div style={{ minWidth: 45, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Lead</div>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{si.leadTimeDays}d</span>
+                  <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 2 }}>Lead</div>
+                  <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{si.leadTimeDays}d</span>
                 </div>
                 <div style={{ minWidth: 45, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>MOQ</div>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{(si as any).moq ?? 1}</span>
+                  <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 2 }}>MOQ</div>
+                  <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{(si as any).moq ?? 1}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
                   {!si.isPreferred && (
@@ -547,7 +547,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none;border-radius:14px 14px 0 0}
         .im-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0;border-radius:14px 14px 0 0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
         .im-title{font-size:14px;font-weight:500;color:var(--text-strong, #f1ede8)}
-        .im-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
+        .im-close{width:24px;height:24px;border-radius:6px;background:var(--l06, rgba(255,255,255,0.06));border:none;cursor:pointer;color:var(--w45, rgba(255,255,255,0.45));font-size:16px;display:flex;align-items:center;justify-content:center}
         .im-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0;background:var(--surface, #0e0b1a);position:relative;z-index:1}
         .im-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:var(--w40, rgba(255,255,255,0.4));border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s;white-space:nowrap}
         .im-tab:hover{color:var(--w70, rgba(255,255,255,0.7))}
@@ -558,20 +558,20 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
         .im-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
         .im-field{display:flex;flex-direction:column;gap:5px}
         .im-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:rgba(251,146,60,0.6)}
-        .im-sublabel{font-size:10px;color:rgba(255,255,255,0.3);margin-top:-2px}
-        .im-input,.im-select,.im-textarea{background:var(--surface, #0e0b1a);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s}
-        .im-input::placeholder,.im-textarea::placeholder{color:rgba(255,255,255,0.18)}
+        .im-sublabel{font-size:10px;color:var(--w30, rgba(255,255,255,0.3));margin-top:-2px}
+        .im-input,.im-select,.im-textarea{background:var(--surface, #0e0b1a);border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:7px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s}
+        .im-input::placeholder,.im-textarea::placeholder{color:var(--w18, rgba(255,255,255,0.18))}
         .im-input:focus,.im-select:focus,.im-textarea:focus{border-color:rgba(251,146,60,0.45);box-shadow:0 0 0 2px rgba(234,88,12,0.1)}
         .im-select option{background:var(--surface, #0e0b1a);color:var(--text-strong, #f1ede8)}
         .im-textarea{resize:vertical;min-height:60px}
-        .im-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
+        .im-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:4px 0 2px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px}
         .im-toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
         .im-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
-        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0;background:var(--surface, #0e0b1a);border-radius:0 0 14px 14px;position:relative;z-index:1}
+        .im-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0;background:var(--surface, #0e0b1a);border-radius:0 0 14px 14px;position:relative;z-index:1}
         .im-btn-cancel{background:var(--l05, rgba(255,255,255,0.05));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer}
         .im-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .im-btn-save:disabled{opacity:0.5;cursor:not-allowed}
-        .im-uom-info{background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.6}
+        .im-uom-info{background:var(--l02, rgba(255,255,255,0.02));border:0.5px solid var(--l06, rgba(255,255,255,0.06));border-radius:8px;padding:10px 14px;font-size:11px;color:var(--w35, rgba(255,255,255,0.35));line-height:1.6}
       `}</style>
 
       <ModalShell
@@ -740,7 +740,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
                 {tab === 'uom' && (
                   <>
                     <div className="im-uom-info">
-                      <strong style={{ color:'rgba(255,255,255,0.5)' }}>Triple UOM:</strong> Three independent logistics domains.
+                      <strong style={{ color:'var(--w50, rgba(255,255,255,0.5))' }}>Triple UOM:</strong> Three independent logistics domains.
                       Purchasing receives in <strong style={{ color:'var(--accent-strong, #fb923c)' }}>Purchase UOM</strong> ·
                       Warehouse manages in <strong style={{ color:'var(--accent-blue, #60a5fa)' }}>Storage UOM</strong> ·
                       Production consumes in <strong style={{ color:'var(--success, #4ade80)' }}>Consumption UOM</strong>.
@@ -795,7 +795,7 @@ function ItemModal({ open, onClose, onSaved, onCreated, initial, categories, mac
 
                     {form.consumptionUomId && systemUoms.length > 0 && (
                       <div style={{ background:'rgba(74,222,128,0.04)', border:'0.5px solid rgba(74,222,128,0.15)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
-                        <div style={{ color:'rgba(255,255,255,0.4)', marginBottom:6, fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Conversion Preview</div>
+                        <div style={{ color:'var(--w40, rgba(255,255,255,0.4))', marginBottom:6, fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Conversion Preview</div>
                         <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
                           <span style={{ color:'var(--accent-strong, #fb923c)' }}>1 {uomUnits.find(u => u.id === form.purchaseUomId)?.code ?? 'purchase'} = {form.purchaseToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
                           <span style={{ color:'var(--accent-blue, #60a5fa)' }}>1 {uomUnits.find(u => u.id === form.storageUomId)?.code ?? 'storage'} = {form.storageToConsumptionFactor ?? 1} {uomUnits.find(u => u.id === form.consumptionUomId)?.code}</span>
@@ -824,7 +824,7 @@ function DeleteConfirm({ item, onCancel, onConfirm, busy }: { item: Item; onCanc
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete item?</div>
-        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
+        <div style={{ fontSize:13, color:'var(--w50, rgba(255,255,255,0.5))', marginBottom:20, lineHeight:1.5 }}>
           <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{item.name}</strong> ({item.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
@@ -858,8 +858,8 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
       render: r => {
         const mc = (r as any).category?.macroCategory;
         return mc
-          ? <span style={{ fontSize:11, color:'rgba(255,255,255,0.45)' }}>{mc.name}</span>
-          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+          ? <span style={{ fontSize:11, color:'var(--w45, rgba(255,255,255,0.45))' }}>{mc.name}</span>
+          : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
       },
     },
     {
@@ -869,7 +869,7 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
         const cat = (r as any).category;
         return cat
           ? <span style={{ fontSize:11, color:'var(--accent-violet, #a78bfa)' }}>{cat.name}</span>
-          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+          : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
       },
     },
     {
@@ -897,7 +897,7 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
       value: r => (r as any).consumptionGroup?.name ?? '',
       render: r => {
         const cg = (r as any).consumptionGroup;
-        if (!cg) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+        if (!cg) return <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
         return (
           <div>
             <div style={{ fontSize:11, color:'#34d399', fontWeight:500 }}>{cg.name}</div>
@@ -917,7 +917,7 @@ function ITEMS_COLUMNS(onEdit: (item: Item) => void, onDelete: (item: Item) => v
         const count = (r as any).supplierItems?.length ?? 0;
         return count > 0
           ? <span style={{ fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'var(--success, #4ade80)' }}>{count}</span>
-          : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+          : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
       },
     },
     { key: 'isStockable',      header: 'S',  width: 30, align: 'center', sortable: false, render: r => <BoolDot value={r.isStockable} /> },
@@ -1037,7 +1037,7 @@ export default function ItemsPage() {
           />
         </div>
 
-        <div style={{ marginTop:6, display:'flex', gap:14, fontSize:10, color:'rgba(255,255,255,0.25)', flexShrink:0 }}>
+        <div style={{ marginTop:6, display:'flex', gap:14, fontSize:10, color:'var(--w25, rgba(255,255,255,0.25))', flexShrink:0 }}>
           <span>S = Stockable</span><span>P = Purchasable</span><span>Sa = Saleable</span><span>M = Manufacturable</span>
         </div>
       </div>

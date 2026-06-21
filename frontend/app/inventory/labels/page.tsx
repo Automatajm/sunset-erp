@@ -187,21 +187,21 @@ function HelpModal({ sz, onClose }: { sz: SizeConfig; onClose: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(96,165,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 480, maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }}>
-        <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l07, rgba(255,255,255,0.07))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)' }}>How to Print Labels</div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 13, color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>x</button>
+          <button onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 13, color: 'var(--w40, rgba(255,255,255,0.4))', cursor: 'pointer' }}>x</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'IBM Plex Sans',sans-serif" }}>
           <div style={{ background: 'rgba(251,146,60,0.06)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 8, padding: '10px 14px' }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-strong, #fb923c)', marginBottom: 4 }}>Selected: {sz.label} - {sz.desc}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{sz.wMm.toFixed(1)} x {sz.hMm.toFixed(1)} mm</div>
+            <div style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{sz.wMm.toFixed(1)} x {sz.hMm.toFixed(1)} mm</div>
           </div>
           {steps.map(s => (
             <div key={s.n} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(251,146,60,0.15)', border: '0.5px solid rgba(251,146,60,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--accent-strong, #fb923c)', flexShrink: 0 }}>{s.n}</div>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary, #e2dfd8)', marginBottom: 2 }}>{s.title}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{s.text}</div>
+                <div style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))', lineHeight: 1.5 }}>{s.text}</div>
               </div>
             </div>
           ))}
@@ -218,8 +218,8 @@ function HelpModal({ sz, onClose }: { sz: SizeConfig; onClose: () => void }) {
 
 const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" };
 const INP:  React.CSSProperties = { background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 10px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
-const LBL:  React.CSSProperties = { fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)', marginBottom: 5, display: 'block' };
-const CHIP  = (active: boolean, color = 'var(--accent-strong, #fb923c)'): React.CSSProperties => ({ fontSize: 10, padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: active ? `color-mix(in srgb, ${color} 13%, transparent)` : 'rgba(255,255,255,0.05)', color: active ? color : 'rgba(255,255,255,0.4)', outline: active ? `1px solid color-mix(in srgb, ${color} 27%, transparent)` : 'none' });
+const LBL:  React.CSSProperties = { fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--w35, rgba(255,255,255,0.35))', marginBottom: 5, display: 'block' };
+const CHIP  = (active: boolean, color = 'var(--accent-strong, #fb923c)'): React.CSSProperties => ({ fontSize: 10, padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: active ? `color-mix(in srgb, ${color} 13%, transparent)` : 'var(--l05, rgba(255,255,255,0.05))', color: active ? color : 'var(--w40, rgba(255,255,255,0.4))', outline: active ? `1px solid color-mix(in srgb, ${color} 27%, transparent)` : 'none' });
 const SELROW = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 6, cursor: 'pointer', background: active ? 'rgba(251,146,60,0.08)' : 'transparent', border: `0.5px solid ${active ? 'rgba(251,146,60,0.2)' : 'transparent'}` });
 const LOCROW = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 7px', borderRadius: 6, cursor: 'pointer', background: active ? 'rgba(96,165,250,0.08)' : 'transparent', border: `0.5px solid ${active ? 'rgba(96,165,250,0.2)' : 'transparent'}` });
 
@@ -333,17 +333,17 @@ export default function LabelPrintPage() {
       <div className="screen-ui" style={{ height: '100vh', background: '#06040f', color: 'var(--text-primary, #e2dfd8)', fontFamily: "'IBM Plex Sans',sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '14px 24px', borderBottom: '0.5px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '14px 24px', borderBottom: '0.5px solid var(--l07, rgba(255,255,255,0.07))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={() => window.history.back()} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '6px 12px', fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>Back</button>
             <div>
               <div style={{ fontSize: 17, fontWeight: 600 }}>Label Printing</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Barcoded labels for items and warehouse locations (levels + bins)</div>
+              <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 2 }}>Barcoded labels for items and warehouse locations (levels + bins)</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => setShowHelp(true)} title="How to print labels" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(96,165,250,0.08)', border: '0.5px solid rgba(96,165,250,0.2)', fontSize: 14, fontWeight: 700, color: 'var(--accent-blue, #60a5fa)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>?</button>
-            <button onClick={() => window.print()} disabled={selCount === 0} style={{ background: selCount > 0 ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))' : 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 9, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: selCount > 0 ? 'white' : 'rgba(255,255,255,0.2)', cursor: selCount > 0 ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+            <button onClick={() => window.print()} disabled={selCount === 0} style={{ background: selCount > 0 ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))' : 'var(--l05, rgba(255,255,255,0.05))', border: 'none', borderRadius: 9, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: selCount > 0 ? 'white' : 'var(--w20, rgba(255,255,255,0.2))', cursor: selCount > 0 ? 'pointer' : 'not-allowed', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               Print {totalLabels} Label{totalLabels !== 1 ? 's' : ''}
             </button>
           </div>
@@ -352,14 +352,14 @@ export default function LabelPrintPage() {
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
           {/* ── Left panel ── */}
-          <div style={{ width: 300, flexShrink: 0, borderRight: '0.5px solid rgba(255,255,255,0.07)', padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ width: 300, flexShrink: 0, borderRight: '0.5px solid var(--l07, rgba(255,255,255,0.07))', padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
             {/* Label type */}
             <div>
               <label style={LBL}>Type</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['item','location'] as LabelType[]).map(t => (
-                  <button key={t} onClick={() => setLabelType(t)} style={{ flex: 1, height: 34, borderRadius: 7, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: labelType === t ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.05)', color: labelType === t ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', outline: labelType === t ? '1px solid rgba(251,146,60,0.3)' : 'none' }}>
+                  <button key={t} onClick={() => setLabelType(t)} style={{ flex: 1, height: 34, borderRadius: 7, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: labelType === t ? 'rgba(251,146,60,0.15)' : 'var(--l05, rgba(255,255,255,0.05))', color: labelType === t ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))', outline: labelType === t ? '1px solid rgba(251,146,60,0.3)' : 'none' }}>
                     {t === 'item' ? 'Items' : 'Locations'}
                   </button>
                 ))}
@@ -372,12 +372,12 @@ export default function LabelPrintPage() {
                 <label style={LBL}>Barcode to print</label>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {(['internal','external','both'] as BarcodeMode[]).map(m => (
-                    <button key={m} onClick={() => setBarcodeMode(m)} style={{ flex: 1, height: 30, borderRadius: 6, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textTransform: 'capitalize' as const, background: barcodeMode === m ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)', color: barcodeMode === m ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.4)', outline: barcodeMode === m ? '1px solid rgba(96,165,250,0.3)' : 'none' }}>
+                    <button key={m} onClick={() => setBarcodeMode(m)} style={{ flex: 1, height: 30, borderRadius: 6, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textTransform: 'capitalize' as const, background: barcodeMode === m ? 'rgba(96,165,250,0.15)' : 'var(--l05, rgba(255,255,255,0.05))', color: barcodeMode === m ? 'var(--accent-blue, #60a5fa)' : 'var(--w40, rgba(255,255,255,0.4))', outline: barcodeMode === m ? '1px solid rgba(96,165,250,0.3)' : 'none' }}>
                       {m}
                     </button>
                   ))}
                 </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 4, lineHeight: 1.4 }}>
                   {barcodeMode === 'internal' && 'Internal barcode only (auto-generated from item code)'}
                   {barcodeMode === 'external' && 'External barcode only (EAN-13, UPC, supplier code)'}
                   {barcodeMode === 'both' && 'Both barcodes — INT + EXT. Best for larger label sizes.'}
@@ -390,7 +390,7 @@ export default function LabelPrintPage() {
               <label style={LBL}>Display Unit</label>
               <div style={{ display: 'flex', gap: 4 }}>
                 {(['mm','cm','in'] as Unit[]).map(u => (
-                  <button key={u} onClick={() => setUnit(u)} style={{ flex: 1, height: 28, borderRadius: 6, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: unit === u ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.05)', color: unit === u ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', outline: unit === u ? '1px solid rgba(251,146,60,0.3)' : 'none', textTransform: 'uppercase' as const }}>
+                  <button key={u} onClick={() => setUnit(u)} style={{ flex: 1, height: 28, borderRadius: 6, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: unit === u ? 'rgba(251,146,60,0.15)' : 'var(--l05, rgba(255,255,255,0.05))', color: unit === u ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))', outline: unit === u ? '1px solid rgba(251,146,60,0.3)' : 'none', textTransform: 'uppercase' as const }}>
                     {u}
                   </button>
                 ))}
@@ -407,7 +407,7 @@ export default function LabelPrintPage() {
                   </optgroup>
                 ))}
               </select>
-              {labelSize !== 'custom' && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace" }}>{fromMm(sz.wMm,unit)} x {fromMm(sz.hMm,unit)} {unit}</div>}
+              {labelSize !== 'custom' && <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace" }}>{fromMm(sz.wMm,unit)} x {fromMm(sz.hMm,unit)} {unit}</div>}
             </div>
 
             {/* Custom dimensions */}
@@ -416,10 +416,10 @@ export default function LabelPrintPage() {
                 <label style={LBL}>Custom Dimensions ({unit})</label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <input style={{ ...INP, width: '45%' }} type="number" min="10" step="0.1" placeholder={`W (${unit})`} value={customW} onChange={e => setCustomW(e.target.value)} />
-                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>x</span>
+                  <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 14 }}>x</span>
                   <input style={{ ...INP, width: '45%' }} type="number" min="10" step="0.1" placeholder={`H (${unit})`} value={customH} onChange={e => setCustomH(e.target.value)} />
                 </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace" }}>= {toMm(parseFloat(customW)||0,unit).toFixed(1)} x {toMm(parseFloat(customH)||0,unit).toFixed(1)} mm</div>
+                <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace" }}>= {toMm(parseFloat(customW)||0,unit).toFixed(1)} x {toMm(parseFloat(customH)||0,unit).toFixed(1)} mm</div>
               </div>
             )}
 
@@ -448,11 +448,11 @@ export default function LabelPrintPage() {
 
                 {/* Bulk selection row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{selItems.size} selected · {filteredItems.length} shown</span>
+                  <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))' }}>{selItems.size} selected · {filteredItems.length} shown</span>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => setSelItems(s => new Set([...s, ...filteredItems.map(i => i.id)]))} style={{ fontSize: 10, color: 'var(--accent-strong, #fb923c)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Shown</button>
                     <button onClick={() => setSelItems(new Set(items.map(i => i.id)))} style={{ fontSize: 10, color: 'var(--accent-strong, #fb923c)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>All</button>
-                    <button onClick={() => setSelItems(new Set())} style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>None</button>
+                    <button onClick={() => setSelItems(new Set())} style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>None</button>
                   </div>
                 </div>
 
@@ -468,7 +468,7 @@ export default function LabelPrintPage() {
                             <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 8, background: 'rgba(96,165,250,0.1)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif" }}>EXT</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--w40, rgba(255,255,255,0.4))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                       </div>
                     </label>
                   ))}
@@ -494,7 +494,7 @@ export default function LabelPrintPage() {
                     {/* Level/bin filter */}
                     <div style={{ display: 'flex', gap: 4 }}>
                       {(['all','levels','bins'] as LocFilter[]).map(f => (
-                        <button key={f} onClick={() => setLocFilter(f)} style={{ flex: 1, height: 28, borderRadius: 6, fontSize: 10, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: locFilter === f ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)', color: locFilter === f ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.4)', outline: locFilter === f ? '1px solid rgba(96,165,250,0.3)' : 'none', textTransform: 'capitalize' as const }}>
+                        <button key={f} onClick={() => setLocFilter(f)} style={{ flex: 1, height: 28, borderRadius: 6, fontSize: 10, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", background: locFilter === f ? 'rgba(96,165,250,0.15)' : 'var(--l05, rgba(255,255,255,0.05))', color: locFilter === f ? 'var(--accent-blue, #60a5fa)' : 'var(--w40, rgba(255,255,255,0.4))', outline: locFilter === f ? '1px solid rgba(96,165,250,0.3)' : 'none', textTransform: 'capitalize' as const }}>
                           {f}
                         </button>
                       ))}
@@ -505,28 +505,28 @@ export default function LabelPrintPage() {
 
                     {/* Bulk selection row */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                      <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))' }}>
                         {selLocs.size} sel · L({locations.filter(l=>l.type==='level').length}) B({locations.filter(l=>l.type==='bin').length})
                       </span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setSelLocs(s => new Set([...s, ...filteredLocs.map(l => l.id)]))} style={{ fontSize: 10, color: 'var(--accent-blue, #60a5fa)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Shown</button>
                         <button onClick={() => setSelLocs(new Set(locations.map(l => l.id)))} style={{ fontSize: 10, color: 'var(--accent-blue, #60a5fa)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>All</button>
-                        <button onClick={() => setSelLocs(new Set())} style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>None</button>
+                        <button onClick={() => setSelLocs(new Set())} style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>None</button>
                       </div>
                     </div>
 
                     {/* Location list */}
                     <div style={{ flex: 1, maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {loading ? (
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: 12, textAlign: 'center' }}>Loading...</div>
+                        <div style={{ fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))', padding: 12, textAlign: 'center' }}>Loading...</div>
                       ) : filteredLocs.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: 12, textAlign: 'center' }}>No locations found.</div>
+                        <div style={{ fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))', padding: 12, textAlign: 'center' }}>No locations found.</div>
                       ) : filteredLocs.map(loc => (
                         <label key={loc.id} style={LOCROW(selLocs.has(loc.id))}>
                           <input type="checkbox" checked={selLocs.has(loc.id)} onChange={() => setSelLocs(toggle(selLocs, loc.id))} style={{ accentColor: 'var(--accent-blue, #60a5fa)' }} />
                           <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ ...MONO, fontSize: 11, color: loc.type === 'bin' ? 'var(--text-primary, #e2dfd8)' : 'var(--accent-blue, #60a5fa)' }}>{loc.fullCode}</span>
-                            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 10, background: loc.type === 'bin' ? 'rgba(255,255,255,0.07)' : 'rgba(96,165,250,0.1)', color: loc.type === 'bin' ? 'rgba(255,255,255,0.4)' : 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{loc.type}</span>
+                            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 10, background: loc.type === 'bin' ? 'var(--l07, rgba(255,255,255,0.07))' : 'rgba(96,165,250,0.1)', color: loc.type === 'bin' ? 'var(--w40, rgba(255,255,255,0.4))' : 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif" }}>{loc.type}</span>
                           </div>
                         </label>
                       ))}
@@ -539,17 +539,17 @@ export default function LabelPrintPage() {
 
           {/* ── Right: preview ── */}
           <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               Preview - {sz.label} ({sz.desc})
               {labelType === 'item' && <span style={{ marginLeft: 8, color: 'var(--accent-blue, #60a5fa)' }}>Barcode: {barcodeMode}</span>}
               {copies > 1 && <span style={{ marginLeft: 8, color: 'var(--accent-strong, #fb923c)' }}>x{copies} copies</span>}
             </div>
             {selCount === 0 ? (
-              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', padding: 60, fontSize: 14 }}>
+              <div style={{ textAlign: 'center', color: 'var(--w20, rgba(255,255,255,0.2))', padding: 60, fontSize: 14 }}>
                 Select {labelType === 'item' ? 'items' : 'locations'} on the left to preview labels
               </div>
             ) : (
-              <div style={{ border: '1px dashed rgba(255,255,255,0.12)', borderRadius: 8, overflow: 'auto', background: '#e5e5e5', padding: 8 }}>
+              <div style={{ border: '1px dashed var(--w12, rgba(255,255,255,0.12))', borderRadius: 8, overflow: 'auto', background: '#e5e5e5', padding: 8 }}>
                 <PrintSheet sz={sz}>
                   {labelType === 'item'
                     ? itemsToPrint.map((item,i) => <ItemLabel key={`${item.id}-${i}`} item={item} sz={sz} barcodeMode={barcodeMode} />)

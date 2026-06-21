@@ -43,8 +43,8 @@ function HeaderBadge({ category }: { category?: string }) {
 }
 function PostingBadge({ allowed }: { allowed: boolean }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: allowed ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.25)' }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: allowed ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />{allowed ? 'Posting' : 'No posting'}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: allowed ? 'var(--success, #4ade80)' : 'var(--w25, rgba(255,255,255,0.25))' }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: allowed ? 'var(--success, #4ade80)' : 'var(--w20, rgba(255,255,255,0.2))', flexShrink: 0 }} />{allowed ? 'Posting' : 'No posting'}
     </span>
   );
 }
@@ -89,8 +89,8 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
   const Toggle = ({ k, label }: { k: string; label: string }) => {
     const on = !!(form as unknown as Record<string, unknown>)[k];
     return (
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: on ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
-        <div onClick={() => setForm(f => ({ ...f, [k]: !(f as unknown as Record<string, unknown>)[k] }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: on ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${on ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: on ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', userSelect: 'none' }}>
+        <div onClick={() => setForm(f => ({ ...f, [k]: !(f as unknown as Record<string, unknown>)[k] }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: on ? 'rgba(234,88,12,0.8)' : 'var(--w10, rgba(255,255,255,0.1))', border: `0.5px solid ${on ? 'rgba(251,146,60,0.5)' : 'var(--w15, rgba(255,255,255,0.15))'}`, position: 'relative' }}>
           <div style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
         </div>{label}
       </label>
@@ -123,7 +123,7 @@ function AccountModal({ open, onClose, onSaved, initial, accounts }: {
             minWidth={320}
           />
         </Field>
-        <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', padding: '4px 0 2px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>Properties</div>
+        <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--w25, rgba(255,255,255,0.25))', padding: '4px 0 2px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>Properties</div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <Toggle k="isActive" label="Active" />
           <Toggle k="allowManualPosting" label="Allow Manual Posting" />
@@ -180,14 +180,14 @@ export default function ChartOfAccountsPage() {
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {kids.map(a => (
           <div key={a.id}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 14px', paddingLeft: 14 + depth * 22, borderBottom: '0.5px solid rgba(255,255,255,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 14px', paddingLeft: 14 + depth * 22, borderBottom: '0.5px solid var(--l03, rgba(255,255,255,0.03))' }}>
               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, minWidth: 70 }}>{a.accountNumber}</span>
               <span style={{ color: 'var(--text-primary, #e2dfd8)', fontSize: 12 }}>{a.name}</span>
               <HeaderBadge category={a.accountCategory} />
               <TypeBadge type={a.accountType} />
               <PostingBadge allowed={a.allowManualPosting} />
               <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-                <button onClick={() => { setEditing(a); setModalOpen(true); }} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+                <button onClick={() => { setEditing(a); setModalOpen(true); }} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
                 <button onClick={() => setDeleting(a)} style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
               </div>
             </div>
@@ -202,14 +202,14 @@ export default function ChartOfAccountsPage() {
     { key: 'accountNumber', header: 'Number', width: 130, sortable: true, value: r => r.accountNumber, render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.accountNumber}</span> },
     { key: 'name', header: 'Name', sortable: true, value: r => r.name, render: r => <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.name}</span><HeaderBadge category={r.accountCategory} /></div> },
     { key: 'accountType', header: 'Type', width: 120, sortable: true, value: r => r.accountType, render: r => <TypeBadge type={r.accountType} /> },
-    { key: 'accountCategory', header: 'Category', width: 150, sortable: true, value: r => r.accountCategory ?? '', render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{fmt(r.accountCategory)}</span> },
+    { key: 'accountCategory', header: 'Category', width: 150, sortable: true, value: r => r.accountCategory ?? '', render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{fmt(r.accountCategory)}</span> },
     { key: 'allowManualPosting', header: 'Posting', width: 110, sortable: true, value: r => r.allowManualPosting ? 'Posting' : '', render: r => <PostingBadge allowed={r.allowManualPosting} /> },
-    { key: 'currency', header: 'Currency', width: 90, sortable: true, value: r => r.currency ?? '', render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{fmt(r.currency)}</span> },
+    { key: 'currency', header: 'Currency', width: 90, sortable: true, value: r => r.currency ?? '', render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{fmt(r.currency)}</span> },
     {
       key: '_actions', header: '', width: 130, sortable: false,
       render: r => (
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+          <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
           <button onClick={() => setDeleting(r)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
         </div>
       ),
@@ -230,7 +230,7 @@ export default function ChartOfAccountsPage() {
         .coa-btn-new:hover { opacity:0.88; }
         .coa-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .coa-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px; color:var(--danger-subtle, #fca5a5); flex-shrink:0; }
-        .coa-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px; }
+        .coa-search { background:var(--l04, rgba(255,255,255,0.04)); border:0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px; }
         .coa-search:focus { border-color:rgba(251,146,60,0.4); }
       `}</style>
 
@@ -238,12 +238,12 @@ export default function ChartOfAccountsPage() {
         {accounts.length > 0 && (
           <div className="coa-stats">
             {typeCounts.map(t => (
-              <div key={t.value} className="coa-stat" style={{ border: `0.5px solid ${typeFilter === t.value ? t.border : 'rgba(255,255,255,0.07)'}` }} onClick={() => setTypeFilter(prev => prev === t.value ? '' : t.value)}>
+              <div key={t.value} className="coa-stat" style={{ border: `0.5px solid ${typeFilter === t.value ? t.border : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setTypeFilter(prev => prev === t.value ? '' : t.value)}>
                 <span className="coa-stat-label" style={{ color: t.color }}>{t.label}</span>
                 <span className="coa-stat-value">{t.count}</span>
               </div>
             ))}
-            <div className="coa-stat" style={{ border: `0.5px solid ${!typeFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setTypeFilter('')}>
+            <div className="coa-stat" style={{ border: `0.5px solid ${!typeFilter ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setTypeFilter('')}>
               <span className="coa-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
               <span className="coa-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{accounts.length}</span>
             </div>

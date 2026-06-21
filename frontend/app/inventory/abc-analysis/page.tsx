@@ -71,10 +71,10 @@ function ParetoBar({ row, grandTotal }: { row: AbcRow; grandTotal: number }) {
   const pct = grandTotal > 0 ? Math.min(100, (row.totalValue / grandTotal) * 100) : 0;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 6, background: 'var(--l06, rgba(255,255,255,0.06))', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: cfg.color, borderRadius: 3, opacity: 0.8 }} />
       </div>
-      <span style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.4)', minWidth: 42, textAlign: 'right' }}>
+      <span style={{ ...MONO, fontSize: 10, color: 'var(--w40, rgba(255,255,255,0.4))', minWidth: 42, textAlign: 'right' }}>
         {fmtPct(row.valuePct)}
       </span>
     </div>
@@ -88,7 +88,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
     {
       key: 'rank', header: '#', width: 50, sortable: true,
       value: r => r.rank,
-      render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>#{r.rank}</span>,
+      render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))' }}>#{r.rank}</span>,
     },
     {
       key: 'abcClass', header: 'Class', width: 90, sortable: true,
@@ -108,7 +108,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
       render: r => (
         <div>
           <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.itemCode}</span>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
+          <div style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 1 }}>{r.itemName}</div>
         </div>
       ),
     },
@@ -132,7 +132,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
     {
       key: 'unitCost', header: 'WAC Cost', width: 110, align: 'right', sortable: true,
       value: r => r.unitCost,
-      render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
+      render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
     },
     {
       key: 'totalValue', header: 'Total Value', width: 140, align: 'right', sortable: true,
@@ -161,7 +161,7 @@ function buildColumns(grandTotal: number): ERPColumn<AbcRow>[] {
       render: r => (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {r.warehouses.map(w => (
-            <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'rgba(255,255,255,0.4)', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>{w}</span>
+            <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'var(--w40, rgba(255,255,255,0.4))', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>{w}</span>
           ))}
         </div>
       ),
@@ -237,7 +237,7 @@ export default function AbcAnalysisPage() {
   const columns = useMemo(() => buildColumns(grandTotal), [grandTotal]);
 
   const SEL: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
     fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', cursor: 'pointer',
   };
@@ -249,21 +249,21 @@ export default function AbcAnalysisPage() {
         .abc-page  { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .abc-kpis  { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; flex-shrink: 0; }
         .abc-kpi   { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 10px 14px; }
-        .abc-kpi-l { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+        .abc-kpi-l { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 4px; }
         .abc-kpi-v { font-size: 19px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .abc-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; flex-shrink: 0; }
         .abc-card  { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 12px 16px; cursor: pointer; transition: all 0.15s; }
         .abc-card:hover { opacity: 0.85; }
         .abc-card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
         .abc-card-row   { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-        .abc-card-label { font-size: 11px; color: rgba(255,255,255,0.4); }
+        .abc-card-label { font-size: 11px; color: var(--w40, rgba(255,255,255,0.4)); }
         .abc-card-value { font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
-        .abc-bar-wrap   { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .abc-bar-wrap   { height: 4px; background: var(--l06, rgba(255,255,255,0.06)); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .abc-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .abc-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .abc-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
         .abc-btn-apply { background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
-        .abc-note { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+        .abc-note { font-size: 10px; color: var(--w25, rgba(255,255,255,0.25)); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
       `}</style>
 
       <div className="abc-page">
@@ -272,7 +272,7 @@ export default function AbcAnalysisPage() {
         <div className="abc-kpis">
           {[
             { label: 'Total Value',  value: fmtAmt(data?.summary.grandTotal ?? 0), color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.2)'   },
-            { label: 'Total Items',  value: String(data?.summary.totalItems ?? 0),  color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Items',  value: String(data?.summary.totalItems ?? 0),  color: 'var(--text-strong, #f1ede8)', border: 'var(--l07, rgba(255,255,255,0.07))' },
             { label: 'Filtered',     value: String(filtered.length),                 color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
             { label: 'Filtered Value', value: fmtAmt(filtered.reduce((s,r)=>s+r.totalValue,0)), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)' },
           ].map(k => (
@@ -293,7 +293,7 @@ export default function AbcAnalysisPage() {
               const active = cardFilter === cls;
               return (
                 <div key={cls} className="abc-card"
-                  style={{ border: `0.5px solid ${active ? c.border : 'rgba(255,255,255,0.07)'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
+                  style={{ border: `0.5px solid ${active ? c.border : 'var(--l07, rgba(255,255,255,0.07))'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
                   onClick={() => setCardFilter(prev => prev === cls ? null : cls)}>
                   <div className="abc-card-title" style={{ color: c.color }}>{c.label}</div>
                   <div className="abc-card-row">
@@ -361,7 +361,7 @@ export default function AbcAnalysisPage() {
             maxHeight="calc(100vh - 510px)"
             toolbarLeft={
               data ? (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {filtered.length} of {rows.length} items · As of {fmtDate(data.asOf)}
                 </span>
               ) : undefined

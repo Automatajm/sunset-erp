@@ -36,7 +36,7 @@ const UOM_VIEWS: { value: UomView; label: string; icon: string; desc: string }[]
 
 function UomToggle({ active, onChange }: { active: UomView; onChange: (v: UomView) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 0, background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+    <div style={{ display: 'flex', gap: 0, background: 'var(--l03, rgba(255,255,255,0.03))', border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
       {UOM_VIEWS.map((v, i) => (
         <button key={v.value} type="button" onClick={() => onChange(v.value)}
           title={v.desc}
@@ -44,9 +44,9 @@ function UomToggle({ active, onChange }: { active: UomView; onChange: (v: UomVie
             padding: '6px 14px', fontSize: 11, fontWeight: 500,
             fontFamily: "'IBM Plex Sans', sans-serif",
             cursor: 'pointer', border: 'none',
-            borderLeft: i > 0 ? '0.5px solid rgba(255,255,255,0.08)' : 'none',
+            borderLeft: i > 0 ? '0.5px solid var(--l08, rgba(255,255,255,0.08))' : 'none',
             background: active === v.value ? 'rgba(251,146,60,0.15)' : 'transparent',
-            color: active === v.value ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.35)',
+            color: active === v.value ? 'var(--accent-strong, #fb923c)' : 'var(--w35, rgba(255,255,255,0.35))',
             transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}>
           {v.icon} {v.label}
@@ -60,7 +60,7 @@ function UomToggle({ active, onChange }: { active: UomView; onChange: (v: UomVie
 
 function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () => void }) {
   if (!row) return null;
-  const itCfg = ITEM_TYPE_CFG[row.item?.itemType ?? ''] ?? { color: 'rgba(255,255,255,0.35)', label: row.item?.itemType ?? '' };
+  const itCfg = ITEM_TYPE_CFG[row.item?.itemType ?? ''] ?? { color: 'var(--w35, rgba(255,255,255,0.35))', label: row.item?.itemType ?? '' };
 
   const sections = [
     {
@@ -103,19 +103,19 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div style={{ padding: '18px 20px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ padding: '18px 20px 14px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ ...MONO, fontSize: 15, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{row.item?.code}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{row.item?.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', marginTop: 3 }}>{row.item?.name}</div>
             </div>
-            <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w40, rgba(255,255,255,0.4))', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: itCfg.color, background: `color-mix(in srgb, ${itCfg.color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${itCfg.color} 19%, transparent)` }}>
               {itCfg.label}
             </span>
-            <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: 'rgba(255,255,255,0.35)', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
+            <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, color: 'var(--w35, rgba(255,255,255,0.35))', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
               {row.warehouse?.code} — {row.warehouse?.name}
             </span>
           </div>
@@ -124,15 +124,15 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
         {/* UOM Sections */}
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {sections.map(sec => (
-            <div key={sec.title} style={{ background: 'rgba(255,255,255,0.02)', border: `0.5px solid color-mix(in srgb, ${sec.color} 13%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
+            <div key={sec.title} style={{ background: 'var(--l02, rgba(255,255,255,0.02))', border: `0.5px solid color-mix(in srgb, ${sec.color} 13%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '10px 14px 8px', borderBottom: `0.5px solid color-mix(in srgb, ${sec.color} 8%, transparent)` }}>
                 <div style={{ fontSize: 11, fontWeight: 500, color: sec.color }}>{sec.title}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{sec.subtitle}</div>
+                <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 2 }}>{sec.subtitle}</div>
               </div>
               <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {sec.rows.map(r => (
                   <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.label}</span>
                     <span style={{ ...MONO, fontSize: 12, fontWeight: r.highlight ? 600 : 400, color: r.highlight ? sec.color : 'var(--text-strong, #f1ede8)' }}>{r.value}</span>
                   </div>
                 ))}
@@ -142,10 +142,10 @@ function StockDrawer({ row, onClose }: { row: StockBalance | null; onClose: () =
 
           {/* Lot/Serial */}
           {(row.lotNumber || row.serialNumber) && (
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-              <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Tracking</div>
-              {row.lotNumber    && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Lot</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.lotNumber}</span></div>}
-              {row.serialNumber && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Serial</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.serialNumber}</span></div>}
+            <div style={{ background: 'var(--l02, rgba(255,255,255,0.02))', border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--w30, rgba(255,255,255,0.3))', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Tracking</div>
+              {row.lotNumber    && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Lot</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.lotNumber}</span></div>}
+              {row.serialNumber && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Serial</span><span style={{ ...MONO, fontSize: 12, color: 'var(--warning, #fbbf24)' }}>{row.serialNumber}</span></div>}
             </div>
           )}
         </div>
@@ -208,7 +208,7 @@ export default function StockBalancePage() {
 
   const hasFilters = !!(search || whFilter || typeFilter || zeroStock);
   const SEL: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))',
     borderRadius: 7, padding: '7px 10px', fontSize: 12,
     fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', cursor: 'pointer',
@@ -228,31 +228,31 @@ export default function StockBalancePage() {
         .sb-page{padding:0 18px 12px;display:flex;flex-direction:column;height:100%;overflow:hidden}
         .sb-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;flex-shrink:0}
         .sb-kpi{background:rgba(10,7,18,0.7);border-radius:9px;padding:10px 14px;display:flex;flex-direction:column;gap:3px}
-        .sb-kpi-label{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3)}
+        .sb-kpi-label{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--w30, rgba(255,255,255,0.3))}
         .sb-kpi-value{font-size:18px;font-weight:500;font-family:'IBM Plex Mono',monospace}
         .sb-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0}
-        .sb-search{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-primary, #e2dfd8);outline:none;width:220px}
-        .sb-search::placeholder{color:rgba(255,255,255,0.2)}
+        .sb-search{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--l09, rgba(255,255,255,0.09));border-radius:7px;padding:7px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-primary, #e2dfd8);outline:none;width:220px}
+        .sb-search::placeholder{color:var(--w20, rgba(255,255,255,0.2))}
         .sb-search:focus{border-color:rgba(251,146,60,0.4)}
         .sb-wrap{background:rgba(10,7,18,0.7);border:0.5px solid rgba(251,146,60,0.12);border-radius:10px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
         .sb-scroll{flex:1;overflow-y:auto;min-height:0}
         .sb-table{width:100%;border-collapse:collapse}
-        .sb-table thead th{padding:8px 12px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid rgba(255,255,255,0.06);text-align:left;white-space:nowrap;position:sticky;top:0;z-index:2}
+        .sb-table thead th{padding:8px 12px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(251,146,60,0.55);background:rgba(251,146,60,0.05);border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));text-align:left;white-space:nowrap;position:sticky;top:0;z-index:2}
         .sb-table thead th.r{text-align:right}
         .sb-table thead th.purchase{color:rgba(251,146,60,0.7)}
         .sb-table thead th.storage{color:rgba(96,165,250,0.7)}
         .sb-table thead th.consumption{color:rgba(74,222,128,0.7)}
-        .sb-table tbody td{padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.03);vertical-align:middle}
+        .sb-table tbody td{padding:10px 12px;border-bottom:0.5px solid var(--l03, rgba(255,255,255,0.03));vertical-align:middle}
         .sb-table tbody tr:last-child td{border-bottom:none}
         .sb-table tbody tr{cursor:pointer;transition:background 0.1s}
         .sb-table tbody tr:hover td{background:rgba(251,146,60,0.03)}
-        .sb-empty,.sb-loading{text-align:center;padding:52px 24px;color:rgba(255,255,255,0.25);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px}
+        .sb-empty,.sb-loading{text-align:center;padding:52px 24px;color:var(--w25, rgba(255,255,255,0.25));font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px}
         .sb-spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(251,146,60,0.2);border-top-color:var(--accent-strong, #fb923c);animation:sb-spin 0.7s linear infinite}
         @keyframes sb-spin{to{transform:rotate(360deg)}}
-        .sb-footer{font-size:11px;color:rgba(255,255,255,0.22);padding:8px 12px;border-top:0.5px solid rgba(255,255,255,0.04);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+        .sb-footer{font-size:11px;color:var(--w22, rgba(255,255,255,0.22));padding:8px 12px;border-top:0.5px solid var(--l04, rgba(255,255,255,0.04));display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
         .sb-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}
-        .sb-btn-reset{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:7px;padding:7px 10px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.4);cursor:pointer}
-        .sb-zero-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.35);font-family:'IBM Plex Sans',sans-serif;cursor:pointer;user-select:none}
+        .sb-btn-reset{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--l09, rgba(255,255,255,0.09));border-radius:7px;padding:7px 10px;font-size:11px;font-family:'IBM Plex Sans',sans-serif;color:var(--w40, rgba(255,255,255,0.4));cursor:pointer}
+        .sb-zero-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--w35, rgba(255,255,255,0.35));font-family:'IBM Plex Sans',sans-serif;cursor:pointer;user-select:none}
         .sb-uom-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
       `}</style>
 
@@ -264,8 +264,8 @@ export default function StockBalancePage() {
             { label: 'Total Value',   value: fmtAmt(totalValue),           color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.2)'   },
             { label: 'Unique Items',  value: String(totalItems),            color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
             { label: 'Warehouses',    value: String(totalWH),               color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
-            { label: 'Low Stock',     value: String(lowStockCount),         color: lowStockCount > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.3)', border: lowStockCount > 0 ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)' },
-            { label: 'Zero Stock',    value: String(zeroCount),             color: zeroCount  > 0 ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.3)',   border: zeroCount  > 0 ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.06)' },
+            { label: 'Low Stock',     value: String(lowStockCount),         color: lowStockCount > 0 ? 'var(--warning, #fbbf24)' : 'var(--w30, rgba(255,255,255,0.3))', border: lowStockCount > 0 ? 'rgba(251,191,36,0.2)' : 'var(--l06, rgba(255,255,255,0.06))' },
+            { label: 'Zero Stock',    value: String(zeroCount),             color: zeroCount  > 0 ? 'var(--danger, #f87171)' : 'var(--w30, rgba(255,255,255,0.3))',   border: zeroCount  > 0 ? 'rgba(248,113,113,0.2)' : 'var(--l06, rgba(255,255,255,0.06))' },
           ].map(k => (
             <div key={k.label} className="sb-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="sb-kpi-label">{k.label}</div>
@@ -303,7 +303,7 @@ export default function StockBalancePage() {
         {/* UOM view description */}
         <div style={{ marginBottom: 8, flexShrink: 0 }}>
           {UOM_VIEWS.filter(v => v.value === uomView).map(v => (
-            <div key={v.value} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div key={v.value} style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: uomView === 'purchase' ? 'var(--accent-strong, #fb923c)' : uomView === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--success, #4ade80)' }}>
                 {v.icon} {v.label}
               </span>
@@ -359,7 +359,7 @@ export default function StockBalancePage() {
                   </thead>
                   <tbody>
                     {filtered.map(row => {
-                      const itCfg = ITEM_TYPE_CFG[row.item?.itemType ?? ''] ?? { color: 'rgba(255,255,255,0.35)', label: '' };
+                      const itCfg = ITEM_TYPE_CFG[row.item?.itemType ?? ''] ?? { color: 'var(--w35, rgba(255,255,255,0.35))', label: '' };
                       const isZero = row.storageQty === 0;
                       const isLow  = row.availableQty > 0 && row.availableQty < 10;
 
@@ -370,7 +370,7 @@ export default function StockBalancePage() {
                           {/* Item */}
                           <td>
                             <div style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{row.item?.code ?? '—'}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.item?.name}</div>
+                            <div style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 2, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.item?.name}</div>
                           </td>
 
                           {/* Type badge */}
@@ -384,14 +384,14 @@ export default function StockBalancePage() {
 
                           {/* Warehouse */}
                           <td>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{row.warehouse?.code}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{row.warehouse?.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{row.warehouse?.code}</div>
+                            <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{row.warehouse?.name}</div>
                           </td>
 
                           {/* Purchase view */}
                           {uomView === 'purchase' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-strong, #fb923c)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'var(--w20, rgba(255,255,255,0.2))' : 'var(--accent-strong, #fb923c)' }}>
                                 {fmtQty(row.purchaseQty)}
                               </span>
                             </td>
@@ -401,10 +401,10 @@ export default function StockBalancePage() {
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.unitCost > 0 ? fmtAmt(row.unitCost) : '—'}</span>
+                              <span style={{ ...MONO, fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{row.unitCost > 0 ? fmtAmt(row.unitCost) : '—'}</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'var(--w20, rgba(255,255,255,0.2))' : 'var(--success, #4ade80)' }}>
                                 {row.totalValue > 0 ? fmtAmt(row.totalValue) : '—'}
                               </span>
                             </td>
@@ -413,12 +413,12 @@ export default function StockBalancePage() {
                           {/* Storage view */}
                           {uomView === 'storage' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--accent-blue, #60a5fa)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'var(--w20, rgba(255,255,255,0.2))' : 'var(--accent-blue, #60a5fa)' }}>
                                 {fmtQty(row.storageQty)}
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 12, color: row.reservedQuantity > 0 ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.3)' }}>
+                              <span style={{ ...MONO, fontSize: 12, color: row.reservedQuantity > 0 ? 'var(--warning, #fbbf24)' : 'var(--w30, rgba(255,255,255,0.3))' }}>
                                 {fmtQty(row.reservedQuantity)}
                               </span>
                             </td>
@@ -434,14 +434,14 @@ export default function StockBalancePage() {
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.unitCostStorage > 0 ? fmtAmt(row.unitCostStorage) : '—'}</span>
+                              <span style={{ ...MONO, fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{row.unitCostStorage > 0 ? fmtAmt(row.unitCostStorage) : '—'}</span>
                             </td>
                           </>}
 
                           {/* Consumption view */}
                           {uomView === 'consumption' && <>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 500, color: isZero ? 'var(--w20, rgba(255,255,255,0.2))' : 'var(--success, #4ade80)' }}>
                                 {fmtQty(row.consumptionQty)}
                               </span>
                             </td>
@@ -451,10 +451,10 @@ export default function StockBalancePage() {
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.unitCostConsumption > 0 ? fmtAmt(row.unitCostConsumption) : '—'}</span>
+                              <span style={{ ...MONO, fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{row.unitCostConsumption > 0 ? fmtAmt(row.unitCostConsumption) : '—'}</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'rgba(255,255,255,0.2)' : 'var(--success, #4ade80)' }}>
+                              <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: isZero ? 'var(--w20, rgba(255,255,255,0.2))' : 'var(--success, #4ade80)' }}>
                                 {row.totalValue > 0 ? fmtAmt(row.totalValue) : '—'}
                               </span>
                             </td>
@@ -464,7 +464,7 @@ export default function StockBalancePage() {
                           <td>
                             {row.lotNumber
                               ? <span style={{ ...MONO, fontSize: 10, color: 'var(--warning, #fbbf24)' }}>{row.lotNumber}</span>
-                              : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)' }}>—</span>
+                              : <span style={{ fontSize: 10, color: 'var(--w15, rgba(255,255,255,0.15))' }}>—</span>
                             }
                           </td>
                         </tr>

@@ -78,7 +78,7 @@ const PERF_CFG: Record<Performance, { color: string; bg: string; border: string;
   good:        { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.12)',   border: 'rgba(96,165,250,0.25)',   label: 'Good',        desc: '6–12× / year' },
   fair:        { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.12)',   border: 'rgba(251,191,36,0.25)',   label: 'Fair',        desc: '3–6× / year'  },
   poor:        { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.12)',  border: 'rgba(248,113,113,0.25)',  label: 'Poor',        desc: '< 3× / year'  },
-  no_movement: { color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', label: 'No Movement', desc: 'No issues'    },
+  no_movement: { color: 'var(--w30, rgba(255,255,255,0.3))', bg: 'var(--l04, rgba(255,255,255,0.04))', border: 'var(--w10, rgba(255,255,255,0.1))', label: 'No Movement', desc: 'No issues'    },
 };
 
 const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
@@ -90,13 +90,13 @@ const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
 // ─── Turnover gauge ───────────────────────────────────────────────────────────
 
 function TurnoverGauge({ ratio }: { ratio: number | null }) {
-  if (ratio === null) return <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>;
+  if (ratio === null) return <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>;
   // Scale: 0–20× mapped to 0–100%
   const pct   = Math.min(100, (ratio / 20) * 100);
   const color = ratio >= 12 ? 'var(--success, #4ade80)' : ratio >= 6 ? 'var(--accent-blue, #60a5fa)' : ratio >= 3 ? 'var(--warning, #fbbf24)' : 'var(--danger, #f87171)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 5, background: 'var(--l06, rgba(255,255,255,0.06))', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3 }} />
       </div>
       <span style={{ ...MONO, fontSize: 12, fontWeight: 600, color, minWidth: 40, textAlign: 'right' }}>
@@ -127,7 +127,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     render: r => (
       <div>
         <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.itemCode}</span>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
+        <div style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
   },
@@ -149,7 +149,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     render: r => (
       <div style={{ textAlign: 'right' }}>
         <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.avgInventory)}</span>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>
+        <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>
           O: {fmtAmt(r.openingValue)} → C: {fmtAmt(r.closingValue)}
         </div>
       </div>
@@ -160,7 +160,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     value: r => r.cogs,
     render: r => (
       <div style={{ textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 12, color: r.cogs > 0 ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.25)' }}>
+        <span style={{ ...MONO, fontSize: 12, color: r.cogs > 0 ? 'var(--danger, #f87171)' : 'var(--w25, rgba(255,255,255,0.25))' }}>
           {r.cogs > 0 ? fmtAmt(r.cogs) : '—'}
         </span>
       </div>
@@ -170,7 +170,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     key: 'annualizedCogs', header: 'COGS (Annual.)', width: 130, align: 'right', sortable: true,
     value: r => r.annualizedCogs,
     render: r => (
-      <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+      <span style={{ ...MONO, fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>
         {r.annualizedCogs > 0 ? fmtAmt(r.annualizedCogs) : '—'}
       </span>
     ),
@@ -184,7 +184,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     key: 'daysOnHand', header: 'Days on Hand', width: 110, align: 'right', sortable: true,
     value: r => r.daysOnHand ?? 9999,
     render: r => {
-      const color = r.daysOnHand === null ? 'rgba(255,255,255,0.2)'
+      const color = r.daysOnHand === null ? 'var(--w20, rgba(255,255,255,0.2))'
         : r.daysOnHand <= 30  ? 'var(--success, #4ade80)'
         : r.daysOnHand <= 60  ? 'var(--accent-blue, #60a5fa)'
         : r.daysOnHand <= 120 ? 'var(--warning, #fbbf24)'
@@ -202,7 +202,7 @@ const COLUMNS: ERPColumn<TurnoverRow>[] = [
     render: r => (
       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         {r.warehouses.map(w => (
-          <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'rgba(255,255,255,0.4)', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>{w}</span>
+          <span key={w} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 6, color: 'var(--w40, rgba(255,255,255,0.4))', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>{w}</span>
         ))}
       </div>
     ),
@@ -343,7 +343,7 @@ export default function InventoryTurnoverPage() {
   const filtered    = useMemo(() => cardFilter ? afterFilter.filter(r => r.performance === cardFilter) : afterFilter, [afterFilter, cardFilter]);
 
   const SEL: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
     fontFamily: "'IBM Plex Sans', sans-serif", color: 'var(--text-primary, #e2dfd8)', outline: 'none', cursor: 'pointer',
   };
@@ -356,20 +356,20 @@ export default function InventoryTurnoverPage() {
         .it-page   { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .it-kpis   { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; flex-shrink: 0; }
         .it-kpi    { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 10px 14px; }
-        .it-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+        .it-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 4px; }
         .it-kpi-v  { font-size: 22px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
-        .it-kpi-sub{ font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .it-kpi-sub{ font-size: 10px; color: var(--w30, rgba(255,255,255,0.3)); margin-top: 2px; }
         .it-cards  { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; flex-shrink: 0; }
         .it-card   { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: all 0.15s; }
         .it-card:hover { opacity: 0.85; }
         .it-card-title { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
         .it-card-count { font-size: 22px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
-        .it-card-desc  { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .it-card-desc  { font-size: 10px; color: var(--w30, rgba(255,255,255,0.3)); margin-top: 2px; }
         .it-period { background: rgba(96,165,250,0.06); border: 0.5px solid rgba(96,165,250,0.15); border-radius: 8px; padding: 10px 16px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
         .it-filters{ display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .it-table  { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .it-error  { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
-        .it-note   { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+        .it-note   { font-size: 10px; color: var(--w25, rgba(255,255,255,0.25)); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
         .it-btn-apply { background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; }
       `}</style>
 
@@ -390,7 +390,7 @@ export default function InventoryTurnoverPage() {
                 ? data.summary.overallTurnover >= 12 ? 'var(--success, #4ade80)'
                 : data.summary.overallTurnover >= 6  ? 'var(--accent-blue, #60a5fa)'
                 : data.summary.overallTurnover >= 3  ? 'var(--warning, #fbbf24)' : 'var(--danger, #f87171)'
-                : 'rgba(255,255,255,0.3)',
+                : 'var(--w30, rgba(255,255,255,0.3))',
               border: 'rgba(251,146,60,0.2)',
             },
             { label: 'Days on Hand',    value: fmtDays(data?.summary.overallDaysOnHand ?? null), sub: 'avg across items', color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
@@ -414,7 +414,7 @@ export default function InventoryTurnoverPage() {
             const active   = cardFilter === perf;
             return (
               <div key={perf} className="it-card"
-                style={{ border: `0.5px solid ${active ? c.border : 'rgba(255,255,255,0.07)'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
+                style={{ border: `0.5px solid ${active ? c.border : 'var(--l07, rgba(255,255,255,0.07))'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
                 onClick={() => setCardFilter(prev => prev === perf ? null : perf)}>
                 <div className="it-card-title" style={{ color: c.color }}>
                   {c.label}
@@ -465,7 +465,7 @@ export default function InventoryTurnoverPage() {
           )}
           {data?.period && (
             <div style={{ alignSelf: 'flex-end', marginLeft: 'auto' }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+              <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                 {data.period.days} days
                 {data.period.isAnnualized && (
                   <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--warning, #fbbf24)', background: 'rgba(251,191,36,0.1)', padding: '1px 6px', borderRadius: 4 }}>
@@ -501,7 +501,7 @@ export default function InventoryTurnoverPage() {
             maxHeight="calc(100vh - 530px)"
             toolbarLeft={
               data ? (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {filtered.length} of {rows.length} items · {fmtTimestamp(data.asOf)}
                 </span>
               ) : undefined
@@ -511,7 +511,7 @@ export default function InventoryTurnoverPage() {
 
         {/* Footer note */}
         <div className="it-note">
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: 500 }}>Formula:</span>
+          <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 11, fontWeight: 500 }}>Formula:</span>
           <span>
             Turnover = Annualized COGS / Avg Inventory · Days on Hand = 365 / Turnover ·
             Excellent ≥12× · Good 6–12× · Fair 3–6× · Poor &lt;3× ·

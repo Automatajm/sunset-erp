@@ -421,19 +421,19 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
         .po-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
         .po-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:860px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .po-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
-        .po-lines-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .po-line-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
-        .po-line-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .po-lines-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));white-space:nowrap;font-weight:500}
+        .po-line-inp{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .po-line-sel{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
         .po-line-sel option{background:var(--surface, #0e0b1a)}
-        .po-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
-        .po-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .po-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:6px 0 4px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .po-btn-add{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:4px 10px;font-size:11px;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
         .po-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div className="po-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="po-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New Purchase Order</span>
-            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -517,13 +517,13 @@ function CreatePOModal({ open, onClose, onSaved, suppliers, items }: {
                 </tbody>
               </table>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
+                <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Grand Total</span>
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{fmtAmt(grandTotal)}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
               <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create Purchase Order'}
@@ -609,17 +609,17 @@ export default function PurchaseOrdersPage() {
     {
       key: 'poDate', header: 'Date', width: 100, sortable: true,
       value: r => r.poDate,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.poDate)}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDateShort(r.poDate)}</span>,
     },
     {
       key: 'expectedDate', header: 'Expected', width: 100, sortable: true,
       value: r => r.expectedDate ?? '',
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDateShort(r.expectedDate)}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtDateShort(r.expectedDate)}</span>,
     },
     {
       key: 'lines', header: 'Lines', width: 60, align: 'center', sortable: true,
       value: r => r._count?.lines ?? r.lines?.length ?? 0,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r._count?.lines ?? r.lines?.length ?? 0}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r._count?.lines ?? r.lines?.length ?? 0}</span>,
     },
     {
       key: 'total', header: 'Total', width: 120, align: 'right', sortable: true,
@@ -628,7 +628,7 @@ export default function PurchaseOrdersPage() {
     },
     {
       key: 'currency', header: 'Cur.', width: 55, align: 'center', sortable: false,
-      render: r => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.currency ?? 'USD'}</span>,
+      render: r => <span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.currency ?? 'USD'}</span>,
     },
     {
       key: 'status', header: 'Status', width: 130, sortable: true,
@@ -640,7 +640,7 @@ export default function PurchaseOrdersPage() {
       render: r => (
         <button
           onClick={e => { e.stopPropagation(); setDetailPO(r); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}
         >
           View
         </button>
@@ -675,7 +675,7 @@ export default function PurchaseOrdersPage() {
           })}
           <div
             onClick={() => setActiveType(null)}
-            style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer', transition: 'all 0.15s' }}
+            style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer', transition: 'all 0.15s' }}
           >
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
             <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{orders.length}</span>

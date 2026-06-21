@@ -103,7 +103,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
       const c = BUCKET_CFG[r.agingBucket];
       return r.daysSinceLastMovement !== null
         ? <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: c.color }}>{r.daysSinceLastMovement}</span>
-        : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>—</span>;
+        : <span style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))' }}>—</span>;
     },
   },
   {
@@ -112,7 +112,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div>
         <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.itemCode}</span>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
+        <div style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
   },
@@ -133,8 +133,8 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.warehouseCode,
     render: r => (
       <div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.warehouseCode}</div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouseName}</div>
+        <div style={{ fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.warehouseCode}</div>
+        <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouseName}</div>
       </div>
     ),
   },
@@ -144,7 +144,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div style={{ textAlign: 'right' }}>
         <span style={{ ...MONO, fontSize: 12, color: r.storageQty > 0 ? 'var(--text-primary, #e2dfd8)' : 'var(--danger, #f87171)' }}>{fmtQty(r.storageQty)}</span>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
+        <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.uom}</div>
       </div>
     ),
   },
@@ -154,28 +154,28 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div style={{ textAlign: 'right' }}>
         <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{fmtQty(r.purchaseQty)}</span>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.purchaseUom}</div>
+        <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.purchaseUom}</div>
       </div>
     ),
   },
   {
     key: 'unitCost', header: 'WAC Cost', width: 110, align: 'right', sortable: true,
     value: r => r.unitCost,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
   },
   {
     key: 'totalValue', header: 'Value at Risk', width: 130, align: 'right', sortable: true,
     value: r => r.totalValue,
     render: r => {
       const c = BUCKET_CFG[r.agingBucket];
-      return <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: r.isSlowMoving ? c.color : 'rgba(255,255,255,0.5)' }}>{fmtAmt(r.totalValue)}</span>;
+      return <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: r.isSlowMoving ? c.color : 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtAmt(r.totalValue)}</span>;
     },
   },
   {
     key: 'lastMovementDate', header: 'Last Movement', width: 140, sortable: true,
     value: r => r.lastMovementDate ?? '',
     render: r => r.lastMovementDate
-      ? <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtDateShort(r.lastMovementDate)}</span>
+      ? <span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{fmtDateShort(r.lastMovementDate)}</span>
       : <span style={{ fontSize: 10, color: 'var(--danger, #f87171)' }}>Never moved</span>,
   },
 ];
@@ -256,20 +256,20 @@ export default function StockAgingPage() {
         .ag-page   { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .ag-kpis   { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; flex-shrink: 0; }
         .ag-kpi    { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 10px 14px; }
-        .ag-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+        .ag-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 4px; }
         .ag-kpi-v  { font-size: 18px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .ag-buckets { display: grid; grid-template-columns: repeat(6,1fr); gap: 6px; flex-shrink: 0; }
         .ag-bucket  { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: all 0.15s; }
         .ag-bucket:hover { opacity: 0.85; }
         .ag-bucket-label { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
         .ag-bucket-count { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
-        .ag-bucket-value { font-size: 11px; color: rgba(255,255,255,0.4); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+        .ag-bucket-value { font-size: 11px; color: var(--w40, rgba(255,255,255,0.4)); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
         .ag-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .ag-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .ag-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
-        .ag-note    { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
-        .ag-refresh { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.09); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.45); cursor: pointer; }
-        .ag-refresh:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
+        .ag-note    { font-size: 10px; color: var(--w25, rgba(255,255,255,0.25)); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+        .ag-refresh { display: inline-flex; align-items: center; gap: 5px; background: var(--l04, rgba(255,255,255,0.04)); border: 0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: var(--w45, rgba(255,255,255,0.45)); cursor: pointer; }
+        .ag-refresh:hover { color: var(--w70, rgba(255,255,255,0.7)); background: var(--l08, rgba(255,255,255,0.08)); }
       `}</style>
 
       <div className="ag-page">
@@ -277,7 +277,7 @@ export default function StockAgingPage() {
         {/* KPI bar */}
         <div className="ag-kpis">
           {[
-            { label: 'Total Items',    value: String(data?.summary.totalItems ?? 0),           color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Items',    value: String(data?.summary.totalItems ?? 0),           color: 'var(--text-strong, #f1ede8)', border: 'var(--l07, rgba(255,255,255,0.07))' },
             { label: 'Total Value',    value: fmtAmt(data?.summary.totalValue ?? 0),            color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.2)'   },
             { label: 'Slow Moving',    value: String(data?.summary.slowMovingCount ?? 0),       color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.15)'   },
             { label: 'Slow Mov. Value', value: fmtAmt(data?.summary.slowMovingValue ?? 0),     color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.15)'   },
@@ -299,7 +299,7 @@ export default function StockAgingPage() {
               const active = cardFilter === bucket;
               return (
                 <div key={bucket} className="ag-bucket"
-                  style={{ border: `0.5px solid ${active ? c.border : 'rgba(255,255,255,0.07)'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
+                  style={{ border: `0.5px solid ${active ? c.border : 'var(--l07, rgba(255,255,255,0.07))'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
                   onClick={() => setCardFilter(prev => prev === bucket ? null : bucket)}>
                   <div className="ag-bucket-label" style={{ color: c.color }}>{c.label}</div>
                   <div className="ag-bucket-count" style={{ color: c.color }}>{info.count}</div>
@@ -341,7 +341,7 @@ export default function StockAgingPage() {
             maxHeight="calc(100vh - 480px)"
             toolbarLeft={
               data ? (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {filtered.length} of {rows.length} positions · As of {fmtTimestamp(data.asOf)}
                 </span>
               ) : undefined

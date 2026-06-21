@@ -103,8 +103,8 @@ function PeriodModal({ open, onClose, onSaved, initial }: {
             <SearchSelect options={[{ value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }, { value: 'locked', label: 'Locked' }]} value={form.status ?? 'open'} onChange={v => setForm(f => ({ ...f, status: v as PeriodStatus }))} placeholder="Status…" minWidth={180} />
           </Field>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isCurrent ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none', background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 14px' }}>
-          <div onClick={() => setForm(f => ({ ...f, isCurrent: !f.isCurrent }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.isCurrent ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.isCurrent ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isCurrent ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', userSelect: 'none', background: 'var(--l03, rgba(255,255,255,0.03))', border: '0.5px solid var(--l07, rgba(255,255,255,0.07))', borderRadius: 8, padding: '10px 14px' }}>
+          <div onClick={() => setForm(f => ({ ...f, isCurrent: !f.isCurrent }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.isCurrent ? 'rgba(234,88,12,0.8)' : 'var(--w10, rgba(255,255,255,0.1))', border: `0.5px solid ${form.isCurrent ? 'rgba(251,146,60,0.5)' : 'var(--w15, rgba(255,255,255,0.15))'}`, position: 'relative' }}>
             <div style={{ position: 'absolute', top: 2, left: form.isCurrent ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
           </div>
           Set as current period
@@ -180,10 +180,10 @@ export default function FiscalPeriodsPage() {
   const columns = useMemo<ERPColumn<FiscalPeriod>[]>(() => [
     { key: 'periodCode', header: 'Code', width: 110, sortable: true, value: r => r.periodCode, render: r => <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.periodCode}</span> },
     { key: 'periodName', header: 'Name', sortable: true, value: r => r.periodName, render: r => <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.periodName}</span>{r.isCurrent && <CurrentBadge />}</div> },
-    { key: 'fiscalYear', header: 'Year', width: 80, sortable: true, value: r => r.fiscalYear, render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{r.fiscalYear}</span> },
-    { key: 'fiscalQuarter', header: 'Quarter', width: 90, sortable: true, value: r => r.fiscalQuarter ?? '', render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{fmt(r.fiscalQuarter)}</span> },
-    { key: 'startDate', header: 'Start Date', width: 130, sortable: true, value: r => r.startDate, render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{fmtDate(r.startDate)}</span> },
-    { key: 'endDate', header: 'End Date', width: 130, sortable: true, value: r => r.endDate, render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{fmtDate(r.endDate)}</span> },
+    { key: 'fiscalYear', header: 'Year', width: 80, sortable: true, value: r => r.fiscalYear, render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{r.fiscalYear}</span> },
+    { key: 'fiscalQuarter', header: 'Quarter', width: 90, sortable: true, value: r => r.fiscalQuarter ?? '', render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{fmt(r.fiscalQuarter)}</span> },
+    { key: 'startDate', header: 'Start Date', width: 130, sortable: true, value: r => r.startDate, render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{fmtDate(r.startDate)}</span> },
+    { key: 'endDate', header: 'End Date', width: 130, sortable: true, value: r => r.endDate, render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{fmtDate(r.endDate)}</span> },
     { key: 'status', header: 'Status', width: 100, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
     {
       key: '_actions', header: '', width: 220, sortable: false,
@@ -201,7 +201,7 @@ export default function FiscalPeriodsPage() {
             {r.status === 'closed' && btn('Reopen', 'reopen', 'var(--success, #4ade80)', 'rgba(74,222,128,0.08)', 'rgba(74,222,128,0.2)')}
             {r.status === 'closed' && btn('Lock', 'lock', 'var(--danger, #f87171)', 'rgba(248,113,113,0.08)', 'rgba(248,113,113,0.2)')}
             {r.status === 'locked' && btn('Unlock', 'unlock', 'var(--warning, #fbbf24)', 'rgba(251,191,36,0.08)', 'rgba(251,191,36,0.2)')}
-            <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', border: '0.5px solid rgba(255,255,255,0.1)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+            <button onClick={() => { setEditing(r); setModalOpen(true); }} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', color: 'var(--w55, rgba(255,255,255,0.55))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
             {r.status === 'open' && <button onClick={() => setDeleting(r)} style={{ padding: '4px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: 'var(--danger, #f87171)', border: '0.5px solid rgba(239,68,68,0.2)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>}
           </div>
         );
@@ -231,13 +231,13 @@ export default function FiscalPeriodsPage() {
             {(['open', 'closed', 'locked'] as PeriodStatus[]).map(s => {
               const c = STATUS_CONFIG[s];
               return (
-                <div key={s} className="fp-stat" style={{ border: `0.5px solid ${statCard === s ? c.border : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatCard(prev => prev === s ? '' : s)}>
+                <div key={s} className="fp-stat" style={{ border: `0.5px solid ${statCard === s ? c.border : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatCard(prev => prev === s ? '' : s)}>
                   <span className="fp-stat-label" style={{ color: c.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
                   <span className="fp-stat-value">{counts[s]}</span>
                 </div>
               );
             })}
-            <div className="fp-stat" style={{ border: `0.5px solid ${!statCard ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatCard('')}>
+            <div className="fp-stat" style={{ border: `0.5px solid ${!statCard ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatCard('')}>
               <span className="fp-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
               <span className="fp-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{periods.length}</span>
             </div>

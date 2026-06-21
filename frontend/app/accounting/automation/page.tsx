@@ -110,12 +110,12 @@ function GroupNode({
         </span>
 
         {/* Count badge */}
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', padding: '1px 7px', borderRadius: 10 }}>
+        <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', background: 'var(--l06, rgba(255,255,255,0.06))', padding: '1px 7px', borderRadius: 10 }}>
           {visible.length} module{visible.length !== 1 ? 's' : ''}
         </span>
 
         {/* Group status summary */}
-        <span style={{ fontSize: 10, color: allEnabled ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.25)', background: allEnabled ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', padding: '1px 7px', borderRadius: 10, border: `0.5px solid ${allEnabled ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+        <span style={{ fontSize: 10, color: allEnabled ? 'var(--success, #4ade80)' : 'var(--w25, rgba(255,255,255,0.25))', background: allEnabled ? 'rgba(74,222,128,0.08)' : 'var(--l04, rgba(255,255,255,0.04))', padding: '1px 7px', borderRadius: 10, border: `0.5px solid ${allEnabled ? 'rgba(74,222,128,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}` }}>
           {allEnabled ? 'All enabled' : 'Partially enabled'}
         </span>
       </div>
@@ -135,11 +135,11 @@ function GroupNode({
                   gridTemplateColumns: '28px 200px 1fr auto auto auto',
                   alignItems: 'center', gap: 0,
                   padding: '10px 14px',
-                  borderBottom: isLast ? 'none' : '0.5px solid rgba(255,255,255,0.03)',
+                  borderBottom: isLast ? 'none' : '0.5px solid var(--l03, rgba(255,255,255,0.03))',
                   background: 'rgba(0,0,0,0.15)',
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--l02, rgba(255,255,255,0.02))')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.15)')}
               >
                 {/* Tree line */}
@@ -153,11 +153,11 @@ function GroupNode({
                   <div style={{ fontSize: 12, fontWeight: 500, color: meta?.color ?? 'var(--text-primary, #e2dfd8)' }}>
                     {meta?.label ?? cfg.module}
                   </div>
-                  <div style={{ ...MONO, color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>{cfg.module}</div>
+                  <div style={{ ...MONO, color: 'var(--w20, rgba(255,255,255,0.2))', marginTop: 2 }}>{cfg.module}</div>
                 </div>
 
                 {/* Description */}
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', paddingRight: 16 }}>
+                <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', paddingRight: 16 }}>
                   {meta?.description ?? '—'}
                 </div>
 
@@ -179,9 +179,9 @@ function GroupNode({
                       style={{
                         padding: '4px 8px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
                         fontFamily: "'IBM Plex Sans',sans-serif",
-                        color:       cfg.mode === opt.value ? opt.color : 'rgba(255,255,255,0.3)',
-                        background:  cfg.mode === opt.value ? `color-mix(in srgb, ${opt.color} 9%, transparent)` : 'rgba(255,255,255,0.03)',
-                        border:      `0.5px solid ${cfg.mode === opt.value ? opt.color + '40' : 'rgba(255,255,255,0.07)'}`,
+                        color:       cfg.mode === opt.value ? opt.color : 'var(--w30, rgba(255,255,255,0.3))',
+                        background:  cfg.mode === opt.value ? `color-mix(in srgb, ${opt.color} 9%, transparent)` : 'var(--l03, rgba(255,255,255,0.03))',
+                        border:      `0.5px solid ${cfg.mode === opt.value ? opt.color + '40' : 'var(--l07, rgba(255,255,255,0.07))'}`,
                         opacity:     isBusy ? 0.5 : 1,
                         transition:  'all 0.15s',
                         whiteSpace:  'nowrap',
@@ -200,9 +200,9 @@ function GroupNode({
                     style={{
                       padding: '4px 10px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
                       fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500,
-                      color:      cfg.isEnabled ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.25)',
-                      background: cfg.isEnabled ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
-                      border:     `0.5px solid ${cfg.isEnabled ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      color:      cfg.isEnabled ? 'var(--success, #4ade80)' : 'var(--w25, rgba(255,255,255,0.25))',
+                      background: cfg.isEnabled ? 'rgba(74,222,128,0.1)' : 'var(--l04, rgba(255,255,255,0.04))',
+                      border:     `0.5px solid ${cfg.isEnabled ? 'rgba(74,222,128,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}`,
                       opacity:    isBusy ? 0.5 : 1,
                       transition: 'all 0.2s',
                       whiteSpace: 'nowrap',
@@ -210,7 +210,7 @@ function GroupNode({
                   >
                     {cfg.isEnabled ? '● On' : '○ Off'}
                   </button>
-                  <span style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.18)', minWidth: 60 }}>
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--w18, rgba(255,255,255,0.18))', minWidth: 60 }}>
                     {new Date(cfg.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
@@ -288,19 +288,19 @@ export default function AutomationConfigPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .auto-page { padding: 0 18px 24px; }
         .auto-stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-        .auto-stat { background:rgba(10,7,18,0.7); border:0.5px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 14px; }
-        .auto-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:3px; }
+        .auto-stat { background:rgba(10,7,18,0.7); border:0.5px solid var(--l08, rgba(255,255,255,0.08)); border-radius:8px; padding:8px 14px; }
+        .auto-stat-label { font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:var(--w30, rgba(255,255,255,0.3)); margin-bottom:3px; }
         .auto-stat-value { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; }
         .auto-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .auto-search { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px; }
-        .auto-search::placeholder { color:rgba(255,255,255,0.2); }
+        .auto-search { background:var(--l04, rgba(255,255,255,0.04)); border:0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; width:260px; }
+        .auto-search::placeholder { color:var(--w20, rgba(255,255,255,0.2)); }
         .auto-search:focus { border-color:rgba(251,146,60,0.4); box-shadow:0 0 0 2px rgba(234,88,12,0.08); }
-        .auto-toggle-all { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:6px 12px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; color:rgba(255,255,255,0.45); cursor:pointer; transition:all 0.15s; }
-        .auto-toggle-all:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); }
+        .auto-toggle-all { background:var(--l04, rgba(255,255,255,0.04)); border:0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius:7px; padding:6px 12px; font-size:11px; font-family:'IBM Plex Sans',sans-serif; color:var(--w45, rgba(255,255,255,0.45)); cursor:pointer; transition:all 0.15s; }
+        .auto-toggle-all:hover { background:var(--l08, rgba(255,255,255,0.08)); color:var(--w70, rgba(255,255,255,0.7)); }
         .auto-legend { display:flex; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
         .auto-wrap { background:rgba(10,7,18,0.75); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
-        .auto-tree-hdr { display:grid; grid-template-columns:28px 200px 1fr auto auto auto; gap:0; padding:7px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.45); background:rgba(251,146,60,0.04); border-bottom:0.5px solid rgba(255,255,255,0.06); }
-        .auto-loading { text-align:center; padding:52px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .auto-tree-hdr { display:grid; grid-template-columns:28px 200px 1fr auto auto auto; gap:0; padding:7px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.45); background:rgba(251,146,60,0.04); border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06)); }
+        .auto-loading { text-align:center; padding:52px; color:var(--w25, rgba(255,255,255,0.25)); font-size:13px; display:flex; align-items:center; justify-content:center; gap:10px; }
         .auto-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:auto-spin 0.7s linear infinite; }
         @keyframes auto-spin { to { transform:rotate(360deg); } }
       `}</style>
@@ -338,7 +338,7 @@ export default function AutomationConfigPage() {
             {MODE_OPTIONS.map(opt => (
               <div key={opt.value} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11 }}>
                 <span style={modeStyle(opt.value)}>{opt.label}</span>
-                <span style={{ color:'rgba(255,255,255,0.25)', fontSize:10 }}>{opt.desc}</span>
+                <span style={{ color:'var(--w25, rgba(255,255,255,0.25))', fontSize:10 }}>{opt.desc}</span>
               </div>
             ))}
           </div>

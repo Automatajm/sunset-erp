@@ -86,9 +86,9 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%', maxWidth: 280 }}>
       {keys.map(k => (
         <button key={k} onClick={() => press(k)}
-          style={{ height: 56, borderRadius: 12, fontSize: k === '<' ? 18 : 22, fontWeight: 500, fontFamily: "'IBM Plex Mono', monospace", background: k === '<' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)', border: k === '<' ? '0.5px solid rgba(248,113,113,0.2)' : '0.5px solid rgba(255,255,255,0.1)', color: k === '<' ? 'var(--danger, #f87171)' : 'var(--text-primary, #e2dfd8)', cursor: 'pointer', userSelect: 'none' }}
-          onTouchStart={e => { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.14)'; }}
-          onTouchEnd={e =>   { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)'; }}>
+          style={{ height: 56, borderRadius: 12, fontSize: k === '<' ? 18 : 22, fontWeight: 500, fontFamily: "'IBM Plex Mono', monospace", background: k === '<' ? 'rgba(248,113,113,0.12)' : 'var(--l06, rgba(255,255,255,0.06))', border: k === '<' ? '0.5px solid rgba(248,113,113,0.2)' : '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: k === '<' ? 'var(--danger, #f87171)' : 'var(--text-primary, #e2dfd8)', cursor: 'pointer', userSelect: 'none' }}
+          onTouchStart={e => { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.25)' : 'var(--w14, rgba(255,255,255,0.14))'; }}
+          onTouchEnd={e =>   { e.currentTarget.style.background = k === '<' ? 'rgba(248,113,113,0.12)' : 'var(--l06, rgba(255,255,255,0.06))'; }}>
           {k}
         </button>
       ))}
@@ -101,7 +101,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
 function ProgressBar({ counted, total }: { counted: number; total: number }) {
   const pct = total > 0 ? (counted / total) * 100 : 0;
   return (
-    <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: 4, background: 'var(--l08, rgba(255,255,255,0.08))', borderRadius: 2, overflow: 'hidden' }}>
       <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,var(--accent, #ea580c),var(--accent-mid, #f97316))', borderRadius: 2, transition: 'width 0.4s ease' }} />
     </div>
   );
@@ -271,7 +271,7 @@ export default function MobileCountPage() {
       <div style={{ height: '100dvh', background: '#06040f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
         <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(251,146,60,0.3)', borderTopColor: 'var(--accent-strong, #fb923c)', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Loading session...</span>
+        <span style={{ fontSize: 13, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Loading session...</span>
       </div>
     );
   }
@@ -287,7 +287,7 @@ export default function MobileCountPage() {
         <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--success, #4ade80)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           {hasAssignments ? 'Your assigned lines are all counted!' : 'All items counted!'}
         </div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: 'var(--w35, rgba(255,255,255,0.35))', textAlign: 'center', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.6 }}>
           {hasAssignments
             ? `You were assigned ${myAssignedCount} line${myAssignedCount !== 1 ? 's' : ''}. Return to the supervisor to complete the session.`
             : 'Return to the desktop view to review variances and submit for approval.'
@@ -329,10 +329,10 @@ export default function MobileCountPage() {
               Back
             </button>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 {session.sessionNumber}
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+              <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))' }}>
                 {session.warehouse.code} - {session.warehouse.name}
               </div>
               {/* Assignment badge */}
@@ -346,7 +346,7 @@ export default function MobileCountPage() {
               {/* Pending/All toggle */}
               <button
                 onClick={() => { setShowAll(a => !a); setCursor(0); }}
-                style={{ background: showAll ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.05)', border: `0.5px solid ${showAll ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, padding: '6px 10px', fontSize: 11, color: showAll ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                style={{ background: showAll ? 'rgba(251,146,60,0.12)' : 'var(--l05, rgba(255,255,255,0.05))', border: `0.5px solid ${showAll ? 'rgba(251,146,60,0.3)' : 'var(--w10, rgba(255,255,255,0.1))'}`, borderRadius: 8, padding: '6px 10px', fontSize: 11, color: showAll ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))', cursor: 'pointer' }}>
                 {showAll ? 'All' : 'Pending'}
               </button>
               {/* Scan button */}
@@ -370,7 +370,7 @@ export default function MobileCountPage() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 16px', gap: 10, overflow: 'hidden' }}>
 
           {/* Item card */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${savedFlash ? 'rgba(74,222,128,0.4)' : !isMyLine ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 14, padding: '14px 16px', flexShrink: 0, transition: 'border-color 0.3s' }}>
+          <div style={{ background: 'var(--l03, rgba(255,255,255,0.03))', border: `0.5px solid ${savedFlash ? 'rgba(74,222,128,0.4)' : !isMyLine ? 'rgba(251,191,36,0.2)' : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 14, padding: '14px 16px', flexShrink: 0, transition: 'border-color 0.3s' }}>
             
             {/* Not-my-line warning */}
             {!isMyLine && (
@@ -381,13 +381,13 @@ export default function MobileCountPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <button onClick={goPrev} disabled={cursor === 0}
-                style={{ width: 40, height: 40, borderRadius: 10, background: cursor === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.08)', fontSize: 18, color: cursor === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', cursor: cursor === 0 ? 'not-allowed' : 'pointer' }}>
+                style={{ width: 40, height: 40, borderRadius: 10, background: cursor === 0 ? 'var(--l02, rgba(255,255,255,0.02))' : 'var(--l07, rgba(255,255,255,0.07))', border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', fontSize: 18, color: cursor === 0 ? 'var(--w15, rgba(255,255,255,0.15))' : 'var(--w50, rgba(255,255,255,0.5))', cursor: cursor === 0 ? 'not-allowed' : 'pointer' }}>
                 {'<'}
               </button>
               <div style={{ textAlign: 'center', flex: 1, padding: '0 12px' }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>{cursor + 1} of {totalLines}</div>
+                <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 2 }}>{cursor + 1} of {totalLines}</div>
                 <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{line.item.code}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{line.item.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--w60, rgba(255,255,255,0.6))', marginTop: 2 }}>{line.item.name}</div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 6 }}>
                   <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, color: itemTypeColor, background: `color-mix(in srgb, ${itemTypeColor} 9%, transparent)`, border: `0.5px solid color-mix(in srgb, ${itemTypeColor} 19%, transparent)` }}>
                     {line.item.itemType.replace('_', ' ')}
@@ -398,15 +398,15 @@ export default function MobileCountPage() {
                 </div>
               </div>
               <button onClick={goNext} disabled={cursor === totalLines - 1}
-                style={{ width: 40, height: 40, borderRadius: 10, background: cursor === totalLines - 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.08)', fontSize: 18, color: cursor === totalLines - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)', cursor: cursor === totalLines - 1 ? 'not-allowed' : 'pointer' }}>
+                style={{ width: 40, height: 40, borderRadius: 10, background: cursor === totalLines - 1 ? 'var(--l02, rgba(255,255,255,0.02))' : 'var(--l07, rgba(255,255,255,0.07))', border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', fontSize: 18, color: cursor === totalLines - 1 ? 'var(--w15, rgba(255,255,255,0.15))' : 'var(--w50, rgba(255,255,255,0.5))', cursor: cursor === totalLines - 1 ? 'not-allowed' : 'pointer' }}>
                 {'>'}
               </button>
             </div>
 
             {/* System quantities */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3 }}>System ({line.storageUom})</div>
+              <div style={{ background: 'var(--l03, rgba(255,255,255,0.03))', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: 'var(--w30, rgba(255,255,255,0.3))', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3 }}>System ({line.storageUom})</div>
                 <div style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)', fontFamily: "'IBM Plex Mono',monospace" }}>{fmtQty(line.systemStorageQty)}</div>
               </div>
               <div style={{ background: 'rgba(251,146,60,0.05)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
@@ -418,7 +418,7 @@ export default function MobileCountPage() {
             {/* Variance if counted */}
             {isCountedLine && line.variancePurchaseQty !== null && (
               <div style={{ marginTop: 8, background: `color-mix(in srgb, ${varColor} 6%, transparent)`, border: `0.5px solid color-mix(in srgb, ${varColor} 19%, transparent)`, borderRadius: 8, padding: '7px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Variance ({line.purchaseUom})</span>
+                <span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Variance ({line.purchaseUom})</span>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: 15, fontWeight: 600, color: varColor, fontFamily: "'IBM Plex Mono',monospace" }}>
                     {line.variancePurchaseQty > 0 ? '+' : ''}{fmtQty(line.variancePurchaseQty)}
@@ -435,25 +435,25 @@ export default function MobileCountPage() {
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button
               onClick={() => { setActiveField('storage'); setInput(line.countedStorageQty !== null ? String(line.countedStorageQty) : ''); }}
-              style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: activeField === 'storage' ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.04)', color: activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.4)', outline: activeField === 'storage' ? '1px solid rgba(96,165,250,0.3)' : 'none' }}>
+              style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: activeField === 'storage' ? 'rgba(96,165,250,0.15)' : 'var(--l04, rgba(255,255,255,0.04))', color: activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--w40, rgba(255,255,255,0.4))', outline: activeField === 'storage' ? '1px solid rgba(96,165,250,0.3)' : 'none' }}>
               Storage - {line.storageUom}
             </button>
             <button
               onClick={() => { setActiveField('purchase'); setInput(line.countedPurchaseQty !== null ? String(line.countedPurchaseQty) : ''); }}
-              style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: activeField === 'purchase' ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.04)', color: activeField === 'purchase' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', outline: activeField === 'purchase' ? '1px solid rgba(251,146,60,0.3)' : 'none' }}>
+              style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: activeField === 'purchase' ? 'rgba(251,146,60,0.15)' : 'var(--l04, rgba(255,255,255,0.04))', color: activeField === 'purchase' ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))', outline: activeField === 'purchase' ? '1px solid rgba(251,146,60,0.3)' : 'none' }}>
               Purchase - {line.purchaseUom}
             </button>
           </div>
 
           {/* Big qty display */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${activeField === 'storage' ? 'rgba(96,165,250,0.25)' : 'rgba(251,146,60,0.25)'}`, borderRadius: 14, padding: '16px 20px', textAlign: 'center', flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 4, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ background: 'var(--l03, rgba(255,255,255,0.03))', border: `1px solid ${activeField === 'storage' ? 'rgba(96,165,250,0.25)' : 'rgba(251,146,60,0.25)'}`, borderRadius: 14, padding: '16px 20px', textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 4, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Counting in {activeField === 'storage' ? line.storageUom : line.purchaseUom}
             </div>
-            <div style={{ fontSize: 42, fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", color: input ? (activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--accent-strong, #fb923c)') : 'rgba(255,255,255,0.15)', letterSpacing: '-0.02em', minHeight: 52 }}>
+            <div style={{ fontSize: 42, fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", color: input ? (activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--accent-strong, #fb923c)') : 'var(--w15, rgba(255,255,255,0.15))', letterSpacing: '-0.02em', minHeight: 52 }}>
               {formatDisplay(displayQty)}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 2 }}>
               {activeField === 'storage' ? line.storageUom : line.purchaseUom} - WAC {fmtAmt(line.unitCostSnapshot)}/{line.purchaseUom}
             </div>
           </div>
@@ -482,13 +482,13 @@ export default function MobileCountPage() {
             <button
               onClick={() => handleSave(false)}
               disabled={!canSave || saving || !isMyLine}
-              style={{ flex: 1, height: 52, borderRadius: 12, fontSize: 14, fontWeight: 500, background: canSave && isMyLine ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.03)', border: `0.5px solid ${canSave && isMyLine ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.06)'}`, color: canSave && isMyLine ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed' }}>
+              style={{ flex: 1, height: 52, borderRadius: 12, fontSize: 14, fontWeight: 500, background: canSave && isMyLine ? 'rgba(96,165,250,0.1)' : 'var(--l03, rgba(255,255,255,0.03))', border: `0.5px solid ${canSave && isMyLine ? 'rgba(96,165,250,0.3)' : 'var(--l06, rgba(255,255,255,0.06))'}`, color: canSave && isMyLine ? 'var(--accent-blue, #60a5fa)' : 'var(--w20, rgba(255,255,255,0.2))', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed' }}>
               Save
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={!canSave || saving || !isMyLine}
-              style={{ flex: 2, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, background: canSave && isMyLine ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))' : 'rgba(255,255,255,0.04)', border: 'none', color: canSave && isMyLine ? 'white' : 'rgba(255,255,255,0.2)', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
+              style={{ flex: 2, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, background: canSave && isMyLine ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))' : 'var(--l04, rgba(255,255,255,0.04))', border: 'none', color: canSave && isMyLine ? 'white' : 'var(--w20, rgba(255,255,255,0.2))', cursor: canSave && isMyLine ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
               {saving ? 'Saving...' : !isMyLine ? 'Not your line' : cursor < totalLines - 1 ? 'Save & Next' : 'Save OK'}
             </button>
           </div>

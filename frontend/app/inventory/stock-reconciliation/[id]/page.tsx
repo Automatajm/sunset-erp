@@ -64,7 +64,7 @@ function fmtDate(d: string) {
 }
 
 const STATUS_CFG: Record<SessionStatus, { color: string; bg: string; border: string; label: string }> = {
-  draft:            { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Draft'            },
+  draft:            { color: 'var(--w40, rgba(255,255,255,0.4))', bg: 'var(--l05, rgba(255,255,255,0.05))', border: 'var(--w10, rgba(255,255,255,0.1))', label: 'Draft'            },
   in_progress:      { color: 'var(--accent-blue, #60a5fa)',               bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',  label: 'In Progress'      },
   pending_approval: { color: 'var(--warning, #fbbf24)',               bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)', label: 'Pending Approval' },
   approved:         { color: 'var(--accent-violet, #a78bfa)',               bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Approved'         },
@@ -73,7 +73,7 @@ const STATUS_CFG: Record<SessionStatus, { color: string; bg: string; border: str
 };
 
 const LINE_CFG: Record<LineStatus, { color: string; label: string }> = {
-  pending:   { color: 'rgba(255,255,255,0.3)', label: 'Pending'  },
+  pending:   { color: 'var(--w30, rgba(255,255,255,0.3))', label: 'Pending'  },
   counted:   { color: 'var(--accent-blue, #60a5fa)',               label: 'Counted'  },
   confirmed: { color: 'var(--accent-violet, #a78bfa)',               label: 'Confirmed'},
   adjusted:  { color: 'var(--success, #4ade80)',               label: 'Adjusted' },
@@ -85,7 +85,7 @@ function QtyCell({ qty, uom, color }: { qty: number | null; uom: string; color: 
   return (
     <div style={{ textAlign: 'right' }}>
       <div style={{ ...MONO, fontSize: 12, color }}>{fmtQty(qty)}</div>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{uom}</div>
+      <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{uom}</div>
     </div>
   );
 }
@@ -143,23 +143,23 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
     textAlign: 'right' as const,
   };
   const INP_OFF: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.02)',
-    border: '0.5px solid rgba(255,255,255,0.06)',
+    background: 'var(--l02, rgba(255,255,255,0.02))',
+    border: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
     borderRadius: 5, padding: '4px 8px', fontSize: 12,
     fontFamily: "'IBM Plex Mono',monospace",
-    color: 'rgba(255,255,255,0.25)', outline: 'none', width: 88,
+    color: 'var(--w25, rgba(255,255,255,0.25))', outline: 'none', width: 88,
     textAlign: 'right' as const, cursor: 'not-allowed',
   };
   const SWITCH_BTN: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)',
-    border: '0.5px solid rgba(255,255,255,0.1)',
+    background: 'var(--l04, rgba(255,255,255,0.04))',
+    border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
     borderRadius: 4, padding: '1px 6px', fontSize: 9,
     fontFamily: "'IBM Plex Sans',sans-serif",
-    color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+    color: 'var(--w35, rgba(255,255,255,0.35))', cursor: 'pointer',
   };
 
   return (
-    <tr style={{ borderBottom: '0.5px solid rgba(255,255,255,0.05)' }}>
+    <tr style={{ borderBottom: '0.5px solid var(--l05, rgba(255,255,255,0.05))' }}>
 
       {/* Status */}
       <td style={{ padding: '8px 12px', width: 90 }}>
@@ -171,9 +171,9 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
       {/* Item */}
       <td style={{ padding: '8px 12px' }}>
         <div style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{line.item.code}</div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{line.item.name}</div>
+        <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 1 }}>{line.item.name}</div>
         {line.lotNumber && (
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 1 }}>Lot: {line.lotNumber}</div>
+          <div style={{ fontSize: 9, color: 'var(--w20, rgba(255,255,255,0.2))', marginTop: 1 }}>Lot: {line.lotNumber}</div>
         )}
       </td>
 
@@ -205,7 +205,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
               />
             </div>
-            <span style={{ fontSize: 9, color: activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: 9, color: activeField === 'storage' ? 'var(--accent-blue, #60a5fa)' : 'var(--w20, rgba(255,255,255,0.2))' }}>
               {line.storageUom}{activeField !== 'storage' ? ' (auto)' : ''}
             </span>
           </div>
@@ -232,7 +232,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
               />
             </div>
-            <span style={{ fontSize: 9, color: activeField === 'purchase' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: 9, color: activeField === 'purchase' ? 'var(--accent-strong, #fb923c)' : 'var(--w20, rgba(255,255,255,0.2))' }}>
               {line.purchaseUom}{activeField !== 'purchase' ? ' (auto)' : ''}
             </span>
           </div>
@@ -248,10 +248,10 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
             <div style={{ ...MONO, fontSize: 12, fontWeight: 600, color: varColor }}>
               {(line.variancePurchaseQty > 0 ? '+' : '') + fmtQty(line.variancePurchaseQty)}
             </div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{line.purchaseUom}</div>
+            <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{line.purchaseUom}</div>
           </div>
         ) : (
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>
+          <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>
         )}
       </td>
 
@@ -259,12 +259,12 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
       <td style={{ padding: '8px 12px', textAlign: 'right' }}>
         {line.varianceValue !== null
           ? <span style={{ ...MONO, fontSize: 12, fontWeight: 600, color: varColor }}>{fmtAmt(line.varianceValue)}</span>
-          : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>—</span>}
+          : <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>}
       </td>
 
       {/* WAC */}
       <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-        <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{fmtAmt(line.unitCostSnapshot)}</span>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))' }}>{fmtAmt(line.unitCostSnapshot)}</span>
       </td>
 
       {/* Actions */}
@@ -279,7 +279,7 @@ function CountRow({ line, canEdit, onSave }: CountRowProps) {
             </button>
             <button
               onClick={() => setEditing(false)}
-              style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+              style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '3px 8px', fontSize: 10, color: 'var(--w40, rgba(255,255,255,0.4))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
               ✕
             </button>
           </div>
@@ -319,7 +319,7 @@ function ApproveModal({ onClose, onApprove }: { onClose: () => void; onApprove: 
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'var(--bg, #0a0712)', border: '0.5px solid rgba(167,139,250,0.3)', borderRadius: 12, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
         <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)', marginBottom: 16 }}>Approve Session</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Approval Notes (optional)</div>
+        <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>Approval Notes (optional)</div>
         <textarea style={INP} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes for the audit trail…" />
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
@@ -387,7 +387,7 @@ export default function StockReconciliationDetailPage() {
   if (loading) {
     return (
       <ERPShell breadcrumbs={['Home', 'Inventory', 'Stock Reconciliation', '…']} title="Loading…">
-        <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Loading session…</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 13 }}>Loading session…</div>
       </ERPShell>
     );
   }
@@ -408,7 +408,7 @@ export default function StockReconciliationDetailPage() {
   })();
 
   const SEL: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)',
+    background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))',
     borderRadius: 7, padding: '6px 10px', fontSize: 12,
     fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', cursor: 'pointer',
@@ -422,16 +422,16 @@ export default function StockReconciliationDetailPage() {
         .srd-hdr   { display:flex; align-items:center; gap:12px; flex-shrink:0; flex-wrap:wrap; }
         .srd-kpis  { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; flex-shrink:0; }
         .srd-kpi   { background:rgba(10,7,18,0.7); border-radius:8px; padding:9px 14px; }
-        .srd-kpi-l { font-size:9px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:4px; }
+        .srd-kpi-l { font-size:9px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--w30, rgba(255,255,255,0.3)); margin-bottom:4px; }
         .srd-kpi-v { font-size:18px; font-weight:500; font-family:'IBM Plex Mono',monospace; }
         .srd-acts  { display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex-shrink:0; }
-        .srd-wrap  { flex:1; min-height:0; overflow-y:auto; background:rgba(10,7,18,0.5); border:0.5px solid rgba(255,255,255,0.07); border-radius:9px; }
+        .srd-wrap  { flex:1; min-height:0; overflow-y:auto; background:rgba(10,7,18,0.5); border:0.5px solid var(--l07, rgba(255,255,255,0.07)); border-radius:9px; }
         .srd-tbl   { width:100%; border-collapse:collapse; }
-        .srd-th    { padding:8px 12px; font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.3); text-align:left; border-bottom:0.5px solid rgba(255,255,255,0.08); background:rgba(10,7,18,0.8); position:sticky; top:0; z-index:1; white-space:nowrap; }
+        .srd-th    { padding:8px 12px; font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--w30, rgba(255,255,255,0.3)); text-align:left; border-bottom:0.5px solid var(--l08, rgba(255,255,255,0.08)); background:rgba(10,7,18,0.8); position:sticky; top:0; z-index:1; white-space:nowrap; }
         .srd-th.r  { text-align:right; }
         .srd-err   { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--danger-subtle, #fca5a5); flex-shrink:0; }
         .srd-btn   { border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; cursor:pointer; }
-        .srd-hint  { font-size:10px; color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.03); border:0.5px solid rgba(255,255,255,0.07); border-radius:6px; padding:5px 10px; flex-shrink:0; }
+        .srd-hint  { font-size:10px; color:var(--w25, rgba(255,255,255,0.25)); background:var(--l03, rgba(255,255,255,0.03)); border:0.5px solid var(--l07, rgba(255,255,255,0.07)); border-radius:6px; padding:5px 10px; flex-shrink:0; }
       `}</style>
 
       <div className="srd-page">
@@ -440,7 +440,7 @@ export default function StockReconciliationDetailPage() {
         <div className="srd-hdr">
           <button
             onClick={() => router.push('/inventory/stock-reconciliation')}
-            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.09)', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+            style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--l09, rgba(255,255,255,0.09))', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w40, rgba(255,255,255,0.4))', cursor: 'pointer' }}>
             ← Back
           </button>
           <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: sc.color, background: sc.bg, border: `0.5px solid ${sc.border}` }}>
@@ -449,11 +449,11 @@ export default function StockReconciliationDetailPage() {
           <span style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>
             {session.warehouse.code} — {session.warehouse.name}
           </span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+          <span style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))' }}>
             Count Date: {fmtDate(session.countDate)}
           </span>
           {session.description && (
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontStyle: 'italic' }}>
               {session.description}
             </span>
           )}
@@ -465,11 +465,11 @@ export default function StockReconciliationDetailPage() {
         {/* KPIs */}
         <div className="srd-kpis">
           {[
-            { label: 'Total Items',      value: String(session.lines.length), color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Items',      value: String(session.lines.length), color: 'var(--text-strong, #f1ede8)', border: 'var(--l07, rgba(255,255,255,0.07))' },
             { label: 'Counted',          value: String(countedCount),         color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
             { label: 'Pending',          value: String(pendingCount),         color: pendingCount > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)', border: pendingCount > 0 ? 'rgba(251,191,36,0.15)' : 'rgba(74,222,128,0.15)' },
             { label: 'Lines w/ Variance',value: String(session.linesWithVariance ?? displayLines.filter(l => (l.variancePurchaseQty ?? 0) !== 0).length), color: 'var(--warning, #fbbf24)', border: 'rgba(251,191,36,0.15)' },
-            { label: 'Total Variance',   value: fmtAmt(session.totalVarianceValue ?? totalVar), color: totalVar < 0 ? 'var(--danger, #f87171)' : totalVar > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)', border: 'rgba(255,255,255,0.07)' },
+            { label: 'Total Variance',   value: fmtAmt(session.totalVarianceValue ?? totalVar), color: totalVar < 0 ? 'var(--danger, #f87171)' : totalVar > 0 ? 'var(--warning, #fbbf24)' : 'var(--success, #4ade80)', border: 'var(--l07, rgba(255,255,255,0.07))' },
           ].map(k => (
             <div key={k.label} className="srd-kpi" style={{ border: `0.5px solid ${k.border}` }}>
               <div className="srd-kpi-l">{k.label}</div>
@@ -499,7 +499,7 @@ export default function StockReconciliationDetailPage() {
           {session.status === 'in_progress' && (
             <button className="srd-btn" disabled={actionLoading || pendingCount > 0}
               onClick={() => doAction('submit')}
-              style={{ background: pendingCount > 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#b45309,#d97706,#f59e0b)', color: pendingCount > 0 ? 'rgba(255,255,255,0.2)' : 'white', cursor: pendingCount > 0 ? 'not-allowed' : 'pointer' }}>
+              style={{ background: pendingCount > 0 ? 'var(--l05, rgba(255,255,255,0.05))' : 'linear-gradient(135deg,#b45309,#d97706,#f59e0b)', color: pendingCount > 0 ? 'var(--w20, rgba(255,255,255,0.2))' : 'white', cursor: pendingCount > 0 ? 'not-allowed' : 'pointer' }}>
               {pendingCount > 0 ? `Submit (${pendingCount} pending)` : 'Submit for Approval'}
             </button>
           )}
@@ -571,7 +571,7 @@ export default function StockReconciliationDetailPage() {
             <tbody>
               {displayLines.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+                  <td colSpan={10} style={{ padding: 32, textAlign: 'center', color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 13 }}>
                     No lines to display
                   </td>
                 </tr>

@@ -118,7 +118,7 @@ export default function LoginPage() {
           background: rgba(12,8,22,0.95);
           border: 0.5px solid rgba(251,146,60,0.2);
           border-radius: 16px;
-          box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02) inset;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px var(--l02, rgba(255,255,255,0.02)) inset;
           backdrop-filter: blur(24px);
           overflow: visible; position: relative;
         }
@@ -131,7 +131,7 @@ export default function LoginPage() {
         /* Clip header so rounded corners still show at top */
         .login-hdr {
           padding: 32px 32px 24px;
-          border-bottom: 0.5px solid rgba(255,255,255,0.05);
+          border-bottom: 0.5px solid var(--l05, rgba(255,255,255,0.05));
           text-align: center;
           border-radius: 16px 16px 0 0;
           overflow: hidden;
@@ -155,20 +155,20 @@ export default function LoginPage() {
           font-size: 26px; font-weight: 300; letter-spacing: 0.1em; color: var(--white, #fff);
         }
         .login-wordmark span { color: var(--accent-strong, #fb923c); }
-        .login-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.06em; }
+        .login-sub { font-size: 11px; color: var(--w30, rgba(255,255,255,0.3)); margin-top: 4px; letter-spacing: 0.06em; }
         .login-field { display: flex; flex-direction: column; gap: 5px; }
         .login-label {
           font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
           color: rgba(251,146,60,0.6);
         }
         .login-input {
-          background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1);
+          background: var(--l04, rgba(255,255,255,0.04)); border: 0.5px solid var(--w10, rgba(255,255,255,0.1));
           border-radius: 8px; padding: 10px 14px; font-size: 13px;
           font-family: 'IBM Plex Sans', sans-serif; color: var(--text-strong, #f1ede8); outline: none;
           transition: border-color 0.2s, box-shadow 0.2s;
         }
         .login-input:focus { border-color: rgba(251,146,60,0.4); box-shadow: 0 0 0 2px rgba(234,88,12,0.1); }
-        .login-input::placeholder { color: rgba(255,255,255,0.2); }
+        .login-input::placeholder { color: var(--w20, rgba(255,255,255,0.2)); }
         .login-btn {
           padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 500;
           font-family: 'IBM Plex Sans', sans-serif; color: white; border: none; cursor: pointer;
@@ -184,20 +184,20 @@ export default function LoginPage() {
         }
         .login-step {
           display: flex; align-items: center; gap: 8px;
-          font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em;
+          font-size: 10px; color: var(--w30, rgba(255,255,255,0.3)); text-transform: uppercase; letter-spacing: 0.08em;
         }
         .login-step-dot {
           width: 20px; height: 20px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
           font-size: 10px; font-weight: 600;
         }
-        .login-step-line { flex: 1; height: 0.5px; background: rgba(255,255,255,0.08); }
+        .login-step-line { flex: 1; height: 0.5px; background: var(--l08, rgba(255,255,255,0.08)); }
 
         /* Tenant dropdown — identical look to original */
         .td-trigger {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 14px; background: rgba(255,255,255,0.04);
-          border: 0.5px solid rgba(255,255,255,0.1); border-radius: 8px;
+          padding: 10px 14px; background: var(--l04, rgba(255,255,255,0.04));
+          border: 0.5px solid var(--w10, rgba(255,255,255,0.1)); border-radius: 8px;
           cursor: pointer; transition: border-color 0.2s;
         }
         .td-trigger:hover { border-color: rgba(251,146,60,0.3); }
@@ -211,7 +211,7 @@ export default function LoginPage() {
           display: flex; flex-direction: column;
         }
         @keyframes dd-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-        .td-search { padding: 10px 12px; border-bottom: 0.5px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+        .td-search { padding: 10px 12px; border-bottom: 0.5px solid var(--l06, rgba(255,255,255,0.06)); flex-shrink: 0; }
         .td-list {
           max-height: 220px; overflow-y: auto; overflow-x: hidden;
           padding: 6px; display: flex; flex-direction: column; gap: 2px;
@@ -228,7 +228,7 @@ export default function LoginPage() {
         }
         .td-item:hover { background: rgba(251,146,60,0.08); }
         .td-item-sel { background: rgba(251,146,60,0.1) !important; }
-        .td-empty { padding: 16px 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.3); }
+        .td-empty { padding: 16px 12px; text-align: center; font-size: 12px; color: var(--w30, rgba(255,255,255,0.3)); }
       `}</style>
 
       <div className="login-root" onKeyDown={handleKey}>
@@ -259,14 +259,14 @@ export default function LoginPage() {
               }}>
                 {step === 'credentials' ? '1' : '✓'}
               </div>
-              <span style={{ color: step === 'credentials' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>Credentials</span>
+              <span style={{ color: step === 'credentials' ? 'var(--accent-strong, #fb923c)' : 'var(--w30, rgba(255,255,255,0.3))' }}>Credentials</span>
               <div className="login-step-line" />
               <div className="login-step-dot" style={{
-                background: step === 'tenant' ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.04)',
-                color:      step === 'tenant' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.2)',
-                border:     `0.5px solid ${step === 'tenant' ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                background: step === 'tenant' ? 'rgba(251,146,60,0.2)' : 'var(--l04, rgba(255,255,255,0.04))',
+                color:      step === 'tenant' ? 'var(--accent-strong, #fb923c)' : 'var(--w20, rgba(255,255,255,0.2))',
+                border:     `0.5px solid ${step === 'tenant' ? 'rgba(251,146,60,0.3)' : 'var(--l08, rgba(255,255,255,0.08))'}`,
               }}>2</div>
-              <span style={{ color: step === 'tenant' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.25)' }}>Company</span>
+              <span style={{ color: step === 'tenant' ? 'var(--accent-strong, #fb923c)' : 'var(--w25, rgba(255,255,255,0.25))' }}>Company</span>
             </div>
 
             {/* Step 1 */}
@@ -292,7 +292,7 @@ export default function LoginPage() {
             {/* Step 2 */}
             {step === 'tenant' && (
               <>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+                <div style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))', lineHeight: 1.6 }}>
                   Your account has access to multiple companies.<br/>
                   Select which one you want to work in.
                 </div>
@@ -308,9 +308,9 @@ export default function LoginPage() {
                         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'rgba(251,146,60,0.6)' }}>{tenantSel.code}</span>
                       </div>
                     ) : (
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Search and select company...</span>
+                      <span style={{ fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))' }}>Search and select company...</span>
                     )}
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{ddOpen ? '▲' : '▼'}</span>
+                    <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))' }}>{ddOpen ? '▲' : '▼'}</span>
                   </div>
 
                   {ddOpen && (
@@ -334,7 +334,7 @@ export default function LoginPage() {
                             onClick={() => { setTenantSel(t); setDdOpen(false); setTenantQ(''); }}>
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 500, color: tenantSel?.id === t.id ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)' }}>{t.name}</div>
-                              {t.industry && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{t.industry}</div>}
+                              {t.industry && <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 1 }}>{t.industry}</div>}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                               <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.08)', padding: '1px 6px', borderRadius: 4 }}>{t.code}</span>
@@ -355,13 +355,13 @@ export default function LoginPage() {
 
                 <button
                   onClick={() => { setStep('credentials'); setError(''); setTenantSel(null); setTempToken(''); }}
-                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textAlign: 'center' }}>
+                  style={{ background: 'none', border: 'none', color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", textAlign: 'center' }}>
                   ← Back to credentials
                 </button>
               </>
             )}
 
-            <div style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.05em', marginTop: 4 }}>
+            <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--w15, rgba(255,255,255,0.15))', letterSpacing: '0.05em', marginTop: 4 }}>
               Sunset ERP · Powered by Automata JM
             </div>
           </div>

@@ -103,7 +103,7 @@ export default function UomCatalogPage() {
     {
       key: 'symbol', header: 'Symbol', width: 100, sortable: true,
       value: r => r.symbol ?? '',
-      render: r => <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{r.symbol ?? '—'}</span>,
+      render: r => <span style={{ color: 'var(--w40, rgba(255,255,255,0.4))', fontSize: 12 }}>{r.symbol ?? '—'}</span>,
     },
     {
       key: 'type', header: 'Type', width: 130, sortable: true,
@@ -120,7 +120,7 @@ export default function UomCatalogPage() {
       value: r => r.isBase ? 'Base' : '',
       render: r => r.isBase
         ? <span style={{ fontSize: 11, color: 'var(--success, #4ade80)', background: 'rgba(74,222,128,0.08)', border: '0.5px solid rgba(74,222,128,0.2)', padding: '2px 9px', borderRadius: 20 }}>Base</span>
-        : <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span>,
+        : <span style={{ color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>—</span>,
     },
   ], []);
 
@@ -129,12 +129,12 @@ export default function UomCatalogPage() {
     {
       key: 'from', header: 'From', sortable: true,
       value: r => r.fromUom.code,
-      render: r => <span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{r.fromUom.code}</span> <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>({r.fromUom.name})</span></span>,
+      render: r => <span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{r.fromUom.code}</span> <span style={{ color: 'var(--w40, rgba(255,255,255,0.4))', fontSize: 12 }}>({r.fromUom.name})</span></span>,
     },
     {
       key: 'to', header: 'To', sortable: true,
       value: r => r.toUom.code,
-      render: r => <span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{r.toUom.code}</span> <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>({r.toUom.name})</span></span>,
+      render: r => <span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{r.toUom.code}</span> <span style={{ color: 'var(--w40, rgba(255,255,255,0.4))', fontSize: 12 }}>({r.toUom.name})</span></span>,
     },
     {
       key: 'factor', header: 'Factor', width: 160, align: 'right', sortable: true,
@@ -156,7 +156,7 @@ export default function UomCatalogPage() {
         .uom-tabs { display:flex; gap:4px; margin-bottom:14px; flex-shrink:0; }
         .uom-tab { padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:0.5px solid transparent; transition:all 0.15s; color:var(--w40, rgba(255,255,255,0.4)); background:var(--l04, rgba(255,255,255,0.04)); }
         .uom-tab-active { color:var(--accent-strong, #fb923c); background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); }
-        .uom-input { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .uom-input { background:var(--l04, rgba(255,255,255,0.04)); border:0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
         .uom-input:focus { border-color:rgba(251,146,60,0.4); }
         .uom-converter { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; padding:16px 18px; margin-bottom:14px; flex-shrink:0; }
         .uom-conv-hdr { font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:rgba(251,146,60,0.55); margin-bottom:12px; }
@@ -183,7 +183,7 @@ export default function UomCatalogPage() {
             <div style={{ width: 150 }}>
               <SearchSelect options={codeOpts} value={from} onChange={setFrom} placeholder="From…" minWidth={220} />
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>→</span>
+            <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 13 }}>→</span>
             <div style={{ width: 150 }}>
               <SearchSelect options={codeOpts} value={to} onChange={setTo} placeholder="To…" minWidth={220} />
             </div>

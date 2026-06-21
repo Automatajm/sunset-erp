@@ -69,7 +69,7 @@ function MacroModal({ open, onClose, onSaved, initial }: {
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 6, padding: '3px 10px' }}>
             {initial?.code ?? 'Auto (MC-YYYY-NNNN)'}
           </span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>auto-generated</span>
+          <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>auto-generated</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -134,7 +134,7 @@ export default function MacroCategoriesPage() {
     {
       key: 'description', header: 'Description', sortable: false,
       value: r => r.description ?? '',
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r.description || '—'}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.description || '—'}</span>,
     },
     {
       key: 'categories', header: 'Categories', width: 130, align: 'center', sortable: true,
@@ -145,7 +145,7 @@ export default function MacroCategoriesPage() {
       key: 'isActive', header: 'Status', width: 100, sortable: true,
       value: r => r.isActive ? 'Active' : 'Inactive',
       render: r => (
-        <span style={{ fontSize: 11, color: r.isActive ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)', background: r.isActive ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 9px', borderRadius: 20 }}>
+        <span style={{ fontSize: 11, color: r.isActive ? 'var(--success, #4ade80)' : 'var(--w30, rgba(255,255,255,0.3))', background: r.isActive ? 'rgba(74,222,128,0.08)' : 'var(--l04, rgba(255,255,255,0.04))', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}`, padding: '2px 9px', borderRadius: 20 }}>
           {r.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
@@ -155,7 +155,7 @@ export default function MacroCategoriesPage() {
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={e => { e.stopPropagation(); setEditing(r); setModalOpen(true); }}
-            style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+            style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
             Edit
           </button>
           <button onClick={e => { e.stopPropagation(); setDeleting(r); }}

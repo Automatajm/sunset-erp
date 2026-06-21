@@ -49,7 +49,7 @@ const ITEM_TYPE_CFG: Record<string, { color: string; label: string }> = {
   finished_good: { color: 'var(--success, #4ade80)', label: 'Finished Good' },
   raw_material:  { color: 'var(--accent-blue, #60a5fa)', label: 'Raw Material'  },
   consumable:    { color: 'var(--warning, #fbbf24)', label: 'Consumable'    },
-  service:       { color: 'rgba(255,255,255,0.35)', label: 'Service' },
+  service:       { color: 'var(--w35, rgba(255,255,255,0.35))', label: 'Service' },
 };
 
 const EMPTY_FORM: CreateStockTransactionDto = {
@@ -87,7 +87,7 @@ function getEffectiveSign(r: LedgerRow): number {
 }
 
 function TxBadge({ type }: { type: string }) {
-  const c = TX_TYPES.find(t => t.value === type) ?? { color: 'var(--text-primary, #e2dfd8)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
+  const c = TX_TYPES.find(t => t.value === type) ?? { color: 'var(--text-primary, #e2dfd8)', bg: 'var(--l06, rgba(255,255,255,0.06))', border: 'var(--w10, rgba(255,255,255,0.1))', sign: '·', label: type };
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 500, color: c.color, background: c.bg, border: `0.5px solid ${c.border}`, whiteSpace: 'nowrap' }}>
       <span style={{ fontSize: 11 }}>{c.sign}</span>{c.label}
@@ -135,8 +135,8 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
   };
   const SEC: React.CSSProperties = {
     fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.2)', paddingTop: 8,
-    borderTop: '0.5px solid rgba(255,255,255,0.06)', marginTop: 2,
+    color: 'var(--w20, rgba(255,255,255,0.2))', paddingTop: 8,
+    borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))', marginTop: 2,
   };
 
   const selectedItem = items.find(i => i.id === form.itemId);
@@ -178,7 +178,7 @@ function CreateTxModal({ open, onClose, onSaved, items, warehouses }: {
                   <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, color: ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary, #e2dfd8)', background: `${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary, #e2dfd8)'}15`, border: `0.5px solid ${ITEM_TYPE_CFG[selectedItem.itemType]?.color ?? 'var(--text-primary, #e2dfd8)'}30` }}>
                     {ITEM_TYPE_CFG[selectedItem.itemType]?.label ?? selectedItem.itemType}
                   </span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Base UOM: {selectedItem.baseUom}</span>
+                  <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))' }}>Base UOM: {selectedItem.baseUom}</span>
                 </div>
               )}
             </div>
@@ -264,7 +264,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'movementDate', header: 'Date', width: 160, sortable: true,
     value: r => r.movementDate,
-    render: r => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(r.movementDate)}</span>,
+    render: r => <span style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtDate(r.movementDate)}</span>,
   },
   {
     key: 'item', header: 'Item', sortable: true,
@@ -272,7 +272,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     render: r => (
       <div>
         <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong, #f1ede8)', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.item?.name}</div>
+        <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 1 }}>{r.item?.name}</div>
       </div>
     ),
   },
@@ -291,8 +291,8 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.warehouse?.code ?? '',
     render: r => (
       <div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.warehouse?.code ?? '—'}</div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouse?.name}</div>
+        <div style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{r.warehouse?.code ?? '—'}</div>
+        <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouse?.name}</div>
       </div>
     ),
   },
@@ -308,7 +308,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
           <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color }}>
             {prefix}{fmtQty(r.signedQuantity)}
           </span>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
+          <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.uom}</div>
         </div>
       );
     },
@@ -337,7 +337,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'unitCost', header: 'Unit Cost', width: 110, align: 'right', sortable: true,
     value: r => r.unitCost,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
   },
   {
     key: 'movementValue', header: 'Value', width: 130, align: 'right', sortable: true,
@@ -362,11 +362,11 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
       return (
         <div>
           {r.referenceType && (
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>
+            <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>
               {r.referenceType.replace(/_/g, ' ')}
             </div>
           )}
-          <span style={{ ...MONO, fontSize: 11, color: ref !== '—' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.2)' }}>{ref}</span>
+          <span style={{ ...MONO, fontSize: 11, color: ref !== '—' ? 'var(--accent-strong, #fb923c)' : 'var(--w20, rgba(255,255,255,0.2))' }}>{ref}</span>
         </div>
       );
     },
@@ -455,7 +455,7 @@ export default function StockTransactionsPage() {
         .st-pill-v { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--text-strong, #f1ede8); }
         .st-totals { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; flex-shrink: 0; }
         .st-total  { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 8px 12px; }
-        .st-total-l{ font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
+        .st-total-l{ font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 3px; }
         .st-total-v{ font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .st-filters{ display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .st-table  { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -468,13 +468,13 @@ export default function StockTransactionsPage() {
           <div className="st-pills">
             {TX_TYPES.filter(t => typeCounts[t.value] > 0).map(t => (
               <div key={t.value} className="st-pill"
-                style={{ border: `0.5px solid ${typeCard === t.value ? t.border : 'rgba(255,255,255,0.07)'}`, background: typeCard === t.value ? t.bg : 'rgba(10,7,18,0.7)' }}
+                style={{ border: `0.5px solid ${typeCard === t.value ? t.border : 'var(--l07, rgba(255,255,255,0.07))'}`, background: typeCard === t.value ? t.bg : 'rgba(10,7,18,0.7)' }}
                 onClick={() => setTypeCard(prev => prev === t.value ? '' : t.value)}>
                 <span className="st-pill-l" style={{ color: t.color }}>{t.sign} {t.label}</span>
                 <span className="st-pill-v">{typeCounts[t.value]}</span>
               </div>
             ))}
-            <div className="st-pill" style={{ border: `0.5px solid ${!typeCard ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setTypeCard('')}>
+            <div className="st-pill" style={{ border: `0.5px solid ${!typeCard ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setTypeCard('')}>
               <span className="st-pill-l" style={{ color: 'rgba(251,146,60,0.6)' }}>All</span>
               <span className="st-pill-v" style={{ color: 'var(--accent-strong, #fb923c)' }}>{rows.length}</span>
             </div>
@@ -488,7 +488,7 @@ export default function StockTransactionsPage() {
               { label: 'Total OUT (qty)', value: `−${new Intl.NumberFormat('en-US',{maximumFractionDigits:3}).format(totals.totalOut)}`, color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.15)' },
               { label: 'IN Value',        value: fmtAmt(totals.totalInValue),  color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.1)'   },
               { label: 'OUT Value',       value: fmtAmt(totals.totalOutValue), color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.1)'  },
-              { label: 'Net Value',       value: fmtAmt(totals.netValue), color: totals.netValue >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Net Value',       value: fmtAmt(totals.netValue), color: totals.netValue >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'var(--l06, rgba(255,255,255,0.06))' },
             ].map(t => (
               <div key={t.label} className="st-total" style={{ border: `0.5px solid ${t.border}` }}>
                 <div className="st-total-l">{t.label}</div>
@@ -522,7 +522,7 @@ export default function StockTransactionsPage() {
             maxHeight="calc(100vh - 430px)"
             toolbarLeft={
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {filtered.length} of {rows.length} movements
                 </span>
                 <PrintButton doc="stock-movements" id="report" label="Print report" style={{ padding: '5px 10px' }} />

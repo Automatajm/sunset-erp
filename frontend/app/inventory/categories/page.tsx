@@ -165,23 +165,23 @@ export default function CategoriesPage() {
     {
       key: 'inventoryAccount', header: 'Inventory Account', width: 160, sortable: false,
       value: r => r.inventoryAccount?.accountNumber ?? '',
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r.inventoryAccount?.accountNumber ?? '—'}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.inventoryAccount?.accountNumber ?? '—'}</span>,
     },
     {
       key: 'cogsAccount', header: 'COGS Account', width: 150, sortable: false,
       value: r => r.cogsAccount?.accountNumber ?? '',
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r.cogsAccount?.accountNumber ?? '—'}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.cogsAccount?.accountNumber ?? '—'}</span>,
     },
     {
       key: 'items', header: 'Items', width: 80, align: 'center', sortable: true,
       value: r => r._count?.items ?? 0,
-      render: r => <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: (r._count?.items ?? 0) > 0 ? 'rgba(251,146,60,0.7)' : 'rgba(255,255,255,0.25)' }}>{r._count?.items ?? 0}</span>,
+      render: r => <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: (r._count?.items ?? 0) > 0 ? 'rgba(251,146,60,0.7)' : 'var(--w25, rgba(255,255,255,0.25))' }}>{r._count?.items ?? 0}</span>,
     },
     {
       key: '_actions', header: '', width: 80, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setEditing(r); setModalOpen(true); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Edit
         </button>
       ),

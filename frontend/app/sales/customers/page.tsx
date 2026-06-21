@@ -46,7 +46,7 @@ const CREDIT_COLORS: Record<CreditStatus, { color: string; bg: string; border: s
 };
 
 function CreditBadge({ status }: { status?: CreditStatus }) {
-  if (!status) return <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>;
+  if (!status) return <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))' }}>—</span>;
   const c = CREDIT_COLORS[status];
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color: c.color, background: c.bg, border: `0.5px solid ${c.border}` }}>
@@ -200,29 +200,29 @@ export default function CustomersPage() {
     {
       key: 'creditLimit', header: 'Credit Limit', width: 120, align: 'right', sortable: true,
       value: r => r.creditLimit != null ? Number(r.creditLimit) : 0,
-      render: r => <span style={{ color: 'rgba(255,255,255,0.45)' }}>{fmtCurrency(r.creditLimit != null ? Number(r.creditLimit) : undefined)}</span>,
+      render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtCurrency(r.creditLimit != null ? Number(r.creditLimit) : undefined)}</span>,
     },
     {
       key: 'paymentTerms', header: 'Payment Terms', width: 130, sortable: true,
       value: r => r.paymentTerms ?? '',
-      render: r => <span style={{ color: 'rgba(255,255,255,0.45)' }}>{fmt(r.paymentTerms)}</span>,
+      render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmt(r.paymentTerms)}</span>,
     },
     {
       key: 'currency', header: 'Currency', width: 90, sortable: true,
       value: r => r.currency ?? '',
-      render: r => <span style={{ color: 'rgba(255,255,255,0.45)' }}>{fmt(r.currency)}</span>,
+      render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmt(r.currency)}</span>,
     },
     {
       key: 'email', header: 'Email', sortable: true,
       value: r => r.email ?? '',
-      render: r => <span style={{ color: 'rgba(255,255,255,0.45)' }}>{fmt(r.email)}</span>,
+      render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmt(r.email)}</span>,
     },
     {
       key: '_actions', header: '', width: 190, sortable: false,
       render: r => (
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
           <button onClick={() => { setEditing(r); setModalOpen(true); }}
-            style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
+            style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>Edit</button>
           <button onClick={() => setDeleting(r)}
             style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', color: 'var(--danger, #f87171)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Delete</button>
           <PrintButton doc="customer-statement" id={r.id} label="Statement" style={{ padding: '3px 9px', fontSize: 11 }} />

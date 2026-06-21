@@ -45,7 +45,9 @@
   /* theme-flipping neutral ramp — dark values EQUAL the rgba(255,255,255,a)
      literals they replace, so dark mode is byte-identical. html.light remaps
      them to dark-ink-on-light so page chrome stays legible in light mode. */
+  --w75: rgba(255,255,255,0.75);
   --w70: rgba(255,255,255,0.70);
+  --w65: rgba(255,255,255,0.65);
   --w60: rgba(255,255,255,0.60);
   --w55: rgba(255,255,255,0.55);
   --w50: rgba(255,255,255,0.50);
@@ -60,6 +62,7 @@
   --w20: rgba(255,255,255,0.20);
   --w18: rgba(255,255,255,0.18);
   --w15: rgba(255,255,255,0.15);
+  --w14: rgba(255,255,255,0.14);
   --w12: rgba(255,255,255,0.12);
   --w10: rgba(255,255,255,0.10);
   --l08: rgba(255,255,255,0.08);
@@ -70,6 +73,8 @@
   --l04: rgba(255,255,255,0.04);
   --l03: rgba(255,255,255,0.03);
   --l02: rgba(255,255,255,0.02);
+  --l015: rgba(255,255,255,0.015);
+  --l01: rgba(255,255,255,0.01);
 
   /* translucent panel/card surfaces — the --bg color (#0a0712 = rgb(10,7,18))
      carried as an rgba triple. html.light flips them to translucent white. */
@@ -97,7 +102,9 @@ html.light {
   --text-secondary:   #6b7280;
 
   /* neutral ramp → dark-ink-on-light */
+  --w75: rgba(26,20,40,0.86);
   --w70: rgba(26,20,40,0.84);
+  --w65: rgba(26,20,40,0.80);
   --w60: rgba(26,20,40,0.78);
   --w55: rgba(26,20,40,0.72);
   --w50: rgba(26,20,40,0.68);
@@ -112,6 +119,7 @@ html.light {
   --w20: rgba(26,20,40,0.34);
   --w18: rgba(26,20,40,0.30);
   --w15: rgba(0,0,0,0.16);
+  --w14: rgba(0,0,0,0.15);
   --w12: rgba(0,0,0,0.14);
   --w10: rgba(0,0,0,0.12);
   --l08: rgba(0,0,0,0.10);
@@ -122,6 +130,8 @@ html.light {
   --l04: rgba(0,0,0,0.05);
   --l03: rgba(0,0,0,0.04);
   --l02: rgba(0,0,0,0.03);
+  --l015: rgba(0,0,0,0.025);
+  --l01: rgba(0,0,0,0.02);
 
   --panel-bg:        rgba(255,255,255,0.98);
   --panel-bg-strong: rgba(255,255,255,1.0);

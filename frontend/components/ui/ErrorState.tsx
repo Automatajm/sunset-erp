@@ -67,13 +67,13 @@ export function ErrorState({ error, variant, onRetry }: ErrorStateProps) {
       <IconAlert color={cfg.color} />
       <div>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-strong, #f1ede8)' }}>{cfg.title}</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 420, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', marginTop: 6, maxWidth: 420, lineHeight: 1.5 }}>
           {cfg.hint}
         </div>
       </div>
 
       {/* Always-visible, non-sensitive identifiers for support */}
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+      <div style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono',monospace" }}>
         {error.status ? `Error ${error.status}` : 'Network error'}
         {' · '}
         {new Date(error.timestamp).toLocaleString('en-US')}
@@ -99,11 +99,11 @@ export function ErrorState({ error, variant, onRetry }: ErrorStateProps) {
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           marginTop: 8, width: '100%', maxWidth: 520, textAlign: 'left',
-          background: 'rgba(0,0,0,0.35)', border: '0.5px solid rgba(255,255,255,0.1)',
+          background: 'rgba(0,0,0,0.35)', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
           borderRadius: 8, padding: '12px 14px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--w35, rgba(255,255,255,0.35))' }}>
               Technical details (dev only)
             </span>
             <button
@@ -111,14 +111,14 @@ export function ErrorState({ error, variant, onRetry }: ErrorStateProps) {
               style={{
                 border: 'none', borderRadius: 5, padding: '3px 9px', fontSize: 10, cursor: 'pointer',
                 fontFamily: "'IBM Plex Sans',sans-serif",
-                background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+                background: 'var(--l06, rgba(255,255,255,0.06))', color: 'var(--w60, rgba(255,255,255,0.6))',
               }}
             >
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
           <pre style={{
-            margin: 0, fontSize: 11, lineHeight: 1.5, color: 'rgba(255,255,255,0.55)',
+            margin: 0, fontSize: 11, lineHeight: 1.5, color: 'var(--w55, rgba(255,255,255,0.55))',
             fontFamily: "'IBM Plex Mono',monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             maxHeight: 200, overflow: 'auto',
           }}>

@@ -43,8 +43,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:12, color: value ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', fontFamily:"'IBM Plex Sans',sans-serif", userSelect:'none', background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.07)', borderRadius:8, padding:'10px 14px' }}>
-      <div onClick={() => onChange(!value)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, cursor:'pointer', background: value ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border:`0.5px solid ${value ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s' }}>
+    <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontSize:12, color: value ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', fontFamily:"'IBM Plex Sans',sans-serif", userSelect:'none', background:'var(--l03, rgba(255,255,255,0.03))', border:'0.5px solid var(--l07, rgba(255,255,255,0.07))', borderRadius:8, padding:'10px 14px' }}>
+      <div onClick={() => onChange(!value)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, cursor:'pointer', background: value ? 'rgba(234,88,12,0.8)' : 'var(--w10, rgba(255,255,255,0.1))', border:`0.5px solid ${value ? 'rgba(251,146,60,0.5)' : 'var(--w15, rgba(255,255,255,0.15))'}`, position:'relative', transition:'background 0.2s' }}>
         <div style={{ position:'absolute', top:2, left: value ? 16 : 2, width:13, height:13, borderRadius:'50%', background:'var(--white, #fff)', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
       </div>
       {label}
@@ -170,23 +170,23 @@ export default function WorkCentersPage() {
       key: 'workCenterType', header: 'Type', width: 120, sortable: true,
       value: r => r.workCenterType ?? '',
       render: r => r.workCenterType
-        ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'rgba(255,255,255,0.06)', border:'0.5px solid rgba(255,255,255,0.1)', color: WC_TYPE_COLOR[r.workCenterType] ?? 'var(--text-primary, #e2dfd8)' }}>{cap(r.workCenterType)}</span>
-        : <span style={{ color:'rgba(255,255,255,0.25)' }}>—</span>,
+        ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:'var(--l06, rgba(255,255,255,0.06))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', color: WC_TYPE_COLOR[r.workCenterType] ?? 'var(--text-primary, #e2dfd8)' }}>{cap(r.workCenterType)}</span>
+        : <span style={{ color:'var(--w25, rgba(255,255,255,0.25))' }}>—</span>,
     },
     {
       key: 'capacityPerHour', header: 'Capacity/hr', width: 120, align: 'right', sortable: true,
       value: r => r.capacityPerHour ?? 0,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'rgba(255,255,255,0.6)' }}>{r.capacityPerHour ?? '—'}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--w60, rgba(255,255,255,0.6))' }}>{r.capacityPerHour ?? '—'}</span>,
     },
     {
       key: 'efficiencyPercent', header: 'Efficiency', width: 110, align: 'right', sortable: true,
       value: r => r.efficiencyPercent ?? 0,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'rgba(255,255,255,0.6)' }}>{r.efficiencyPercent != null ? `${r.efficiencyPercent}%` : '—'}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--w60, rgba(255,255,255,0.6))' }}>{r.efficiencyPercent != null ? `${r.efficiencyPercent}%` : '—'}</span>,
     },
     {
       key: 'costPerHour', header: 'Cost/hr', width: 110, align: 'right', sortable: true,
       value: r => r.costPerHour ?? 0,
-      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'rgba(255,255,255,0.6)' }}>{r.costPerHour != null ? `$${r.costPerHour}/hr` : '—'}</span>,
+      render: r => <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--w60, rgba(255,255,255,0.6))' }}>{r.costPerHour != null ? `$${r.costPerHour}/hr` : '—'}</span>,
     },
     {
       key: 'isActive', header: 'Status', width: 100, sortable: true,
@@ -197,7 +197,7 @@ export default function WorkCentersPage() {
       key: '_actions', header: '', width: 130, sortable: false,
       render: r => (
         <div style={{ display:'flex', gap:5 }}>
-          <button onClick={e => { e.stopPropagation(); setEditing(r); setModalOpen(true); }} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.55)', border:'0.5px solid rgba(255,255,255,0.1)', fontFamily:"'IBM Plex Sans',sans-serif" }}>Edit</button>
+          <button onClick={e => { e.stopPropagation(); setEditing(r); setModalOpen(true); }} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', background:'var(--l05, rgba(255,255,255,0.05))', color:'var(--w55, rgba(255,255,255,0.55))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', fontFamily:"'IBM Plex Sans',sans-serif" }}>Edit</button>
           <button onClick={e => { e.stopPropagation(); setDeleting(r); }} style={{ padding:'4px 9px', borderRadius:6, fontSize:11, cursor:'pointer', background:'rgba(239,68,68,0.08)', color:'var(--danger, #f87171)', border:'0.5px solid rgba(239,68,68,0.2)', fontFamily:"'IBM Plex Sans',sans-serif" }}>Delete</button>
         </div>
       ),

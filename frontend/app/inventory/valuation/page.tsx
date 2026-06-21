@@ -56,7 +56,7 @@ const ITEM_TYPE_CFG: Record<string, { color: string; bg: string; border: string;
   finished_good: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)',   label: 'Finished Good' },
   raw_material:  { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)',   label: 'Raw Material'  },
   consumable:    { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)',   label: 'Consumable'    },
-  service:       { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', label: 'Service' },
+  service:       { color: 'var(--w40, rgba(255,255,255,0.4))', bg: 'var(--l05, rgba(255,255,255,0.05))', border: 'var(--w10, rgba(255,255,255,0.1))', label: 'Service' },
 };
 
 function TypeBadge({ type }: { type: string }) {
@@ -160,8 +160,8 @@ function buildColumns(totalValue: number): ERPColumn<ValuationRow>[] {
       value:  r => r.warehouseCode,
       render: r => (
         <div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{r.warehouseCode}</div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouseName}</div>
+          <div style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.warehouseCode}</div>
+          <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouseName}</div>
         </div>
       ),
     },
@@ -207,7 +207,7 @@ function buildColumns(totalValue: number): ERPColumn<ValuationRow>[] {
       sortable: true,
       value:  r => r.unitCost,
       render: r => (
-        <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--w55, rgba(255,255,255,0.55))' }}>
           {r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}
         </span>
       ),
@@ -237,10 +237,10 @@ function buildColumns(totalValue: number): ERPColumn<ValuationRow>[] {
         const s      = ITEM_TYPE_CFG[r.itemType] ?? ITEM_TYPE_CFG.service;
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ flex: 1, height: 4, background: 'var(--l06, rgba(255,255,255,0.06))', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: s.color, borderRadius: 2, opacity: 0.7 }} />
             </div>
-            <span style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.4)', minWidth: 36, textAlign: 'right' }}>
+            <span style={{ ...MONO, fontSize: 10, color: 'var(--w40, rgba(255,255,255,0.4))', minWidth: 36, textAlign: 'right' }}>
               {pct.toFixed(1)}%
             </span>
           </div>
@@ -321,12 +321,12 @@ export default function InventoryValuationPage() {
         .iv-card  { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 9px 13px; min-width: 150px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 3px; }
         .iv-card-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
         .iv-card-value { font-size: 15px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--text-strong, #f1ede8); }
-        .iv-card-sub   { font-size: 10px; color: rgba(255,255,255,0.3); }
-        .iv-bar-wrap   { width: 100%; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+        .iv-card-sub   { font-size: 10px; color: var(--w30, rgba(255,255,255,0.3)); }
+        .iv-bar-wrap   { width: 100%; height: 3px; background: var(--l06, rgba(255,255,255,0.06)); border-radius: 2px; margin-top: 3px; overflow: hidden; }
         .iv-bar        { height: 100%; border-radius: 2px; opacity: 0.65; }
         .iv-filters    { flex-shrink: 0; }
         .iv-table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        .iv-footer-note { font-size: 11px; color: rgba(255,255,255,0.25); padding: 6px 2px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+        .iv-footer-note { font-size: 11px; color: var(--w25, rgba(255,255,255,0.25)); padding: 6px 2px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
         .iv-error { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
       `}</style>
 
@@ -336,7 +336,7 @@ export default function InventoryValuationPage() {
         <div className="iv-kpis">
           {[
             { label: 'Total Inv. Value', value: fmtAmt(data?.totalInventoryValue ?? 0), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.18)' },
-            { label: 'Items Tracked',   value: String(data?.totalItems ?? 0),            color: 'var(--text-strong, #f1ede8)', border: 'rgba(255,255,255,0.06)' },
+            { label: 'Items Tracked',   value: String(data?.totalItems ?? 0),            color: 'var(--text-strong, #f1ede8)', border: 'var(--l06, rgba(255,255,255,0.06))' },
             { label: 'Avg Value / Item', value: (data?.totalItems ?? 0) > 0 ? fmtAmt((data!.totalInventoryValue) / data!.totalItems) : '—', color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
             { label: 'Filtered Total',  value: fmtAmt(filteredTotal),                  color: 'var(--accent-strong, #fb923c)', border: 'rgba(251,146,60,0.18)' },
           ].map(k => (
@@ -358,7 +358,7 @@ export default function InventoryValuationPage() {
                 const active = typeCardFilter === type;
                 return (
                   <div key={type} className="iv-card"
-                    style={{ border: `0.5px solid ${active ? s.border : 'rgba(255,255,255,0.06)'}`, background: active ? s.bg : 'rgba(10,7,18,0.7)' }}
+                    style={{ border: `0.5px solid ${active ? s.border : 'var(--l06, rgba(255,255,255,0.06))'}`, background: active ? s.bg : 'rgba(10,7,18,0.7)' }}
                     onClick={() => setTypeCardFilter(prev => prev === type ? null : type)}>
                     <span className="iv-card-label" style={{ color: s.color }}>
                       {s.label}
@@ -408,7 +408,7 @@ export default function InventoryValuationPage() {
             toolbarLeft={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {data && (
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                     As of {fmtDate(data.asOf)}
                   </span>
                 )}
@@ -435,7 +435,7 @@ export default function InventoryValuationPage() {
         {/* ── Footer note ── */}
         <div className="iv-footer-note">
           <span style={{ color: 'rgba(251,146,60,0.5)', fontSize: 10 }}>💰</span>
-          <span>Total Value = <strong style={{ color: 'rgba(255,255,255,0.5)' }}>purchaseQty × WAC</strong> — purchaseUom is the financial unit of record (ADR-019)</span>
+          <span>Total Value = <strong style={{ color: 'var(--w50, rgba(255,255,255,0.5))' }}>purchaseQty × WAC</strong> — purchaseUom is the financial unit of record (ADR-019)</span>
         </div>
 
       </div>

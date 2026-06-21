@@ -93,12 +93,12 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(167,139,250,0.2)', borderRadius: 14, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '14px 18px 10px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>Generate from Sales Orders</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{budget.budgetCode} — MRP auto-generation</div>
+            <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 2 }}>{budget.budgetCode} — MRP auto-generation</div>
           </div>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>×</button>
+          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 16 }}>×</button>
         </div>
 
         <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -114,7 +114,7 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
                   { label: 'Lines Skipped',   value: result.linesSkipped },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
+                    <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
                     <span style={{ ...MONO, color: 'var(--success, #4ade80)', fontSize: 14 }}>{s.value}</span>
                   </div>
                 ))}
@@ -128,7 +128,7 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
                 const active = form.soStatuses.includes(s);
                 return (
                   <button key={s} onClick={() => toggleStatus(s)}
-                    style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, color: active ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.35)', background: active ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${active ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.08)'}`, transition: 'all 0.15s' }}>
+                    style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, color: active ? 'var(--accent-violet, #a78bfa)' : 'var(--w35, rgba(255,255,255,0.35))', background: active ? 'rgba(167,139,250,0.15)' : 'var(--l04, rgba(255,255,255,0.04))', border: `0.5px solid ${active ? 'rgba(167,139,250,0.3)' : 'var(--l08, rgba(255,255,255,0.08))'}`, transition: 'all 0.15s' }}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
                 );
@@ -150,20 +150,20 @@ function MrpModal({ budget, onClose, onSaved }: { budget: Budget; onClose: () =>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => setForm(f => ({ ...f, overwrite: !f.overwrite }))}
-              style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: form.overwrite ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.35)', background: form.overwrite ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${form.overwrite ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+              style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", color: form.overwrite ? 'var(--warning, #fbbf24)' : 'var(--w35, rgba(255,255,255,0.35))', background: form.overwrite ? 'rgba(251,191,36,0.1)' : 'var(--l04, rgba(255,255,255,0.04))', border: `0.5px solid ${form.overwrite ? 'rgba(251,191,36,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}` }}>
               {form.overwrite ? 'Overwrite existing lines' : 'Skip existing lines'}
             </button>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+            <span style={{ fontSize: 11, color: 'var(--w25, rgba(255,255,255,0.25))' }}>
               {form.overwrite ? 'Replaces existing budget lines for same account+period' : 'Keeps existing lines, only adds new ones'}
             </span>
           </div>
 
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 7, padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'rgba(255,255,255,0.5)' }}>How it works:</strong> Revenue is budgeted in the delivery period (promisedDate). Materials and labor are budgeted in the production start period (promisedDate minus item leadTime). Quantities use BOM components x scrap% and routing steps x work center rates.
+          <div style={{ background: 'var(--l03, rgba(255,255,255,0.03))', border: '0.5px solid var(--l06, rgba(255,255,255,0.06))', borderRadius: 7, padding: '8px 12px', fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--w50, rgba(255,255,255,0.5))' }}>How it works:</strong> Revenue is budgeted in the delivery period (promisedDate). Materials and labor are budgeted in the production start period (promisedDate minus item leadTime). Quantities use BOM components x scrap% and routing steps x work center rates.
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 18px 16px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
           <button onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>
             {result ? 'Close' : 'Cancel'}
           </button>
@@ -297,8 +297,8 @@ function RollForwardModal({ open, source, onClose, onSaved }: { open: boolean; s
           ? <div style={{ background: 'rgba(74,222,128,0.06)', border: '0.5px solid rgba(74,222,128,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--success, #4ade80)' }}>{result}</div>
           : (
             <>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
-                Creates a new <strong style={{ color: 'rgba(255,255,255,0.5)' }}>draft</strong> budget by copying {source.budgetLines.length} line{source.budgetLines.length !== 1 ? 's' : ''}, remapping each period to the target year and scaling amounts by the growth %.
+              <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', lineHeight: 1.5 }}>
+                Creates a new <strong style={{ color: 'var(--w50, rgba(255,255,255,0.5))' }}>draft</strong> budget by copying {source.budgetLines.length} line{source.budgetLines.length !== 1 ? 's' : ''}, remapping each period to the target year and scaling amounts by the growth %.
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Field label="Target Fiscal Year *"><input placeholder="2027" value={form.targetFiscalYear} onChange={e => setForm(f => ({ ...f, targetFiscalYear: e.target.value }))} style={INPUT} /></Field>
@@ -306,8 +306,8 @@ function RollForwardModal({ open, source, onClose, onSaved }: { open: boolean; s
               </div>
               <Field label="New Budget Code *"><input placeholder="BUDGET-2027" value={form.targetBudgetCode} onChange={e => setForm(f => ({ ...f, targetBudgetCode: e.target.value }))} style={INPUT} /></Field>
               <Field label="New Budget Name"><input placeholder={`${source.budgetName} (FY${form.targetFiscalYear || '…'})`} value={form.targetBudgetName} onChange={e => setForm(f => ({ ...f, targetBudgetName: e.target.value }))} style={INPUT} /></Field>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: form.includeNotes ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
-                <div onClick={() => setForm(f => ({ ...f, includeNotes: !f.includeNotes }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.includeNotes ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.includeNotes ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: form.includeNotes ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', userSelect: 'none' }}>
+                <div onClick={() => setForm(f => ({ ...f, includeNotes: !f.includeNotes }))} style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer', background: form.includeNotes ? 'rgba(234,88,12,0.8)' : 'var(--w10, rgba(255,255,255,0.1))', border: `0.5px solid ${form.includeNotes ? 'rgba(251,146,60,0.5)' : 'var(--w15, rgba(255,255,255,0.15))'}`, position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 2, left: form.includeNotes ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s' }} />
                 </div>
                 Copy line notes
@@ -355,10 +355,10 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
       {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 14px', marginBottom: 10, fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 0, background: 'rgba(255,255,255,0.04)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 0, background: 'var(--l04, rgba(255,255,255,0.04))', borderRadius: 7, border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', overflow: 'hidden' }}>
           {(['lines', 'vsactual'] as const).map(v => (
             <button key={v} onClick={() => v === 'vsactual' ? loadVsActual() : setView('lines')}
-              style={{ padding: '5px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer', border: 'none', background: view === v ? 'rgba(251,146,60,0.15)' : 'transparent', color: view === v ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.45)', transition: 'background 0.15s, color 0.15s' }}>
+              style={{ padding: '5px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer', border: 'none', background: view === v ? 'rgba(251,146,60,0.15)' : 'transparent', color: view === v ? 'var(--accent-strong, #fb923c)' : 'var(--w45, rgba(255,255,255,0.45))', transition: 'background 0.15s, color 0.15s' }}>
               {v === 'lines' ? 'Budget Lines' : loadingVA ? 'Loading...' : 'vs Actual'}
             </button>
           ))}
@@ -389,7 +389,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
           </button>
         )}
 
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono',monospace" }}>
           Total: {fmtAmt(totalBudget)}
         </span>
       </div>
@@ -398,21 +398,21 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>{['Account', 'Period', 'Budget Amount', 'Notes'].map(h => (
-              <th key={h} style={{ padding: '7px 12px', fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.04)', borderBottom: '0.5px solid rgba(255,255,255,0.06)', textAlign: h === 'Budget Amount' ? 'right' : 'left' }}>{h}</th>
+              <th key={h} style={{ padding: '7px 12px', fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.04)', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', textAlign: h === 'Budget Amount' ? 'right' : 'left' }}>{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {budget.budgetLines.length === 0 ? (
-              <tr><td colSpan={4} style={{ padding: '24px 12px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>No lines yet. Click Generate from SO or + Add Line.</td></tr>
+              <tr><td colSpan={4} style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>No lines yet. Click Generate from SO or + Add Line.</td></tr>
             ) : budget.budgetLines.map(line => (
               <tr key={line.id}>
-                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                   <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.account?.accountNumber}</span>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{line.account?.name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--w60, rgba(255,255,255,0.6))', marginLeft: 8 }}>{line.account?.name}</span>
                 </td>
-                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: 'rgba(255,255,255,0.55)' }}>{line.fiscalPeriod}</td>
-                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(Number(line.budgetAmount))}</td>
-                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{line.notes || '-'}</td>
+                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', ...MONO, color: 'var(--w55, rgba(255,255,255,0.55))' }}>{line.fiscalPeriod}</td>
+                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(Number(line.budgetAmount))}</td>
+                <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{line.notes || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -423,7 +423,7 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>{['Account', 'Period', 'Budget', 'Actual', 'Variance', '%'].map(h => (
-              <th key={h} style={{ padding: '7px 12px', fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.04)', borderBottom: '0.5px solid rgba(255,255,255,0.06)', textAlign: ['Budget', 'Actual', 'Variance', '%'].includes(h) ? 'right' : 'left' }}>{h}</th>
+              <th key={h} style={{ padding: '7px 12px', fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)', background: 'rgba(251,146,60,0.04)', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', textAlign: ['Budget', 'Actual', 'Variance', '%'].includes(h) ? 'right' : 'left' }}>{h}</th>
             ))}</tr>
           </thead>
           <tbody>
@@ -431,15 +431,15 @@ function BudgetDetail({ budget, accounts, onRefresh }: { budget: Budget; account
               const favorable = line.variance >= 0;
               return (
                 <tr key={idx}>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                     <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.accountNumber}</span>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>{line.accountName}</span>
+                    <span style={{ fontSize: 12, color: 'var(--w60, rgba(255,255,255,0.6))', marginLeft: 8 }}>{line.accountName}</span>
                   </td>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: 'rgba(255,255,255,0.55)' }}>{line.fiscalPeriod}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(line.budgetAmount)}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.6)' }}>{fmtAmt(line.actualAmount)}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', ...MONO, color: favorable ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontWeight: 500 }}>{fmtAmt(line.variance)}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', textAlign: 'right', fontSize: 11, color: favorable ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtPct(line.variancePercent)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', ...MONO, color: 'var(--w55, rgba(255,255,255,0.55))' }}>{line.fiscalPeriod}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(line.budgetAmount)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', textAlign: 'right', ...MONO, color: 'var(--w60, rgba(255,255,255,0.6))' }}>{fmtAmt(line.actualAmount)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', textAlign: 'right', ...MONO, color: favorable ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontWeight: 500 }}>{fmtAmt(line.variance)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', textAlign: 'right', fontSize: 11, color: favorable ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtPct(line.variancePercent)}</td>
                 </tr>
               );
             })}
@@ -494,9 +494,9 @@ export default function BudgetsPage() {
   const columns = useMemo<ERPTreeColumn<Budget>[]>(() => [
     { key: 'budgetCode', header: 'Code', width: 150, sortable: true, value: r => r.budgetCode, render: r => <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.budgetCode}</span> },
     { key: 'budgetName', header: 'Name', sortable: true, value: r => r.budgetName, render: r => <span style={{ color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{r.budgetName}</span> },
-    { key: 'fiscalYear', header: 'FY', width: 80, sortable: true, value: r => r.fiscalYear, render: r => <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{r.fiscalYear}</span> },
-    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r.budgetLines.length, render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{r.budgetLines.length}</span> },
-    { key: 'total', header: 'Total', width: 140, align: 'right', sortable: true, value: r => r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0), render: r => <span style={{ ...MONO, color: 'rgba(255,255,255,0.6)' }}>{fmtAmt(r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0))}</span> },
+    { key: 'fiscalYear', header: 'FY', width: 80, sortable: true, value: r => r.fiscalYear, render: r => <span style={{ color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 12 }}>{r.fiscalYear}</span> },
+    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r.budgetLines.length, render: r => <span style={{ fontSize: 12, color: 'var(--w35, rgba(255,255,255,0.35))' }}>{r.budgetLines.length}</span> },
+    { key: 'total', header: 'Total', width: 140, align: 'right', sortable: true, value: r => r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0), render: r => <span style={{ ...MONO, color: 'var(--w60, rgba(255,255,255,0.6))' }}>{fmtAmt(r.budgetLines.reduce((s, l) => s + Number(l.budgetAmount), 0))}</span> },
     { key: 'status', header: 'Status', width: 110, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
   ], []);
 
@@ -506,15 +506,15 @@ export default function BudgetsPage() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap');
         .bg-page { padding: 0 18px 12px; display:flex; flex-direction:column; height:100%; overflow:hidden; }
         .bg-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:nowrap; }
-        .bg-filter { background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.09); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
+        .bg-filter { background:var(--l04, rgba(255,255,255,0.04)); border:0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius:7px; padding:7px 12px; font-size:12px; font-family:'IBM Plex Sans',sans-serif; color:var(--text-primary, #e2dfd8); outline:none; }
         .bg-filter option { background:var(--surface, #0e0b1a); color:var(--text-strong, #f1ede8); }
         .bg-btn-new { display:flex; align-items:center; gap:6px; margin-left:auto; background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border:none; border-radius:7px; padding:7px 14px; font-size:12px; font-weight:500; font-family:'IBM Plex Sans',sans-serif; color:white; cursor:pointer; box-shadow:0 3px 12px rgba(234,88,12,0.3); flex-shrink:0; white-space:nowrap; }
         .bg-list { display:flex; flex-direction:column; gap:10px; }
         .bg-card { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .bg-card-hdr { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; transition:background 0.15s; }
         .bg-card-hdr:hover { background:rgba(251,146,60,0.03); }
-        .bg-card-body { padding:0 16px 14px; border-top:0.5px solid rgba(255,255,255,0.06); }
-        .bg-empty, .bg-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+        .bg-card-body { padding:0 16px 14px; border-top:0.5px solid var(--l06, rgba(255,255,255,0.06)); }
+        .bg-empty, .bg-loading { text-align:center; padding:52px 24px; color:var(--w25, rgba(255,255,255,0.25)); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
         .bg-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:bg-spin 0.7s linear infinite; }
         @keyframes bg-spin { to { transform:rotate(360deg); } }
         .bg-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }
@@ -545,7 +545,7 @@ export default function BudgetsPage() {
             canExpand={() => true}
             expandedRow={budget => (
               <div style={{ padding: '12px 16px' }}>
-                {budget.description && <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.5 }}>{budget.description}</p>}
+                {budget.description && <p style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))', marginBottom: 12, lineHeight: 1.5 }}>{budget.description}</p>}
                 <BudgetDetail budget={budget} accounts={accounts} onRefresh={fetchAll} />
               </div>
             )}

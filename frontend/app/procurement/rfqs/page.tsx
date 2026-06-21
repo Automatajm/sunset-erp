@@ -569,20 +569,20 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
         .rfq-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
         .rfq-box{background:var(--surface, #0e0b1a);border:0.5px solid rgba(251,146,60,0.2);border-radius:14px;width:100%;max-width:940px;margin:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.7)}
         .rfq-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
-        .rfq-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap;font-weight:500}
-        .rfq-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
-        .rfq-sel{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .rfq-th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));white-space:nowrap;font-weight:500}
+        .rfq-inp{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .rfq-sel{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
         .rfq-sel option{background:var(--surface, #0e0b1a)}
-        .rfq-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
-        .rfq-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .rfq-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:6px 0 4px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .rfq-btn-add{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:4px 10px;font-size:11px;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
         .rfq-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .sup-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'IBM Plex Sans',sans-serif;border:0.5px solid}
       `}</style>
       <div className="rfq-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="rfq-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', position: 'sticky', top: 0, background: 'var(--surface, #0e0b1a)', zIndex: 1, borderRadius: '14px 14px 0 0' }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>New RFQ — Request for Quotation</span>
-            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -612,9 +612,9 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
                     return (
                       <span key={s.id} className="sup-chip"
                         onClick={() => toggleSupplier(s.id)}
-                        style={{ background: sel ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)', borderColor: sel ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.1)', color: sel ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.45)' }}>
+                        style={{ background: sel ? 'rgba(167,139,250,0.1)' : 'var(--l03, rgba(255,255,255,0.03))', borderColor: sel ? 'rgba(167,139,250,0.35)' : 'var(--w10, rgba(255,255,255,0.1))', color: sel ? 'var(--accent-violet, #a78bfa)' : 'var(--w45, rgba(255,255,255,0.45))' }}>
                         {sel && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{s.code}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: sel ? 'var(--accent-strong, #fb923c)' : 'var(--w30, rgba(255,255,255,0.3))' }}>{s.code}</span>
                         {s.name}
                       </span>
                     );
@@ -672,7 +672,7 @@ function CreateRFQModal({ open, onClose, onSaved, items, suppliers }: {
               </table>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
               <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
                 {submitting ? 'Creating…' : 'Create RFQ'}
@@ -750,32 +750,32 @@ export default function RFQsPage() {
     {
       key: 'issueDate', header: 'Issued', width: 100, sortable: true,
       value: r => r.issueDate,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(r.issueDate)}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDateShort(r.issueDate)}</span>,
     },
     {
       key: 'deadline', header: 'Deadline', width: 100, sortable: true,
       value: r => r.responseDeadline ?? '',
       render: r => {
-        if (!r.responseDeadline) return <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>;
+        if (!r.responseDeadline) return <span style={{ color: 'var(--w20, rgba(255,255,255,0.2))' }}>—</span>;
         const isLate = new Date(r.responseDeadline) < new Date() && r.status === 'sent';
-        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.45)' }}>{fmtDateShort(r.responseDeadline)}</span>;
+        return <span style={{ fontSize: 12, color: isLate ? 'var(--danger, #f87171)' : 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtDateShort(r.responseDeadline)}</span>;
       },
     },
     {
       key: 'suppliers', header: 'Suppliers', width: 75, align: 'center', sortable: true,
       value: r => r._count?.rfqSuppliers ?? 0,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r._count?.rfqSuppliers ?? 0}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r._count?.rfqSuppliers ?? 0}</span>,
     },
     {
       key: 'lines', header: 'Lines', width: 60, align: 'center', sortable: true,
       value: r => r._count?.lines ?? 0,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r._count?.lines ?? 0}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r._count?.lines ?? 0}</span>,
     },
     {
       key: 'source', header: 'Source', width: 100, sortable: false,
       render: r => {
         const src = r.purchaseRequisition?.prNumber ?? r.generalNeed?.gnNumber;
-        return <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: src ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.25)' }}>{src ?? 'Manual'}</span>;
+        return <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: src ? 'var(--accent-blue, #60a5fa)' : 'var(--w25, rgba(255,255,255,0.25))' }}>{src ?? 'Manual'}</span>;
       },
     },
     {
@@ -787,7 +787,7 @@ export default function RFQsPage() {
       key: '_actions', header: '', width: 70, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setDetailRFQ(r); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           View
         </button>
       ),
@@ -815,7 +815,7 @@ export default function RFQsPage() {
             );
           })}
           <div onClick={() => setActiveStatus(null)}
-            style={{ background: !activeStatus ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeStatus ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer' }}>
+            style={{ background: !activeStatus ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeStatus ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70, cursor: 'pointer' }}>
             <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
             <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{rfqs.length}</span>
           </div>

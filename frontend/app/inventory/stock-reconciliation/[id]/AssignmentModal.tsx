@@ -50,8 +50,8 @@ interface AssignmentModalProps {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const INP: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '0.5px solid rgba(255,255,255,0.1)',
+  background: 'var(--l04, rgba(255,255,255,0.04))',
+  border: '0.5px solid var(--w10, rgba(255,255,255,0.1))',
   borderRadius: 7, padding: '8px 12px', fontSize: 13,
   fontFamily: "'IBM Plex Sans',sans-serif",
   color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%',
@@ -62,7 +62,7 @@ const SEL: React.CSSProperties = { ...INP, cursor: 'pointer' };
 
 const LABEL: React.CSSProperties = {
   fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-  textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)',
+  textTransform: 'uppercase' as const, color: 'var(--w35, rgba(255,255,255,0.35))',
   marginBottom: 5, display: 'block',
 };
 
@@ -207,7 +207,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
       onSubmit={handleSave}
     >
       {loading ? (
-        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: 40, fontSize: 13 }}>Loading…</div>
+        <div style={{ textAlign: 'center', color: 'var(--w30, rgba(255,255,255,0.3))', padding: 40, fontSize: 13 }}>Loading…</div>
       ) : (
         <>
           {/* Existing assignments */}
@@ -216,12 +216,12 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
               <div style={LABEL}>Current Assignments</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {assignments.map(a => (
-                  <div key={a.id} style={{ background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div key={a.id} style={{ background: 'var(--l03, rgba(255,255,255,0.03))', border: '0.5px solid var(--l07, rgba(255,255,255,0.07))', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>
                         {a.user ? `${a.user.firstName} ${a.user.lastName}` : a.userId}
                       </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 2 }}>
                         {a.assignedCount} lines assigned
                         {a.categoryIds?.length > 0 && ` · ${a.categoryIds.length} category filter(s)`}
                         {a.macroCategoryIds?.length > 0 && ` · ${a.macroCategoryIds.length} macrocategory filter(s)`}
@@ -240,7 +240,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
           )}
 
           {/* New assignment form */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' as const }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--w50, rgba(255,255,255,0.5))', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' as const }}>
             New Assignment
           </div>
 
@@ -316,7 +316,7 @@ export default function AssignmentModal({ sessionId, onClose, onSaved }: Assignm
           <button
             onClick={handlePreview}
             disabled={!selectedUserId}
-            style={{ width: '100%', height: 38, borderRadius: 7, fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: selectedUserId ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)', border: `0.5px solid ${selectedUserId ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`, color: selectedUserId ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)', cursor: selectedUserId ? 'pointer' : 'not-allowed' }}>
+            style={{ width: '100%', height: 38, borderRadius: 7, fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 500, background: selectedUserId ? 'var(--l06, rgba(255,255,255,0.06))' : 'var(--l02, rgba(255,255,255,0.02))', border: `0.5px solid ${selectedUserId ? 'var(--w12, rgba(255,255,255,0.12))' : 'var(--l05, rgba(255,255,255,0.05))'}`, color: selectedUserId ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))', cursor: selectedUserId ? 'pointer' : 'not-allowed' }}>
             Preview
           </button>
         </>

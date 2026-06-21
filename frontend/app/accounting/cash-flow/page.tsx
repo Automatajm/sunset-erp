@@ -104,11 +104,11 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer', transition: 'background 0.15s' }}
         onClick={() => setExpanded(e => !e)}
       >
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>▶</span>
+        <span style={{ fontSize: 9, color: 'var(--w30, rgba(255,255,255,0.3))', transform: expanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s', flexShrink: 0 }}>▶</span>
         <span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, flexShrink: 0 }}>{proj.projectionCode}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{proj.projectionName}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 1 }}>
             {fmtDate(proj.startDate)} → {fmtDate(proj.endDate)} · {proj.cashFlowLines.length} line{proj.cashFlowLines.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -119,14 +119,14 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
             <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.6)', letterSpacing: '0.06em' }}>INFLOW</span>
             <span style={{ ...MONO, color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(totalInflow)}</span>
           </div>
-          <div style={{ width: 0.5, height: 28, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ width: 0.5, height: 28, background: 'var(--w10, rgba(255,255,255,0.1))' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <span style={{ fontSize: 10, color: 'rgba(248,113,113,0.6)', letterSpacing: '0.06em' }}>OUTFLOW</span>
             <span style={{ ...MONO, color: 'var(--danger, #f87171)', fontWeight: 500 }}>{fmtAmt(totalOutflow)}</span>
           </div>
-          <div style={{ width: 0.5, height: 28, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ width: 0.5, height: 28, background: 'var(--w10, rgba(255,255,255,0.1))' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>NET</span>
+            <span style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', letterSpacing: '0.06em' }}>NET</span>
             <span style={{ ...MONO, fontWeight: 600, color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{fmtAmt(netFlow)}</span>
           </div>
           <ScenarioBadge scenario={proj.scenario} />
@@ -135,14 +135,14 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
 
       {/* Expanded detail */}
       {expanded && (
-        <div style={{ borderTop: '0.5px solid rgba(255,255,255,0.06)', padding: '12px 16px 14px' }}>
+        <div style={{ borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))', padding: '12px 16px 14px' }}>
           {proj.description && (
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.5 }}>{proj.description}</p>
+            <p style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))', marginBottom: 12, lineHeight: 1.5 }}>{proj.description}</p>
           )}
 
           {/* Line filter + add */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 7, border: '0.5px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', background: 'var(--l04, rgba(255,255,255,0.04))', borderRadius: 7, border: '0.5px solid var(--l08, rgba(255,255,255,0.08))', overflow: 'hidden' }}>
               {(['all', 'inflow', 'outflow'] as const).map(f => (
                 <button
                   key={f}
@@ -151,7 +151,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                     padding: '5px 12px', fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
                     cursor: 'pointer', border: 'none',
                     background: lineFilter === f ? 'rgba(251,146,60,0.15)' : 'transparent',
-                    color: lineFilter === f ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)',
+                    color: lineFilter === f ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))',
                     transition: 'background 0.15s',
                   }}
                 >
@@ -174,7 +174,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
 
           {/* Lines table */}
           {filteredLines.length === 0 ? (
-            <div style={{ padding: '20px 0', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>
+            <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>
               No {lineFilter !== 'all' ? lineFilter : ''} lines yet.
             </div>
           ) : (
@@ -186,7 +186,7 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                       padding: '6px 10px', fontSize: 10, color: 'rgba(251,146,60,0.5)',
                       fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
                       textAlign: h === 'Amount' ? 'right' : 'left',
-                      borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+                      borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -194,10 +194,10 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
               <tbody>
                 {filteredLines.map(line => (
                   <tr key={line.id}>
-                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.5)', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                       {fmtDateShort(line.lineDate)}
                     </td>
-                    <td style={{ padding: '7px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '7px 10px', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                       <span style={{
                         fontSize: 11, padding: '1px 7px', borderRadius: 20,
                         color: line.lineType === 'inflow' ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)',
@@ -207,13 +207,13 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
                         {line.lineType === 'inflow' ? '↑ In' : '↓ Out'}
                       </span>
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500, borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500, borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                       {line.category}
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                       {line.description || '—'}
                     </td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.04)', ...MONO, color: line.lineType === 'inflow' ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontWeight: 500 }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))', ...MONO, color: line.lineType === 'inflow' ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontWeight: 500 }}>
                       {line.lineType === 'inflow' ? '+' : '−'}{fmtAmt(line.amount)}
                     </td>
                   </tr>
@@ -221,8 +221,8 @@ function ProjectionCard({ proj, onAddLine, onRefresh }: {
               </tbody>
               {/* Summary row */}
               <tfoot>
-                <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
-                  <td colSpan={4} style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
+                <tr style={{ borderTop: '0.5px solid var(--w10, rgba(255,255,255,0.1))' }}>
+                  <td colSpan={4} style={{ padding: '8px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500 }}>
                     NET FLOW
                   </td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, fontWeight: 600, fontSize: 13, color: netFlow >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>
@@ -282,9 +282,9 @@ function CreateProjectionModal({ open, onClose, onSaved }: {
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 500, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>New Cash Flow Projection</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -322,7 +322,7 @@ function CreateProjectionModal({ open, onClose, onSaved }: {
               <input style={INPUT} placeholder="Optional description" value={form.description} onChange={set('description')} />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
             <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
               {submitting ? 'Creating…' : 'Create Projection'}
@@ -381,9 +381,9 @@ function AddLineModal({ open, projectionId, onClose, onSaved }: {
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 14, width: '100%', maxWidth: 460, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ position: 'absolute', top: 0, left: 30, right: 30, height: 1, background: 'linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}>Add Cash Flow Line</span>
-          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06, rgba(255,255,255,0.06))', border: 'none', cursor: 'pointer', color: 'var(--w45, rgba(255,255,255,0.45))', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -413,7 +413,7 @@ function AddLineModal({ open, projectionId, onClose, onSaved }: {
               <input style={INPUT} placeholder="Optional description" value={form.description} onChange={set('description')} />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
             <button type="button" onClick={onClose} style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={submitting} style={{ background: 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))', border: 'none', borderRadius: 7, padding: '8px 20px', fontSize: 13, fontWeight: 500, fontFamily: "'IBM Plex Sans',sans-serif", color: 'white', cursor: 'pointer', boxShadow: '0 3px 12px rgba(234,88,12,0.35)', opacity: submitting ? 0.5 : 1 }}>
               {submitting ? 'Adding…' : 'Add Line'}
@@ -466,7 +466,7 @@ export default function CashFlowPage() {
         .cf-btn-new:hover { opacity:0.88; transform:translateY(-1px); }
         .cf-btn-new svg { width:13px; height:13px; display:block; flex-shrink:0; }
         .cf-list { display:flex; flex-direction:column; gap:10px; }
-        .cf-empty, .cf-loading { text-align:center; padding:52px 24px; color:rgba(255,255,255,0.25); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; }
+        .cf-empty, .cf-loading { text-align:center; padding:52px 24px; color:var(--w25, rgba(255,255,255,0.25)); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; }
         .cf-spinner { width:18px; height:18px; border-radius:50%; border:2px solid rgba(251,146,60,0.2); border-top-color:var(--accent-strong, #fb923c); animation:cf-spin 0.7s linear infinite; flex-shrink:0; }
         @keyframes cf-spin { to { transform:rotate(360deg); } }
         .cf-error { background:rgba(239,68,68,0.08); border:0.5px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--danger-subtle, #fca5a5); }

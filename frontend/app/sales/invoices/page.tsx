@@ -42,7 +42,7 @@ const STATUS_STYLE: Record<InvoiceStatus, { color: string; bg: string; border: s
   partial: { color: 'var(--accent-strong, #fb923c)', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)' },
   paid:    { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
   overdue: { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
-  void:    { color: 'rgba(255,255,255,0.25)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)' },
+  void:    { color: 'var(--w25, rgba(255,255,255,0.25))', bg: 'var(--l04, rgba(255,255,255,0.04))', border: 'var(--l08, rgba(255,255,255,0.08))' },
 };
 
 function StatusBadge({ status }: { status: InvoiceStatus }) {
@@ -68,13 +68,13 @@ function KpiCards({ kpis, aging }: { kpis: ArKpis | null; aging: ArAging | null 
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', flexShrink: 0 }}>
       {cards.map(c => (
-        <div key={c.label} style={{ background: 'rgba(10,7,18,0.7)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 130 }}>
-          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>{c.label}</span>
+        <div key={c.label} style={{ background: 'rgba(10,7,18,0.7)', border: '0.5px solid var(--l07, rgba(255,255,255,0.07))', borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 130 }}>
+          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--w30, rgba(255,255,255,0.3))' }}>{c.label}</span>
           <span style={{ ...MONO, fontSize: 16, fontWeight: 500, color: c.color }}>{c.value}</span>
         </div>
       ))}
       {aging && (
-        <div style={{ background: 'rgba(10,7,18,0.7)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ background: 'rgba(10,7,18,0.7)', border: '0.5px solid var(--l07, rgba(255,255,255,0.07))', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 16, alignItems: 'center' }}>
           {[
             { label: 'Current', val: aging.summary.current.amount,   color: 'var(--success, #4ade80)' },
             { label: '1-30d',   val: aging.summary.days1to30.amount,  color: 'var(--warning, #fbbf24)' },
@@ -103,12 +103,12 @@ function InvoiceDetailModal({ inv, onClose }: { inv: ArInvoice | null; onClose: 
   }, [inv]);
 
   const TH = (h: string, right = false) =>
-    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>;
+    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>{h}</th>;
 
   return (
     <ModalShell open={!!inv} onClose={onClose} title={inv ? `${inv.invoiceNumber} — Detail` : ''} width={840}>
       {loading ? (
-        <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
+        <div style={{ padding: '16px', fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))' }}>Loading…</div>
       ) : detail ? (
         <div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -118,18 +118,18 @@ function InvoiceDetailModal({ inv, onClose }: { inv: ArInvoice | null; onClose: 
             <tbody>
               {detail.lines?.map(line => (
                 <tr key={line.id}>
-                  <td style={{ padding: '7px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                  <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{line.description || '—'}</td>
+                  <td style={{ padding: '7px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>{line.lineNumber}</td>
+                  <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w70, rgba(255,255,255,0.7))' }}>{line.description || '—'}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{line.quantity}</td>
-                  <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom || '—'}</td>
+                  <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{line.uom || '—'}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.35)' }}>{line.cogsAmount ? fmtAmt(line.cogsAmount) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--w35, rgba(255,255,255,0.35))' }}>{line.cogsAmount ? fmtAmt(line.cogsAmount) : '—'}</td>
                 </tr>
               ))}
-              <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-                <td colSpan={6} style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
+              <tr style={{ borderTop: '0.5px solid var(--l08, rgba(255,255,255,0.08))', background: 'var(--l02, rgba(255,255,255,0.02))' }}>
+                <td colSpan={6} style={{ padding: '8px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500 }}>TOTAL</td>
                 <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, color: 'var(--accent-blue, #60a5fa)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.totalAmount)}</td>
                 <td />
               </tr>
@@ -143,9 +143,9 @@ function InvoiceDetailModal({ inv, onClose }: { inv: ArInvoice | null; onClose: 
                 {detail.payments.map(p => (
                   <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
                     <span style={{ ...MONO, color: 'var(--success, #4ade80)', fontWeight: 500 }}>{fmtAmt(p.amount)}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>{fmtDate(p.paymentDate)}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{p.paymentMethod ?? '—'}</span>
-                    {p.reference && <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11 }}>{p.reference}</span>}
+                    <span style={{ color: 'var(--w40, rgba(255,255,255,0.4))' }}>{fmtDate(p.paymentDate)}</span>
+                    <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))', fontSize: 11 }}>{p.paymentMethod ?? '—'}</span>
+                    {p.reference && <span style={{ color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 11 }}>{p.reference}</span>}
                     <PrintButton doc="ar-receipt" id={detail.id} query={{ paymentId: p.id }} label="Receipt" style={{ padding: '2px 8px', fontSize: 10 }} />
                   </div>
                 ))}
@@ -153,7 +153,7 @@ function InvoiceDetailModal({ inv, onClose }: { inv: ArInvoice | null; onClose: 
             </div>
           )}
         </div>
-      ) : <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>No detail.</div>}
+      ) : <div style={{ padding: '16px', fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))' }}>No detail.</div>}
     </ModalShell>
   );
 }
@@ -281,9 +281,9 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers }: {
     <FormModal open={open} onClose={onClose} title="New Invoice" submitLabel="Create Invoice" submitting={submitting} isValid={isValid} error={error} onSubmit={submit} width={820}>
       <style>{`
         .invl-table{width:100%;border-collapse:collapse}
-        .invl-table th{font-size:10px;color:rgba(96,165,250,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap}
+        .invl-table th{font-size:10px;color:rgba(96,165,250,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));white-space:nowrap}
         .invl-table td{padding:4px 3px;vertical-align:middle}
-        .invl-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .invl-inp{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
         .invl-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -299,7 +299,7 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers }: {
         </div>
         <Field label="Notes"><input placeholder="Invoice notes" value={header.notes} onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))} style={INP} /></Field>
 
-        <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', padding: '6px 0 4px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--w25, rgba(255,255,255,0.25))', padding: '6px 0 4px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Invoice Lines</span>
           <button type="button" onClick={() => setLines(ls => [...ls, { ...EMPTY_LINE }])} style={{ background: 'var(--l04, rgba(255,255,255,0.04))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 5, padding: '4px 10px', fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>+ Add Line</button>
         </div>
@@ -319,15 +319,15 @@ function CreateInvoiceModal({ open, onClose, onSaved, customers }: {
                 <td><input className="invl-inp" placeholder="hrs" value={line.uom} onChange={e => setLine(idx, 'uom', e.target.value)} /></td>
                 <td><input className="invl-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.unitPrice} onChange={e => setLine(idx, 'unitPrice', e.target.value)} style={{ textAlign: 'right' }} /></td>
                 <td><input className="invl-inp" type="number" min="0" max="100" step="0.1" placeholder="0" value={line.discountPercent} onChange={e => setLine(idx, 'discountPercent', e.target.value)} style={{ textAlign: 'right' }} /></td>
-                <td><input className="invl-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.cogsAmount} onChange={e => setLine(idx, 'cogsAmount', e.target.value)} style={{ textAlign: 'right', color: 'rgba(255,255,255,0.45)' }} /></td>
+                <td><input className="invl-inp" type="number" min="0" step="0.01" placeholder="0.00" value={line.cogsAmount} onChange={e => setLine(idx, 'cogsAmount', e.target.value)} style={{ textAlign: 'right', color: 'var(--w45, rgba(255,255,255,0.45))' }} /></td>
                 <td style={{ ...MONO, fontSize: 11, color: 'var(--text-primary, #e2dfd8)', textAlign: 'right', padding: '4px 6px' }}>{calcLineTotal(line) > 0 ? fmtAmt(calcLineTotal(line)) : '—'}</td>
                 <td>{lines.length > 1 && <button type="button" className="invl-btn-rm" onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}>×</button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '6px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '6px 0', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
+          <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Grand Total</span>
           <span style={{ ...MONO, fontSize: 14, fontWeight: 500, color: 'var(--accent-blue, #60a5fa)' }}>{fmtAmt(grandTotal)}</span>
         </div>
       </div>
@@ -401,7 +401,7 @@ export default function ArInvoicesPage() {
         </div>
       ),
     },
-    { key: 'invoiceDate', header: 'Invoice Date', width: 120, sortable: true, value: r => r.invoiceDate ?? '', render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.invoiceDate)}</span> },
+    { key: 'invoiceDate', header: 'Invoice Date', width: 120, sortable: true, value: r => r.invoiceDate ?? '', render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDate(r.invoiceDate)}</span> },
     {
       key: 'dueDate', header: 'Due Date', width: 130, sortable: true,
       value: r => r.dueDate ?? '',
@@ -409,7 +409,7 @@ export default function ArInvoicesPage() {
         const days = daysUntil(r.dueDate);
         const dueSoon = r.status === 'sent' && days >= 0 && days <= 7;
         return (
-          <span style={{ fontSize: 12, color: dueSoon ? 'var(--warning, #fbbf24)' : r.status === 'overdue' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.5)' }}>
+          <span style={{ fontSize: 12, color: dueSoon ? 'var(--warning, #fbbf24)' : r.status === 'overdue' ? 'var(--danger, #f87171)' : 'var(--w50, rgba(255,255,255,0.5))' }}>
             {fmtDate(r.dueDate)}
             {dueSoon && <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--warning, #fbbf24)' }}>({days}d)</span>}
           </span>
@@ -425,10 +425,10 @@ export default function ArInvoicesPage() {
         const pctPaid = Number(r.totalAmount) > 0 ? (Number(r.paidAmount) / Number(r.totalAmount)) * 100 : 0;
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-            <div style={{ width: 44, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ width: 44, height: 3, borderRadius: 2, background: 'var(--l08, rgba(255,255,255,0.08))', overflow: 'hidden', flexShrink: 0 }}>
               <div style={{ height: '100%', width: `${Math.min(100, pctPaid)}%`, background: pctPaid >= 100 ? 'var(--success, #4ade80)' : 'var(--accent-strong, #fb923c)', borderRadius: 2 }} />
             </div>
-            <span style={{ ...MONO, fontSize: 11, color: pctPaid >= 100 ? 'var(--success, #4ade80)' : outstanding > 0 ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.3)' }}>{fmtAmt(outstanding)}</span>
+            <span style={{ ...MONO, fontSize: 11, color: pctPaid >= 100 ? 'var(--success, #4ade80)' : outstanding > 0 ? 'var(--accent-strong, #fb923c)' : 'var(--w30, rgba(255,255,255,0.3))' }}>{fmtAmt(outstanding)}</span>
           </div>
         );
       },
@@ -481,13 +481,13 @@ export default function ArInvoicesPage() {
           {ALL_STATUSES.map(s => {
             const style = STATUS_STYLE[s];
             return (
-              <div key={s} className="ar-stat" style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter(prev => prev === s ? '' : s)}>
+              <div key={s} className="ar-stat" style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatusFilter(prev => prev === s ? '' : s)}>
                 <span className="ar-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
                 <span className="ar-stat-value">{counts[s]}</span>
               </div>
             );
           })}
-          <div className="ar-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter('')}>
+          <div className="ar-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(96,165,250,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatusFilter('')}>
             <span className="ar-stat-label" style={{ color: 'rgba(96,165,250,0.6)' }}>Total</span>
             <span className="ar-stat-value" style={{ color: 'var(--accent-blue, #60a5fa)' }}>{invoices.length}</span>
           </div>

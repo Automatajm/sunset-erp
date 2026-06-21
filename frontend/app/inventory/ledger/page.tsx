@@ -69,11 +69,11 @@ const MOVE_CFG: Record<string, { color: string; bg: string; border: string; sign
 
 const ITEM_TYPE_CFG: Record<string, string> = {
   finished_good: 'var(--success, #4ade80)', raw_material: 'var(--accent-blue, #60a5fa)',
-  consumable: 'var(--warning, #fbbf24)', service: 'rgba(255,255,255,0.35)',
+  consumable: 'var(--warning, #fbbf24)', service: 'var(--w35, rgba(255,255,255,0.35))',
 };
 
 function MoveBadge({ type }: { type: string }) {
-  const c = MOVE_CFG[type] ?? { color: 'var(--text-primary, #e2dfd8)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', sign: '·', label: type };
+  const c = MOVE_CFG[type] ?? { color: 'var(--text-primary, #e2dfd8)', bg: 'var(--l06, rgba(255,255,255,0.06))', border: 'var(--w10, rgba(255,255,255,0.1))', sign: '·', label: type };
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -112,7 +112,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'movementDate', header: 'Date', width: 155, sortable: true,
     value: r => r.movementDate,
-    render: r => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(r.movementDate)}</span>,
+    render: r => <span style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtDate(r.movementDate)}</span>,
   },
   {
     key: 'item', header: 'Item', sortable: true,
@@ -120,7 +120,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     render: r => (
       <div>
         <span style={{ ...MONO, fontSize: 11, color: 'var(--text-strong, #f1ede8)', fontWeight: 500 }}>{r.item?.code ?? '—'}</span>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.item?.name}</div>
+        <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 1 }}>{r.item?.name}</div>
       </div>
     ),
   },
@@ -128,7 +128,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     key: 'itemType', header: 'Category', width: 120, sortable: true,
     value: r => r.item?.itemType ?? '',
     render: r => {
-      const color = ITEM_TYPE_CFG[r.item?.itemType ?? ''] ?? 'rgba(255,255,255,0.35)';
+      const color = ITEM_TYPE_CFG[r.item?.itemType ?? ''] ?? 'var(--w35, rgba(255,255,255,0.35))';
       return r.item?.itemType ? (
         <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, color, background: `color-mix(in srgb, ${color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 19%, transparent)`, whiteSpace: 'nowrap' }}>
           {r.item.itemType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
@@ -141,8 +141,8 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     value: r => r.warehouse?.code ?? '',
     render: r => (
       <div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.warehouse?.code ?? '—'}</div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouse?.name}</div>
+        <div style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{r.warehouse?.code ?? '—'}</div>
+        <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouse?.name}</div>
       </div>
     ),
   },
@@ -152,11 +152,11 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     render: r => (
       <div>
         {r.referenceType && (
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>
+          <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>
             {r.referenceType.replace(/_/g, ' ')}
           </div>
         )}
-        <span style={{ ...MONO, fontSize: 11, color: r.referenceNumber !== '—' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.2)' }}>
+        <span style={{ ...MONO, fontSize: 11, color: r.referenceNumber !== '—' ? 'var(--accent-strong, #fb923c)' : 'var(--w20, rgba(255,255,255,0.2))' }}>
           {r.referenceNumber}
         </span>
       </div>
@@ -165,7 +165,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
   {
     key: 'openingBalance', header: 'Opening Bal.', width: 110, align: 'right', sortable: true,
     value: r => r.openingBalance,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtQty(r.openingBalance)}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{fmtQty(r.openingBalance)}</span>,
   },
   {
     key: 'signedQuantity', header: 'Qty Moved', width: 110, align: 'right', sortable: true,
@@ -179,7 +179,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
           <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color }}>
             {prefix}{fmtQty(r.signedQuantity)}
           </span>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
+          <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.uom}</div>
         </div>
       );
     },
@@ -218,7 +218,7 @@ const COLUMNS: ERPColumn<LedgerRow>[] = [
     key: 'unitCost', header: 'Unit Cost', width: 110, align: 'right', sortable: true,
     value: r => r.unitCost,
     render: r => (
-      <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+      <span style={{ ...MONO, fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>
         {r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}
       </span>
     ),
@@ -349,14 +349,14 @@ export default function StockLedgerPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
         .sl-page    { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
-        .sl-filters { background: rgba(10,7,18,0.7); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+        .sl-filters { background: rgba(10,7,18,0.7); border: 0.5px solid var(--l08, rgba(255,255,255,0.08)); border-radius: 10px; padding: 12px 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
         .sl-filter-actions { display: flex; align-items: center; gap: 8px; }
         .sl-btn-apply { background: linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316)); border: none; border-radius: 7px; padding: 7px 18px; font-size: 12px; font-weight: 500; font-family: 'IBM Plex Sans',sans-serif; color: white; cursor: pointer; box-shadow: 0 3px 10px rgba(234,88,12,0.3); }
         .sl-btn-apply:hover { opacity: 0.88; }
-        .sl-btn-reset { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 7px 14px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.4); cursor: pointer; }
+        .sl-btn-reset { background: var(--l04, rgba(255,255,255,0.04)); border: 0.5px solid var(--w10, rgba(255,255,255,0.1)); border-radius: 7px; padding: 7px 14px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: var(--w40, rgba(255,255,255,0.4)); cursor: pointer; }
         .sl-totals  { display: grid; grid-template-columns: repeat(8,1fr); gap: 6px; flex-shrink: 0; }
         .sl-total   { background: rgba(10,7,18,0.7); border-radius: 8px; padding: 8px 10px; }
-        .sl-total-l { font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
+        .sl-total-l { font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 3px; }
         .sl-total-v { font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sl-table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .sl-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
@@ -376,7 +376,7 @@ export default function StockLedgerPage() {
             {activeCount > 0 && (
               <button className="sl-btn-reset" onClick={handleReset}>↺ Clear</button>
             )}
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>
+            <span style={{ fontSize: 11, color: 'var(--w25, rgba(255,255,255,0.25))', marginLeft: 4 }}>
               Date filter requires Apply — other filters work in real-time
             </span>
           </div>
@@ -390,11 +390,11 @@ export default function StockLedgerPage() {
               { label: 'Opening Bal.',   value: fmtQty(data.totals.openingBalance), color: 'var(--accent-violet, #a78bfa)', border: 'rgba(167,139,250,0.15)' },
               { label: 'Total IN (qty)', value: `+${fmtQty(data.totals.totalIn)}`,  color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.15)'  },
               { label: 'Total OUT (qty)',value: `−${fmtQty(data.totals.totalOut)}`,  color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.15)' },
-              { label: 'Net Movement',   value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Net Movement',   value: fmtQty(data.totals.netMovement),    color: data.totals.netMovement >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'var(--l06, rgba(255,255,255,0.06))' },
               { label: 'Closing Bal.',   value: fmtQty(data.totals.closingBalance), color: 'var(--accent-blue, #60a5fa)', border: 'rgba(96,165,250,0.15)'  },
               { label: 'IN Value',       value: fmtAmt(data.totals.totalInValue),   color: 'var(--success, #4ade80)', border: 'rgba(74,222,128,0.1)'   },
               { label: 'OUT Value',      value: fmtAmt(data.totals.totalOutValue),  color: 'var(--danger, #f87171)', border: 'rgba(248,113,113,0.1)'  },
-              { label: 'Net Value',      value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'rgba(255,255,255,0.06)' },
+              { label: 'Net Value',      value: fmtAmt(data.totals.netValue),       color: data.totals.netValue >= 0 ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', border: 'var(--l06, rgba(255,255,255,0.06))' },
             ].map(t => (
               <div key={t.label} className="sl-total" style={{ border: `0.5px solid ${t.border}` }}>
                 <div className="sl-total-l">{t.label}</div>
@@ -416,7 +416,7 @@ export default function StockLedgerPage() {
             maxHeight="calc(100vh - 420px)"
             toolbarLeft={
               data ? (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {data.count} movement{data.count !== 1 ? 's' : ''}
                   {data.totals && (
                     <span style={{ marginLeft: 10, color: 'rgba(251,146,60,0.5)' }}>

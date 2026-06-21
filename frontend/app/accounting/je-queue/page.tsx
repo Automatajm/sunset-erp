@@ -50,9 +50,9 @@ function RejectModal({ item, onClose, onRejected }: { item: JeQueueItem; onClose
   return (
     <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(248,113,113,0.2)', borderRadius:14, width:'100%', maxWidth:440, boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
-        <div style={{ padding:'14px 18px 10px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ padding:'14px 18px 10px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <span style={{ fontSize:13, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>Reject — {item.journalEntry.entryNumber}</span>
-          <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16 }}>×</button>
+          <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'var(--l06, rgba(255,255,255,0.06))', border:'none', cursor:'pointer', color:'var(--w45, rgba(255,255,255,0.45))', fontSize:16 }}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:10 }}>
@@ -62,11 +62,11 @@ function RejectModal({ item, onClose, onRejected }: { item: JeQueueItem; onClose
               <input placeholder="e.g. Wrong account used — needs correction" style={INPUT_S} value={reason} onChange={e => setReason(e.target.value)} />
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-              <label style={{ fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)' }}>Notes (optional)</label>
+              <label style={{ fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--w30, rgba(255,255,255,0.3))' }}>Notes (optional)</label>
               <input placeholder="Additional notes" style={INPUT_S} value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
           </div>
-          <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'10px 18px 16px', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'10px 18px 16px', borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
             <button type="button" onClick={onClose} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'7px 14px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
             <button type="submit" disabled={busy} style={{ background:'linear-gradient(135deg,#7f1d1d,#dc2626)', border:'none', borderRadius:7, padding:'7px 18px', fontSize:12, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer', opacity:busy?0.5:1 }}>
               {busy ? 'Rejecting…' : 'Reject & Delete JE'}
@@ -129,12 +129,12 @@ export default function JeQueuePage() {
         .queue-stat:hover { opacity:0.8; }
         .queue-wrap { background:rgba(10,7,18,0.7); border:0.5px solid rgba(251,146,60,0.12); border-radius:10px; overflow:hidden; }
         .queue-table { width:100%; border-collapse:collapse; }
-        .queue-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid rgba(255,255,255,0.06); text-align:left; white-space:nowrap; }
-        .queue-table tbody td { padding:10px 14px; border-bottom:0.5px solid rgba(255,255,255,0.04); vertical-align:middle; font-size:13px; }
+        .queue-table thead th { padding:9px 14px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,146,60,0.55); background:rgba(251,146,60,0.05); border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06)); text-align:left; white-space:nowrap; }
+        .queue-table tbody td { padding:10px 14px; border-bottom:0.5px solid var(--l04, rgba(255,255,255,0.04)); vertical-align:middle; font-size:13px; }
         .queue-table tbody tr:last-child td { border-bottom:none; }
         .queue-table tbody tr:hover td { background:rgba(251,146,60,0.02); }
-        .queue-empty { text-align:center; padding:52px; color:rgba(255,255,255,0.25); font-size:13px; }
-        .queue-footer { font-size:11px; color:rgba(255,255,255,0.22); padding:8px 14px; border-top:0.5px solid rgba(255,255,255,0.04); }
+        .queue-empty { text-align:center; padding:52px; color:var(--w25, rgba(255,255,255,0.25)); font-size:13px; }
+        .queue-footer { font-size:11px; color:var(--w22, rgba(255,255,255,0.22)); padding:8px 14px; border-top:0.5px solid var(--l04, rgba(255,255,255,0.04)); }
       `}</style>
 
       <div className="queue-page">
@@ -148,7 +148,7 @@ export default function JeQueuePage() {
               { label: 'Total',    value: stats.total,    color: 'var(--accent-strong, #fb923c)', filter: '' },
             ].map(s => (
               <div key={s.label} className="queue-stat"
-                style={{ border:`0.5px solid ${statusFilter === s.filter ? `color-mix(in srgb, ${s.color} 25%, transparent)` : 'rgba(255,255,255,0.07)'}` }}
+                style={{ border:`0.5px solid ${statusFilter === s.filter ? `color-mix(in srgb, ${s.color} 25%, transparent)` : 'var(--l07, rgba(255,255,255,0.07))'}` }}
                 onClick={() => setStatusFilter(prev => prev === s.filter ? '' : s.filter)}>
                 <span style={{ fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:s.color }}>{s.label}</span>
                 <span style={{ fontSize:20, fontWeight:500, fontFamily:"'IBM Plex Mono',monospace", color:'var(--text-strong, #f1ede8)' }}>{s.value}</span>
@@ -169,7 +169,7 @@ export default function JeQueuePage() {
               minWidth={180}
             />
           </div>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize:11, color:'var(--w25, rgba(255,255,255,0.25))' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
         </div>
 
         {error   && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'8px 14px', marginBottom:12, fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
@@ -195,7 +195,7 @@ export default function JeQueuePage() {
                         <>
                           <tr key={item.id} style={{ cursor:'pointer' }} onClick={() => setExpanded(isExp ? null : item.id)}>
                             <td style={{ width:24 }}>
-                              <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', transform:isExp?'rotate(90deg)':'none', display:'inline-block', transition:'transform 0.15s' }}>▶</span>
+                              <span style={{ fontSize:9, color:'var(--w30, rgba(255,255,255,0.3))', transform:isExp?'rotate(90deg)':'none', display:'inline-block', transition:'transform 0.15s' }}>▶</span>
                             </td>
                             <td><span style={{ ...MONO, color:'var(--accent-strong, #fb923c)', fontWeight:500 }}>{item.journalEntry.entryNumber}</span></td>
                             <td>
@@ -203,10 +203,10 @@ export default function JeQueuePage() {
                                 {item.eventType.replace(/_/g, ' ')}
                               </span>
                             </td>
-                            <td><span style={{ ...MONO, fontSize:11, color:'rgba(255,255,255,0.5)' }}>{item.sourceRef ?? '—'}</span></td>
-                            <td><span style={{ fontSize:12, color:'rgba(255,255,255,0.55)' }}>{item.journalEntry.description}</span></td>
+                            <td><span style={{ ...MONO, fontSize:11, color:'var(--w50, rgba(255,255,255,0.5))' }}>{item.sourceRef ?? '—'}</span></td>
+                            <td><span style={{ fontSize:12, color:'var(--w55, rgba(255,255,255,0.55))' }}>{item.journalEntry.description}</span></td>
                             <td><span style={{ ...MONO, color:'var(--text-primary, #e2dfd8)' }}>{fmtAmt(totalDr)}</span></td>
-                            <td><span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{fmtDate(item.createdAt)}</span></td>
+                            <td><span style={{ fontSize:12, color:'var(--w40, rgba(255,255,255,0.4))' }}>{fmtDate(item.createdAt)}</span></td>
                             <td>
                               <span style={{
                                 fontSize:11, padding:'2px 8px', borderRadius:20, fontWeight:500,
@@ -238,26 +238,26 @@ export default function JeQueuePage() {
                           {isExp && (
                             <tr key={`${item.id}-exp`}>
                               <td colSpan={9} style={{ padding:0 }}>
-                                <div style={{ padding:'8px 40px 14px', background:'rgba(251,146,60,0.015)', borderTop:'0.5px solid rgba(255,255,255,0.04)' }}>
+                                <div style={{ padding:'8px 40px 14px', background:'rgba(251,146,60,0.015)', borderTop:'0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
                                   <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                                     <thead>
                                       <tr>{['#', 'Account', 'Description', 'Debit', 'Credit'].map(h => (
-                                        <th key={h} style={{ padding:'4px 10px', fontSize:10, color:'rgba(251,146,60,0.5)', fontWeight:500, textTransform:'uppercase', letterSpacing:'0.08em', textAlign:'left', borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>{h}</th>
+                                        <th key={h} style={{ padding:'4px 10px', fontSize:10, color:'rgba(251,146,60,0.5)', fontWeight:500, textTransform:'uppercase', letterSpacing:'0.08em', textAlign:'left', borderBottom:'0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>{h}</th>
                                       ))}</tr>
                                     </thead>
                                     <tbody>
                                       {item.journalEntry.lines.map(line => (
                                         <tr key={line.id}>
-                                          <td style={{ padding:'5px 10px', ...MONO, color:'rgba(255,255,255,0.3)', width:30 }}>{line.lineNumber}</td>
+                                          <td style={{ padding:'5px 10px', ...MONO, color:'var(--w30, rgba(255,255,255,0.3))', width:30 }}>{line.lineNumber}</td>
                                           <td style={{ padding:'5px 10px' }}>
                                             <span style={{ ...MONO, color:'var(--accent-strong, #fb923c)', fontSize:11 }}>{line.account.accountNumber}</span>
-                                            <span style={{ fontSize:12, color:'rgba(255,255,255,0.55)', marginLeft:8 }}>{line.account.name}</span>
+                                            <span style={{ fontSize:12, color:'var(--w55, rgba(255,255,255,0.55))', marginLeft:8 }}>{line.account.name}</span>
                                           </td>
-                                          <td style={{ padding:'5px 10px', fontSize:12, color:'rgba(255,255,255,0.4)' }}>{line.description}</td>
-                                          <td style={{ padding:'5px 10px', ...MONO, color: line.debitAmount > 0 ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
+                                          <td style={{ padding:'5px 10px', fontSize:12, color:'var(--w40, rgba(255,255,255,0.4))' }}>{line.description}</td>
+                                          <td style={{ padding:'5px 10px', ...MONO, color: line.debitAmount > 0 ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))', textAlign:'right' }}>
                                             {line.debitAmount > 0 ? fmtAmt(line.debitAmount) : '—'}
                                           </td>
-                                          <td style={{ padding:'5px 10px', ...MONO, color: line.creditAmount > 0 ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.2)', textAlign:'right' }}>
+                                          <td style={{ padding:'5px 10px', ...MONO, color: line.creditAmount > 0 ? 'var(--accent-violet, #a78bfa)' : 'var(--w20, rgba(255,255,255,0.2))', textAlign:'right' }}>
                                             {line.creditAmount > 0 ? fmtAmt(line.creditAmount) : '—'}
                                           </td>
                                         </tr>
@@ -265,11 +265,11 @@ export default function JeQueuePage() {
                                     </tbody>
                                     <tfoot>
                                       <tr>
-                                        <td colSpan={3} style={{ padding:'6px 10px', fontSize:10, color:'rgba(255,255,255,0.25)', textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Totals</td>
-                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--text-primary, #e2dfd8)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+                                        <td colSpan={3} style={{ padding:'6px 10px', fontSize:10, color:'var(--w25, rgba(255,255,255,0.25))', textAlign:'right', borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))', textTransform:'uppercase', letterSpacing:'0.08em' }}>Totals</td>
+                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--text-primary, #e2dfd8)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
                                           {fmtAmt(item.journalEntry.lines.reduce((s, l) => s + l.debitAmount, 0))}
                                         </td>
-                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--accent-violet, #a78bfa)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+                                        <td style={{ padding:'6px 10px', ...MONO, color:'var(--accent-violet, #a78bfa)', fontWeight:500, textAlign:'right', borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
                                           {fmtAmt(item.journalEntry.lines.reduce((s, l) => s + l.creditAmount, 0))}
                                         </td>
                                       </tr>

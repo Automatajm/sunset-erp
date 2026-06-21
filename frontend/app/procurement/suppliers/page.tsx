@@ -70,8 +70,8 @@ function fmtAmt(v?: number | string | null) {
 
 function ActiveBadge({ active }: { active: boolean }) {
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.35)', background:active ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', border:`0.5px solid ${active ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
-      <span style={{ width:5, height:5, borderRadius:'50%', background:active ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.2)', flexShrink:0 }} />
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active ? 'var(--success, #4ade80)' : 'var(--w35, rgba(255,255,255,0.35))', background:active ? 'rgba(74,222,128,0.1)' : 'var(--l05, rgba(255,255,255,0.05))', border:`0.5px solid ${active ? 'rgba(74,222,128,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}` }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:active ? 'var(--success, #4ade80)' : 'var(--w20, rgba(255,255,255,0.2))', flexShrink:0 }} />
       {active ? 'Active' : 'Inactive'}
     </span>
   );
@@ -79,7 +79,7 @@ function ActiveBadge({ active }: { active: boolean }) {
 
 // Inline SVG star (design rule: no emoji glyphs). filled = solid warning color.
 function StarIcon({ size = 14, filled, onClick, style, className }: { size?: number; filled: boolean; onClick?: () => void; style?: React.CSSProperties; className?: string }) {
-  const c = filled ? 'var(--warning, #fbbf24)' : 'rgba(255,255,255,0.2)';
+  const c = filled ? 'var(--warning, #fbbf24)' : 'var(--w20, rgba(255,255,255,0.2))';
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? c : 'none'} stroke={c} strokeWidth="1.5" strokeLinejoin="round" onClick={onClick} className={className} style={{ flexShrink: 0, ...style }}>
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -88,12 +88,12 @@ function StarIcon({ size = 14, filled, onClick, style, className }: { size?: num
 }
 
 function StarRating({ value }: { value?: number | null }) {
-  if (!value) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>;
+  if (!value) return <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:12 }}>—</span>;
   const v = Number(value);
   return (
     <div style={{ display:'flex', alignItems:'center', gap:3 }}>
       {[1,2,3,4,5].map(i => <StarIcon key={i} size={11} filled={i <= Math.round(v)} />)}
-      <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginLeft:2 }}>{v.toFixed(1)}</span>
+      <span style={{ fontSize:11, color:'var(--w40, rgba(255,255,255,0.4))', marginLeft:2 }}>{v.toFixed(1)}</span>
     </div>
   );
 }
@@ -161,9 +161,9 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
     finally { setSubmitting(false); }
   };
 
-  const F: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+  const F: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const L: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
-  const SL: React.CSSProperties = { fontSize:10, color:'rgba(255,255,255,0.3)', marginTop:-2 };
+  const SL: React.CSSProperties = { fontSize:10, color:'var(--w30, rgba(255,255,255,0.3))', marginTop:-2 };
 
   const TABS = [
     { key:'general',    label:'General' },
@@ -193,7 +193,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
         .sm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .sm-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
         .sm-field{display:flex;flex-direction:column;gap:5px}
-        .sm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
+        .sm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:4px 0 2px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px}
         .sm-stars{display:flex;gap:4px;padding:4px 0}
         .sm-star{cursor:pointer;transition:transform 0.1s}
         .sm-star:hover{transform:scale(1.15)}
@@ -269,7 +269,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                             onClick={() => setForm(f => ({ ...f, qualityRating: f.qualityRating === i ? undefined : i }))} />
                         ))}
                         {form.qualityRating && (
-                          <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)', alignSelf:'center', marginLeft:4 }}>
+                          <span style={{ fontSize:12, color:'var(--w40, rgba(255,255,255,0.4))', alignSelf:'center', marginLeft:4 }}>
                             {form.qualityRating}.0
                           </span>
                         )}
@@ -395,7 +395,7 @@ function SupplierModal({ open, onClose, onSaved, initial }: {
                       </div>
                     </div>
                     <div style={{ background:'rgba(251,146,60,0.04)', border:'0.5px solid rgba(251,146,60,0.12)', borderRadius:8, padding:'10px 14px', marginTop:4 }}>
-                      <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6 }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:11, color:'var(--w35, rgba(255,255,255,0.35))', lineHeight:1.6 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:2 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <span>Banking details are stored encrypted and only visible to users with AP access.</span>
                       </div>
@@ -437,19 +437,19 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
       <div style={{ width:680, background:'var(--bg, #0a0712)', borderLeft:'0.5px solid rgba(251,146,60,0.15)', display:'flex', flexDirection:'column' }}>
         {/* Header */}
-        <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', flexShrink:0 }}>
+        <div style={{ padding:'16px 20px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
               <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)' }}>{supplier.name}</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', marginTop:2 }}>
+              <div style={{ fontSize:12, color:'var(--w35, rgba(255,255,255,0.35))', marginTop:2 }}>
                 <span style={{ ...MONO, color:'var(--accent-strong, #fb923c)' }}>{supplier.code}</span>
                 {supplier.paymentTerms && <span style={{ marginLeft:10 }}>{supplier.paymentTerms}</span>}
                 {supplier.currency && <span style={{ marginLeft:10 }}>{supplier.currency}</span>}
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>{items.length} items</span>
-              <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+              <span style={{ fontSize:12, color:'var(--w30, rgba(255,255,255,0.3))' }}>{items.length} items</span>
+              <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'var(--l06, rgba(255,255,255,0.06))', border:'none', cursor:'pointer', color:'var(--w45, rgba(255,255,255,0.45))', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
             </div>
           </div>
 
@@ -460,8 +460,8 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
               { label:'Preferred', value: items.filter(i => i.isPreferred).length, color:'var(--success, #4ade80)' },
               { label:'With Price', value: items.filter(i => i.lastPrice).length, color:'var(--accent-blue, #60a5fa)' },
             ].map(s => (
-              <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:6, padding:'5px 12px', display:'flex', gap:6, alignItems:'center' }}>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>{s.label}</span>
+              <div key={s.label} style={{ background:'var(--l03, rgba(255,255,255,0.03))', border:'0.5px solid var(--l06, rgba(255,255,255,0.06))', borderRadius:6, padding:'5px 12px', display:'flex', gap:6, alignItems:'center' }}>
+                <span style={{ fontSize:10, color:'var(--w30, rgba(255,255,255,0.3))', textTransform:'uppercase', letterSpacing:'0.08em' }}>{s.label}</span>
                 <span style={{ fontSize:15, fontWeight:500, color:s.color, ...MONO }}>{s.value}</span>
               </div>
             ))}
@@ -469,20 +469,20 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
         </div>
 
         {/* Search */}
-        <div style={{ padding:'10px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.04)', flexShrink:0 }}>
+        <div style={{ padding:'10px 20px', borderBottom:'0.5px solid var(--l04, rgba(255,255,255,0.04))', flexShrink:0 }}>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search item code or name…"
-            style={{ background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', width:'100%' }}
+            style={{ background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--l09, rgba(255,255,255,0.09))', borderRadius:7, padding:'7px 12px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', width:'100%' }}
           />
         </div>
 
         {/* List */}
         <div style={{ flex:1, overflowY:'auto', padding:'10px 20px', display:'flex', flexDirection:'column', gap:6 }}>
           {loading ? (
-            <div style={{ textAlign:'center', padding:30, color:'rgba(255,255,255,0.25)', fontSize:13 }}>Loading…</div>
+            <div style={{ textAlign:'center', padding:30, color:'var(--w25, rgba(255,255,255,0.25))', fontSize:13 }}>Loading…</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign:'center', padding:30, color:'rgba(255,255,255,0.2)', fontSize:13 }}>
+            <div style={{ textAlign:'center', padding:30, color:'var(--w20, rgba(255,255,255,0.2))', fontSize:13 }}>
               {search ? `No items matching "${search}"` : 'No items assigned to this supplier yet.'}
             </div>
           ) : (
@@ -491,7 +491,7 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
                 <>
                   <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(74,222,128,0.5)', padding:'4px 0 2px', borderBottom:'0.5px solid rgba(74,222,128,0.1)', marginBottom:2 }}>Preferred Items</div>
                   {preferred.map(si => <PriceRow key={si.id} si={si} />)}
-                  {others.length > 0 && <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)', padding:'8px 0 2px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', marginBottom:2, marginTop:4 }}>Other Items</div>}
+                  {others.length > 0 && <div style={{ fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--w20, rgba(255,255,255,0.2))', padding:'8px 0 2px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', marginBottom:2, marginTop:4 }}>Other Items</div>}
                 </>
               )}
               {others.map(si => <PriceRow key={si.id} si={si} />)}
@@ -505,37 +505,37 @@ function PriceListDrawer({ supplier, onClose }: { supplier: Supplier; onClose: (
 
 function PriceRow({ si }: { si: SupplierItem }) {
   return (
-    <div style={{ background:'rgba(255,255,255,0.02)', border:`0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.06)'}`, borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:12 }}>
+    <div style={{ background:'var(--l02, rgba(255,255,255,0.02))', border:`0.5px solid ${si.isPreferred ? 'rgba(74,222,128,0.15)' : 'var(--l06, rgba(255,255,255,0.06))'}`, borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:12 }}>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ ...MONO, fontSize:11, color:'var(--accent-strong, #fb923c)' }}>{si.item?.code}</span>
           {(si as any).supplierItemCode && (
-            <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.04)', padding:'1px 6px', borderRadius:4 }}>{(si as any).supplierItemCode}</span>
+            <span style={{ fontSize:10, color:'var(--w25, rgba(255,255,255,0.25))', background:'var(--l04, rgba(255,255,255,0.04))', padding:'1px 6px', borderRadius:4 }}>{(si as any).supplierItemCode}</span>
           )}
           {si.isPreferred && (
             <span style={{ fontSize:9, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.1)', border:'0.5px solid rgba(74,222,128,0.2)', padding:'1px 6px', borderRadius:10 }}>preferred</span>
           )}
         </div>
-        <div style={{ fontSize:11, color:'rgba(255,255,255,0.45)', marginTop:2 }}>{si.item?.name}</div>
+        <div style={{ fontSize:11, color:'var(--w45, rgba(255,255,255,0.45))', marginTop:2 }}>{si.item?.name}</div>
       </div>
       <div style={{ display:'flex', gap:14, alignItems:'center', flexShrink:0 }}>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>UOM</div>
+          <div style={{ fontSize:9, color:'var(--w25, rgba(255,255,255,0.25))', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>UOM</div>
           <span style={{ ...MONO, fontSize:12, color:'var(--accent-strong, #fb923c)' }}>{si.purchaseUom?.code ?? '—'}</span>
         </div>
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>Last Price</div>
-          <span style={{ ...MONO, fontSize:13, fontWeight:500, color: si.lastPrice ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>
+          <div style={{ fontSize:9, color:'var(--w25, rgba(255,255,255,0.25))', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>Last Price</div>
+          <span style={{ ...MONO, fontSize:13, fontWeight:500, color: si.lastPrice ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))' }}>
             {si.lastPrice ? `$${Number(si.lastPrice).toFixed(4)}` : '—'}
           </span>
         </div>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>MOQ</div>
-          <span style={{ ...MONO, fontSize:12, color:'rgba(255,255,255,0.5)' }}>{(si as any).moq ?? 1}</span>
+          <div style={{ fontSize:9, color:'var(--w25, rgba(255,255,255,0.25))', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>MOQ</div>
+          <span style={{ ...MONO, fontSize:12, color:'var(--w50, rgba(255,255,255,0.5))' }}>{(si as any).moq ?? 1}</span>
         </div>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:9, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>Lead</div>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{si.leadTimeDays ?? 0}d</span>
+          <div style={{ fontSize:9, color:'var(--w25, rgba(255,255,255,0.25))', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:2 }}>Lead</div>
+          <span style={{ fontSize:12, color:'var(--w50, rgba(255,255,255,0.5))' }}>{si.leadTimeDays ?? 0}d</span>
         </div>
       </div>
     </div>
@@ -551,7 +551,7 @@ function DeleteConfirm({ supplier, onCancel, onConfirm, busy }: {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:400, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete supplier?</div>
-        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}>
+        <div style={{ fontSize:13, color:'var(--w50, rgba(255,255,255,0.5))', marginBottom:20, lineHeight:1.5 }}>
           <strong style={{ color:'var(--text-strong, #f1ede8)' }}>{supplier.name}</strong> ({supplier.code}) will be soft-deleted.
         </div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
@@ -589,8 +589,8 @@ function SUPPLIER_COLUMNS(
       render: r => (
         <div>
           <div style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500 }}>{r.name}</div>
-          {r.legalName && r.legalName !== r.name && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.legalName}</div>}
-          {(r as any).city && <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:1 }}>{(r as any).city}{(r as any).country ? ` · ${(r as any).country}` : ''}</div>}
+          {r.legalName && r.legalName !== r.name && <div style={{ fontSize:11, color:'var(--w30, rgba(255,255,255,0.3))', marginTop:2 }}>{r.legalName}</div>}
+          {(r as any).city && <div style={{ fontSize:10, color:'var(--w25, rgba(255,255,255,0.25))', marginTop:1 }}>{(r as any).city}{(r as any).country ? ` · ${(r as any).country}` : ''}</div>}
         </div>
       ),
     },
@@ -599,7 +599,7 @@ function SUPPLIER_COLUMNS(
       value: r => r.category ?? '',
       render: r => r.category
         ? <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:20, fontSize:10, fontWeight:500, color:'var(--accent-violet, #a78bfa)', background:'rgba(167,139,250,0.1)', border:'0.5px solid rgba(167,139,250,0.2)' }}>{r.category}</span>
-        : <span style={{ color:'rgba(255,255,255,0.25)', fontSize:12 }}>—</span>,
+        : <span style={{ color:'var(--w25, rgba(255,255,255,0.25))', fontSize:12 }}>—</span>,
     },
     {
       key: 'contact', header: 'Contact', sortable: false,
@@ -608,8 +608,8 @@ function SUPPLIER_COLUMNS(
         return (
           <div>
             {s.contactName && <div style={{ fontSize:12, color:'var(--text-primary, #e2dfd8)' }}>{s.contactName}</div>}
-            {r.email && <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>{r.email}</div>}
-            {r.phone && <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', ...MONO }}>{r.phone}</div>}
+            {r.email && <div style={{ fontSize:11, color:'var(--w40, rgba(255,255,255,0.4))' }}>{r.email}</div>}
+            {r.phone && <div style={{ fontSize:11, color:'var(--w35, rgba(255,255,255,0.35))', ...MONO }}>{r.phone}</div>}
           </div>
         );
       },
@@ -617,12 +617,12 @@ function SUPPLIER_COLUMNS(
     {
       key: 'paymentTerms', header: 'Terms', width: 85, sortable: true,
       value: r => r.paymentTerms ?? '',
-      render: r => <span style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{r.paymentTerms || '—'}</span>,
+      render: r => <span style={{ fontSize:12, color:'var(--w50, rgba(255,255,255,0.5))' }}>{r.paymentTerms || '—'}</span>,
     },
     {
       key: 'creditLimit', header: 'Credit', width: 100, align:'right', sortable: true,
       value: r => r.creditLimit ? Number(r.creditLimit) : 0,
-      render: r => <span style={{ ...MONO, fontSize:11, color: r.creditLimit ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.2)' }}>{fmtAmt(r.creditLimit)}</span>,
+      render: r => <span style={{ ...MONO, fontSize:11, color: r.creditLimit ? 'var(--text-primary, #e2dfd8)' : 'var(--w20, rgba(255,255,255,0.2))' }}>{fmtAmt(r.creditLimit)}</span>,
     },
     {
       key: 'qualityRating', header: 'Rating', width: 110, sortable: true,
@@ -704,8 +704,8 @@ export default function SuppliersPage() {
         .sup-btn-edit,.sup-btn-del,.sup-btn-price{padding:4px 8px;border-radius:6px;font-size:10px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;border:0.5px solid transparent;white-space:nowrap}
         .sup-btn-price{background:rgba(251,146,60,0.08);color:var(--accent-strong, #fb923c);border-color:rgba(251,146,60,0.2)}
         .sup-btn-price:hover{background:rgba(251,146,60,0.14)}
-        .sup-btn-edit{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.55);border-color:rgba(255,255,255,0.1)}
-        .sup-btn-edit:hover{background:rgba(255,255,255,0.09)}
+        .sup-btn-edit{background:var(--l05, rgba(255,255,255,0.05));color:var(--w55, rgba(255,255,255,0.55));border-color:var(--w10, rgba(255,255,255,0.1))}
+        .sup-btn-edit:hover{background:var(--l09, rgba(255,255,255,0.09))}
         .sup-btn-del{background:rgba(239,68,68,0.08);color:var(--danger, #f87171);border-color:rgba(239,68,68,0.2)}
         .sup-btn-del:hover{background:rgba(239,68,68,0.14)}
         .sup-error{background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--danger-subtle, #fca5a5);flex-shrink:0}

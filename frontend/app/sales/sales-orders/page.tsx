@@ -63,13 +63,13 @@ const STATUS_STYLE: Record<SOStatus, { color: string; bg: string; border: string
   confirmed: { color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' },
   shipped:   { color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
   delivered: { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' },
-  closed:    { color: 'rgba(255,255,255,0.35)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' },
+  closed:    { color: 'var(--w35, rgba(255,255,255,0.35))', bg: 'var(--l05, rgba(255,255,255,0.05))', border: 'var(--w10, rgba(255,255,255,0.1))' },
 };
 const STATUS_ACTIONS: Record<SOStatus, { label: string; next: string; color: string; bg: string; border: string }[]> = {
   draft:     [{ label: 'Confirm', next: 'confirmed', color: 'var(--accent-blue, #60a5fa)', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)' }],
   confirmed: [{ label: 'Ship',    next: 'shipped',   color: 'var(--accent-violet, #a78bfa)', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' }],
   shipped:   [{ label: 'Deliver', next: 'delivered', color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.2)' }],
-  delivered: [{ label: 'Close',   next: 'closed',    color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' }],
+  delivered: [{ label: 'Close',   next: 'closed',    color: 'var(--w40, rgba(255,255,255,0.4))', bg: 'var(--l05, rgba(255,255,255,0.05))', border: 'var(--w10, rgba(255,255,255,0.1))' }],
   closed:    [],
 };
 
@@ -95,12 +95,12 @@ function SODetailModal({ so, onClose }: { so: SO | null; onClose: () => void }) 
   }, [so]);
 
   const TH = (h: string, right = false) =>
-    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>{h}</th>;
+    <th key={h} style={{ padding: '6px 10px', fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: right ? 'right' : 'left', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>{h}</th>;
 
   return (
     <ModalShell open={!!so} onClose={onClose} title={so ? `${so.soNumber} — Lines` : ''} width={860}>
       {loading ? (
-        <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Loading lines…</div>
+        <div style={{ padding: '16px', fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))' }}>Loading lines…</div>
       ) : detail?.lines ? (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -109,26 +109,26 @@ function SODetailModal({ so, onClose }: { so: SO | null; onClose: () => void }) 
           <tbody>
             {detail.lines.map(line => (
               <tr key={line.id}>
-                <td style={{ padding: '7px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
-                <td style={{ padding: '7px 10px' }}><span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span> <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{line.item?.name}</span></td>
-                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.description || '—'}</td>
+                <td style={{ padding: '7px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>{line.lineNumber}</td>
+                <td style={{ padding: '7px 10px' }}><span style={{ ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span> <span style={{ fontSize: 12, color: 'var(--w60, rgba(255,255,255,0.6))' }}>{line.item?.name}</span></td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{line.description || '—'}</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{line.orderedQuantity}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)' }}>{line.shippedQuantity}</td>
-                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: Number(line.shippedQuantity) > 0 ? 'var(--success, #4ade80)' : 'var(--w30, rgba(255,255,255,0.3))' }}>{line.shippedQuantity}</td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{line.uom}</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO }}>{fmtAmt(line.unitPrice)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{Number(line.discountPercent) > 0 ? `${line.discountPercent}%` : '—'}</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', ...MONO, color: 'var(--text-primary, #e2dfd8)', fontWeight: 500 }}>{fmtAmt(line.lineTotal)}</td>
-                <td style={{ padding: '7px 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{fmtDate(line.deliveryDate)}</td>
+                <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{fmtDate(line.deliveryDate)}</td>
               </tr>
             ))}
-            <tr style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-              <td colSpan={8} style={{ padding: '8px 10px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
+            <tr style={{ borderTop: '0.5px solid var(--l08, rgba(255,255,255,0.08))', background: 'var(--l02, rgba(255,255,255,0.02))' }}>
+              <td colSpan={8} style={{ padding: '8px 10px', fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500 }}>TOTAL</td>
               <td style={{ padding: '8px 10px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)', fontWeight: 600, fontSize: 13 }}>{fmtAmt(detail.total)}</td>
               <td />
             </tr>
           </tbody>
         </table>
-      ) : <div style={{ padding: '16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>No lines.</div>}
+      ) : <div style={{ padding: '16px', fontSize: 12, color: 'var(--w30, rgba(255,255,255,0.3))' }}>No lines.</div>}
     </ModalShell>
   );
 }
@@ -191,11 +191,11 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
     <FormModal open={open} onClose={onClose} title="New Sales Order" submitLabel="Create Sales Order" submitting={submitting} isValid={isValid} error={error} onSubmit={submit} width={820}>
       <style>{`
         .sol-table{width:100%;border-collapse:collapse}
-        .sol-table th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid rgba(255,255,255,0.06);white-space:nowrap}
+        .sol-table th{font-size:10px;color:rgba(251,146,60,0.5);text-transform:uppercase;letter-spacing:0.08em;padding:5px 6px;text-align:left;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));white-space:nowrap}
         .sol-table td{padding:4px 3px;vertical-align:middle}
-        .sol-inp{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
-        .sol-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:6px 0 4px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
-        .sol-btn-add{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+        .sol-inp{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:5px 7px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--text-strong, #f1ede8);outline:none;width:100%}
+        .sol-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:6px 0 4px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+        .sol-btn-add{background:var(--l04, rgba(255,255,255,0.04));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:5px;padding:4px 10px;font-size:11px;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
         .sol-btn-rm{width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.2);color:var(--danger, #f87171);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
       `}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -245,8 +245,8 @@ function CreateSOModal({ open, onClose, onSaved, customers, items }: {
             ))}
           </tbody>
         </table>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Grand Total</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: '8px 0', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
+          <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>Grand Total</span>
           <span style={{ ...MONO, fontSize: 14, fontWeight: 500, color: 'var(--accent-strong, #fb923c)' }}>{fmtAmt(grandTotal)}</span>
         </div>
       </div>
@@ -325,11 +325,11 @@ export default function SalesOrdersPage() {
         </div>
       ),
     },
-    { key: 'orderDate', header: 'Order Date', width: 120, sortable: true, value: r => r.orderDate ?? '', render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.orderDate)}</span> },
-    { key: 'promisedDate', header: 'Promised', width: 120, sortable: true, value: r => r.promisedDate ?? '', render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.promisedDate)}</span> },
-    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r._count?.lines ?? r.lines?.length ?? 0, render: r => { const n = r._count?.lines ?? r.lines?.length ?? 0; return <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{n}</span>; } },
+    { key: 'orderDate', header: 'Order Date', width: 120, sortable: true, value: r => r.orderDate ?? '', render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDate(r.orderDate)}</span> },
+    { key: 'promisedDate', header: 'Promised', width: 120, sortable: true, value: r => r.promisedDate ?? '', render: r => <span style={{ fontSize: 12, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDate(r.promisedDate)}</span> },
+    { key: 'lines', header: 'Lines', width: 70, align: 'center', sortable: true, value: r => r._count?.lines ?? r.lines?.length ?? 0, render: r => { const n = r._count?.lines ?? r.lines?.length ?? 0; return <span style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))' }}>{n}</span>; } },
     { key: 'total', header: 'Total', width: 120, align: 'right', sortable: true, value: r => Number(r.total), render: r => <span style={{ ...MONO, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(r.total)}</span> },
-    { key: 'currency', header: 'Currency', width: 90, sortable: true, value: r => r.currency ?? 'USD', render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{r.currency ?? 'USD'}</span> },
+    { key: 'currency', header: 'Currency', width: 90, sortable: true, value: r => r.currency ?? 'USD', render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))' }}>{r.currency ?? 'USD'}</span> },
     { key: 'status', header: 'Status', width: 120, sortable: true, value: r => r.status, render: r => <StatusBadge status={r.status} /> },
     {
       key: '_actions', header: '', width: 170, sortable: false,
@@ -372,13 +372,13 @@ export default function SalesOrdersPage() {
             {ALL_STATUSES.map(s => {
               const style = STATUS_STYLE[s];
               return (
-                <div key={s} className="so-stat" style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter(prev => (prev === s ? '' : s))}>
+                <div key={s} className="so-stat" style={{ border: `0.5px solid ${statusFilter === s ? style.border : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatusFilter(prev => (prev === s ? '' : s))}>
                   <span className="so-stat-label" style={{ color: style.color }}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
                   <span className="so-stat-value">{counts[s]}</span>
                 </div>
               );
             })}
-            <div className="so-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}` }} onClick={() => setStatusFilter('')}>
+            <div className="so-stat" style={{ border: `0.5px solid ${!statusFilter ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}` }} onClick={() => setStatusFilter('')}>
               <span className="so-stat-label" style={{ color: 'rgba(251,146,60,0.6)' }}>Total</span>
               <span className="so-stat-value" style={{ color: 'var(--accent-strong, #fb923c)' }}>{orders.length}</span>
             </div>

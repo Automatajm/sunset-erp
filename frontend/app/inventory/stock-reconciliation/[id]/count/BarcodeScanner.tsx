@@ -96,7 +96,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         </div>
         <button
           onClick={onClose}
-          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, color: 'white', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ background: 'var(--w10, rgba(255,255,255,0.1))', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, color: 'white', cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Cancel
         </button>
       </div>
@@ -141,10 +141,10 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
       {/* Instructions */}
       <div style={{ marginTop: 24, textAlign: 'center', padding: '0 32px' }}>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: 'var(--w50, rgba(255,255,255,0.5))', fontFamily: "'IBM Plex Sans',sans-serif", lineHeight: 1.6 }}>
           Point camera at item barcode, internal code, or supplier code
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 8, fontFamily: "'IBM Plex Sans',sans-serif" }}>
+        <div style={{ fontSize: 11, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 8, fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Supports CODE128, EAN-13, QR, and more
         </div>
       </div>

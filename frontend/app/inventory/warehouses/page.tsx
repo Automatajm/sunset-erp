@@ -64,37 +64,37 @@ function occupancyColor(pct: number): string {
 }
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
-const INP: React.CSSProperties = { background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'6px 10px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+const INP: React.CSSProperties = { background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w12, rgba(255,255,255,0.12))', borderRadius:6, padding:'6px 10px', fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
 const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.55)' };
 const BTN_ADD: React.CSSProperties = { background:'rgba(251,146,60,0.1)', border:'0.5px solid rgba(251,146,60,0.25)', borderRadius:6, padding:'4px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--accent-strong, #fb923c)', cursor:'pointer' };
 const BTN_SAVE: React.CSSProperties = { background:'rgba(234,88,12,0.8)', border:'none', borderRadius:6, padding:'5px 12px', fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'white', cursor:'pointer' };
-const BTN_CANCEL: React.CSSProperties = { background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.45)', cursor:'pointer' };
-const BTN_EDIT: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(255,255,255,0.3)', cursor:'pointer', borderRadius:4 };
+const BTN_CANCEL: React.CSSProperties = { background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w45, rgba(255,255,255,0.45))', cursor:'pointer' };
+const BTN_EDIT: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w30, rgba(255,255,255,0.3))', cursor:'pointer', borderRadius:4 };
 const BTN_DEL: React.CSSProperties = { background:'none', border:'none', padding:'3px 7px', fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", color:'rgba(239,68,68,0.5)', cursor:'pointer', borderRadius:4 };
 
 // ─── Capacity Value — absolute, no % ────────────────────────────────────────
 function CapacityValue({ value, unit, color = 'var(--accent-violet, #a78bfa)' }: { value: number | null; unit: string; color?: string }) {
-  if (value === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+  if (value === null) return <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
   return (
     <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color }}>
-      {value.toLocaleString()} <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{unit}</span>
+      {value.toLocaleString()} <span style={{ fontSize:9, color:'var(--w30, rgba(255,255,255,0.3))' }}>{unit}</span>
     </span>
   );
 }
 
 // ─── Occupancy Bar — pallets estimate only, clearly labelled ─────────────────
 function OccupancyBar({ pct }: { pct: number | null }) {
-  if (pct === null) return <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>—</span>;
+  if (pct === null) return <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>—</span>;
   const color = pct >= 90 ? 'var(--danger, #f87171)' : pct >= 70 ? 'var(--warning, #fbbf24)' : pct >= 40 ? 'var(--success, #4ade80)' : 'var(--accent-blue, #60a5fa)';
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
       <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-        <div style={{ flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.08)', overflow:'hidden' }}>
+        <div style={{ flex:1, height:4, borderRadius:2, background:'var(--l08, rgba(255,255,255,0.08))', overflow:'hidden' }}>
           <div style={{ width:`${pct}%`, height:'100%', background:color, borderRadius:2, transition:'width 0.3s' }} />
         </div>
         <span style={{ fontSize:10, color, fontFamily:"'IBM Plex Mono',monospace", minWidth:28 }}>{pct}%</span>
       </div>
-      <span style={{ fontSize:8, color:'rgba(255,255,255,0.2)', letterSpacing:'0.05em' }}>est. lines/pallets</span>
+      <span style={{ fontSize:8, color:'var(--w20, rgba(255,255,255,0.2))', letterSpacing:'0.05em' }}>est. lines/pallets</span>
     </div>
   );
 }
@@ -104,8 +104,8 @@ function CapacityPanel({ w }: { w: WarehouseEnriched }) {
   const hasAny = w.capacityKg !== null || w.capacityLtr !== null || w.capacityPallets !== null;
   if (!hasAny) return null;
   return (
-    <div style={{ display:'flex', gap:10, padding:'8px 20px', flexWrap:'wrap', alignItems:'center', borderBottom:'0.5px solid rgba(255,255,255,0.04)', background:'rgba(167,139,250,0.03)' }}>
-      <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Capacity:</span>
+    <div style={{ display:'flex', gap:10, padding:'8px 20px', flexWrap:'wrap', alignItems:'center', borderBottom:'0.5px solid var(--l04, rgba(255,255,255,0.04))', background:'rgba(167,139,250,0.03)' }}>
+      <span style={{ fontSize:10, color:'var(--w30, rgba(255,255,255,0.3))', textTransform:'uppercase', letterSpacing:'0.08em' }}>Capacity:</span>
       {w.capacityKg !== null && (
         <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'rgba(167,139,250,0.08)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:6, padding:'3px 9px', fontSize:11, color:'var(--accent-violet, #a78bfa)', fontFamily:"'IBM Plex Mono',monospace" }}>
           {w.capacityKg.toLocaleString()} kg
@@ -123,7 +123,7 @@ function CapacityPanel({ w }: { w: WarehouseEnriched }) {
       )}
       {w.occupancyPct !== null && (
         <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginLeft:4 }}>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Occ.:</span>
+          <span style={{ fontSize:10, color:'var(--w30, rgba(255,255,255,0.3))', textTransform:'uppercase', letterSpacing:'0.08em' }}>Occ.:</span>
           <OccupancyBar pct={w.occupancyPct} />
         </div>
       )}
@@ -181,8 +181,8 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
 
   const toggle = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  if (loading) return <div style={{ padding:'12px 16px', color:'rgba(255,255,255,0.25)', fontSize:11 }}>Loading locations…</div>;
-  if (zones.length === 0) return <div style={{ padding:'12px 16px', color:'rgba(255,255,255,0.2)', fontSize:11, fontStyle:'italic' }}>No locations configured — use Edit → Location Tree to add zones.</div>;
+  if (loading) return <div style={{ padding:'12px 16px', color:'var(--w25, rgba(255,255,255,0.25))', fontSize:11 }}>Loading locations…</div>;
+  if (zones.length === 0) return <div style={{ padding:'12px 16px', color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11, fontStyle:'italic' }}>No locations configured — use Edit → Location Tree to add zones.</div>;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', padding:'6px 0' }}>
@@ -193,44 +193,44 @@ function LocationTreeReadOnly({ warehouseId }: { warehouseId: string }) {
             <span style={{ fontSize:11, color:zoneColor(zone.zoneType), fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, minWidth:55 }}>{zone.code}</span>
             <span style={{ fontSize:11, color:'var(--text-primary, #e2dfd8)', flex:1 }}>{zone.name}</span>
             <span style={{ fontSize:9, color:zoneColor(zone.zoneType), background:`${zoneColor(zone.zoneType)}18`, border:`0.5px solid ${zoneColor(zone.zoneType)}35`, padding:'1px 6px', borderRadius:20 }}>{zone.zoneType}</span>
-            <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)' }}>{zone.aisles?.length ?? 0} aisles</span>
+            <span style={{ fontSize:10, color:'var(--w25, rgba(255,255,255,0.25))' }}>{zone.aisles?.length ?? 0} aisles</span>
           </div>
           {expanded.has(zone.id) && zone.aisles?.map(aisle => (
             <div key={aisle.id}>
-              <div onClick={() => toggle(aisle.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 20px 5px 52px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid rgba(255,255,255,0.03)' }}>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>│</span>
+              <div onClick={() => toggle(aisle.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 20px 5px 52px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid var(--l03, rgba(255,255,255,0.03))' }}>
+                <span style={{ fontSize:9, color:'var(--w20, rgba(255,255,255,0.2))' }}>│</span>
                 <span style={{ fontSize:9, color:'rgba(251,146,60,0.6)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(aisle.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                 <span style={{ fontSize:10, color:'rgba(251,146,60,0.7)', fontFamily:"'IBM Plex Mono',monospace", minWidth:65 }}>{aisle.fullCode}</span>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', flex:1 }}>{aisle.name ?? `Aisle ${aisle.code}`}</span>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{aisle.racks?.length ?? 0} racks</span>
+                <span style={{ fontSize:10, color:'var(--w50, rgba(255,255,255,0.5))', flex:1 }}>{aisle.name ?? `Aisle ${aisle.code}`}</span>
+                <span style={{ fontSize:9, color:'var(--w20, rgba(255,255,255,0.2))' }}>{aisle.racks?.length ?? 0} racks</span>
               </div>
               {expanded.has(aisle.id) && aisle.racks?.map(rack => (
                 <div key={rack.id}>
-                  <div onClick={() => toggle(rack.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 20px 4px 68px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid rgba(255,255,255,0.02)' }}>
-                    <span style={{ fontSize:9, color:'rgba(255,255,255,0.15)' }}>│</span>
+                  <div onClick={() => toggle(rack.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 20px 4px 68px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid var(--l02, rgba(255,255,255,0.02))' }}>
+                    <span style={{ fontSize:9, color:'var(--w15, rgba(255,255,255,0.15))' }}>│</span>
                     <span style={{ fontSize:9, color:'rgba(96,165,250,0.5)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(rack.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                     <span style={{ fontSize:10, color:'rgba(96,165,250,0.7)', fontFamily:"'IBM Plex Mono',monospace", minWidth:75 }}>{rack.fullCode}</span>
-                    <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)', flex:1 }}>{rack.name ?? `Rack ${rack.code}`}</span>
-                    <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{rack.levels?.length ?? 0} levels</span>
+                    <span style={{ fontSize:10, color:'var(--w40, rgba(255,255,255,0.4))', flex:1 }}>{rack.name ?? `Rack ${rack.code}`}</span>
+                    <span style={{ fontSize:9, color:'var(--w20, rgba(255,255,255,0.2))' }}>{rack.levels?.length ?? 0} levels</span>
                   </div>
                   {expanded.has(rack.id) && rack.levels?.map(level => (
                     <div key={level.id}>
-                      <div onClick={() => toggle(level.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 20px 4px 84px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid rgba(255,255,255,0.015)' }}>
-                        <span style={{ fontSize:9, color:'rgba(255,255,255,0.1)' }}>│</span>
+                      <div onClick={() => toggle(level.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 20px 4px 84px', cursor:'pointer', userSelect:'none', borderTop:'0.5px solid var(--l015, rgba(255,255,255,0.015))' }}>
+                        <span style={{ fontSize:9, color:'var(--w10, rgba(255,255,255,0.1))' }}>│</span>
                         <span style={{ fontSize:9, color:'rgba(167,139,250,0.5)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(level.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                         <span style={{ fontSize:9, color:'rgba(167,139,250,0.7)', fontFamily:"'IBM Plex Mono',monospace", minWidth:85 }}>{level.fullCode}</span>
-                        <span style={{ fontSize:9, color:'rgba(255,255,255,0.35)', flex:1 }}>{level.name ?? `Level ${level.code}`}</span>
-                        {level.maxWeightKg && <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
-                        {(level._count?.bins ?? 0) > 0 && <span style={{ fontSize:9, color:'rgba(255,255,255,0.2)' }}>{level._count!.bins} bins</span>}
+                        <span style={{ fontSize:9, color:'var(--w35, rgba(255,255,255,0.35))', flex:1 }}>{level.name ?? `Level ${level.code}`}</span>
+                        {level.maxWeightKg && <span style={{ fontSize:9, color:'var(--w20, rgba(255,255,255,0.2))' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
+                        {(level._count?.bins ?? 0) > 0 && <span style={{ fontSize:9, color:'var(--w20, rgba(255,255,255,0.2))' }}>{level._count!.bins} bins</span>}
                         {(level._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{level._count!.stock} lines</span>}
                       </div>
                       {expanded.has(level.id) && level.bins?.map(bin => (
-                        <div key={bin.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 20px 3px 100px', borderTop:'0.5px solid rgba(255,255,255,0.01)' }}>
-                          <span style={{ fontSize:9, color:'rgba(255,255,255,0.08)' }}>│</span>
+                        <div key={bin.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 20px 3px 100px', borderTop:'0.5px solid var(--l01, rgba(255,255,255,0.01))' }}>
+                          <span style={{ fontSize:9, color:'var(--l08, rgba(255,255,255,0.08))' }}>│</span>
                           <span style={{ fontSize:9, color:'rgba(251,146,60,0.55)', fontFamily:"'IBM Plex Mono',monospace", minWidth:100 }}>{bin.fullCode}</span>
-                          <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', flex:1 }}>{bin.name ?? `Bin ${bin.code}`}</span>
-                          <span style={{ fontSize:8, color:'rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.03)', padding:'1px 5px', borderRadius:20 }}>{bin.binType}</span>
-                          {bin.maxWeightKg && <span style={{ fontSize:9, color:'rgba(255,255,255,0.15)' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
+                          <span style={{ fontSize:9, color:'var(--w30, rgba(255,255,255,0.3))', flex:1 }}>{bin.name ?? `Bin ${bin.code}`}</span>
+                          <span style={{ fontSize:8, color:'var(--w20, rgba(255,255,255,0.2))', background:'var(--l03, rgba(255,255,255,0.03))', padding:'1px 5px', borderRadius:20 }}>{bin.binType}</span>
+                          {bin.maxWeightKg && <span style={{ fontSize:9, color:'var(--w15, rgba(255,255,255,0.15))' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
                           {(bin._count?.stock ?? 0) > 0 && <span style={{ fontSize:9, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', padding:'1px 5px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
                         </div>
                       ))}
@@ -328,83 +328,83 @@ function LocationTree({ warehouseId, onStatsChange }: LocationTreeProps) {
     </div>
   );
 
-  if (loading) return <div style={{ textAlign:'center', padding:32, color:'rgba(255,255,255,0.25)', fontSize:12 }}>Loading locations…</div>;
+  if (loading) return <div style={{ textAlign:'center', padding:32, color:'var(--w25, rgba(255,255,255,0.25))', fontSize:12 }}>Loading locations…</div>;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-      <style>{`.loc-row:hover .loc-actions{opacity:1!important}.loc-row:hover{background:rgba(255,255,255,0.03)!important}`}</style>
+      <style>{`.loc-row:hover .loc-actions{opacity:1!important}.loc-row:hover{background:var(--l03, rgba(255,255,255,0.03))!important}`}</style>
       {addingTo !== warehouseId && <button style={{ ...BTN_ADD, alignSelf:'flex-start', marginBottom:2 }} onClick={() => startAdd(warehouseId, 'zone', { zoneType:'storage' })} type="button">+ Add Zone</button>}
       {addingTo === warehouseId && addLevel === 'zone' && <InlineForm fields={zoneFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Zone" />}
-      {zones.length === 0 && addingTo !== warehouseId && <div style={{ textAlign:'center', padding:32, color:'rgba(255,255,255,0.2)', fontSize:12, border:'0.5px dashed rgba(255,255,255,0.08)', borderRadius:8 }}>No zones yet — click "+ Add Zone" to start.</div>}
+      {zones.length === 0 && addingTo !== warehouseId && <div style={{ textAlign:'center', padding:32, color:'var(--w20, rgba(255,255,255,0.2))', fontSize:12, border:'0.5px dashed var(--l08, rgba(255,255,255,0.08))', borderRadius:8 }}>No zones yet — click "+ Add Zone" to start.</div>}
       {zones.map(zone => (
-        <div key={zone.id} style={{ borderRadius:8, border:'0.5px solid rgba(255,255,255,0.07)', overflow:'visible' }}>
+        <div key={zone.id} style={{ borderRadius:8, border:'0.5px solid var(--l07, rgba(255,255,255,0.07))', overflow:'visible' }}>
           {editingId === zone.id
             ? <div style={{ padding:10 }}><InlineForm fields={zoneFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Zone" /></div>
-            : <div className="loc-row" onClick={() => toggle(zone.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'rgba(255,255,255,0.02)', cursor:'pointer', userSelect:'none', borderRadius:expanded.has(zone.id)?'8px 8px 0 0':8 }}>
+            : <div className="loc-row" onClick={() => toggle(zone.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--l02, rgba(255,255,255,0.02))', cursor:'pointer', userSelect:'none', borderRadius:expanded.has(zone.id)?'8px 8px 0 0':8 }}>
                 <span style={{ fontSize:11, color:zoneColor(zone.zoneType), display:'inline-block', transition:'transform 0.15s', transform:expanded.has(zone.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                 <span style={{ fontSize:12, color:zoneColor(zone.zoneType), fontFamily:"'IBM Plex Mono',monospace", fontWeight:500, minWidth:60 }}>{zone.code}</span>
                 <span style={{ fontSize:12, color:'var(--text-primary, #e2dfd8)', flex:1 }}>{zone.name}</span>
                 <span style={{ fontSize:10, color:zoneColor(zone.zoneType), background:`${zoneColor(zone.zoneType)}18`, border:`0.5px solid ${zoneColor(zone.zoneType)}35`, padding:'1px 7px', borderRadius:20 }}>{zone.zoneType}</span>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>{zone.aisles?.length??zone._count?.aisles??0} aisles</span>
+                <span style={{ fontSize:11, color:'var(--w25, rgba(255,255,255,0.25))' }}>{zone.aisles?.length??zone._count?.aisles??0} aisles</span>
                 {nodeActions(zone.id,'zone',{code:zone.code,name:zone.name,zoneType:zone.zoneType,description:zone.description??''},true,'aisle','Aisle')}
               </div>
           }
-          {addingTo === zone.id && addLevel === 'aisle' && <div style={{ padding:'0 10px 10px', borderTop:'0.5px solid rgba(255,255,255,0.05)' }}><InlineForm fields={aisleFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Aisle" /></div>}
+          {addingTo === zone.id && addLevel === 'aisle' && <div style={{ padding:'0 10px 10px', borderTop:'0.5px solid var(--l05, rgba(255,255,255,0.05))' }}><InlineForm fields={aisleFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Aisle" /></div>}
           {expanded.has(zone.id) && zone.aisles?.map(aisle => (
-            <div key={aisle.id} style={{ borderTop:'0.5px solid rgba(255,255,255,0.04)' }}>
+            <div key={aisle.id} style={{ borderTop:'0.5px solid var(--l04, rgba(255,255,255,0.04))' }}>
               {editingId === aisle.id
                 ? <div style={{ padding:'6px 10px 6px 28px' }}><InlineForm fields={aisleFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Aisle" /></div>
                 : <div className="loc-row" onClick={() => toggle(aisle.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px 8px 28px', cursor:'pointer', userSelect:'none' }}>
-                    <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>│</span>
+                    <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>│</span>
                     <span style={{ fontSize:10, color:'rgba(251,146,60,0.7)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(aisle.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                     <span style={{ fontSize:11, color:'rgba(251,146,60,0.8)', fontFamily:"'IBM Plex Mono',monospace", minWidth:70 }}>{aisle.fullCode}</span>
-                    <span style={{ fontSize:11, color:'rgba(255,255,255,0.6)', flex:1 }}>{aisle.name??`Aisle ${aisle.code}`}</span>
-                    <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{aisle.racks?.length??aisle._count?.racks??0} racks</span>
+                    <span style={{ fontSize:11, color:'var(--w60, rgba(255,255,255,0.6))', flex:1 }}>{aisle.name??`Aisle ${aisle.code}`}</span>
+                    <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{aisle.racks?.length??aisle._count?.racks??0} racks</span>
                     {nodeActions(aisle.id,'aisle',{code:aisle.code,name:aisle.name??''},true,'rack','Rack')}
                   </div>
               }
-              {addingTo === aisle.id && addLevel === 'rack' && <div style={{ padding:'0 10px 8px 44px', borderTop:'0.5px solid rgba(255,255,255,0.03)' }}><InlineForm fields={rackFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Rack" /></div>}
+              {addingTo === aisle.id && addLevel === 'rack' && <div style={{ padding:'0 10px 8px 44px', borderTop:'0.5px solid var(--l03, rgba(255,255,255,0.03))' }}><InlineForm fields={rackFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Rack" /></div>}
               {expanded.has(aisle.id) && aisle.racks?.map(rack => (
-                <div key={rack.id} style={{ borderTop:'0.5px solid rgba(255,255,255,0.03)' }}>
+                <div key={rack.id} style={{ borderTop:'0.5px solid var(--l03, rgba(255,255,255,0.03))' }}>
                   {editingId === rack.id
                     ? <div style={{ padding:'6px 10px 6px 44px' }}><InlineForm fields={rackFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Rack" /></div>
                     : <div className="loc-row" onClick={() => toggle(rack.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 14px 7px 44px', cursor:'pointer', userSelect:'none' }}>
-                        <span style={{ fontSize:10, color:'rgba(255,255,255,0.15)' }}>│</span>
+                        <span style={{ fontSize:10, color:'var(--w15, rgba(255,255,255,0.15))' }}>│</span>
                         <span style={{ fontSize:10, color:'rgba(96,165,250,0.6)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(rack.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                         <span style={{ fontSize:11, color:'rgba(96,165,250,0.8)', fontFamily:"'IBM Plex Mono',monospace", minWidth:80 }}>{rack.fullCode}</span>
-                        <span style={{ fontSize:11, color:'rgba(255,255,255,0.5)', flex:1 }}>{rack.name??`Rack ${rack.code}`}</span>
-                        <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{rack.levels?.length??0} levels</span>
+                        <span style={{ fontSize:11, color:'var(--w50, rgba(255,255,255,0.5))', flex:1 }}>{rack.name??`Rack ${rack.code}`}</span>
+                        <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{rack.levels?.length??0} levels</span>
                         {nodeActions(rack.id,'rack',{code:rack.code,name:rack.name??''},true,'level','Level')}
                       </div>
                   }
-                  {addingTo === rack.id && addLevel === 'level' && <div style={{ padding:'0 10px 8px 58px', borderTop:'0.5px solid rgba(255,255,255,0.02)' }}><InlineForm fields={levelFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Level" /></div>}
+                  {addingTo === rack.id && addLevel === 'level' && <div style={{ padding:'0 10px 8px 58px', borderTop:'0.5px solid var(--l02, rgba(255,255,255,0.02))' }}><InlineForm fields={levelFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Level" /></div>}
                   {expanded.has(rack.id) && rack.levels?.map(level => (
-                    <div key={level.id} style={{ borderTop:'0.5px solid rgba(255,255,255,0.02)' }}>
+                    <div key={level.id} style={{ borderTop:'0.5px solid var(--l02, rgba(255,255,255,0.02))' }}>
                       {editingId === level.id
                         ? <div style={{ padding:'6px 10px 6px 58px' }}><InlineForm fields={levelFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Level" /></div>
                         : <div className="loc-row" onClick={() => toggle(level.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 14px 6px 58px', cursor:'pointer', userSelect:'none' }}>
-                            <span style={{ fontSize:10, color:'rgba(255,255,255,0.12)' }}>│</span>
+                            <span style={{ fontSize:10, color:'var(--w12, rgba(255,255,255,0.12))' }}>│</span>
                             <span style={{ fontSize:10, color:'rgba(167,139,250,0.6)', display:'inline-block', transition:'transform 0.15s', transform:expanded.has(level.id)?'rotate(90deg)':'rotate(0deg)' }}>▶</span>
                             <span style={{ fontSize:10, color:'rgba(167,139,250,0.8)', fontFamily:"'IBM Plex Mono',monospace", minWidth:90 }}>{level.fullCode}</span>
-                            <span style={{ fontSize:10, color:'rgba(255,255,255,0.45)', flex:1 }}>{level.name??`Level ${level.code}`}</span>
-                            {level.maxWeightKg && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
-                            {level.maxPallets  && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{level.maxPallets}plt</span>}
+                            <span style={{ fontSize:10, color:'var(--w45, rgba(255,255,255,0.45))', flex:1 }}>{level.name??`Level ${level.code}`}</span>
+                            {level.maxWeightKg && <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{Number(level.maxWeightKg).toLocaleString()}kg</span>}
+                            {level.maxPallets  && <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{level.maxPallets}plt</span>}
                             {(level._count?.stock??0)>0 && <span style={{ fontSize:10, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{level._count!.stock} lines</span>}
-                            {(level._count?.bins??0)>0  && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{level._count!.bins} bins</span>}
+                            {(level._count?.bins??0)>0  && <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{level._count!.bins} bins</span>}
                             {nodeActions(level.id,'level',{code:level.code,name:level.name??'',maxWeightKg:level.maxWeightKg?String(level.maxWeightKg):'',maxVolumeLtr:level.maxVolumeLtr?String(level.maxVolumeLtr):'',maxPallets:level.maxPallets?String(level.maxPallets):''},true,'bin','Bin')}
                           </div>
                       }
-                      {addingTo === level.id && addLevel === 'bin' && <div style={{ padding:'0 10px 8px 72px', borderTop:'0.5px solid rgba(255,255,255,0.015)' }}><InlineForm fields={binFields} values={{ binType:'standard',...formVals }} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Bin" /></div>}
+                      {addingTo === level.id && addLevel === 'bin' && <div style={{ padding:'0 10px 8px 72px', borderTop:'0.5px solid var(--l015, rgba(255,255,255,0.015))' }}><InlineForm fields={binFields} values={{ binType:'standard',...formVals }} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Create Bin" /></div>}
                       {expanded.has(level.id) && level.bins?.map(bin => (
                         <div key={bin.id}>
                           {editingId === bin.id
-                            ? <div style={{ padding:'6px 10px 6px 72px', borderTop:'0.5px solid rgba(255,255,255,0.01)' }}><InlineForm fields={binFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Bin" /></div>
-                            : <div className="loc-row" style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 14px 5px 72px', borderTop:'0.5px solid rgba(255,255,255,0.01)', cursor:'default', userSelect:'none' }}>
-                                <span style={{ fontSize:10, color:'rgba(255,255,255,0.1)' }}>│</span>
+                            ? <div style={{ padding:'6px 10px 6px 72px', borderTop:'0.5px solid var(--l01, rgba(255,255,255,0.01))' }}><InlineForm fields={binFields} values={formVals} onChange={setFv} onSave={handleSave} onCancel={cancelForm} saving={saving} error={formError} saveLabel="Save Bin" /></div>
+                            : <div className="loc-row" style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 14px 5px 72px', borderTop:'0.5px solid var(--l01, rgba(255,255,255,0.01))', cursor:'default', userSelect:'none' }}>
+                                <span style={{ fontSize:10, color:'var(--w10, rgba(255,255,255,0.1))' }}>│</span>
                                 <span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', fontFamily:"'IBM Plex Mono',monospace", minWidth:100 }}>{bin.fullCode}</span>
-                                <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)', flex:1 }}>{bin.name??`Bin ${bin.code}`}</span>
-                                <span style={{ fontSize:9, color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.04)', padding:'1px 6px', borderRadius:20 }}>{bin.binType}</span>
-                                {bin.maxWeightKg && <span style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
+                                <span style={{ fontSize:10, color:'var(--w40, rgba(255,255,255,0.4))', flex:1 }}>{bin.name??`Bin ${bin.code}`}</span>
+                                <span style={{ fontSize:9, color:'var(--w25, rgba(255,255,255,0.25))', background:'var(--l04, rgba(255,255,255,0.04))', padding:'1px 6px', borderRadius:20 }}>{bin.binType}</span>
+                                {bin.maxWeightKg && <span style={{ fontSize:10, color:'var(--w20, rgba(255,255,255,0.2))' }}>{Number(bin.maxWeightKg).toLocaleString()}kg</span>}
                                 {(bin._count?.stock??0)>0 && <span style={{ fontSize:10, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', padding:'1px 6px', borderRadius:20 }}>{bin._count!.stock} lines</span>}
                                 {nodeActions(bin.id,'bin',{code:bin.code,name:bin.name??'',binType:bin.binType,maxWeightKg:bin.maxWeightKg?String(bin.maxWeightKg):'',maxVolumeLtr:bin.maxVolumeLtr?String(bin.maxVolumeLtr):'',maxPallets:bin.maxPallets?String(bin.maxPallets):'',notes:bin.notes??''},false)}
                               </div>
@@ -430,10 +430,10 @@ function TypeBadge({ type }: { type?: string }) {
   return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:c.color, background:c.bg, border:`0.5px solid ${c.border}`, whiteSpace:'nowrap' }}><span style={{ width:5, height:5, borderRadius:'50%', background:c.color, flexShrink:0 }} />{c.label}</span>;
 }
 function ActiveBadge({ active }: { active: boolean }) {
-  return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active?'var(--success, #4ade80)':'rgba(255,255,255,0.35)', background:active?'rgba(74,222,128,0.1)':'rgba(255,255,255,0.04)', border:`0.5px solid ${active?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.08)'}` }}><span style={{ width:5, height:5, borderRadius:'50%', background:active?'var(--success, #4ade80)':'rgba(255,255,255,0.2)', flexShrink:0 }} />{active?'Active':'Inactive'}</span>;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:500, color:active?'var(--success, #4ade80)':'var(--w35, rgba(255,255,255,0.35))', background:active?'rgba(74,222,128,0.1)':'var(--l04, rgba(255,255,255,0.04))', border:`0.5px solid ${active?'rgba(74,222,128,0.2)':'var(--l08, rgba(255,255,255,0.08))'}` }}><span style={{ width:5, height:5, borderRadius:'50%', background:active?'var(--success, #4ade80)':'var(--w20, rgba(255,255,255,0.2))', flexShrink:0 }} />{active?'Active':'Inactive'}</span>;
 }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked?'var(--text-primary, #e2dfd8)':'rgba(255,255,255,0.4)', userSelect:'none' }}><div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked?'rgba(234,88,12,0.8)':'rgba(255,255,255,0.1)', border:`0.5px solid ${checked?'rgba(251,146,60,0.5)':'rgba(255,255,255,0.15)'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}><div style={{ position:'absolute', top:2, left:checked?16:2, width:13, height:13, borderRadius:'50%', background:'var(--white, #fff)', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} /></div>{label}</label>;
+  return <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, color:checked?'var(--text-primary, #e2dfd8)':'var(--w40, rgba(255,255,255,0.4))', userSelect:'none' }}><div onClick={() => onChange(!checked)} style={{ width:32, height:18, borderRadius:9, flexShrink:0, background:checked?'rgba(234,88,12,0.8)':'var(--w10, rgba(255,255,255,0.1))', border:`0.5px solid ${checked?'rgba(251,146,60,0.5)':'var(--w15, rgba(255,255,255,0.15))'}`, position:'relative', transition:'background 0.2s', cursor:'pointer' }}><div style={{ position:'absolute', top:2, left:checked?16:2, width:13, height:13, borderRadius:'50%', background:'var(--white, #fff)', transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} /></div>{label}</label>;
 }
 
 // ─── Stats Bar ────────────────────────────────────────────────────────────────
@@ -467,7 +467,7 @@ function buildColumns(
     {
       key:'name', header:'Name', sortable:true,
       value: r => r.name,
-      render: r => <div><div style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500 }}>{r.name}</div>{r.address && <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>{r.address}</div>}</div>,
+      render: r => <div><div style={{ color:'var(--text-primary, #e2dfd8)', fontWeight:500 }}>{r.name}</div>{r.address && <div style={{ fontSize:11, color:'var(--w30, rgba(255,255,255,0.3))', marginTop:2 }}>{r.address}</div>}</div>,
     },
     {
       key:'warehouseType', header:'Type', width:130, sortable:true,
@@ -477,12 +477,12 @@ function buildColumns(
     {
       key:'zoneCount', header:'Zones', width:80, sortable:true, align:'center',
       value: r => r.zoneCount ?? 0,
-      render: r => r.zoneCount > 0 ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-blue, #60a5fa)' }}>{r.zoneCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      render: r => r.zoneCount > 0 ? <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:12, color:'var(--accent-blue, #60a5fa)' }}>{r.zoneCount}</span> : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:12 }}>—</span>,
     },
     {
       key:'stockCount', header:'Stock Lines', width:100, sortable:true, align:'center',
       value: r => r.stockCount ?? 0,
-      render: r => r.stockCount > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{r.stockCount}</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>—</span>,
+      render: r => r.stockCount > 0 ? <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 7px', borderRadius:20, fontSize:10, color:'var(--success, #4ade80)', background:'rgba(74,222,128,0.08)', border:'0.5px solid rgba(74,222,128,0.2)' }}>{r.stockCount}</span> : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:12 }}>—</span>,
     },
     {
       key:'capacityKg', header:'Cap. kg', width:90, sortable:true, align:'center',
@@ -507,7 +507,7 @@ function buildColumns(
     {
       key:'locationTrackingEnabled', header:'Locations', width:90, sortable:true, align:'center',
       value: r => r.locationTrackingEnabled ? 1 : 0,
-      render: r => r.locationTrackingEnabled ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'var(--accent-blue, #60a5fa)' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent-blue, #60a5fa)' }} />On</span> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11 }}>Off</span>,
+      render: r => r.locationTrackingEnabled ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'var(--accent-blue, #60a5fa)' }}><span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent-blue, #60a5fa)' }} />On</span> : <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11 }}>Off</span>,
     },
     {
       key:'isActive', header:'Status', width:100, sortable:true,
@@ -518,7 +518,7 @@ function buildColumns(
       key:'_actions', header:'', width:120, sortable:false,
       render: r => (
         <div style={{ display:'flex', gap:6 }}>
-          <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.55)', border:'0.5px solid rgba(255,255,255,0.1)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onEdit(r); }}>Edit</button>
+          <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'var(--l05, rgba(255,255,255,0.05))', color:'var(--w55, rgba(255,255,255,0.55))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onEdit(r); }}>Edit</button>
           <button style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', background:'rgba(239,68,68,0.08)', color:'var(--danger, #f87171)', border:'0.5px solid rgba(239,68,68,0.2)', whiteSpace:'nowrap' }} onClick={e => { e.stopPropagation(); onDelete(r); }}>Delete</button>
         </div>
       ),
@@ -565,7 +565,7 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
 
   if (!open) return null;
   const TABS = [{ key:'general', label:'General' }, ...(initial ? [{ key:'locations', label:'Location Tree' }] : [])];
-  const FINP: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
+  const FINP: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'9px 12px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-strong, #f1ede8)', outline:'none', width:'100%' };
   const FLBL: React.CSSProperties = { fontSize:11, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.6)' };
 
   return (
@@ -576,8 +576,8 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
         .wm-box::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(251,146,60,0.4),transparent);pointer-events:none}
         .wm-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
         .wm-title{font-size:14px;font-weight:500;color:var(--text-strong, #f1ede8)}
-        .wm-close{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;color:rgba(255,255,255,0.45);font-size:16px;display:flex;align-items:center;justify-content:center}
-        .wm-close:hover{background:rgba(255,255,255,0.12);color:var(--text-strong, #f1ede8)}
+        .wm-close{width:24px;height:24px;border-radius:6px;background:var(--l06, rgba(255,255,255,0.06));border:none;cursor:pointer;color:var(--w45, rgba(255,255,255,0.45));font-size:16px;display:flex;align-items:center;justify-content:center}
+        .wm-close:hover{background:var(--w12, rgba(255,255,255,0.12));color:var(--text-strong, #f1ede8)}
         .wm-tabs{display:flex;padding:0 20px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0}
         .wm-tab{padding:10px 14px;font-size:12px;cursor:pointer;color:var(--w40, rgba(255,255,255,0.4));border:none;border-bottom:2px solid transparent;background:none;font-family:'IBM Plex Sans',sans-serif;transition:color 0.15s}
         .wm-tab:hover{color:var(--w70, rgba(255,255,255,0.7))}
@@ -587,14 +587,14 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
         .wm-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .wm-field{display:flex;flex-direction:column;gap:5px}
         .wm-error{background:rgba(239,68,68,0.1);border:0.5px solid rgba(239,68,68,0.25);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--danger-subtle, #fca5a5)}
-        .wm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid rgba(255,255,255,0.06);flex-shrink:0}
-        .wm-btn-cancel{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:rgba(255,255,255,0.5);cursor:pointer}
+        .wm-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;border-top:0.5px solid var(--l06, rgba(255,255,255,0.06));flex-shrink:0}
+        .wm-btn-cancel{background:var(--l05, rgba(255,255,255,0.05));border:0.5px solid var(--w10, rgba(255,255,255,0.1));border-radius:7px;padding:8px 16px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--w50, rgba(255,255,255,0.5));cursor:pointer}
         .wm-btn-save{background:linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316));border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:white;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .wm-btn-save:disabled{opacity:0.5;cursor:not-allowed}
-        .wm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:4px 0 2px;border-bottom:0.5px solid rgba(255,255,255,0.06);margin-top:4px}
+        .wm-section{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--w25, rgba(255,255,255,0.25));padding:4px 0 2px;border-bottom:0.5px solid var(--l06, rgba(255,255,255,0.06));margin-top:4px}
         .wm-stat-row{display:flex;gap:10px;flex-wrap:wrap}
-        .wm-stat{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:2;min-width:80px}
-        .wm-stat-lbl{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em}
+        .wm-stat{background:var(--l03, rgba(255,255,255,0.03));border:0.5px solid var(--l07, rgba(255,255,255,0.07));border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:2;min-width:80px}
+        .wm-stat-lbl{font-size:10px;color:var(--w30, rgba(255,255,255,0.3));text-transform:uppercase;letter-spacing:0.08em}
         .wm-stat-val{font-size:16px;font-family:'IBM Plex Mono',monospace;color:var(--text-strong, #f1ede8);font-weight:500}
       `}</style>
       {/* ── NO onClick on overlay — modal only closes with X button ── */}
@@ -631,7 +631,7 @@ function WarehouseModal({ open, onClose, onSaved, initial }: { open: boolean; on
                   <div className="wm-field"><label style={FLBL}>Name *</label><input style={FINP} placeholder="Main Warehouse" value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))} required /></div>
                   <div className="wm-field"><label style={FLBL}>Address</label><textarea style={{ ...FINP, resize:'vertical', minHeight:64 }} placeholder="Industrial Zone…" value={form.address??''} onChange={e => setForm(f=>({...f,address:e.target.value}))} /></div>
                   <div className="wm-section">Configuration</div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:10, background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'12px 14px' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:10, background:'var(--l02, rgba(255,255,255,0.02))', border:'0.5px solid var(--l06, rgba(255,255,255,0.06))', borderRadius:8, padding:'12px 14px' }}>
                     <Toggle label="Active" checked={form.isActive??true} onChange={v => setForm(f=>({...f,isActive:v}))} />
                     <Toggle label="Enable Location Tracking (Zone → Aisle → Rack → Level → Bin)" checked={form.locationTrackingEnabled??false} onChange={v => setForm(f=>({...f,locationTrackingEnabled:v}))} />
                   </div>
@@ -675,7 +675,7 @@ function DeleteConfirm({ warehouse, onCancel, onConfirm, busy }: { warehouse: Wa
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(239,68,68,0.25)', borderRadius:14, width:'100%', maxWidth:420, padding:'24px 24px 20px', boxShadow:'0 24px 60px rgba(0,0,0,0.7)' }}>
         <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', marginBottom:10 }}>Delete warehouse?</div>
-        <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20, lineHeight:1.5 }}><strong style={{ color:'var(--text-strong, #f1ede8)' }}>{warehouse.name}</strong> ({warehouse.code}) will be soft-deleted.</div>
+        <div style={{ fontSize:13, color:'var(--w50, rgba(255,255,255,0.5))', marginBottom:20, lineHeight:1.5 }}><strong style={{ color:'var(--text-strong, #f1ede8)' }}>{warehouse.name}</strong> ({warehouse.code}) will be soft-deleted.</div>
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <button onClick={onCancel} style={{ background:'var(--l05, rgba(255,255,255,0.05))', border:'0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius:7, padding:'8px 16px', fontSize:13, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--w50, rgba(255,255,255,0.5))', cursor:'pointer' }}>Cancel</button>
           <button onClick={onConfirm} disabled={busy} style={{ background:'rgba(239,68,68,0.15)', border:'0.5px solid rgba(239,68,68,0.35)', borderRadius:7, padding:'8px 16px', fontSize:13, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--danger, #f87171)', cursor:busy?'not-allowed':'pointer', opacity:busy?0.5:1 }}>{busy?'Deleting…':'Delete'}</button>

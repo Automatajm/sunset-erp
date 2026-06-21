@@ -114,7 +114,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div>
         <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{r.itemCode}</span>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{r.itemName}</div>
+        <div style={{ fontSize: 10, color: 'var(--w35, rgba(255,255,255,0.35))', marginTop: 1 }}>{r.itemName}</div>
       </div>
     ),
   },
@@ -135,8 +135,8 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     value: r => r.warehouseCode,
     render: r => (
       <div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.warehouseCode}</div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.warehouseName}</div>
+        <div style={{ fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.warehouseCode}</div>
+        <div style={{ fontSize: 10, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.warehouseName}</div>
       </div>
     ),
   },
@@ -146,7 +146,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div style={{ textAlign: 'right' }}>
         <span style={{ ...MONO, fontSize: 12, color: 'var(--text-primary, #e2dfd8)' }}>{fmtQty(r.storageQty)}</span>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.uom}</div>
+        <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.uom}</div>
       </div>
     ),
   },
@@ -156,14 +156,14 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     render: r => (
       <div style={{ textAlign: 'right' }}>
         <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{fmtQty(r.purchaseQty)}</span>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{r.purchaseUom}</div>
+        <div style={{ fontSize: 9, color: 'var(--w25, rgba(255,255,255,0.25))', marginTop: 1 }}>{r.purchaseUom}</div>
       </div>
     ),
   },
   {
     key: 'unitCost', header: 'WAC Cost', width: 110, align: 'right', sortable: true,
     value: r => r.unitCost,
-    render: r => <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
+    render: r => <span style={{ ...MONO, fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{r.unitCost > 0 ? fmtAmt(r.unitCost) : '—'}</span>,
   },
   {
     key: 'totalValue', header: 'Capital Tied Up', width: 140, align: 'right', sortable: true,
@@ -181,7 +181,7 @@ const COLUMNS: ERPColumn<AgingRow>[] = [
     key: 'lastMovementDate', header: 'Last Movement', width: 130, sortable: true,
     value: r => r.lastMovementDate ?? '',
     render: r => r.lastMovementDate
-      ? <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmtDateShort(r.lastMovementDate)}</span>
+      ? <span style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{fmtDateShort(r.lastMovementDate)}</span>
       : <span style={{ fontSize: 10, color: 'var(--danger, #f87171)', fontWeight: 500 }}>Never moved</span>,
   },
 ];
@@ -270,23 +270,23 @@ export default function SlowMovingPage() {
         .sm-page   { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden; }
         .sm-kpis   { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; flex-shrink: 0; }
         .sm-kpi    { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 10px 14px; }
-        .sm-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+        .sm-kpi-l  { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--w30, rgba(255,255,255,0.3)); margin-bottom: 4px; }
         .sm-kpi-v  { font-size: 18px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
         .sm-cards  { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; flex-shrink: 0; }
         .sm-card   { background: rgba(10,7,18,0.7); border-radius: 9px; padding: 12px 16px; cursor: pointer; transition: all 0.15s; }
         .sm-card:hover { opacity: 0.85; }
         .sm-card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
         .sm-card-row   { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-        .sm-card-label { font-size: 11px; color: rgba(255,255,255,0.4); }
+        .sm-card-label { font-size: 11px; color: var(--w40, rgba(255,255,255,0.4)); }
         .sm-card-value { font-size: 13px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
-        .sm-card-bar   { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .sm-card-bar   { height: 3px; background: var(--l06, rgba(255,255,255,0.06)); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .sm-alert-banner { background: rgba(248,113,113,0.08); border: 0.5px solid rgba(248,113,113,0.2); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .sm-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
         .sm-table   { flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .sm-error   { background: rgba(239,68,68,0.08); border: 0.5px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--danger-subtle, #fca5a5); flex-shrink: 0; }
-        .sm-note    { font-size: 10px; color: rgba(255,255,255,0.25); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
-        .sm-refresh { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.09); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: rgba(255,255,255,0.45); cursor: pointer; }
-        .sm-refresh:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
+        .sm-note    { font-size: 10px; color: var(--w25, rgba(255,255,255,0.25)); flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+        .sm-refresh { display: inline-flex; align-items: center; gap: 5px; background: var(--l04, rgba(255,255,255,0.04)); border: 0.5px solid var(--l09, rgba(255,255,255,0.09)); border-radius: 7px; padding: 6px 12px; font-size: 12px; font-family: 'IBM Plex Sans',sans-serif; color: var(--w45, rgba(255,255,255,0.45)); cursor: pointer; }
+        .sm-refresh:hover { color: var(--w70, rgba(255,255,255,0.7)); background: var(--l08, rgba(255,255,255,0.08)); }
       `}</style>
 
       <div className="sm-page">
@@ -315,7 +315,7 @@ export default function SlowMovingPage() {
             const pct    = totalAtRisk > 0 ? (info.value / totalAtRisk * 100) : 0;
             return (
               <div key={risk} className="sm-card"
-                style={{ border: `0.5px solid ${active ? c.border : 'rgba(255,255,255,0.07)'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
+                style={{ border: `0.5px solid ${active ? c.border : 'var(--l07, rgba(255,255,255,0.07))'}`, background: active ? c.bg : 'rgba(10,7,18,0.7)' }}
                 onClick={() => setCardFilter(prev => prev === risk ? null : risk)}>
                 <div className="sm-card-title" style={{ color: c.color }}>{c.label}</div>
                 <div className="sm-card-row">
@@ -342,7 +342,7 @@ export default function SlowMovingPage() {
               <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--danger, #f87171)' }}>
                 {data!.summary.deadStockCount} item{data!.summary.deadStockCount !== 1 ? 's' : ''} with no movement in 180+ days
               </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: 'var(--w40, rgba(255,255,255,0.4))', marginTop: 2 }}>
                 {fmtAmt(data!.summary.deadStockValue)} in capital at risk — consider write-down or liquidation
               </div>
             </div>
@@ -380,7 +380,7 @@ export default function SlowMovingPage() {
             maxHeight="calc(100vh - 500px)"
             toolbarLeft={
               data ? (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono', monospace" }}>
                   {filtered.length} of {slowRows.length} problematic items · {fmtTimestamp(data.asOf)}
                 </span>
               ) : undefined
@@ -390,7 +390,7 @@ export default function SlowMovingPage() {
 
         {/* Footer note */}
         <div className="sm-note">
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>Definitions:</span>
+          <span style={{ color: 'var(--w30, rgba(255,255,255,0.3))', fontWeight: 500 }}>Definitions:</span>
           <span>
             Watch = 31–60d · Slow = 61–90d · Critical = 91–180d · Dead = 180+d or never moved ·
             Capital Tied Up = purchaseQty × WAC (ADR-019)

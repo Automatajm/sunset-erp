@@ -31,7 +31,7 @@ export function PrintButton({
       onClick={open}
       style={{
         border: 'none', borderRadius: 7, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-        fontFamily: "'IBM Plex Sans',sans-serif", background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+        fontFamily: "'IBM Plex Sans',sans-serif", background: 'var(--l06, rgba(255,255,255,0.06))', color: 'var(--w60, rgba(255,255,255,0.6))',
         display: 'inline-flex', alignItems: 'center', gap: 7, ...style,
       }}
     >

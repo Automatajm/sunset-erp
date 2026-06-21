@@ -31,7 +31,7 @@ const UOM_COLOR: Record<string, string> = {
 };
 
 function UomBadge({ uom }: { uom?: UomUnit | null }) {
-  if (!uom) return <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span>;
+  if (!uom) return <span style={{ color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 12 }}>—</span>;
   const color = UOM_COLOR[uom.type] ?? 'var(--text-primary, #e2dfd8)';
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500, color, background: `color-mix(in srgb, ${color} 8%, transparent)`, border: `0.5px solid color-mix(in srgb, ${color} 21%, transparent)` }}>
@@ -115,7 +115,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
       `}</style>
       <div className="cgm-overlay">
         <div className="cgm-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)' }}>
               {initial ? `Edit — ${initial.code}` : 'New Consumption Group'}
             </span>
@@ -132,7 +132,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(251,146,60,0.5)' }}>Code</span>
                   <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: 'var(--accent-strong, #fb923c)', fontWeight: 500, background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 6, padding: '3px 10px' }}>{initial.code}</span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>auto-generated</span>
+                  <span style={{ fontSize: 10, color: 'var(--w20, rgba(255,255,255,0.2))' }}>auto-generated</span>
                 </div>
               )}
 
@@ -146,7 +146,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
               {/* Consumption UOM — restricted to system UOMs */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={LBL}>Consumption UOM *</label>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', margin: 0, lineHeight: 1.5 }}>
                   Restricted to <strong style={{ color: 'var(--accent-strong, #fb923c)' }}>system UOMs</strong> configured in Settings → General.
                   MRP aggregates all items in this group to this unit.
                 </p>
@@ -174,7 +174,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
                         return (
                           <button key={u.id} type="button"
                             onClick={() => setForm(f => ({ ...f, consumptionUomId: u.id }))}
-                            style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400, color: active ? color : 'rgba(255,255,255,0.4)', background: active ? `color-mix(in srgb, ${color} 9%, transparent)` : 'rgba(255,255,255,0.03)', border: `0.5px solid ${active ? `color-mix(in srgb, ${color} 31%, transparent)` : 'rgba(255,255,255,0.09)'}`, transition: 'all 0.15s' }}>
+                            style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400, color: active ? color : 'var(--w40, rgba(255,255,255,0.4))', background: active ? `color-mix(in srgb, ${color} 9%, transparent)` : 'var(--l03, rgba(255,255,255,0.03))', border: `0.5px solid ${active ? `color-mix(in srgb, ${color} 31%, transparent)` : 'var(--l09, rgba(255,255,255,0.09))'}`, transition: 'all 0.15s' }}>
                             {u.code}
                             <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>{u.type}</span>
                           </button>
@@ -184,8 +184,8 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
                     {selUom && (
                       <div style={{ fontSize: 11, color: UOM_COLOR[selUom.type] ?? 'var(--text-primary, #e2dfd8)', display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
                         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500 }}>{selUom.code}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.35)' }}>{selUom.name}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.2)' }}>{selUom.type} · {selUom.system}</span>
+                        <span style={{ color: 'var(--w35, rgba(255,255,255,0.35))' }}>{selUom.name}</span>
+                        <span style={{ color: 'var(--w20, rgba(255,255,255,0.2))' }}>{selUom.type} · {selUom.system}</span>
                       </div>
                     )}
                   </>
@@ -205,9 +205,9 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
 
               {/* Active toggle */}
               {initial && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isActive ? 'var(--text-primary, #e2dfd8)' : 'rgba(255,255,255,0.4)', userSelect: 'none' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12, color: form.isActive ? 'var(--text-primary, #e2dfd8)' : 'var(--w40, rgba(255,255,255,0.4))', userSelect: 'none' }}>
                   <div onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
-                    style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, background: form.isActive ? 'rgba(234,88,12,0.8)' : 'rgba(255,255,255,0.1)', border: `0.5px solid ${form.isActive ? 'rgba(251,146,60,0.5)' : 'rgba(255,255,255,0.15)'}`, position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
+                    style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, background: form.isActive ? 'rgba(234,88,12,0.8)' : 'var(--w10, rgba(255,255,255,0.1))', border: `0.5px solid ${form.isActive ? 'rgba(251,146,60,0.5)' : 'var(--w15, rgba(255,255,255,0.15))'}`, position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
                     <div style={{ position: 'absolute', top: 2, left: form.isActive ? 16 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--white, #fff)', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
                   </div>
                   Active
@@ -215,7 +215,7 @@ function CgModal({ open, onClose, onSaved, initial, systemUoms }: {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 20px 18px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))' }}>
               <button type="button" onClick={onClose}
                 style={{ background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', borderRadius: 7, padding: '8px 16px', fontSize: 13, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50, rgba(255,255,255,0.5))', cursor: 'pointer' }}>
                 Cancel
@@ -319,7 +319,7 @@ export default function ConsumptionGroupsPage() {
     {
       key: 'description', header: 'Description', sortable: false,
       value: r => r.description ?? '',
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{r.description || '—'}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w40, rgba(255,255,255,0.4))' }}>{r.description || '—'}</span>,
     },
     {
       key: 'consumptionUom', header: 'System UOM', width: 200, sortable: true,
@@ -331,14 +331,14 @@ export default function ConsumptionGroupsPage() {
       value: r => (r as any)._count?.items ?? 0,
       render: r => {
         const n = (r as any)._count?.items ?? 0;
-        return <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: n > 0 ? 'rgba(251,146,60,0.7)' : 'rgba(255,255,255,0.25)' }}>{n}</span>;
+        return <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: n > 0 ? 'rgba(251,146,60,0.7)' : 'var(--w25, rgba(255,255,255,0.25))' }}>{n}</span>;
       },
     },
     {
       key: 'isActive', header: 'Status', width: 90, sortable: true,
       value: r => r.isActive ? 'Active' : 'Inactive',
       render: r => (
-        <span style={{ fontSize: 11, color: r.isActive ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.3)', background: r.isActive ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 9px', borderRadius: 20 }}>
+        <span style={{ fontSize: 11, color: r.isActive ? 'var(--success, #4ade80)' : 'var(--w30, rgba(255,255,255,0.3))', background: r.isActive ? 'rgba(74,222,128,0.08)' : 'var(--l04, rgba(255,255,255,0.04))', border: `0.5px solid ${r.isActive ? 'rgba(74,222,128,0.2)' : 'var(--l08, rgba(255,255,255,0.08))'}`, padding: '2px 9px', borderRadius: 20 }}>
           {r.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
@@ -347,7 +347,7 @@ export default function ConsumptionGroupsPage() {
       key: '_actions', header: '', width: 80, sortable: false,
       render: r => (
         <button onClick={e => { e.stopPropagation(); setEditing(r); setModal(true); }}
-          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'rgba(255,255,255,0.55)', fontFamily: "'IBM Plex Sans',sans-serif" }}>
+          style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', background: 'var(--l05, rgba(255,255,255,0.05))', border: '0.5px solid var(--w10, rgba(255,255,255,0.1))', color: 'var(--w55, rgba(255,255,255,0.55))', fontFamily: "'IBM Plex Sans',sans-serif" }}>
           Edit
         </button>
       ),
@@ -365,7 +365,7 @@ export default function ConsumptionGroupsPage() {
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
             {/* Total */}
             <div onClick={() => setActiveType(null)}
-              style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80, cursor: 'pointer' }}>
+              style={{ background: !activeType ? 'rgba(251,146,60,0.08)' : 'rgba(10,7,18,0.7)', border: `0.5px solid ${!activeType ? 'rgba(251,146,60,0.3)' : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 80, cursor: 'pointer' }}>
               <span style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Total</span>
               <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--accent-strong, #fb923c)', fontFamily: "'IBM Plex Mono',monospace" }}>{groups.length}</span>
             </div>
@@ -376,7 +376,7 @@ export default function ConsumptionGroupsPage() {
               const isActive = activeType === u.type;
               return (
                 <div key={u.type} onClick={() => setActiveType(prev => prev === u.type ? null : u.type)}
-                  style={{ background: isActive ? `color-mix(in srgb, ${color} 7%, transparent)` : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? color : 'rgba(255,255,255,0.07)'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 90, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  style={{ background: isActive ? `color-mix(in srgb, ${color} 7%, transparent)` : 'rgba(10,7,18,0.7)', border: `0.5px solid ${isActive ? color : 'var(--l07, rgba(255,255,255,0.07))'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 90, cursor: 'pointer', transition: 'all 0.15s' }}>
                   <span style={{ fontSize: 10, color: isActive ? color : `color-mix(in srgb, ${color} 50%, transparent)`, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{u.code}</span>
                   <span style={{ fontSize: 22, fontWeight: 500, color: isActive ? color : 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{count}</span>
                 </div>

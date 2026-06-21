@@ -21,7 +21,7 @@ const STATUS_CFG: Record<string, { color: string; bg: string; label: string }> =
   pending:   { color: 'var(--warning, #fbbf24)', bg: 'rgba(251,191,36,0.1)',  label: 'Pending'   },
   sent:      { color: 'var(--success, #4ade80)', bg: 'rgba(74,222,128,0.1)',  label: 'Sent'      },
   failed:    { color: 'var(--danger, #f87171)', bg: 'rgba(248,113,113,0.1)', label: 'Failed'    },
-  cancelled: { color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.05)', label: 'Cancelled' },
+  cancelled: { color: 'var(--w40, rgba(255,255,255,0.4))', bg: 'var(--l05, rgba(255,255,255,0.05))', label: 'Cancelled' },
 };
 
 const TYPE_CFG: Record<string, { color: string; label: string }> = {
@@ -36,8 +36,8 @@ const BTN = (variant: 'primary' | 'ghost' | 'danger' = 'ghost'): React.CSSProper
   border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 11, fontWeight: 600,
   cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif",
   background: variant === 'primary' ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))'
-    : variant === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)',
-  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.6)',
+    : variant === 'danger' ? 'rgba(239,68,68,0.1)' : 'var(--l06, rgba(255,255,255,0.06))',
+  color: variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'var(--w60, rgba(255,255,255,0.6))',
   outline: variant === 'danger' ? '0.5px solid rgba(239,68,68,0.2)' : 'none',
 });
 
@@ -119,7 +119,7 @@ export default function NotificationsPage() {
     {
       key: 'type', header: 'Type', width: 150, sortable: true, value: r => r.type,
       render: r => {
-        const c = TYPE_CFG[r.type] ?? { color: 'rgba(255,255,255,0.6)', label: r.type };
+        const c = TYPE_CFG[r.type] ?? { color: 'var(--w60, rgba(255,255,255,0.6))', label: r.type };
         return <span style={{ fontSize: 12, fontWeight: 600, color: c.color }}>{c.label}</span>;
       },
     },
@@ -128,25 +128,25 @@ export default function NotificationsPage() {
       value: r => r.recipientEmail ?? '',
       render: r => (
         <div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{r.recipientEmail ?? '—'}</div>
-          {r.recipientName && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{r.recipientName}</div>}
+          <div style={{ fontSize: 12, color: 'var(--w75, rgba(255,255,255,0.75))' }}>{r.recipientEmail ?? '—'}</div>
+          {r.recipientName && <div style={{ fontSize: 10, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 1 }}>{r.recipientName}</div>}
         </div>
       ),
     },
     {
       key: 'subject', header: 'Subject', sortable: true, value: r => r.subject,
-      render: r => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{r.subject}</span>,
+      render: r => <span style={{ fontSize: 12, color: 'var(--w60, rgba(255,255,255,0.6))' }}>{r.subject}</span>,
     },
     {
       key: 'channel', header: 'Channel', width: 90, sortable: true, value: r => r.channel,
-      render: r => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>{r.channel}</span>,
+      render: r => <span style={{ fontSize: 11, color: 'var(--w45, rgba(255,255,255,0.45))', textTransform: 'uppercase' }}>{r.channel}</span>,
     },
     {
       key: 'status', header: 'Status', width: 110, sortable: true, value: r => r.status,
       render: r => (
         <div>
           <StatusBadge status={r.status} />
-          {r.retryCount > 0 && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>retries: {r.retryCount}</div>}
+          {r.retryCount > 0 && <div style={{ fontSize: 9, color: 'var(--w30, rgba(255,255,255,0.3))', marginTop: 2 }}>retries: {r.retryCount}</div>}
         </div>
       ),
     },
@@ -155,7 +155,7 @@ export default function NotificationsPage() {
       value: r => r.createdAt,
       render: r => (
         <div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDate(r.createdAt)}</div>
+          <div style={{ fontSize: 11, color: 'var(--w50, rgba(255,255,255,0.5))' }}>{fmtDate(r.createdAt)}</div>
           {r.sentAt && <div style={{ fontSize: 9, color: 'var(--success, #4ade80)', marginTop: 1 }}>sent {fmtDate(r.sentAt)}</div>}
         </div>
       ),
@@ -211,7 +211,7 @@ export default function NotificationsPage() {
     { label: 'Pending', value: counts.pending, color: STATUS_CFG.pending.color, border: 'rgba(251,191,36,0.2)' },
     { label: 'Sent', value: counts.sent, color: STATUS_CFG.sent.color, border: 'rgba(74,222,128,0.2)' },
     { label: 'Failed', value: counts.failed, color: STATUS_CFG.failed.color, border: 'rgba(248,113,113,0.2)' },
-    { label: 'Cancelled', value: counts.cancelled, color: STATUS_CFG.cancelled.color, border: 'rgba(255,255,255,0.1)' },
+    { label: 'Cancelled', value: counts.cancelled, color: STATUS_CFG.cancelled.color, border: 'var(--w10, rgba(255,255,255,0.1))' },
   ];
 
   return (
@@ -219,7 +219,7 @@ export default function NotificationsPage() {
       <div style={{ padding: 20 }}>
         {/* Header actions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--w50, rgba(255,255,255,0.5))' }}>
             <IconBell />
             <span style={{ fontSize: 12 }}>
               Queue-first outbound notifications. The worker drains pending rows every 15s.
@@ -248,7 +248,7 @@ export default function NotificationsPage() {
               padding: '12px 16px', borderRadius: 9, background: 'rgba(10,7,18,0.7)',
               border: `0.5px solid ${k.border}`,
             }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{k.label}</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--w35, rgba(255,255,255,0.35))' }}>{k.label}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: k.color, marginTop: 4 }}>{k.value}</div>
             </div>
           ))}
