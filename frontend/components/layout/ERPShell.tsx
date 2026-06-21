@@ -178,7 +178,10 @@ function NavDropdown({ item, isActive, hasPermission }: {
   };
 
   const handlePointerLeave = (e: React.PointerEvent) => {
-    if (wrapperRef.current && !wrapperRef.current.contains(e.relatedTarget as Node)) {
+    // relatedTarget can be null (left the window) or a non-Node (e.g. the
+    // Window object) — both throw on Node.contains(). Guard with instanceof.
+    const related = e.relatedTarget;
+    if (wrapperRef.current && (!(related instanceof Node) || !wrapperRef.current.contains(related))) {
       scheduleClose();
     }
   };
