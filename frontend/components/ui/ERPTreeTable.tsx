@@ -73,8 +73,8 @@ export interface ERPTreeTableProps<T> {
 function IconSort({ dir }: { dir: SortDir }) {
   return (
     <span style={{ display:'inline-flex', flexDirection:'column', gap:1, marginLeft:4, verticalAlign:'middle', opacity:dir?1:0.3 }}>
-      <svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0L7 4H0L3.5 0Z" fill={dir==='asc'?'var(--accent-strong, #fb923c)':'rgba(255,255,255,0.4)'} /></svg>
-      <svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 4L0 0H7L3.5 4Z" fill={dir==='desc'?'var(--accent-strong, #fb923c)':'rgba(255,255,255,0.4)'} /></svg>
+      <svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0L7 4H0L3.5 0Z" fill={dir==='asc'?'var(--accent-strong, #fb923c)':'var(--w40, rgba(255,255,255,0.4))'} /></svg>
+      <svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 4L0 0H7L3.5 4Z" fill={dir==='desc'?'var(--accent-strong, #fb923c)':'var(--w40, rgba(255,255,255,0.4))'} /></svg>
     </span>
   );
 }
@@ -128,7 +128,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
       {open && (
         <div style={{ position:'absolute', right:0, top:'calc(100% + 4px)', zIndex:50, background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, overflow:'hidden', minWidth:130, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
           <button style={ITEM('var(--text-primary, #e2dfd8)')} onClick={() => { onCSV(); setOpen(false); }} onMouseEnter={e=>(e.currentTarget.style.background='rgba(251,146,60,0.08)')} onMouseLeave={e=>(e.currentTarget.style.background='none')}><IconDownload /> CSV</button>
-          <button style={{ ...ITEM('var(--success, #4ade80)'), borderTop:'0.5px solid rgba(255,255,255,0.06)' }} onClick={() => { onXLSX(); setOpen(false); }} onMouseEnter={e=>(e.currentTarget.style.background='rgba(74,222,128,0.08)')} onMouseLeave={e=>(e.currentTarget.style.background='none')}><IconDownload /> Excel</button>
+          <button style={{ ...ITEM('var(--success, #4ade80)'), borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))' }} onClick={() => { onXLSX(); setOpen(false); }} onMouseEnter={e=>(e.currentTarget.style.background='rgba(74,222,128,0.08)')} onMouseLeave={e=>(e.currentTarget.style.background='none')}><IconDownload /> Excel</button>
         </div>
       )}
     </div>
@@ -144,11 +144,11 @@ function FilterBar<T>({ filters, values, onChange, activeCount, onClear }: {
   activeCount: number;
   onClear: () => void;
 }) {
-  const SEL: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'5px 8px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', cursor:'pointer', colorScheme:'dark' as any };
-  const INP: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.12)', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', minWidth:160 };
+  const SEL: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid var(--w12, rgba(255,255,255,0.12))', borderRadius:6, padding:'5px 8px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', cursor:'pointer', colorScheme:'dark' as any };
+  const INP: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid var(--w12, rgba(255,255,255,0.12))', borderRadius:6, padding:'5px 10px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', minWidth:160 };
   const LBL: React.CSSProperties = { fontSize:10, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(251,146,60,0.5)', marginBottom:3 };
   return (
-    <div style={{ display:'flex', alignItems:'flex-end', gap:10, flexWrap:'wrap', padding:'10px 14px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', background:'rgba(0,0,0,0.15)' }}>
+    <div style={{ display:'flex', alignItems:'flex-end', gap:10, flexWrap:'wrap', padding:'10px 14px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', background:'rgba(0,0,0,0.15)' }}>
       {filters.map(f => (
         <div key={f.key} style={{ display:'flex', flexDirection:'column' }}>
           <span style={LBL}>{f.label}</span>
@@ -163,12 +163,12 @@ function FilterBar<T>({ filters, values, onChange, activeCount, onClear }: {
             <div style={{ display:'flex', gap:4, flexWrap:'wrap', maxWidth:300 }}>
               {f.options?.map(o => {
                 const selected = ((values[f.key] as string[]) ?? []).includes(o.value);
-                return <button key={o.value} type="button" onClick={() => { const curr=(values[f.key] as string[])??[]; const next=selected?curr.filter(v=>v!==o.value):[...curr,o.value]; onChange(f.key,next.length?next:null); }} style={{ padding:'3px 9px', borderRadius:20, fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', fontWeight:selected?500:400, color:selected?(o.color??'var(--accent-strong, #fb923c)'):'rgba(255,255,255,0.4)', background:selected?(o.bg??'rgba(251,146,60,0.12)'):'rgba(255,255,255,0.04)', border:`0.5px solid ${selected?(o.border??'rgba(251,146,60,0.3)'):'rgba(255,255,255,0.09)'}`, transition:'all 0.15s' }}>{o.label}</button>;
+                return <button key={o.value} type="button" onClick={() => { const curr=(values[f.key] as string[])??[]; const next=selected?curr.filter(v=>v!==o.value):[...curr,o.value]; onChange(f.key,next.length?next:null); }} style={{ padding:'3px 9px', borderRadius:20, fontSize:10, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', fontWeight:selected?500:400, color:selected?(o.color??'var(--accent-strong, #fb923c)'):'var(--w40, rgba(255,255,255,0.4))', background:selected?(o.bg??'rgba(251,146,60,0.12)'):'var(--l04, rgba(255,255,255,0.04))', border:`0.5px solid ${selected?(o.border??'rgba(251,146,60,0.3)'):'var(--l09, rgba(255,255,255,0.09))'}`, transition:'all 0.15s' }}>{o.label}</button>;
               })}
             </div>
           )}
           {f.type === 'boolean' && (
-            <button type="button" onClick={() => onChange(f.key, values[f.key]===true?null:true)} style={{ padding:'5px 12px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', color:values[f.key]===true?'var(--success, #4ade80)':'rgba(255,255,255,0.4)', background:values[f.key]===true?'rgba(74,222,128,0.1)':'rgba(255,255,255,0.04)', border:`0.5px solid ${values[f.key]===true?'rgba(74,222,128,0.3)':'rgba(255,255,255,0.09)'}`, transition:'all 0.15s', whiteSpace:'nowrap' }}>
+            <button type="button" onClick={() => onChange(f.key, values[f.key]===true?null:true)} style={{ padding:'5px 12px', borderRadius:6, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:'pointer', color:values[f.key]===true?'var(--success, #4ade80)':'var(--w40, rgba(255,255,255,0.4))', background:values[f.key]===true?'rgba(74,222,128,0.1)':'var(--l04, rgba(255,255,255,0.04))', border:`0.5px solid ${values[f.key]===true?'rgba(74,222,128,0.3)':'var(--l09, rgba(255,255,255,0.09))'}`, transition:'all 0.15s', whiteSpace:'nowrap' }}>
               {values[f.key]===true?'✓ ':''}{f.label}
             </button>
           )}
@@ -327,31 +327,31 @@ export function ERPTreeTable<T>({
   // ── Styles ────────────────────────────────────────────────────────────────
   const TH = (col: ERPTreeColumn<T>): React.CSSProperties => ({
     padding:'9px 14px', fontSize:10, fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase',
-    color:'rgba(251,146,60,0.55)', background:'#0d0a1a',
-    borderBottom:'0.5px solid rgba(255,255,255,0.06)',
+    color:'rgba(251,146,60,0.55)', background:'var(--surface, #0d0a1a)',
+    borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))',
     textAlign:(col.align??'left') as any, whiteSpace:'nowrap',
     cursor: col.sortable !== false && col.key !== '_expand' ? 'pointer' : 'default',
     userSelect:'none', width:col.width??'auto',
   });
   const TD = (col: ERPTreeColumn<T>): React.CSSProperties => ({
-    padding:'10px 14px', borderBottom:'0.5px solid rgba(255,255,255,0.04)',
+    padding:'10px 14px', borderBottom:'0.5px solid var(--l04, rgba(255,255,255,0.04))',
     verticalAlign:'middle', fontSize:13, textAlign:(col.align??'left') as any,
     color:'var(--text-primary, #e2dfd8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
   });
-  const SEL: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid rgba(255,255,255,0.15)', borderRadius:6, padding:'3px 8px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', colorScheme:'dark' as any };
-  const PAG = (active: boolean, disabled?: boolean): React.CSSProperties => ({ minWidth:28, height:26, padding:'0 6px', borderRadius:5, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:disabled?'not-allowed':'pointer', opacity:disabled?0.35:1, background:active?'rgba(251,146,60,0.2)':'rgba(255,255,255,0.04)', border:`0.5px solid ${active?'rgba(251,146,60,0.4)':'rgba(255,255,255,0.09)'}`, color:active?'var(--accent-strong, #fb923c)':'rgba(255,255,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' });
+  const SEL: React.CSSProperties = { background:'var(--surface, #0e0b1a)', border:'0.5px solid var(--w15, rgba(255,255,255,0.15))', borderRadius:6, padding:'3px 8px', fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', colorScheme:'dark' as any };
+  const PAG = (active: boolean, disabled?: boolean): React.CSSProperties => ({ minWidth:28, height:26, padding:'0 6px', borderRadius:5, fontSize:11, fontFamily:"'IBM Plex Sans',sans-serif", cursor:disabled?'not-allowed':'pointer', opacity:disabled?0.35:1, background:active?'rgba(251,146,60,0.2)':'var(--l04, rgba(255,255,255,0.04))', border:`0.5px solid ${active?'rgba(251,146,60,0.4)':'var(--l09, rgba(255,255,255,0.09))'}`, color:active?'var(--accent-strong, #fb923c)':'var(--w50, rgba(255,255,255,0.5))', display:'inline-flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' });
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ display:'flex', flexDirection:'column', background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.12)', borderRadius:10, overflow:'hidden', flex:1, minHeight:0 }}>
 
       {/* Toolbar */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', gap:8, flexShrink:0, background:'rgba(251,146,60,0.03)' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', gap:8, flexShrink:0, background:'rgba(251,146,60,0.03)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
           <div style={{ position:'relative', flex:1, maxWidth:360 }}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.4" strokeLinecap="round" style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><circle cx="5.5" cy="5.5" r="4"/><line x1="8.5" y1="8.5" x2="12" y2="12"/></svg>
-            <input value={searchInput} onChange={e => handleSearch(e.target.value)} placeholder="Search all columns…" style={{ width:'100%', padding:'5px 28px 5px 28px', background:'rgba(255,255,255,0.04)', border:`0.5px solid ${searchInput?'rgba(251,146,60,0.35)':'rgba(255,255,255,0.09)'}`, borderRadius:6, fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', transition:'border-color 0.15s' }} />
-            {searchInput && <button onClick={() => handleSearch('')} style={{ position:'absolute', right:7, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'50%', width:15, height:15, cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>}
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--w30, rgba(255,255,255,0.3))" strokeWidth="1.4" strokeLinecap="round" style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><circle cx="5.5" cy="5.5" r="4"/><line x1="8.5" y1="8.5" x2="12" y2="12"/></svg>
+            <input value={searchInput} onChange={e => handleSearch(e.target.value)} placeholder="Search all columns…" style={{ width:'100%', padding:'5px 28px 5px 28px', background:'var(--l04, rgba(255,255,255,0.04))', border:`0.5px solid ${searchInput?'rgba(251,146,60,0.35)':'var(--l09, rgba(255,255,255,0.09))'}`, borderRadius:6, fontSize:12, fontFamily:"'IBM Plex Sans',sans-serif", color:'var(--text-primary, #e2dfd8)', outline:'none', transition:'border-color 0.15s' }} />
+            {searchInput && <button onClick={() => handleSearch('')} style={{ position:'absolute', right:7, top:'50%', transform:'translateY(-50%)', background:'var(--w10, rgba(255,255,255,0.1))', border:'none', borderRadius:'50%', width:15, height:15, cursor:'pointer', color:'var(--w50, rgba(255,255,255,0.5))', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>}
           </div>
           {search && <span style={{ fontSize:11, color:'rgba(251,146,60,0.7)', whiteSpace:'nowrap', fontFamily:"'IBM Plex Mono',monospace" }}>{searched.length} of {filtered.length}</span>}
           {toolbarLeft}
@@ -361,7 +361,7 @@ export function ERPTreeTable<T>({
             <button
               type="button"
               onClick={() => (allExpanded ? collapseAll() : expandAll())}
-              style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.55)', cursor:'pointer' }}
+              style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:500, fontFamily:"'IBM Plex Sans',sans-serif", background:'var(--l04, rgba(255,255,255,0.04))', border:'0.5px solid var(--w12, rgba(255,255,255,0.12))', color:'var(--w55, rgba(255,255,255,0.55))', cursor:'pointer' }}
             >
               {allExpanded ? 'Collapse all' : 'Expand all'}
             </button>
@@ -391,11 +391,11 @@ export function ERPTreeTable<T>({
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={columns.length + (canExpand ? 1 : 0)} style={{ textAlign:'center', padding:40, color:'rgba(255,255,255,0.25)', fontSize:13 }}>
+              <tr><td colSpan={columns.length + (canExpand ? 1 : 0)} style={{ textAlign:'center', padding:40, color:'var(--w25, rgba(255,255,255,0.25))', fontSize:13 }}>
                 <div style={{ display:'inline-block', width:18, height:18, borderRadius:'50%', border:'2px solid rgba(251,146,60,0.2)', borderTopColor:'var(--accent-strong, #fb923c)', animation:'erp-tree-spin 0.7s linear infinite', marginBottom:8 }} /><div>Loading…</div>
               </td></tr>
             ) : pageData.length === 0 ? (
-              <tr><td colSpan={columns.length + (canExpand ? 1 : 0)} style={{ textAlign:'center', padding:40, color:'rgba(255,255,255,0.2)', fontSize:13 }}>{emptyMessage}</td></tr>
+              <tr><td colSpan={columns.length + (canExpand ? 1 : 0)} style={{ textAlign:'center', padding:40, color:'var(--w20, rgba(255,255,255,0.2))', fontSize:13 }}>{emptyMessage}</td></tr>
             ) : pageData.map((row, idx) => {
               const id = rowKey(row);
               const expandable = canExpand ? canExpand(row) : false;
@@ -410,9 +410,9 @@ export function ERPTreeTable<T>({
                   >
                     {/* Expand chevron cell */}
                     {canExpand && (
-                      <td style={{ padding:'10px 8px', textAlign:'center', borderBottom:'0.5px solid rgba(255,255,255,0.04)', verticalAlign:'middle', width:36 }}>
+                      <td style={{ padding:'10px 8px', textAlign:'center', borderBottom:'0.5px solid var(--l04, rgba(255,255,255,0.04))', verticalAlign:'middle', width:36 }}>
                         {expandable
-                          ? <button onClick={e => { e.stopPropagation(); toggleExpand(id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', fontSize:11, padding:'2px 4px', borderRadius:4, display:'inline-block', transition:'transform 0.15s', transform:isExpanded?'rotate(90deg)':'rotate(0deg)' }}>▶</button>
+                          ? <button onClick={e => { e.stopPropagation(); toggleExpand(id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--w35, rgba(255,255,255,0.35))', fontSize:11, padding:'2px 4px', borderRadius:4, display:'inline-block', transition:'transform 0.15s', transform:isExpanded?'rotate(90deg)':'rotate(0deg)' }}>▶</button>
                           : <span style={{ display:'inline-block', width:20 }} />
                         }
                       </td>
@@ -426,7 +426,7 @@ export function ERPTreeTable<T>({
                   {/* Expanded content row */}
                   {expandable && isExpanded && expandedRow && (
                     <tr>
-                      <td colSpan={columns.length + 1} style={{ padding:0, borderBottom:'0.5px solid rgba(255,255,255,0.06)', background:'rgba(0,0,0,0.2)' }}>
+                      <td colSpan={columns.length + 1} style={{ padding:0, borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', background:'rgba(0,0,0,0.2)' }}>
                         <div style={{ borderTop:'0.5px solid rgba(251,146,60,0.08)', borderLeft:'2px solid rgba(251,146,60,0.15)', marginLeft:expandIndent }}>
                           {expandedRow(row)}
                         </div>
@@ -441,19 +441,19 @@ export function ERPTreeTable<T>({
       </div>
 
       {/* Footer */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderTop:'0.5px solid rgba(255,255,255,0.06)', flexShrink:0, flexWrap:'wrap', gap:8 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderTop:'0.5px solid var(--l06, rgba(255,255,255,0.06))', flexShrink:0, flexWrap:'wrap', gap:8 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontFamily:"'IBM Plex Mono',monospace" }}>
+          <span style={{ fontSize:11, color:'var(--w30, rgba(255,255,255,0.3))', fontFamily:"'IBM Plex Mono',monospace" }}>
             {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
           </span>
           {showPageOfM && (
-            <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontFamily:"'IBM Plex Mono',monospace" }}>
+            <span style={{ fontSize:11, color:'var(--w30, rgba(255,255,255,0.3))', fontFamily:"'IBM Plex Mono',monospace" }}>
               Page {safePage} of {totalPages}
             </span>
           )}
           {showRowsPerPage && (
             <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>Rows:</span>
+              <span style={{ fontSize:11, color:'var(--w30, rgba(255,255,255,0.3))' }}>Rows:</span>
               <select style={SEL} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>{pageSizes.map(n => <option key={n} value={n}>{n}</option>)}</select>
             </span>
           )}
@@ -461,9 +461,9 @@ export function ERPTreeTable<T>({
         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
           <button style={PAG(false, safePage===1)} disabled={safePage===1} onClick={() => setPage(1)}>«</button>
           <button style={PAG(false, safePage===1)} disabled={safePage===1} onClick={() => setPage(p=>p-1)}><IconChevron dir="left" /></button>
-          {pageRange[0]>1 && <><button style={PAG(false)} onClick={() => setPage(1)}>1</button>{pageRange[0]>2 && <span style={{ color:'rgba(255,255,255,0.2)', fontSize:11, padding:'0 2px' }}>…</span>}</>}
+          {pageRange[0]>1 && <><button style={PAG(false)} onClick={() => setPage(1)}>1</button>{pageRange[0]>2 && <span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11, padding:'0 2px' }}>…</span>}</>}
           {pageRange.map(p => <button key={p} style={PAG(p===safePage)} onClick={() => setPage(p)}>{p}</button>)}
-          {pageRange[pageRange.length-1]<totalPages && <>{pageRange[pageRange.length-1]<totalPages-1&&<span style={{ color:'rgba(255,255,255,0.2)', fontSize:11, padding:'0 2px' }}>…</span>}<button style={PAG(false)} onClick={() => setPage(totalPages)}>{totalPages}</button></>}
+          {pageRange[pageRange.length-1]<totalPages && <>{pageRange[pageRange.length-1]<totalPages-1&&<span style={{ color:'var(--w20, rgba(255,255,255,0.2))', fontSize:11, padding:'0 2px' }}>…</span>}<button style={PAG(false)} onClick={() => setPage(totalPages)}>{totalPages}</button></>}
           <button style={PAG(false, safePage===totalPages)} disabled={safePage===totalPages} onClick={() => setPage(p=>p+1)}><IconChevron dir="right" /></button>
           <button style={PAG(false, safePage===totalPages)} disabled={safePage===totalPages} onClick={() => setPage(totalPages)}>»</button>
         </div>

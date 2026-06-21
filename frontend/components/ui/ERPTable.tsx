@@ -85,10 +85,10 @@ function IconSort({ dir }: { dir: SortDir }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, marginLeft: 4, verticalAlign: 'middle', opacity: dir ? 1 : 0.3 }}>
       <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
-        <path d="M3.5 0L7 4H0L3.5 0Z" fill={dir === 'asc' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)'} />
+        <path d="M3.5 0L7 4H0L3.5 0Z" fill={dir === 'asc' ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))'} />
       </svg>
       <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
-        <path d="M3.5 4L0 0H7L3.5 4Z" fill={dir === 'desc' ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)'} />
+        <path d="M3.5 4L0 0H7L3.5 4Z" fill={dir === 'desc' ? 'var(--accent-strong, #fb923c)' : 'var(--w40, rgba(255,255,255,0.4))'} />
       </svg>
     </span>
   );
@@ -201,7 +201,7 @@ function ExportDropdown({ onCSV, onXLSX }: { onCSV: () => void; onXLSX: () => vo
             padding: '9px 14px', background: 'none', border: 'none',
             fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif",
             color: 'var(--success, #4ade80)', cursor: 'pointer', textAlign: 'left',
-            borderTop: '0.5px solid rgba(255,255,255,0.06)',
+            borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(74,222,128,0.08)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -230,13 +230,13 @@ function FilterBar<T>({
   onClear: () => void;
 }) {
   const SEL: React.CSSProperties = {
-    background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)',
+    background: 'var(--surface, #0e0b1a)', border: '0.5px solid var(--w12, rgba(255,255,255,0.12))',
     borderRadius: 6, padding: '5px 8px', fontSize: 11,
     fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', cursor: 'pointer', colorScheme: 'dark' as any,
   };
   const INP: React.CSSProperties = {
-    background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(255,255,255,0.12)',
+    background: 'var(--surface, #0e0b1a)', border: '0.5px solid var(--w12, rgba(255,255,255,0.12))',
     borderRadius: 6, padding: '5px 10px', fontSize: 11,
     fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--text-primary, #e2dfd8)',
     outline: 'none', minWidth: 160,
@@ -250,7 +250,7 @@ function FilterBar<T>({
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap',
-      padding: '10px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+      padding: '10px 14px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
       background: 'rgba(0,0,0,0.15)',
     }}>
       {filters.map(f => (
@@ -298,9 +298,9 @@ function FilterBar<T>({
                       padding: '3px 9px', borderRadius: 20, fontSize: 10,
                       fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
                       fontWeight: selected ? 500 : 400,
-                      color: selected ? (o.color ?? 'var(--accent-strong, #fb923c)') : 'rgba(255,255,255,0.4)',
-                      background: selected ? (o.bg ?? 'rgba(251,146,60,0.12)') : 'rgba(255,255,255,0.04)',
-                      border: `0.5px solid ${selected ? (o.border ?? 'rgba(251,146,60,0.3)') : 'rgba(255,255,255,0.09)'}`,
+                      color: selected ? (o.color ?? 'var(--accent-strong, #fb923c)') : 'var(--w40, rgba(255,255,255,0.4))',
+                      background: selected ? (o.bg ?? 'rgba(251,146,60,0.12)') : 'var(--l04, rgba(255,255,255,0.04))',
+                      border: `0.5px solid ${selected ? (o.border ?? 'rgba(251,146,60,0.3)') : 'var(--l09, rgba(255,255,255,0.09))'}`,
                       transition: 'all 0.15s',
                     }}
                   >
@@ -318,9 +318,9 @@ function FilterBar<T>({
               style={{
                 padding: '5px 12px', borderRadius: 6, fontSize: 11,
                 fontFamily: "'IBM Plex Sans',sans-serif", cursor: 'pointer',
-                color: values[f.key] === true ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)',
-                background: values[f.key] === true ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
-                border: `0.5px solid ${values[f.key] === true ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.09)'}`,
+                color: values[f.key] === true ? 'var(--success, #4ade80)' : 'var(--w40, rgba(255,255,255,0.4))',
+                background: values[f.key] === true ? 'rgba(74,222,128,0.1)' : 'var(--l04, rgba(255,255,255,0.04))',
+                border: `0.5px solid ${values[f.key] === true ? 'rgba(74,222,128,0.3)' : 'var(--l09, rgba(255,255,255,0.09))'}`,
                 transition: 'all 0.15s', whiteSpace: 'nowrap',
               }}
             >
@@ -515,7 +515,7 @@ export function ERPTable<T>({
     } as React.CSSProperties,
     toolbar: {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '8px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+      padding: '8px 14px', borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
       gap: 8, flexShrink: 0, background: 'rgba(251,146,60,0.03)',
     } as React.CSSProperties,
     tableWrap: {
@@ -535,8 +535,8 @@ export function ERPTable<T>({
       padding: '9px 14px',
       fontSize: 10, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' as const,
       color: 'rgba(251,146,60,0.55)',
-      background: '#0d0a1a',
-      borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+      background: 'var(--surface, #0d0a1a)',
+      borderBottom: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
       textAlign: (col.align ?? 'left') as any,
       whiteSpace: 'nowrap' as const,
       cursor: col.sortable !== false ? 'pointer' : 'default',
@@ -545,7 +545,7 @@ export function ERPTable<T>({
     }),
     td: (col: ERPColumn<T>) => ({
       padding: '10px 14px',
-      borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+      borderBottom: '0.5px solid var(--l04, rgba(255,255,255,0.04))',
       verticalAlign: 'middle' as const,
       fontSize: 13,
       textAlign: (col.align ?? 'left') as any,
@@ -556,7 +556,7 @@ export function ERPTable<T>({
     }),
     footer: {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '8px 14px', borderTop: '0.5px solid rgba(255,255,255,0.06)',
+      padding: '8px 14px', borderTop: '0.5px solid var(--l06, rgba(255,255,255,0.06))',
       flexShrink: 0, flexWrap: 'wrap' as const, gap: 8,
     } as React.CSSProperties,
     btnPage: (active: boolean, disabled?: boolean) => ({
@@ -567,15 +567,15 @@ export function ERPTable<T>({
       fontFamily: "'IBM Plex Sans',sans-serif",
       cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.35 : 1,
-      background: active ? 'rgba(251,146,60,0.2)' : 'rgba(255,255,255,0.04)',
-      border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'rgba(255,255,255,0.09)'}`,
-      color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.5)',
+      background: active ? 'rgba(251,146,60,0.2)' : 'var(--l04, rgba(255,255,255,0.04))',
+      border: `0.5px solid ${active ? 'rgba(251,146,60,0.4)' : 'var(--l09, rgba(255,255,255,0.09))'}`,
+      color: active ? 'var(--accent-strong, #fb923c)' : 'var(--w50, rgba(255,255,255,0.5))',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       transition: 'background 0.15s',
     } as React.CSSProperties),
     select: {
       background: 'var(--surface, #0e0b1a)',
-      border: '0.5px solid rgba(255,255,255,0.15)',
+      border: '0.5px solid var(--w15, rgba(255,255,255,0.15))',
       borderRadius: 6, padding: '3px 8px',
       fontSize: 11, fontFamily: "'IBM Plex Sans',sans-serif",
       color: 'var(--text-primary, #e2dfd8)', outline: 'none',
@@ -599,7 +599,7 @@ export function ERPTable<T>({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           {/* Search box */}
           <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.4" strokeLinecap="round"
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--w30, rgba(255,255,255,0.3))" strokeWidth="1.4" strokeLinecap="round"
               style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
               <circle cx="5.5" cy="5.5" r="4"/>
               <line x1="8.5" y1="8.5" x2="12" y2="12"/>
@@ -610,8 +610,8 @@ export function ERPTable<T>({
               placeholder="Search all columns…"
               style={{
                 width: '100%', padding: '5px 28px 5px 28px',
-                background: 'rgba(255,255,255,0.04)',
-                border: `0.5px solid ${searchInput ? 'rgba(251,146,60,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                background: 'var(--l04, rgba(255,255,255,0.04))',
+                border: `0.5px solid ${searchInput ? 'rgba(251,146,60,0.35)' : 'var(--l09, rgba(255,255,255,0.09))'}`,
                 borderRadius: 6, fontSize: 12,
                 fontFamily: "'IBM Plex Sans',sans-serif",
                 color: 'var(--text-primary, #e2dfd8)', outline: 'none',
@@ -623,8 +623,8 @@ export function ERPTable<T>({
                 onClick={() => handleSearch('')}
                 style={{
                   position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
-                  background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-                  width: 15, height: 15, cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
+                  background: 'var(--w10, rgba(255,255,255,0.1))', border: 'none', borderRadius: '50%',
+                  width: 15, height: 15, cursor: 'pointer', color: 'var(--w50, rgba(255,255,255,0.5))',
                   fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   lineHeight: 1, padding: 0,
                 }}
@@ -679,14 +679,14 @@ export function ERPTable<T>({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>
+                <td colSpan={columns.length} style={{ textAlign: 'center', padding: 40, color: 'var(--w25, rgba(255,255,255,0.25))', fontSize: 13 }}>
                   <div style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(251,146,60,0.2)', borderTopColor: 'var(--accent-strong, #fb923c)', animation: 'erp-spin 0.7s linear infinite', marginBottom: 8 }} />
                   <div>Loading…</div>
                 </td>
               </tr>
             ) : pageData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+                <td colSpan={columns.length} style={{ textAlign: 'center', padding: 40, color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 13 }}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -712,17 +712,17 @@ export function ERPTable<T>({
       {/* ── Footer / Pagination ── */}
       <div style={S.footer}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+          <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono',monospace" }}>
             {sorted.length === 0 ? '0 records' : `${from}–${to} of ${sorted.length}`}
           </span>
           {showPageOfM && (
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'IBM Plex Mono',monospace" }}>
+            <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))', fontFamily: "'IBM Plex Mono',monospace" }}>
               Page {safePage} of {totalPages}
             </span>
           )}
           {showRowsPerPage && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Rows:</span>
+              <span style={{ fontSize: 11, color: 'var(--w30, rgba(255,255,255,0.3))' }}>Rows:</span>
               <select style={S.select} value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
                 {pageSizes.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
@@ -741,7 +741,7 @@ export function ERPTable<T>({
           {pageRange[0] > 1 && (
             <>
               <button style={S.btnPage(false)} onClick={() => setPage(1)}>1</button>
-              {pageRange[0] > 2 && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, padding: '0 2px' }}>…</span>}
+              {pageRange[0] > 2 && <span style={{ color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 11, padding: '0 2px' }}>…</span>}
             </>
           )}
           {pageRange.map(p => (
@@ -749,7 +749,7 @@ export function ERPTable<T>({
           ))}
           {pageRange[pageRange.length - 1] < totalPages && (
             <>
-              {pageRange[pageRange.length - 1] < totalPages - 1 && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, padding: '0 2px' }}>…</span>}
+              {pageRange[pageRange.length - 1] < totalPages - 1 && <span style={{ color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 11, padding: '0 2px' }}>…</span>}
               <button style={S.btnPage(false)} onClick={() => setPage(totalPages)}>{totalPages}</button>
             </>
           )}
