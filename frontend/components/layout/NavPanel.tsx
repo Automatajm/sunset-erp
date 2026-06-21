@@ -89,10 +89,14 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus the search when the panel opens; reset query on close.
+  // Focus the search only on a genuine closed→open transition — not when the
+  // shell remounts while already open (book mode), which would steal focus on
+  // every navigation. Reset the query on close.
+  const prevOpen = useRef(open);
   useEffect(() => {
-    if (open) { setTimeout(() => inputRef.current?.focus(), 60); }
-    else setQuery('');
+    if (open && !prevOpen.current) setTimeout(() => inputRef.current?.focus(), 60);
+    if (!open) setQuery('');
+    prevOpen.current = open;
   }, [open]);
 
   // Escape always closes; click-outside is handled by the overlay backdrop.
@@ -143,6 +147,8 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
           font-family: 'IBM Plex Sans', sans-serif;
         }
         .np-panel.np-open { transform: translateX(0); }
+        /* Book/sidebar mode gets an orange edge to distinguish it from overlay. */
+        .np-panel.np-sidebar { border-left: 2px solid var(--accent, #ea580c); }
 
         .np-head { padding: 14px 14px 10px; flex-shrink: 0; border-bottom: 0.5px solid var(--l06, rgba(255,255,255,0.06)); }
         .np-head-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -183,17 +189,26 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
       <div className={`np-backdrop${open && mode === 'overlay' ? ' np-show' : ''}`}
            onClick={onClose} aria-hidden />
 
-      <aside className={`np-panel${open ? ' np-open' : ''}`} aria-hidden={!open}>
+      <aside className={`np-panel${open ? ' np-open' : ''}${mode === 'sidebar' ? ' np-sidebar' : ''}`} aria-hidden={!open}>
         <div className="np-head">
           <div className="np-head-top">
             <span className="np-title">Navigation</span>
             <button className={`np-iconbtn${mode === 'sidebar' ? ' np-mode-on' : ''}`}
               onClick={onToggleMode}
-              title={mode === 'overlay' ? 'Switch to sidebar mode' : 'Switch to overlay mode'}>
-              {/* panel-left icon */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
+              title={mode === 'overlay' ? 'Switch to book mode' : 'Switch to overlay mode'}>
+              {mode === 'overlay' ? (
+                // floating panel — overlay mode
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="2" y="3" width="20" height="18" rx="2" />
+                  <rect x="2" y="3" width="8" height="18" fill="currentColor" opacity="0.3" />
+                </svg>
+              ) : (
+                // open book — sidebar/book mode
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                </svg>
+              )}
             </button>
             <button className="np-iconbtn" onClick={onClose} title="Close navigation">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>

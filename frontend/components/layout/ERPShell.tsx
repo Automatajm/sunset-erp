@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import InactivityGuard from '@/components/auth/InactivityGuard';
-import NavPanel, { NavMode, NAV_PANEL_WIDTH } from '@/components/layout/NavPanel';
+import NavPanel, { NAV_PANEL_WIDTH } from '@/components/layout/NavPanel';
+import { useNav } from '@/components/layout/NavProvider';
 
 // ─── Permission-aware nav structure ──────────────────────────────────────────
 
@@ -257,8 +258,9 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
   const { user, tenantName, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
-  const [navOpen,      setNavOpen]      = useState(false);
-  const [navMode,      setNavMode]      = useState<NavMode>('overlay');
+  // Nav panel open/mode live in NavProvider (above the per-page shell) so the
+  // panel survives navigation — book mode stays open as you browse.
+  const { open: navOpen, mode: navMode, setOpen: setNavOpen, toggleOpen: toggleNavOpen, toggleMode: toggleNavMode } = useNav();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const hasPermission = useHasPermission();
 
@@ -274,33 +276,11 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
   const visibleNav = NAV.filter(item => hasPermission(item.permission));
 
-  // Global Ctrl+K shortcut — now toggles the nav panel.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setNavOpen(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  // Restore the persisted nav display mode.
-  useEffect(() => {
-    const saved = localStorage.getItem('sunset-nav-mode');
-    if (saved === 'sidebar' || saved === 'overlay') setNavMode(saved);
-  }, []);
-
-  const toggleNavMode = () => setNavMode(m => {
-    const next: NavMode = m === 'overlay' ? 'sidebar' : 'overlay';
-    localStorage.setItem('sunset-nav-mode', next);
-    return next;
-  });
-
-  // Fullscreen API + keep the icon in sync with external changes (e.g. Esc/F11).
+  // Fullscreen API — sync on mount (shell remounts on navigation) and on
+  // external changes (Esc / F11).
   useEffect(() => {
     const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    onFs();
     document.addEventListener('fullscreenchange', onFs);
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
@@ -531,8 +511,8 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
                 </svg>
               )}
             </button>
-            <button className={`shell-iconbtn${navOpen ? ' shell-iconbtn-on' : ''}`} onClick={() => setNavOpen(o => !o)}
-              title={navOpen ? 'Close navigation' : 'Open navigation'}>
+            <button className={`shell-iconbtn${navOpen ? ' shell-iconbtn-on' : ''}`} onClick={toggleNavOpen}
+              title={!navOpen ? 'Open navigation (Ctrl+K)' : navMode === 'sidebar' ? 'Navigation — book mode' : 'Navigation — overlay mode'}>
               {navOpen ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>

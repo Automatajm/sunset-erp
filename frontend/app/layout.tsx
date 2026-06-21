@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import AuthGate from "@/components/auth/AuthGate";
 import ThemeManager from "@/components/theme/ThemeManager";
+import { NavProvider } from "@/components/layout/NavProvider";
 
 // Applied before first paint to avoid a flash of the wrong theme. Mirrors
 // ThemeManager.applyFromStorage but runs synchronously during HTML parse.
@@ -43,11 +44,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-full`} suppressHydrationWarning>
         <ThemeManager />
-        <AuthProvider>
-          <AuthGate>
-            {children}
-          </AuthGate>
-        </AuthProvider>
+        <NavProvider>
+          <AuthProvider>
+            <AuthGate>
+              {children}
+            </AuthGate>
+          </AuthProvider>
+        </NavProvider>
       </body>
     </html>
   );
