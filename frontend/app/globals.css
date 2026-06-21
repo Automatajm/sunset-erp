@@ -45,6 +45,7 @@
   /* theme-flipping neutral ramp — dark values EQUAL the rgba(255,255,255,a)
      literals they replace, so dark mode is byte-identical. html.light remaps
      them to dark-ink-on-light so page chrome stays legible in light mode. */
+  --w60: rgba(255,255,255,0.60);
   --w55: rgba(255,255,255,0.55);
   --w50: rgba(255,255,255,0.50);
   --w45: rgba(255,255,255,0.45);
@@ -57,11 +58,13 @@
   --w20: rgba(255,255,255,0.20);
   --w18: rgba(255,255,255,0.18);
   --w15: rgba(255,255,255,0.15);
+  --w12: rgba(255,255,255,0.12);
   --w10: rgba(255,255,255,0.10);
   --l08: rgba(255,255,255,0.08);
   --l07: rgba(255,255,255,0.07);
   --l06: rgba(255,255,255,0.06);
   --l05: rgba(255,255,255,0.05);
+  --l04: rgba(255,255,255,0.04);
   --l03: rgba(255,255,255,0.03);
   --l02: rgba(255,255,255,0.02);
 }
@@ -85,6 +88,7 @@ html.light {
   --text-secondary:   #6b7280;
 
   /* neutral ramp → dark-ink-on-light */
+  --w60: rgba(26,20,40,0.78);
   --w55: rgba(26,20,40,0.72);
   --w50: rgba(26,20,40,0.68);
   --w45: rgba(26,20,40,0.62);
@@ -97,11 +101,13 @@ html.light {
   --w20: rgba(26,20,40,0.34);
   --w18: rgba(26,20,40,0.30);
   --w15: rgba(0,0,0,0.16);
+  --w12: rgba(0,0,0,0.14);
   --w10: rgba(0,0,0,0.12);
   --l08: rgba(0,0,0,0.10);
   --l07: rgba(0,0,0,0.09);
   --l06: rgba(0,0,0,0.08);
   --l05: rgba(0,0,0,0.07);
+  --l04: rgba(0,0,0,0.05);
   --l03: rgba(0,0,0,0.04);
   --l02: rgba(0,0,0,0.03);
 }

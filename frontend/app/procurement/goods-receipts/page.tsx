@@ -125,10 +125,10 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
     <div style={{ position:'fixed', inset:0, zIndex:400, display:'flex' }}>
       <div style={{ flex:1, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(2px)' }} onClick={onClose} />
       <div style={{ width:720, background:'var(--bg, #0a0712)', borderLeft:'0.5px solid rgba(74,222,128,0.15)', display:'flex', flexDirection:'column', overflowY:'auto' }}>
-        <div style={{ padding:'16px 20px', borderBottom:'0.5px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+        <div style={{ padding:'16px 20px', borderBottom:'0.5px solid var(--l06)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
             <div style={{ fontSize:14, fontWeight:500, color:'var(--text-strong, #f1ede8)', ...MONO }}>{grn.grnNumber}</div>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
+            <div style={{ fontSize:12, color:'var(--w40)', marginTop:2 }}>
               {grn.supplierName ? `${grn.supplierName} · ` : ''}{grn.warehouseName}
               {grn.poNumber && <span style={{ color:'rgba(251,146,60,0.5)', marginLeft:8 }}>· PO {grn.poNumber}</span>}
             </div>
@@ -136,12 +136,12 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <StatusBadge status={grn.status} />
             <PrintButton doc="goods-receipt" id={grn.id} style={{ padding:'6px 12px' }} />
-            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.06)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+            <button onClick={onClose} style={{ width:24, height:24, borderRadius:6, background:'var(--l06)', border:'none', cursor:'pointer', color:'var(--w45)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>Loading…</div>
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--w30)', fontSize:13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:16 }}>
             {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', borderRadius:7, padding:'8px 12px', fontSize:12, color:'var(--danger-subtle, #fca5a5)' }}>{error}</div>}
@@ -154,8 +154,8 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                 { label:'PO Number',     value: detail.poNumber ?? '—' },
                 { label:'Warehouse',     value:`${detail.warehouseCode} — ${detail.warehouseName}` },
               ].map(item => (
-                <div key={item.label} style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 12px' }}>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{item.label}</div>
+                <div key={item.label} style={{ background:'var(--l03)', borderRadius:8, padding:'8px 12px' }}>
+                  <div style={{ fontSize:10, color:'var(--w30)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{item.label}</div>
                   <div style={{ fontSize:12, color:'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
@@ -176,36 +176,36 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
                 <thead>
                   <tr>
                     {['#','Item','Qty','UOM','Unit Cost','Total','Lot','Expiry'].map(h => (
-                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(74,222,128,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding:'6px 8px', fontSize:10, color:'rgba(74,222,128,0.5)', fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', textAlign:['Qty','Unit Cost','Total'].includes(h)?'right':'left', borderBottom:'0.5px solid var(--l06)', whiteSpace:'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {detail.lines?.map(line => (
-                    <tr key={line.id} style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding:'8px', color:'rgba(255,255,255,0.3)', ...MONO }}>{line.lineNumber}</td>
+                    <tr key={line.id} style={{ borderBottom:'0.5px solid var(--l04)' }}>
+                      <td style={{ padding:'8px', color:'var(--w30)', ...MONO }}>{line.lineNumber}</td>
                       <td style={{ padding:'8px' }}>
                         <div style={{ ...MONO, color:'var(--accent-strong, #fb923c)', fontSize:11 }}>{line.item?.code}</div>
-                        <div style={{ color:'rgba(255,255,255,0.55)', fontSize:11, marginTop:1 }}>{line.item?.name}</div>
+                        <div style={{ color:'var(--w55)', fontSize:11, marginTop:1 }}>{line.item?.name}</div>
                       </td>
                       <td style={{ padding:'8px', textAlign:'right', ...MONO, color:'var(--success, #4ade80)', fontWeight:500 }}>{Number(line.receivedQuantity).toLocaleString()}</td>
-                      <td style={{ padding:'8px', color:'rgba(255,255,255,0.45)' }}>{line.uom}</td>
+                      <td style={{ padding:'8px', color:'var(--w45)' }}>{line.uom}</td>
                       <td style={{ padding:'8px', textAlign:'right', ...MONO, fontSize:11 }}>{line.unitCost ? fmtAmt(line.unitCost) : '—'}</td>
                       <td style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:500, color:'var(--text-primary, #e2dfd8)' }}>
                         {line.unitCost ? fmtAmt(Number(line.receivedQuantity) * Number(line.unitCost)) : '—'}
                       </td>
-                      <td style={{ padding:'8px', color:'rgba(255,255,255,0.35)', fontSize:11 }}>{line.lotNumber ?? '—'}</td>
+                      <td style={{ padding:'8px', color:'var(--w35)', fontSize:11 }}>{line.lotNumber ?? '—'}</td>
                       <td style={{ padding:'8px', fontSize:11 }}>
                         {line.expiryDate ? (
                           <span style={{ color: new Date(line.expiryDate) < new Date() ? 'var(--danger, #f87171)' : 'var(--warning, #fbbf24)', ...MONO }}>
                             {fmtDateShort(line.expiryDate)}
                           </span>
-                        ) : <span style={{ color:'rgba(255,255,255,0.2)' }}>—</span>}
+                        ) : <span style={{ color:'var(--w20)' }}>—</span>}
                       </td>
                     </tr>
                   ))}
-                  <tr style={{ background:'rgba(255,255,255,0.02)' }}>
-                    <td colSpan={5} style={{ padding:'8px', fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:500 }}>TOTAL VALUE</td>
+                  <tr style={{ background:'var(--l02)' }}>
+                    <td colSpan={5} style={{ padding:'8px', fontSize:11, color:'var(--w30)', fontWeight:500 }}>TOTAL VALUE</td>
                     <td colSpan={3} style={{ padding:'8px', textAlign:'right', ...MONO, fontWeight:600, color:'var(--success, #4ade80)', fontSize:14 }}>
                       {fmtAmt(detail.lines?.reduce((sum, l) => sum + Number(l.receivedQuantity) * Number(l.unitCost ?? 0), 0) ?? 0)}
                     </td>
@@ -215,14 +215,14 @@ function GrnDetailDrawer({ grn, onClose, onAction }: {
             </div>
 
             {detail.notes && (
-              <div style={{ background:'rgba(255,255,255,0.02)', border:'0.5px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'10px 14px' }}>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>Notes</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.55)', lineHeight:1.6 }}>{detail.notes}</div>
+              <div style={{ background:'var(--l02)', border:'0.5px solid var(--l06)', borderRadius:8, padding:'10px 14px' }}>
+                <div style={{ fontSize:10, color:'var(--w30)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>Notes</div>
+                <div style={{ fontSize:12, color:'var(--w55)', lineHeight:1.6 }}>{detail.notes}</div>
               </div>
             )}
 
             {detail.status === 'posted' && (
-              <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display:'flex', gap:8, paddingTop:8, borderTop:'0.5px solid var(--l06)' }}>
                 <button onClick={cancelModal.openModal}
                   style={{ padding:'7px 16px', borderRadius:7, fontSize:12, cursor:'pointer', background:'rgba(239,68,68,0.08)', border:'0.5px solid rgba(239,68,68,0.2)', color:'var(--danger, #f87171)', fontFamily:"'IBM Plex Sans',sans-serif" }}>
                   Cancel GRN

@@ -75,7 +75,7 @@ export function ConfirmModal({
         </>
       }
     >
-      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: 'var(--w60)', lineHeight: 1.5 }}>
         {variant === 'destructive'
           ? 'This action cannot be undone.'
           : 'Please confirm you want to proceed.'}

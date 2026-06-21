@@ -145,20 +145,20 @@ function PODetailDrawer({ po, onClose, onAction }: {
       {/* Drawer */}
       <div style={{ width: 680, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--l06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Mono',monospace" }}>{po.poNumber}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{po.supplier?.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--w40)', marginTop: 2 }}>{po.supplier?.name}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <StatusBadge status={po.status} />
             <PrintButton doc="purchase-order" id={po.id} style={{ padding: '6px 12px' }} />
-            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06)', border: 'none', cursor: 'pointer', color: 'var(--w45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--w30)', fontSize: 13 }}>
             Loading…
           </div>
         ) : detail ? (
@@ -172,8 +172,8 @@ function PODetailDrawer({ po, onClose, onAction }: {
                 { label: 'Payment Terms', value: detail.paymentTerms || '—' },
                 { label: 'Currency',      value: detail.currency || 'USD' },
               ].map(item => (
-                <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
+                <div key={item.label} style={{ background: 'var(--l03)', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--w30)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
@@ -186,7 +186,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
                 <thead>
                   <tr>
                     {['#', 'Item', 'Ordered', 'Received', 'UOM', 'Price', 'Total', 'Status'].map(h => (
-                      <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Ordered','Received','Price','Total'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Ordered','Received','Price','Total'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid var(--l06)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -196,34 +196,34 @@ function PODetailDrawer({ po, onClose, onAction }: {
                       ? (Number(line.receivedQuantity) / Number(line.orderedQuantity)) * 100
                       : 0;
                     return (
-                      <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                      <tr key={line.id} style={{ borderBottom: '0.5px solid var(--l04)' }}>
+                        <td style={{ padding: '8px', color: 'var(--w30)' }}>{line.lineNumber}</td>
                         <td style={{ padding: '8px' }}>
                           <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 }}>{line.item?.name}</div>
+                          <div style={{ color: 'var(--w55)', fontSize: 11, marginTop: 1 }}>{line.item?.name}</div>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.orderedQuantity).toLocaleString()}</td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <div style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : pct > 0 ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)' }}>
+                          <div style={{ ...MONO, color: pct >= 100 ? 'var(--success, #4ade80)' : pct > 0 ? 'var(--accent-strong, #fb923c)' : 'var(--w40)' }}>
                             {Number(line.receivedQuantity).toLocaleString()}
                           </div>
                           {pct > 0 && pct < 100 && (
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{pct.toFixed(0)}%</div>
+                            <div style={{ fontSize: 10, color: 'var(--w30)', marginTop: 2 }}>{pct.toFixed(0)}%</div>
                           )}
                         </td>
-                        <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
+                        <td style={{ padding: '8px', color: 'var(--w45)' }}>{line.uom}</td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontSize: 11 }}>{fmtAmt(line.unitPrice)}</td>
                         <td style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 500, color: 'var(--text-primary, #e2dfd8)' }}>{fmtAmt(line.lineTotal)}</td>
                         <td style={{ padding: '8px' }}>
-                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: line.status === 'closed' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'closed' ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'closed' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: line.status === 'closed' ? 'rgba(74,222,128,0.1)' : 'var(--l05)', color: line.status === 'closed' ? 'var(--success, #4ade80)' : 'var(--w40)', border: `0.5px solid ${line.status === 'closed' ? 'rgba(74,222,128,0.2)' : 'var(--l08)'}` }}>
                             {line.status}
                           </span>
                         </td>
                       </tr>
                     );
                   })}
-                  <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    <td colSpan={5} style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>TOTAL</td>
+                  <tr style={{ background: 'var(--l02)' }}>
+                    <td colSpan={5} style={{ padding: '8px', fontSize: 11, color: 'var(--w30)', fontWeight: 500 }}>TOTAL</td>
                     <td colSpan={2} style={{ padding: '8px', textAlign: 'right', ...MONO, fontWeight: 600, color: 'var(--accent-strong, #fb923c)', fontSize: 14 }}>{fmtAmt(detail.total)}</td>
                     <td />
                   </tr>
@@ -252,7 +252,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Warehouse *</label>
+                      <label style={{ fontSize: 10, fontWeight: 500, color: 'var(--w40)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Warehouse *</label>
                       <SearchSelect
                         options={warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }))}
                         value={recvWh}
@@ -266,10 +266,10 @@ function PODetailDrawer({ po, onClose, onAction }: {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
                         <tr>
-                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'left', fontWeight: 500 }}>Item</th>
-                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Ordered</th>
-                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Received</th>
-                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'right', fontWeight: 500 }}>Pending</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'var(--w35)', textAlign: 'left', fontWeight: 500 }}>Item</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'var(--w35)', textAlign: 'right', fontWeight: 500 }}>Ordered</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'var(--w35)', textAlign: 'right', fontWeight: 500 }}>Received</th>
+                          <th style={{ padding: '5px 6px', fontSize: 10, color: 'var(--w35)', textAlign: 'right', fontWeight: 500 }}>Pending</th>
                           <th style={{ padding: '5px 6px', fontSize: 10, color: 'rgba(74,222,128,0.7)', textAlign: 'right', fontWeight: 500 }}>Receive Now</th>
                         </tr>
                       </thead>
@@ -277,13 +277,13 @@ function PODetailDrawer({ po, onClose, onAction }: {
                         {detail.lines?.filter(l => l.status !== 'closed').map(line => {
                           const pending = Number(line.orderedQuantity) - Number(line.receivedQuantity);
                           return (
-                            <tr key={line.id} style={{ borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
+                            <tr key={line.id} style={{ borderTop: '0.5px solid var(--l04)' }}>
                               <td style={{ padding: '6px' }}>
                                 <span style={{ ...MONO, fontSize: 11, color: 'var(--accent-strong, #fb923c)' }}>{line.item?.code}</span>
-                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{line.item?.name}</span>
+                                <span style={{ fontSize: 11, color: 'var(--w50)', marginLeft: 6 }}>{line.item?.name}</span>
                               </td>
-                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.orderedQuantity).toLocaleString()}</td>
-                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'rgba(255,255,255,0.4)' }}>{Number(line.receivedQuantity).toLocaleString()}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'var(--w40)' }}>{Number(line.orderedQuantity).toLocaleString()}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'var(--w40)' }}>{Number(line.receivedQuantity).toLocaleString()}</td>
                               <td style={{ padding: '6px', textAlign: 'right', ...MONO, color: 'var(--accent-strong, #fb923c)' }}>{pending.toLocaleString()}</td>
                               <td style={{ padding: '6px' }}>
                                 <input
@@ -291,7 +291,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
                                   placeholder={`max ${pending}`}
                                   value={recvQtys[line.id] ?? ''}
                                   onChange={e => setRecvQtys(q => ({ ...q, [line.id]: e.target.value }))}
-                                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '4px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', textAlign: 'right' }}
+                                  style={{ background: 'var(--l06)', border: '0.5px solid rgba(74,222,128,0.25)', borderRadius: 5, padding: '4px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: '100%', textAlign: 'right' }}
                                 />
                               </td>
                             </tr>
@@ -314,7 +314,7 @@ function PODetailDrawer({ po, onClose, onAction }: {
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid var(--l06)', flexWrap: 'wrap' }}>
               {canConfirm && (
                 <button onClick={() => setConfirmStatus({ status: 'confirmed', title: `Confirm PO ${po.poNumber}?`, description: 'This issues the purchase order to the supplier.', variant: 'default', label: 'Confirm PO' })} disabled={actionBusy}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>

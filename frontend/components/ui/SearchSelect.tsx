@@ -88,13 +88,13 @@ export default function SearchSelect({
         ref={triggerRef}
         onClick={() => open ? setOpen(false) : openPanel()}
         style={{
-          background:     disabled ? 'rgba(255,255,255,0.02)' : 'var(--surface, #0e0b1a)',
-          border:         `0.5px solid ${open ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
+          background:     disabled ? 'var(--l02)' : 'var(--surface, #0e0b1a)',
+          border:         `0.5px solid ${open ? 'rgba(251,146,60,0.45)' : 'var(--w10)'}`,
           borderRadius:   7,
           padding:        '7px 12px',
           fontSize:       12,
           fontFamily:     "'IBM Plex Sans', sans-serif",
-          color:          selected ? 'var(--text-strong, #f1ede8)' : 'rgba(255,255,255,0.3)',
+          color:          selected ? 'var(--text-strong, #f1ede8)' : 'var(--w30)',
           cursor:         disabled ? 'not-allowed' : 'pointer',
           opacity:        disabled ? 0.5 : 1,
           display:        'flex',
@@ -128,12 +128,12 @@ export default function SearchSelect({
             background:   'var(--surface, #0e0b1a)',
             border:       '0.5px solid rgba(251,146,60,0.25)',
             borderRadius: 8,
-            boxShadow:    '0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.04) inset',
+            boxShadow:    '0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px var(--l04) inset',
             overflow:     'hidden',
           }}
         >
           {/* Search input */}
-          <div style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ padding: '8px 10px', borderBottom: '0.5px solid var(--l07)' }}>
             <input
               ref={inputRef}
               value={query}
@@ -141,8 +141,8 @@ export default function SearchSelect({
               placeholder={placeholder}
               style={{
                 width:        '100%',
-                background:   'rgba(255,255,255,0.05)',
-                border:       '0.5px solid rgba(255,255,255,0.1)',
+                background:   'var(--l05)',
+                border:       '0.5px solid var(--w10)',
                 borderRadius: 6,
                 padding:      '6px 10px',
                 fontSize:     12,
@@ -162,20 +162,20 @@ export default function SearchSelect({
                 padding:      '8px 14px',
                 fontSize:     12,
                 cursor:       'pointer',
-                color:        'rgba(255,255,255,0.3)',
+                color:        'var(--w30)',
                 fontFamily:   "'IBM Plex Sans', sans-serif",
-                borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+                borderBottom: '0.5px solid var(--l04)',
                 background:   'transparent',
                 whiteSpace:   'nowrap',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--l04)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               {clearLabel}
             </div>
 
             {filtered.length === 0 ? (
-              <div style={{ padding: 12, fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', fontFamily: "'IBM Plex Sans', sans-serif" }}>
+              <div style={{ padding: 12, fontSize: 12, color: 'var(--w25)', textAlign: 'center', fontFamily: "'IBM Plex Sans', sans-serif" }}>
                 No results for &ldquo;{query}&rdquo;
               </div>
             ) : filtered.map(o => (
@@ -192,12 +192,12 @@ export default function SearchSelect({
                   borderLeft: value === o.value ? '2px solid var(--accent-strong, #fb923c)' : '2px solid transparent',
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={e => { if (value !== o.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseEnter={e => { if (value !== o.value) e.currentTarget.style.background = 'var(--l05)'; }}
                 onMouseLeave={e => { if (value !== o.value) e.currentTarget.style.background = 'transparent'; }}
               >
                 <div>{o.label}</div>
                 {o.sublabel && (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{o.sublabel}</div>
+                  <div style={{ fontSize: 11, color: 'var(--w30)', marginTop: 2 }}>{o.sublabel}</div>
                 )}
               </div>
             ))}

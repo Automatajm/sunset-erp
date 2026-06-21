@@ -196,7 +196,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
     padding: '6px 14px', fontSize: 12, borderRadius: 6, cursor: 'pointer', border: 'none',
     fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: active ? 500 : 400,
     background: active ? 'rgba(251,146,60,0.12)' : 'transparent',
-    color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)',
+    color: active ? 'var(--accent-strong, #fb923c)' : 'var(--w40)',
     transition: 'all 0.15s',
   });
 
@@ -206,27 +206,27 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
       <div style={{ width: 780, background: 'var(--bg, #0a0712)', borderLeft: '0.5px solid rgba(251,146,60,0.15)', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--l06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-strong, #f1ede8)', ...MONO }}>{rfq.rfqNumber}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{rfq.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--w40)', marginTop: 2 }}>{rfq.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <PrintButton doc="rfq" id={rfq.id} label="" style={{ padding: '4px 7px' }} />
             <StatusBadge status={rfq.status} />
-            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--l06)', border: 'none', cursor: 'pointer', color: 'var(--w45)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ padding: '8px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', gap: 4, flexShrink: 0 }}>
+        <div style={{ padding: '8px 16px', borderBottom: '0.5px solid var(--l06)', display: 'flex', gap: 4, flexShrink: 0 }}>
           <button style={TAB_STYLE(tab === 'lines')} onClick={() => setTab('lines')}>Lines & Suppliers</button>
           <button style={TAB_STYLE(tab === 'comparison')} onClick={() => setTab('comparison')}>Comparison Matrix</button>
           {canRespond && <button style={TAB_STYLE(tab === 'response')} onClick={() => setTab('response')}>Enter Response</button>}
         </div>
 
         {loading ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Loading…</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--w30)', fontSize: 13 }}>Loading…</div>
         ) : detail ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -238,8 +238,8 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                 { label: 'Currency',      value: detail.currency },
                 { label: 'Source',        value: detail.purchaseRequisition?.prNumber ?? detail.generalNeed?.gnNumber ?? 'Manual' },
               ].map(item => (
-                <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
+                <div key={item.label} style={{ background: 'var(--l03)', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--w30)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-primary, #e2dfd8)' }}>{item.value}</div>
                 </div>
               ))}
@@ -255,13 +255,13 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                     {detail.rfqSuppliers?.map(rs => {
                       const scfg = { invited: 'var(--warning, #fbbf24)', sent: 'var(--accent-blue, #60a5fa)', responded: '#34d399', awarded: 'var(--success, #4ade80)', declined: 'var(--danger, #f87171)' }[rs.status] ?? 'var(--warning, #fbbf24)';
                       return (
-                        <div key={rs.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                        <div key={rs.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--l03)', borderRadius: 8, padding: '8px 12px' }}>
                           <div>
                             <span style={{ ...MONO, fontSize: 12, color: 'var(--accent-strong, #fb923c)' }}>{rs.supplier?.code}</span>
                             <span style={{ fontSize: 12, color: 'var(--text-primary, #e2dfd8)', marginLeft: 8 }}>{rs.supplier?.name}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {rs.totalOfferedAmount && <span style={{ ...MONO, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{fmtAmt(rs.totalOfferedAmount)}</span>}
+                            {rs.totalOfferedAmount && <span style={{ ...MONO, fontSize: 12, color: 'var(--w50)' }}>{fmtAmt(rs.totalOfferedAmount)}</span>}
                             <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 10, background: `color-mix(in srgb, ${scfg} 9%, transparent)`, color: scfg, border: `0.5px solid color-mix(in srgb, ${scfg} 19%, transparent)` }}>{rs.status}</span>
                             <PrintButton doc="rfq" id={rfq.id} query={{ rfqSupplierId: rs.id }} label="" style={{ padding: '3px 6px' }} />
                           </div>
@@ -278,27 +278,27 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                     <thead>
                       <tr>
                         {['#', 'Item', 'Qty', 'UOM', 'Required', 'Status', 'Awarded To', 'Awarded Price'].map(h => (
-                          <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Qty', 'Awarded Price'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: ['Qty', 'Awarded Price'].includes(h) ? 'right' : 'left', borderBottom: '0.5px solid var(--l06)', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {detail.lines?.map(line => (
-                        <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-                          <td style={{ padding: '8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                        <tr key={line.id} style={{ borderBottom: '0.5px solid var(--l04)' }}>
+                          <td style={{ padding: '8px', color: 'var(--w30)' }}>{line.lineNumber}</td>
                           <td style={{ padding: '8px' }}>
                             {line.item ? (
                               <>
                                 <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item.code}</div>
-                                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{line.item.name}</div>
+                                <div style={{ color: 'var(--w55)', fontSize: 11 }}>{line.item.name}</div>
                               </>
-                            ) : <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontStyle: 'italic' }}>{line.genericDescription}</div>}
+                            ) : <div style={{ color: 'var(--w40)', fontSize: 11, fontStyle: 'italic' }}>{line.genericDescription}</div>}
                           </td>
                           <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.quantity).toLocaleString()}</td>
-                          <td style={{ padding: '8px', color: 'rgba(255,255,255,0.45)' }}>{line.uom}</td>
-                          <td style={{ padding: '8px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{fmtDateShort(line.requiredDate)}</td>
+                          <td style={{ padding: '8px', color: 'var(--w45)' }}>{line.uom}</td>
+                          <td style={{ padding: '8px', fontSize: 11, color: 'var(--w50)' }}>{fmtDateShort(line.requiredDate)}</td>
                           <td style={{ padding: '8px' }}>
-                            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.status === 'awarded' ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)', color: line.status === 'awarded' ? 'var(--success, #4ade80)' : 'rgba(255,255,255,0.4)', border: `0.5px solid ${line.status === 'awarded' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: line.status === 'awarded' ? 'rgba(74,222,128,0.1)' : 'var(--l05)', color: line.status === 'awarded' ? 'var(--success, #4ade80)' : 'var(--w40)', border: `0.5px solid ${line.status === 'awarded' ? 'rgba(74,222,128,0.2)' : 'var(--l08)'}` }}>
                               {line.status}
                             </span>
                           </td>
@@ -316,7 +316,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
             {tab === 'comparison' && (
               <div>
                 {!comparison ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Loading comparison…</div>
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--w30)', fontSize: 13 }}>Loading comparison…</div>
                 ) : (
                   <>
                     <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(251,146,60,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
@@ -330,23 +330,23 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                         <thead>
                           <tr>
-                            <th style={{ padding: '7px 10px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', minWidth: 160 }}>Item</th>
-                            <th style={{ padding: '7px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>Needed</th>
+                            <th style={{ padding: '7px 10px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid var(--l08)', whiteSpace: 'nowrap', minWidth: 160 }}>Item</th>
+                            <th style={{ padding: '7px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid var(--l08)', whiteSpace: 'nowrap' }}>Needed</th>
                             {comparison.matrix[0]?.offers.map((o: any) => (
-                              <th key={o.supplierId} style={{ padding: '7px 10px', fontSize: 10, color: 'var(--accent-violet, #a78bfa)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', minWidth: 120 }}>
+                              <th key={o.supplierId} style={{ padding: '7px 10px', fontSize: 10, color: 'var(--accent-violet, #a78bfa)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', borderBottom: '0.5px solid var(--l08)', whiteSpace: 'nowrap', minWidth: 120 }}>
                                 {o.supplierCode}
-                                <div style={{ fontSize: 9, color: o.supplierStatus === 'responded' ? '#34d399' : 'rgba(255,255,255,0.3)', fontWeight: 400 }}>{o.supplierStatus}</div>
+                                <div style={{ fontSize: 9, color: o.supplierStatus === 'responded' ? '#34d399' : 'var(--w30)', fontWeight: 400 }}>{o.supplierStatus}</div>
                               </th>
                             ))}
-                            {canAward && <th style={{ padding: '7px 10px', fontSize: 10, color: 'var(--success, #4ade80)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>Award</th>}
+                            {canAward && <th style={{ padding: '7px 10px', fontSize: 10, color: 'var(--success, #4ade80)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', borderBottom: '0.5px solid var(--l08)', whiteSpace: 'nowrap' }}>Award</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {comparison.matrix.map((line: any) => (
-                            <tr key={line.lineId} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                            <tr key={line.lineId} style={{ borderBottom: '0.5px solid var(--l04)' }}>
                               <td style={{ padding: '8px 10px' }}>
                                 <div style={{ ...MONO, color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.itemName}</div>
-                                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 2 }}>{fmtDateShort(line.requiredDate)}</div>
+                                <div style={{ color: 'var(--w30)', fontSize: 10, marginTop: 2 }}>{fmtDateShort(line.requiredDate)}</div>
                               </td>
                               <td style={{ padding: '8px', textAlign: 'right', ...MONO }}>{Number(line.quantity).toLocaleString()} {line.uom}</td>
                               {line.offers.map((offer: any) => (
@@ -354,9 +354,9 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                                   {offer.unitPrice ? (
                                     <>
                                       <div style={{ ...MONO, color: offer.isAwarded ? 'var(--success, #4ade80)' : 'var(--text-primary, #e2dfd8)', fontWeight: offer.isAwarded ? 600 : 400 }}>{fmtAmt(offer.unitPrice)}</div>
-                                      <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 1 }}>{offer.leadTimeDays}d · {Number(offer.offeredQty).toLocaleString()} {line.uom}</div>
+                                      <div style={{ color: 'var(--w30)', fontSize: 10, marginTop: 1 }}>{offer.leadTimeDays}d · {Number(offer.offeredQty).toLocaleString()} {line.uom}</div>
                                     </>
-                                  ) : <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>}
+                                  ) : <span style={{ color: 'var(--w20)' }}>—</span>}
                                 </td>
                               ))}
                               {canAward && (
@@ -398,7 +398,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                 {respError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--danger-subtle, #fca5a5)' }}>{respError}</div>}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <label style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Responding Supplier *</label>
+                  <label style={{ fontSize: 10, fontWeight: 500, color: 'var(--w40)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Responding Supplier *</label>
                   <div style={{ maxWidth: 320 }}>
                     <SearchSelect
                       options={(detail.rfqSuppliers?.filter(rs => rs.status === 'sent') ?? []).map(rs => ({ value: rs.id, label: `${rs.supplier?.code} — ${rs.supplier?.name}` }))}
@@ -415,33 +415,33 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
                   <thead>
                     <tr>
                       {['Line', 'Item', 'Needed', 'Offered Qty', 'Unit Price', 'Lead Days'].map(h => (
-                        <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '6px 8px', fontSize: 10, color: 'rgba(251,146,60,0.5)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', borderBottom: '0.5px solid var(--l06)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {detail.lines?.map(line => (
-                      <tr key={line.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '7px 8px', color: 'rgba(255,255,255,0.3)' }}>{line.lineNumber}</td>
+                      <tr key={line.id} style={{ borderBottom: '0.5px solid var(--l04)' }}>
+                        <td style={{ padding: '7px 8px', color: 'var(--w30)' }}>{line.lineNumber}</td>
                         <td style={{ padding: '7px 8px' }}>
                           <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: 'var(--accent-strong, #fb923c)', fontSize: 11 }}>{line.item?.code ?? '—'}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{line.item?.name ?? line.genericDescription}</div>
+                          <div style={{ color: 'var(--w50)', fontSize: 11 }}>{line.item?.name ?? line.genericDescription}</div>
                         </td>
-                        <td style={{ padding: '7px 8px', fontFamily: "'IBM Plex Mono',monospace", color: 'rgba(255,255,255,0.5)' }}>{Number(line.quantity).toLocaleString()} {line.uom}</td>
+                        <td style={{ padding: '7px 8px', fontFamily: "'IBM Plex Mono',monospace", color: 'var(--w50)' }}>{Number(line.quantity).toLocaleString()} {line.uom}</td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="0.001" placeholder="0" value={respLines[line.id]?.qty ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], qty: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
+                            style={{ background: 'var(--l04)', border: '0.5px solid var(--w12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="0.01" placeholder="0.00" value={respLines[line.id]?.price ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], price: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
+                            style={{ background: 'var(--l04)', border: '0.5px solid var(--w12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 90, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '7px 5px' }}>
                           <input type="number" min="0" step="1" placeholder="0" value={respLines[line.id]?.leadDays ?? ''}
                             onChange={e => setRespLines(r => ({ ...r, [line.id]: { ...r[line.id], leadDays: e.target.value } }))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 70, textAlign: 'right' }} />
+                            style={{ background: 'var(--l04)', border: '0.5px solid var(--w12)', borderRadius: 5, padding: '5px 8px', fontSize: 12, fontFamily: "'IBM Plex Mono',monospace", color: 'var(--text-primary, #e2dfd8)', outline: 'none', width: 70, textAlign: 'right' }} />
                         </td>
                       </tr>
                     ))}
@@ -458,7 +458,7 @@ function RFQDetailDrawer({ rfq, onClose, onAction }: {
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '0.5px solid var(--l06)', flexWrap: 'wrap' }}>
               {canSend && (
                 <button onClick={sendModal.openModal} disabled={actionBusy}
                   style={{ padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', background: 'rgba(96,165,250,0.1)', border: '0.5px solid rgba(96,165,250,0.25)', color: 'var(--accent-blue, #60a5fa)', fontFamily: "'IBM Plex Sans',sans-serif", opacity: actionBusy ? 0.5 : 1 }}>

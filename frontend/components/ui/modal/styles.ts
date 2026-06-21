@@ -28,7 +28,7 @@ export const panelStyle = (width = 420): CSSProperties => ({
   maxHeight: '90vh',
   display: 'flex',
   flexDirection: 'column',
-  background: '#14101f',
+  background: 'var(--surface-raised, #14101f)',
   border: '0.5px solid rgba(251,146,60,0.25)',
   borderRadius: 12,
   boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
@@ -49,7 +49,7 @@ export const titleStyle: CSSProperties = {
 
 export const descriptionStyle: CSSProperties = {
   fontSize: 12,
-  color: 'rgba(255,255,255,0.5)',
+  color: 'var(--w50)',
   lineHeight: 1.5,
   marginTop: 6,
 };
@@ -90,12 +90,12 @@ export const btn = (variant: Variant = 'ghost', disabled = false): CSSProperties
   opacity: disabled ? 0.5 : 1,
   fontFamily: "'IBM Plex Sans',sans-serif",
   color:
-    variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'rgba(255,255,255,0.6)',
+    variant === 'primary' ? 'white' : variant === 'danger' ? 'var(--danger, #f87171)' : 'var(--w60)',
   background:
     variant === 'primary'
       ? 'linear-gradient(135deg,var(--accent-pressed, #c2410c),var(--accent, #ea580c),var(--accent-mid, #f97316))'
       : variant === 'danger'
         ? 'rgba(239,68,68,0.1)'
-        : 'rgba(255,255,255,0.06)',
+        : 'var(--l06)',
   outline: variant === 'danger' ? '0.5px solid rgba(239,68,68,0.25)' : 'none',
 });
