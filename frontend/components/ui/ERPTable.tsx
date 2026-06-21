@@ -508,7 +508,7 @@ export function ERPTable<T>({
   const S = {
     wrap: {
       display: 'flex', flexDirection: 'column' as const, gap: 0,
-      background: 'rgba(10,7,18,0.7)',
+      background: 'var(--panel-bg, rgba(10,7,18,0.7))',
       border: '0.5px solid rgba(251,146,60,0.12)',
       borderRadius: 10, overflow: 'hidden',
       minWidth: 0, flex: 1,

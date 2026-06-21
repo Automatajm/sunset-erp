@@ -343,7 +343,7 @@ export function ERPTreeTable<T>({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display:'flex', flexDirection:'column', background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.12)', borderRadius:10, overflow:'hidden', flex:1, minHeight:0 }}>
+    <div style={{ display:'flex', flexDirection:'column', background:'var(--panel-bg, rgba(10,7,18,0.7))', border:'0.5px solid rgba(251,146,60,0.12)', borderRadius:10, overflow:'hidden', flex:1, minHeight:0 }}>
 
       {/* Toolbar */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderBottom:'0.5px solid var(--l06, rgba(255,255,255,0.06))', gap:8, flexShrink:0, background:'rgba(251,146,60,0.03)' }}>

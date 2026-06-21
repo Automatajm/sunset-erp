@@ -70,6 +70,12 @@
   --l04: rgba(255,255,255,0.04);
   --l03: rgba(255,255,255,0.03);
   --l02: rgba(255,255,255,0.02);
+
+  /* translucent panel/card surfaces — the --bg color (#0a0712 = rgb(10,7,18))
+     carried as an rgba triple. html.light flips them to translucent white. */
+  --panel-bg:        rgba(10,7,18,0.70);
+  --panel-bg-strong: rgba(10,7,18,0.85);
+  --panel-bg-soft:   rgba(10,7,18,0.60);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -116,7 +122,23 @@ html.light {
   --l04: rgba(0,0,0,0.05);
   --l03: rgba(0,0,0,0.04);
   --l02: rgba(0,0,0,0.03);
+
+  --panel-bg:        rgba(255,255,255,0.85);
+  --panel-bg-strong: rgba(255,255,255,0.92);
+  --panel-bg-soft:   rgba(255,255,255,0.70);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Accent presets — applied globally via data-accent="<hex>" on <html> (set by
+   the pre-paint bootstrap script in layout.tsx and the ThemeManager). The hex
+   value is the localStorage "sunset-accent" string. Default (orange) lives in
+   :root, so an unset/absent attribute keeps the brand accent.
+   ────────────────────────────────────────────────────────────────────────── */
+:root[data-accent="#3b82f6"] { --accent:#3b82f6; --accent-mid:#60a5fa; --accent-strong:#93c5fd; --accent-pressed:#2563eb; }
+:root[data-accent="#16a34a"] { --accent:#16a34a; --accent-mid:#22c55e; --accent-strong:#4ade80; --accent-pressed:#15803d; }
+:root[data-accent="#7c3aed"] { --accent:#7c3aed; --accent-mid:#8b5cf6; --accent-strong:#a78bfa; --accent-pressed:#6d28d9; }
+:root[data-accent="#dc2626"] { --accent:#dc2626; --accent-mid:#ef4444; --accent-strong:#f87171; --accent-pressed:#b91c1c; }
+:root[data-accent="#ea580c"] { --accent:#ea580c; --accent-mid:#f97316; --accent-strong:#fb923c; --accent-pressed:#c2410c; }
 
 html, body { height: 100%; overflow: hidden; }
 body {

@@ -209,7 +209,7 @@ function InteractiveChart({
 function Portlet({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: 'rgba(10,7,18,0.85)',
+      background: 'var(--panel-bg-strong, rgba(10,7,18,0.85))',
       border: '0.5px solid rgba(251,146,60,0.14)',
       borderRadius: 12, overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
@@ -891,7 +891,7 @@ function DashboardContent() {
           gap: 1px; background: var(--l05, rgba(255,255,255,0.05));
           border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
-        .kpi-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
+        .kpi-hero { background: var(--panel-bg-soft, rgba(10,7,18,0.6)); padding: 4px 8px; }
         .kpi-hero-label { font-size: 9px; color: var(--w40, rgba(255,255,255,0.4)); letter-spacing: 0.06em; text-transform: uppercase; }
         .kpi-hero-value { font-size: 16px; font-weight: 500; line-height: 1; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
@@ -913,7 +913,7 @@ function DashboardContent() {
           gap: 1px; background: var(--l05, rgba(255,255,255,0.05));
           border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
-        .fin-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
+        .fin-hero { background: var(--panel-bg-soft, rgba(10,7,18,0.6)); padding: 4px 8px; }
         .fin-hero-label { font-size: 9px; color: var(--w35, rgba(255,255,255,0.35)); letter-spacing: 0.05em; margin-bottom: 2px; }
         .fin-hero-value { font-size: 14px; font-weight: 500; color: var(--text-strong, #f1ede8); font-family: 'IBM Plex Mono', monospace; }
 

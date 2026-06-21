@@ -134,25 +134,11 @@ const LS = {
   numFmt:  'sunset-numberformat',
 };
 
-// ─── DOM appliers (client-only, safe inside effects/handlers) ────────────────
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const effectiveLight = theme === 'light' || (theme === 'system' && prefersLight);
-  root.classList.toggle('light', effectiveLight);
-}
-
-function applyAccent(p: AccentPreset) {
-  const root = document.documentElement;
-  root.style.setProperty('--accent', p.accent);
-  root.style.setProperty('--accent-mid', p.mid);
-  root.style.setProperty('--accent-strong', p.strong);
-  root.style.setProperty('--accent-pressed', p.pressed);
-}
-
-function applyDensity(d: Density) {
-  document.documentElement.setAttribute('data-density', d);
+// Appearance preferences are applied globally by ThemeManager (mounted in the
+// root layout). This page only persists them and pings ThemeManager to re-read
+// — no direct document.documentElement mutation lives here anymore.
+function notifyThemeChange() {
+  window.dispatchEvent(new Event('sunset-theme-change'));
 }
 
 // ─── Warning Modal ────────────────────────────────────────────────────────────
@@ -334,37 +320,27 @@ export default function GeneralSettingsPage() {
     const accentHex = localStorage.getItem(LS.accent) ?? ACCENTS[0].accent;
     const preset    = ACCENTS.find(p => p.accent === accentHex) ?? ACCENTS[0];
     setAccent(preset.accent);
-    applyAccent(preset);
 
     const d = (localStorage.getItem(LS.density) as Density) ?? 'normal';
     setDensity(d);
-    applyDensity(d);
   }, []);
 
-  // ── Apply theme + keep the OS listener live while in System mode ──────────
-  useEffect(() => {
-    applyTheme(theme);
-    if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: light)');
-    const handler = () => applyTheme('system');
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
-
-  // ── Appearance handlers (persist + apply immediately, no Save needed) ─────
+  // ── Appearance handlers — persist + notify ThemeManager (applies globally,
+  //    instantly, no reload). DOM is never touched directly here. ────────────
   const chooseTheme = (t: Theme) => {
     setTheme(t);
-    localStorage.setItem(LS.theme, t);   // effect applies it
+    localStorage.setItem(LS.theme, t);
+    notifyThemeChange();
   };
   const chooseAccent = (p: AccentPreset) => {
     setAccent(p.accent);
-    applyAccent(p);
     localStorage.setItem(LS.accent, p.accent);
+    notifyThemeChange();
   };
   const chooseDensity = (d: Density) => {
     setDensity(d);
-    applyDensity(d);
     localStorage.setItem(LS.density, d);
+    notifyThemeChange();
   };
 
   // ── Regional field setter ─────────────────────────────────────────────────
