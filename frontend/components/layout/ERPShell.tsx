@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import InactivityGuard from '@/components/auth/InactivityGuard';
+import NavPanel, { NavMode, NAV_PANEL_WIDTH } from '@/components/layout/NavPanel';
 
 // ─── Permission-aware nav structure ──────────────────────────────────────────
 
@@ -136,210 +137,6 @@ const NAV: NavItem[] = [
   },
 ];
 
-// ─── Module icons map ─────────────────────────────────────────────────────────
-
-const MODULE_ICONS: Record<string, string> = {
-  'Procurement': '📦', 'Inventory': '🏭', 'Manufacturing': '⚙️',
-  'Sales': '💼', 'Financial': '📊', 'Settings': '🔧', 'Home': '🏠',
-};
-
-const GROUP_ICONS: Record<string, string> = {
-  'Suppliers': '🤝', 'Planning': '📋', 'Purchasing': '🛒',
-  'Catalog': '📚', 'Stock Control': '📦', 'Analysis': '📈',
-  'Engineering': '🔩', 'Production': '🏗️', 'Customers': '👥',
-  'Orders & Billing': '🧾', 'General Ledger': '📒', 'Automation': '⚡',
-  'Reports': '📊', 'Access Control': '🔐', 'System Config': '⚙️',
-  'Data Management': '💾', 'Master Data': '🗂️',
-};
-
-// ─── Flat list of all pages for palette search ────────────────────────────────
-
-interface PaletteItem {
-  label:    string;
-  href:     string;
-  group:    string;
-  module:   string;
-  keywords: string;
-}
-
-function buildPaletteItems(hasPermission: (p?: string) => boolean): PaletteItem[] {
-  const items: PaletteItem[] = [];
-  for (const nav of NAV) {
-    if (!hasPermission(nav.permission)) continue;
-    if (nav.href) {
-      items.push({ label: nav.label, href: nav.href, group: '', module: nav.label, keywords: nav.label.toLowerCase() });
-    }
-    for (const group of nav.groups ?? []) {
-      for (const leaf of group.items) {
-        if (!hasPermission(leaf.permission)) continue;
-        items.push({
-          label:    leaf.label,
-          href:     leaf.href,
-          group:    group.label,
-          module:   nav.label,
-          keywords: `${leaf.label} ${group.label} ${nav.label}`.toLowerCase(),
-        });
-      }
-    }
-  }
-  return items;
-}
-
-// ─── Command Palette ──────────────────────────────────────────────────────────
-
-function CommandPalette({ open, onClose, hasPermission }: {
-  open: boolean;
-  onClose: () => void;
-  hasPermission: (p?: string) => boolean;
-}) {
-  const [query,    setQuery]    = useState('');
-  const [selected, setSelected] = useState(0);
-  const router  = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const allItems = useMemo(() => buildPaletteItems(hasPermission), [hasPermission]);
-
-  const results = useMemo(() => {
-    if (!query.trim()) {
-      // Show recent/popular pages when empty
-      return allItems.slice(0, 8);
-    }
-    const q = query.toLowerCase();
-    return allItems
-      .filter(it => it.keywords.includes(q))
-      .slice(0, 10);
-  }, [query, allItems]);
-
-  // Group results by module
-  const grouped = useMemo(() => {
-    const map = new Map<string, PaletteItem[]>();
-    for (const item of results) {
-      if (!map.has(item.module)) map.set(item.module, []);
-      map.get(item.module)!.push(item);
-    }
-    return map;
-  }, [results]);
-
-  // Flat index for keyboard nav
-  const flat = useMemo(() => results, [results]);
-
-  useEffect(() => {
-    if (open) {
-      setQuery(''); setSelected(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [open]);
-
-  useEffect(() => { setSelected(0); }, [query]);
-
-  const navigate = useCallback((href: string) => {
-    router.push(href);
-    onClose();
-  }, [router, onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, flat.length - 1)); }
-      if (e.key === 'ArrowUp')   { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
-      if (e.key === 'Enter' && flat[selected]) { navigate(flat[selected].href); }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, flat, selected, navigate, onClose]);
-
-  if (!open) return null;
-
-  let flatIdx = 0;
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 80, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-
-      <div style={{ width: 560, background: '#0c0a18', border: '0.5px solid rgba(251,146,60,0.3)', borderRadius: 14, boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset', overflow: 'hidden', animation: 'palette-in 0.15s ease' }}>
-        <style>{`
-          @keyframes palette-in {
-            from { opacity:0; transform: scale(0.97) translateY(-8px); }
-            to   { opacity:1; transform: scale(1)    translateY(0); }
-          }
-        `}</style>
-
-        {/* Search input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: 'rgba(251,146,60,0.5)' }}>
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
-            <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search pages, modules…"
-            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-strong, #f1ede8)', fontFamily: "'IBM Plex Sans',sans-serif" }}
-          />
-          <kbd style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '2px 6px', fontFamily: 'monospace' }}>ESC</kbd>
-        </div>
-
-        {/* Results */}
-        <div style={{ maxHeight: 400, overflowY: 'auto', padding: '6px 8px 8px' }}>
-          {results.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 20px', fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
-              No pages found for "{query}"
-            </div>
-          ) : (
-            Array.from(grouped.entries()).map(([module, items]) => (
-              <div key={module}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(251,146,60,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '8px 8px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>{MODULE_ICONS[module] ?? '📄'}</span>
-                  {module}
-                </div>
-                {items.map(item => {
-                  const idx = flat.indexOf(item);
-                  const isSelected = idx === selected;
-                  flatIdx++;
-                  return (
-                    <div key={item.href}
-                      onClick={() => navigate(item.href)}
-                      onMouseEnter={() => setSelected(idx)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 7, cursor: 'pointer', background: isSelected ? 'rgba(251,146,60,0.1)' : 'transparent', border: `0.5px solid ${isSelected ? 'rgba(251,146,60,0.2)' : 'transparent'}`, transition: 'all 0.08s', marginBottom: 2 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 6, background: isSelected ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                        {GROUP_ICONS[item.group] ?? '📄'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: isSelected ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)', fontWeight: isSelected ? 500 : 400 }}>{item.label}</div>
-                        {item.group && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{item.group}</div>}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>
-                        {item.href}
-                      </div>
-                      {isSelected && (
-                        <kbd style={{ fontSize: 10, color: 'rgba(251,146,60,0.6)', background: 'rgba(251,146,60,0.08)', border: '0.5px solid rgba(251,146,60,0.2)', borderRadius: 4, padding: '2px 6px', fontFamily: 'monospace', flexShrink: 0 }}>↵</kbd>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer hints */}
-        <div style={{ padding: '8px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 16, fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
-          <span><kbd style={{ fontFamily: 'monospace', marginRight: 4 }}>↑↓</kbd>navigate</span>
-          <span><kbd style={{ fontFamily: 'monospace', marginRight: 4 }}>↵</kbd>go</span>
-          <span><kbd style={{ fontFamily: 'monospace', marginRight: 4 }}>ESC</kbd>close</span>
-          <span style={{ marginLeft: 'auto' }}>
-            <kbd style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '1px 5px', marginRight: 4 }}>Ctrl</kbd>
-            <kbd style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 3, padding: '1px 5px' }}>K</kbd>
-            to open
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Permission helper ────────────────────────────────────────────────────────
 
 function useHasPermission() {
@@ -460,7 +257,9 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
   const { user, tenantName, logout } = useAuth();
   const router   = useRouter();
   const pathname = usePathname();
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [navOpen,      setNavOpen]      = useState(false);
+  const [navMode,      setNavMode]      = useState<NavMode>('overlay');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hasPermission = useHasPermission();
 
   const fullName  = user ? `${user.firstName} ${user.lastName}`.trim() : '';
@@ -475,17 +274,44 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
 
   const visibleNav = NAV.filter(item => hasPermission(item.permission));
 
-  // Global Ctrl+K shortcut
+  // Global Ctrl+K shortcut — now toggles the nav panel.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setPaletteOpen(prev => !prev);
+        setNavOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // Restore the persisted nav display mode.
+  useEffect(() => {
+    const saved = localStorage.getItem('sunset-nav-mode');
+    if (saved === 'sidebar' || saved === 'overlay') setNavMode(saved);
+  }, []);
+
+  const toggleNavMode = () => setNavMode(m => {
+    const next: NavMode = m === 'overlay' ? 'sidebar' : 'overlay';
+    localStorage.setItem('sunset-nav-mode', next);
+    return next;
+  });
+
+  // Fullscreen API + keep the icon in sync with external changes (e.g. Esc/F11).
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  };
+
+  // Sidebar mode pushes the whole shell right by the panel width.
+  const sidebarPush = navOpen && navMode === 'sidebar';
 
   return (
     <>
@@ -648,11 +474,22 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
         .shell-bc-cur  { color: rgba(255,255,255,0.6); }
         .shell-title   { font-size: 15px; font-weight: 500; color: var(--text-strong, #f1ede8); padding: 0 18px 8px; }
         .shell-content { flex: 1; overflow: hidden; min-height: 0; }
+
+        /* ── Toolbar icon buttons (fullscreen / nav panel) ── */
+        .shell-iconbtn {
+          width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          background: none; border: none; color: var(--w40, rgba(255,255,255,0.4));
+          transition: color 0.15s, background 0.15s;
+        }
+        .shell-iconbtn:hover { color: var(--w70, rgba(255,255,255,0.7)); background: var(--l04, rgba(255,255,255,0.04)); }
+        .shell-iconbtn.shell-iconbtn-on { color: var(--accent-strong, #fb923c); }
+        .shell-tools { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
       `}</style>
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} hasPermission={hasPermission} />
+      <NavPanel open={navOpen} mode={navMode} onClose={() => setNavOpen(false)} onToggleMode={toggleNavMode} />
 
-      <div className="shell-root">
+      <div className="shell-root" style={{ marginLeft: sidebarPush ? NAV_PANEL_WIDTH : 0, transition: 'margin-left 200ms ease' }}>
         {/* ── Top bar ── */}
         <div className="shell-brand">
           <div className="shell-mark" onClick={() => router.push('/')}>
@@ -668,8 +505,8 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
           </div>
           <span className="shell-wordmark" onClick={() => router.push('/')}>Sun<span>set</span></span>
 
-          {/* Command palette trigger */}
-          <button className="shell-search-btn" onClick={() => setPaletteOpen(true)}>
+          {/* Nav panel trigger (search) */}
+          <button className="shell-search-btn" onClick={() => setNavOpen(true)}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.3"/>
               <line x1="9" y1="9" x2="12" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -679,6 +516,34 @@ export default function ERPShell({ children, breadcrumbs, title }: ERPShellProps
               <kbd>Ctrl</kbd><kbd>K</kbd>
             </span>
           </button>
+
+          {/* Toolbar icons: fullscreen + nav panel */}
+          <div className="shell-tools">
+            <button className="shell-iconbtn" onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+              {isFullscreen ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                </svg>
+              )}
+            </button>
+            <button className={`shell-iconbtn${navOpen ? ' shell-iconbtn-on' : ''}`} onClick={() => setNavOpen(o => !o)}
+              title={navOpen ? 'Close navigation' : 'Open navigation'}>
+              {navOpen ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+                </svg>
+              )}
+            </button>
+          </div>
 
           <div className="shell-user">
             {tenantName && <span className="shell-tenant">{tenantName}</span>}
