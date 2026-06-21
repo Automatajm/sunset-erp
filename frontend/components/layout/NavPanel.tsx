@@ -124,7 +124,7 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
       <style>{`
         .np-backdrop {
           position: fixed; inset: 0; z-index: 8000;
-          background: rgba(0,0,0,0.4);
+          background: var(--nav-scrim, rgba(0,0,0,0.4));
           backdrop-filter: blur(2px);
           opacity: 0; pointer-events: none; transition: opacity 200ms ease;
         }
