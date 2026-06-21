@@ -5,10 +5,25 @@
 // palette modal. Two display modes (overlay / sidebar) persisted by ERPShell.
 // Shows the complete page directory grouped by module with live search.
 // ============================================================================
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import apiClient from '@/lib/api/client';
+import { useNav } from './NavProvider';
 
 export type NavMode = 'overlay' | 'sidebar';
+
+// Live-count badges: nav href → axios call that resolves to its count (or 0).
+// All fail silently (handled by Promise.allSettled at the call site).
+const BADGE_SOURCES: { href: string; load: () => Promise<number> }[] = [
+  { href: '/accounting/je-queue', load: async () =>
+      (await apiClient.get('/automation/queue/stats')).data?.pending ?? 0 },
+  { href: '/settings/notifications', load: async () =>
+      (await apiClient.get('/notifications', { params: { status: 'pending' } })).data?.count ?? 0 },
+  { href: '/procurement/purchase-orders', load: async () =>
+      (await apiClient.get('/purchase-orders', { params: { status: 'draft' } })).data?.count ?? 0 },
+  { href: '/sales/sales-orders', load: async () =>
+      (await apiClient.get('/sales-orders', { params: { status: 'draft' } })).data?.count ?? 0 },
+];
 
 export const NAV_PANEL_WIDTH = 320;
 
@@ -86,7 +101,9 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
 }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const { recent, pins, togglePin } = useNav();
   const [query, setQuery] = useState('');
+  const [badges, setBadges] = useState<Record<string, number>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus the search only on a genuine closed→open transition — not when the
@@ -121,6 +138,86 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
   const go = (href: string) => {
     router.push(href);
     if (mode === 'overlay') onClose();   // sidebar mode stays open
+  };
+
+  // ── Live badges: fetch on open, refresh every 60s while open, fail silently ──
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const load = async () => {
+      const settled = await Promise.allSettled(BADGE_SOURCES.map(s => s.load()));
+      if (cancelled) return;
+      const next: Record<string, number> = {};
+      settled.forEach((r, i) => {
+        if (r.status === 'fulfilled' && typeof r.value === 'number' && r.value > 0) {
+          next[BADGE_SOURCES[i].href] = r.value;
+        }
+      });
+      setBadges(next);
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [open]);
+
+  // ── Directory lookup: resolve a visited path to its directory page ──────────
+  const ALL = useMemo(() => DIRECTORY.flatMap(d => d.pages.map(([label, href]) => ({ label, href }))), []);
+  const byHref = useMemo(() => new Map(ALL.map(p => [p.href, p])), [ALL]);
+  const resolve = useCallback((path: string) => {
+    const exact = byHref.get(path);
+    if (exact) return exact;
+    let best: { label: string; href: string } | null = null;
+    for (const p of ALL) {
+      if (path === p.href || path.startsWith(p.href + '/')) {
+        if (!best || p.href.length > best.href.length) best = p;
+      }
+    }
+    return best;
+  }, [ALL, byHref]);
+
+  const pinnedItems = useMemo(
+    () => pins.map(h => byHref.get(h)).filter((p): p is { label: string; href: string } => !!p),
+    [pins, byHref]);
+
+  // Recent: resolved, deduped, current page + already-pinned excluded, top 5.
+  const recentItems = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { label: string; href: string }[] = [];
+    for (const path of recent) {
+      const p = resolve(path);
+      if (!p || isActive(p.href) || pins.includes(p.href) || seen.has(p.href)) continue;
+      seen.add(p.href);
+      out.push(p);
+      if (out.length >= 5) break;
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recent, pins, resolve, pathname]);
+
+  const clockIcon = (
+    <svg className="np-lead" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 1.8" />
+    </svg>
+  );
+
+  const renderItem = (label: string, href: string, leading: React.ReactNode, keyPrefix: string) => {
+    const active = isActive(href);
+    const pinned = pins.includes(href);
+    const count  = badges[href] ?? 0;
+    return (
+      <div key={`${keyPrefix}-${href}`} className={`np-item${active ? ' np-current' : ''}`} onClick={() => go(href)}>
+        {leading}
+        <span className="np-item-label">{label}</span>
+        {count > 0 && <span className="np-badge">{count > 99 ? '99+' : count}</span>}
+        <button className={`np-pin${pinned ? ' np-pinned' : ''}`} type="button"
+          title={pinned ? 'Unpin from favorites' : 'Pin to favorites'}
+          onClick={e => { e.stopPropagation(); togglePin(href); }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -183,6 +280,24 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
           background: color-mix(in srgb, var(--accent, #ea580c) 8%, transparent);
         }
         .np-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; background: currentColor; opacity: 0.5; }
+        .np-lead { flex-shrink: 0; opacity: 0.5; }
+        .np-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        .np-badge {
+          flex-shrink: 0; min-width: 18px; text-align: center;
+          background: var(--accent, #ea580c); color: var(--white, #fff);
+          font-size: 10px; font-weight: 600; line-height: 1.5;
+          border-radius: 9px; padding: 1px 5px;
+        }
+        .np-pin {
+          flex-shrink: 0; padding: 2px; background: none; border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: var(--w40, rgba(255,255,255,0.4)); opacity: 0;
+          transition: opacity 0.12s, color 0.12s;
+        }
+        .np-item:hover .np-pin { opacity: 0.55; }
+        .np-pin:hover { opacity: 1; color: var(--w70, rgba(255,255,255,0.7)); }
+        .np-item .np-pin.np-pinned, .np-item:hover .np-pin.np-pinned { opacity: 1; color: var(--accent, #ea580c); }
+        .np-pin.np-pinned:hover { color: var(--accent-strong, #fb923c); }
         .np-empty { text-align: center; padding: 30px 16px; font-size: 12px; color: var(--w25, rgba(255,255,255,0.25)); }
       `}</style>
 
@@ -227,19 +342,26 @@ export default function NavPanel({ open, mode, onClose, onToggleMode }: {
         </div>
 
         <div className="np-body">
+          {/* Pinned + Recent shortcuts — only when not actively searching */}
+          {!query.trim() && pinnedItems.length > 0 && (
+            <div>
+              <div className="np-module">Pinned</div>
+              {pinnedItems.map(p => renderItem(p.label, p.href, <span className="np-dot" />, 'pin'))}
+            </div>
+          )}
+          {!query.trim() && recentItems.length > 0 && (
+            <div>
+              <div className="np-module">Recent</div>
+              {recentItems.map(p => renderItem(p.label, p.href, clockIcon, 'rec'))}
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="np-empty">No pages found for &ldquo;{query}&rdquo;</div>
           ) : filtered.map(d => (
             <div key={d.module}>
               <div className="np-module">{d.module}</div>
-              {d.pages.map(([label, href]) => (
-                <div key={href}
-                  className={`np-item${isActive(href) ? ' np-current' : ''}`}
-                  onClick={() => go(href)}>
-                  <span className="np-dot" />
-                  {label}
-                </div>
-              ))}
+              {d.pages.map(([label, href]) => renderItem(label, href, <span className="np-dot" />, 'mod'))}
             </div>
           ))}
         </div>
