@@ -86,9 +86,9 @@
    token-driven surfaces (cards, shell, tables) do.
    ────────────────────────────────────────────────────────────────────────── */
 html.light {
-  --bg:               #ffffff;
-  --surface:          #f8f7ff;
-  --surface-raised:   #f0eef8;
+  --bg:               #f0eef8;
+  --surface:          #ffffff;
+  --surface-raised:   #f4f2fa;
   --border:           #e2dfe8;
   --border-strong:    #c8c5d5;
 
@@ -123,9 +123,9 @@ html.light {
   --l03: rgba(0,0,0,0.04);
   --l02: rgba(0,0,0,0.03);
 
-  --panel-bg:        rgba(255,255,255,0.85);
-  --panel-bg-strong: rgba(255,255,255,0.92);
-  --panel-bg-soft:   rgba(255,255,255,0.70);
+  --panel-bg:        rgba(255,255,255,0.98);
+  --panel-bg-strong: rgba(255,255,255,1.0);
+  --panel-bg-soft:   rgba(255,255,255,0.92);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

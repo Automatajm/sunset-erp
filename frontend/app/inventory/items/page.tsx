@@ -111,24 +111,24 @@ function StatsBar({ stats, activeType, onTypeClick }: {
         const isActive = activeType === t.value;
         return (
           <div key={t.value} onClick={() => onTypeClick?.(isActive ? null : t.value)}
-            style={{ background: isActive ? t.bg : 'rgba(10,7,18,0.7)', border:`0.5px solid ${isActive ? t.color : t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:onTypeClick ? 'pointer' : 'default', transition:'all 0.15s', boxShadow:isActive ? `0 0 12px ${t.bg}` : 'none' }}>
+            style={{ background: isActive ? t.bg : 'var(--panel-bg, rgba(10,7,18,0.7))', border:`0.5px solid ${isActive ? t.color : t.border}`, borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:110, cursor:onTypeClick ? 'pointer' : 'default', transition:'all 0.15s', boxShadow:isActive ? `0 0 12px ${t.bg}` : 'none' }}>
             <span style={{ fontSize:10, color:t.color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>{t.label}</span>
             <span style={{ fontSize:22, fontWeight:500, color:isActive ? t.color : 'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{count}</span>
           </div>
         );
       })}
-      <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}>
+      <div style={{ background:'var(--panel-bg, rgba(10,7,18,0.7))', border:'0.5px solid rgba(251,146,60,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:70 }}>
         <span style={{ fontSize:10, color:'rgba(251,146,60,0.6)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Total</span>
         <span style={{ fontSize:22, fontWeight:500, color:'var(--accent-strong, #fb923c)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.total}</span>
       </div>
       {stats.withCategory !== undefined && (
-        <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
+        <div style={{ background:'var(--panel-bg, rgba(10,7,18,0.7))', border:'0.5px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
           <span style={{ fontSize:10, color:'var(--accent-violet, #a78bfa)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>Categorized</span>
           <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withCategory}</span>
         </div>
       )}
       {stats.withUomTriple !== undefined && (
-        <div style={{ background:'rgba(10,7,18,0.7)', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
+        <div style={{ background:'var(--panel-bg, rgba(10,7,18,0.7))', border:'0.5px solid rgba(96,165,250,0.2)', borderRadius:8, padding:'8px 14px', display:'flex', flexDirection:'column', gap:2, minWidth:90 }}>
           <span style={{ fontSize:10, color:'var(--accent-blue, #60a5fa)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:500 }}>UOM Triple</span>
           <span style={{ fontSize:22, fontWeight:500, color:'var(--text-strong, #f1ede8)', fontFamily:"'IBM Plex Mono',monospace" }}>{stats.withUomTriple}</span>
         </div>
