@@ -126,9 +126,9 @@ function InteractiveChart({
           <button key={m} onClick={() => onModeChange(m)} style={{
             padding: '2px 8px', borderRadius: 4, fontSize: 10, cursor: 'pointer',
             fontFamily: "'IBM Plex Sans',sans-serif",
-            background: mode === m ? `color-mix(in srgb, ${color} 13%, transparent)` : 'rgba(255,255,255,0.04)',
-            border: `0.5px solid ${mode === m ? color + '66' : 'rgba(255,255,255,0.08)'}`,
-            color: mode === m ? color : 'rgba(255,255,255,0.35)',
+            background: mode === m ? `color-mix(in srgb, ${color} 13%, transparent)` : 'var(--l04, rgba(255,255,255,0.04))',
+            border: `0.5px solid ${mode === m ? color + '66' : 'var(--l08, rgba(255,255,255,0.08))'}`,
+            color: mode === m ? color : 'var(--w35, rgba(255,255,255,0.35))',
             transition: 'all 0.15s',
           }}>{m === 'monthly' ? 'Monthly' : 'Weekly'}</button>
         ))}
@@ -192,7 +192,7 @@ function InteractiveChart({
           return (
             <div key={i} title={p.label} style={{
               flex: 1, textAlign: 'center', fontSize: 8, lineHeight: 1,
-              color: isActive ? color : 'rgba(255,255,255,0.22)',
+              color: isActive ? color : 'var(--w22, rgba(255,255,255,0.22))',
               fontFamily: "'IBM Plex Mono',monospace",
               fontWeight: isActive ? 700 : 400,
               overflow: 'hidden', whiteSpace: 'nowrap',
@@ -227,9 +227,9 @@ function Portlet({ title, children }: { title: string; children: React.ReactNode
           {['+','≡'].map(s => (
             <div key={s} style={{
               width: 16, height: 16, borderRadius: 4,
-              background: 'rgba(255,255,255,0.06)', cursor: 'pointer',
+              background: 'var(--l06, rgba(255,255,255,0.06))', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, color: 'rgba(255,255,255,0.4)',
+              fontSize: 10, color: 'var(--w40, rgba(255,255,255,0.4))',
             }}>{s}</div>
           ))}
         </div>
@@ -243,7 +243,7 @@ function Portlet({ title, children }: { title: string; children: React.ReactNode
 
 function Delta({ value, positive }: { value: string; positive: boolean }) {
   if (value === 'N/A') return (
-    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 20 }}>N/A</span>
+    <span style={{ fontSize: 11, color: 'var(--w35, rgba(255,255,255,0.35))', background: 'var(--l06, rgba(255,255,255,0.06))', padding: '2px 7px', borderRadius: 20 }}>N/A</span>
   );
   return (
     <span style={{
@@ -262,7 +262,7 @@ function Delta({ value, positive }: { value: string; positive: boolean }) {
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function Sk({ w = 70 }: { w?: number }) {
-  return <span style={{ display: 'inline-block', width: w, height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.08)', animation: 'db-pulse 1.2s ease-in-out infinite' }} />;
+  return <span style={{ display: 'inline-block', width: w, height: 10, borderRadius: 4, background: 'var(--l08, rgba(255,255,255,0.08))', animation: 'db-pulse 1.2s ease-in-out infinite' }} />;
 }
 
 // ─── Dashboard content ────────────────────────────────────────────────────────
@@ -860,7 +860,7 @@ function DashboardContent() {
         .db-actions { display: flex; align-items: center; gap: 6px; font-size: 12px; }
         .db-action-link { color: rgba(251,146,60,0.55); cursor: pointer; transition: color 0.15s; }
         .db-action-link:hover { color: var(--accent-strong, #fb923c); }
-        .db-sep { color: rgba(255,255,255,0.15); }
+        .db-sep { color: var(--w15, rgba(255,255,255,0.15)); }
 
         .portlet-grid {
           display: grid;
@@ -888,20 +888,20 @@ function DashboardContent() {
 
         .kpi-heroes {
           display: grid; grid-template-columns: repeat(4,1fr);
-          gap: 1px; background: rgba(255,255,255,0.05);
+          gap: 1px; background: var(--l05, rgba(255,255,255,0.05));
           border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
         .kpi-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
-        .kpi-hero-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; text-transform: uppercase; }
+        .kpi-hero-label { font-size: 9px; color: var(--w40, rgba(255,255,255,0.4)); letter-spacing: 0.06em; text-transform: uppercase; }
         .kpi-hero-value { font-size: 16px; font-weight: 500; line-height: 1; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
         .kpi-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .kpi-table thead th {
           font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
           text-transform: uppercase; color: rgba(251,146,60,0.5);
-          padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.07); text-align: left; white-space: nowrap;
+          padding: 3px 6px; border-bottom: 0.5px solid var(--l07, rgba(255,255,255,0.07)); text-align: left; white-space: nowrap;
         }
-        .kpi-table tbody td { padding: 3px 6px; border-bottom: 0.5px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); vertical-align: middle; white-space: nowrap; }
+        .kpi-table tbody td { padding: 3px 6px; border-bottom: 0.5px solid var(--l04, rgba(255,255,255,0.04)); color: var(--w70, rgba(255,255,255,0.7)); vertical-align: middle; white-space: nowrap; }
         .kpi-table tbody td.indicator { font-weight: 500; color: var(--text-primary, #e2dfd8); }
         .kpi-table tbody td.period    { color: rgba(251,146,60,0.55); font-size: 11px; }
         .kpi-table tbody td.mono      { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
@@ -910,24 +910,24 @@ function DashboardContent() {
 
         .fin-heroes {
           display: grid; grid-template-columns: repeat(4,1fr);
-          gap: 1px; background: rgba(255,255,255,0.05);
+          gap: 1px; background: var(--l05, rgba(255,255,255,0.05));
           border-radius: 6px; overflow: hidden; margin-bottom: 4px;
         }
         .fin-hero { background: rgba(10,7,18,0.6); padding: 4px 8px; }
-        .fin-hero-label { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; margin-bottom: 2px; }
+        .fin-hero-label { font-size: 9px; color: var(--w35, rgba(255,255,255,0.35)); letter-spacing: 0.05em; margin-bottom: 2px; }
         .fin-hero-value { font-size: 14px; font-weight: 500; color: var(--text-strong, #f1ede8); font-family: 'IBM Plex Mono', monospace; }
 
         .fin-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .fin-table thead th {
           font-size: 9px; font-weight: 500; letter-spacing: 0.07em;
           text-transform: uppercase; color: rgba(251,146,60,0.5);
-          padding: 3px 5px; border-bottom: 0.5px solid rgba(255,255,255,0.07);
+          padding: 3px 5px; border-bottom: 0.5px solid var(--l07, rgba(255,255,255,0.07));
           text-align: right; white-space: nowrap;
         }
         .fin-table thead th:first-child { text-align: left; }
         .fin-table tbody td {
-          padding: 3px 5px; border-bottom: 0.5px solid rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.55); text-align: right;
+          padding: 3px 5px; border-bottom: 0.5px solid var(--l04, rgba(255,255,255,0.04));
+          color: var(--w55, rgba(255,255,255,0.55)); text-align: right;
           font-family: 'IBM Plex Mono', monospace; font-size: 10px;
           white-space: nowrap;
         }
@@ -935,7 +935,7 @@ function DashboardContent() {
         .fin-table tbody tr:last-child td { border-bottom: none; }
         .fin-table tbody tr:hover td { background: rgba(251,146,60,0.04); }
 
-        .chart-subtitle { font-size: 10px; color: rgba(255,255,255,0.3); text-align: center; }
+        .chart-subtitle { font-size: 10px; color: var(--w30, rgba(255,255,255,0.3)); text-align: center; }
       `}</style>
 
       {/* Page header */}
@@ -952,9 +952,9 @@ function DashboardContent() {
                 <button key={y} onClick={() => { setSelYear(y); setYtd(false); setSelMonths([]); setLastClicked(null); }} title={String(y)} style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                   fontFamily: "'IBM Plex Sans',sans-serif",
-                  background: active ? 'rgba(251,146,60,0.18)' : 'rgba(255,255,255,0.04)',
-                  border: `0.5px solid ${active ? 'rgba(251,146,60,0.45)' : 'rgba(255,255,255,0.1)'}`,
-                  color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.45)',
+                  background: active ? 'rgba(251,146,60,0.18)' : 'var(--l04, rgba(255,255,255,0.04))',
+                  border: `0.5px solid ${active ? 'rgba(251,146,60,0.45)' : 'var(--w10, rgba(255,255,255,0.1))'}`,
+                  color: active ? 'var(--accent-strong, #fb923c)' : 'var(--w45, rgba(255,255,255,0.45))',
                   fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
 
@@ -966,9 +966,9 @@ function DashboardContent() {
             <button onClick={() => { setYtd(v => !v); setSelMonths([]); setLastClicked(null); }} style={{
               padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
               fontFamily: "'IBM Plex Sans',sans-serif",
-              background: ytd ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)',
-              border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.1)'}`,
-              color: ytd ? 'var(--accent-violet, #a78bfa)' : 'rgba(255,255,255,0.45)',
+              background: ytd ? 'rgba(167,139,250,0.15)' : 'var(--l04, rgba(255,255,255,0.04))',
+              border: `0.5px solid ${ytd ? 'rgba(167,139,250,0.45)' : 'var(--w10, rgba(255,255,255,0.1))'}`,
+              color: ytd ? 'var(--accent-violet, #a78bfa)' : 'var(--w45, rgba(255,255,255,0.45))',
               fontWeight: ytd ? 600 : 400,
               transition: 'all 0.15s',
             }}>YTD</button>
@@ -977,14 +977,14 @@ function DashboardContent() {
             <button onClick={() => { setSelYear(new Date().getFullYear()); setSelMonths([]); setYtd(false); setLastClicked(null); }} style={{
               padding: '3px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
               fontFamily: "'IBM Plex Sans',sans-serif",
-              background: 'rgba(255,255,255,0.03)',
-              border: '0.5px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.3)',
+              background: 'var(--l03, rgba(255,255,255,0.03))',
+              border: '0.5px solid var(--l08, rgba(255,255,255,0.08))',
+              color: 'var(--w30, rgba(255,255,255,0.3))',
               transition: 'all 0.15s',
             }}>↺ Reset</button>
 
             {/* ── Divider ── */}
-            <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 16, margin: '0 2px' }}>│</span>
+            <span style={{ color: 'var(--w10, rgba(255,255,255,0.1))', fontSize: 16, margin: '0 2px' }}>│</span>
 
             {/* ── Month buttons ── */}
             {MONTH_NAMES.map((name, i) => {
@@ -1012,9 +1012,9 @@ function DashboardContent() {
                 }} style={{
                   padding: '3px 7px', borderRadius: 5, fontSize: 11, cursor: 'pointer',
                   fontFamily: "'IBM Plex Sans',sans-serif",
-                  background: active ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.03)',
-                  border: `0.5px solid ${active ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                  color: active ? 'var(--accent-blue, #60a5fa)' : 'rgba(255,255,255,0.38)',
+                  background: active ? 'rgba(96,165,250,0.15)' : 'var(--l03, rgba(255,255,255,0.03))',
+                  border: `0.5px solid ${active ? 'rgba(96,165,250,0.4)' : 'var(--l08, rgba(255,255,255,0.08))'}`,
+                  color: active ? 'var(--accent-blue, #60a5fa)' : 'var(--w38, rgba(255,255,255,0.38))',
                   fontWeight: active ? 600 : 400,
                   transition: 'all 0.15s',
                   userSelect: 'none',
@@ -1138,13 +1138,13 @@ function DashboardContent() {
                     ))
                   : kpiRows.map(row => (
                       <tr key={row.indicator} style={row.isSubtotal ? { background: 'rgba(251,146,60,0.04)', borderTop: '0.5px solid rgba(251,146,60,0.15)' } : {}}>
-                        <td className="indicator" style={row.isSubtotal ? { color: 'var(--accent-strong, #fb923c)', fontWeight: 600 } : row.indicator.startsWith('─') ? { color: 'rgba(255,255,255,0.2)', fontSize: 10 } : {}}>{row.indicator}</td>
+                        <td className="indicator" style={row.isSubtotal ? { color: 'var(--accent-strong, #fb923c)', fontWeight: 600 } : row.indicator.startsWith('─') ? { color: 'var(--w20, rgba(255,255,255,0.2))', fontSize: 10 } : {}}>{row.indicator}</td>
                         <td className="mono" style={{ textAlign:'right', color:'var(--accent-strong, #fb923c)', fontWeight:500 }}>{row.current}</td>
-                        <td className="mono" style={{ textAlign:'right', color:'rgba(255,255,255,0.4)' }}>{row.previous}</td>
-                        <td style={{ textAlign:'right', fontSize:10, color: row.vsP==='—' ? 'rgba(255,255,255,0.25)' : row.vsPPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsP}</td>
+                        <td className="mono" style={{ textAlign:'right', color:'var(--w40, rgba(255,255,255,0.4))' }}>{row.previous}</td>
+                        <td style={{ textAlign:'right', fontSize:10, color: row.vsP==='—' ? 'var(--w25, rgba(255,255,255,0.25))' : row.vsPPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsP}</td>
                         <td className="mono" style={{ textAlign:'right', color:'var(--accent-blue, #60a5fa)' }}>{row.ytd}</td>
-                        <td className="mono" style={{ textAlign:'right', color:'rgba(255,255,255,0.4)' }}>{row.prevYtd}</td>
-                        <td style={{ textAlign:'right', fontSize:10, color: row.vsYtd==='—' ? 'rgba(255,255,255,0.25)' : row.vsYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsYtd}</td>
+                        <td className="mono" style={{ textAlign:'right', color:'var(--w40, rgba(255,255,255,0.4))' }}>{row.prevYtd}</td>
+                        <td style={{ textAlign:'right', fontSize:10, color: row.vsYtd==='—' ? 'var(--w25, rgba(255,255,255,0.25))' : row.vsYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)' }}>{row.vsYtd}</td>
                         <td style={{ textAlign:'center' }}>
                           <span style={{ fontSize:10, color: row.statusPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
                             {row.statusPos ? '▲' : '▼'} YTD
@@ -1187,23 +1187,23 @@ function DashboardContent() {
                   <th style={{ color:'var(--accent-blue, #60a5fa)' }}>Current YTD</th>
                   <th style={{ color:'var(--accent-violet, #a78bfa)' }}>Budget YTD</th>
                   <th style={{ color:'var(--warning, #fbbf24)' }}>Current vs Bud YTD</th>
-                  <th style={{ textAlign:'center', color:'rgba(255,255,255,0.3)' }}>Status</th>
+                  <th style={{ textAlign:'center', color:'var(--w30, rgba(255,255,255,0.3))' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {finRows.map(row => (
                   <tr key={row.indicator} style={row.isSubtotal ? { background:'rgba(251,146,60,0.04)', borderTop:'0.5px solid rgba(251,146,60,0.15)' } : {}}>
                     <td style={{ fontFamily:"'IBM Plex Sans',sans-serif", textAlign:'left',
-                      color: row.indicator.startsWith('─') ? 'rgba(255,255,255,0.2)' : row.isSubtotal ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)',
+                      color: row.indicator.startsWith('─') ? 'var(--w20, rgba(255,255,255,0.2))' : row.isSubtotal ? 'var(--accent-strong, #fb923c)' : 'var(--text-primary, #e2dfd8)',
                       fontWeight: row.isSubtotal ? 600 : 400, fontSize: row.indicator.startsWith('─') ? 9 : undefined }}>{row.indicator}</td>
                     <td style={{ color: row.today !== '—' ? 'var(--text-strong, #f1ede8)' : undefined }}>{row.today}</td>
                     <td style={{ color: row.thisWeek !== '—' ? 'var(--text-strong, #f1ede8)' : undefined }}>{row.thisWeek}</td>
                     <td style={{ color:'var(--accent-strong, #fb923c)', fontWeight: 500 }}>{row.current}</td>
                     <td style={{ color:'rgba(167,139,250,0.8)' }}>{row.budget}</td>
-                    <td style={{ color: row.varBud === '—' ? 'rgba(255,255,255,0.25)' : row.varBudPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varBud}</td>
+                    <td style={{ color: row.varBud === '—' ? 'var(--w25, rgba(255,255,255,0.25))' : row.varBudPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varBud}</td>
                     <td style={{ color:'var(--accent-blue, #60a5fa)' }}>{row.ytd}</td>
                     <td style={{ color:'rgba(167,139,250,0.8)' }}>{row.budgetYtd}</td>
-                    <td style={{ color: row.varYtd === '—' ? 'rgba(255,255,255,0.25)' : row.varYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varYtd}</td>
+                    <td style={{ color: row.varYtd === '—' ? 'var(--w25, rgba(255,255,255,0.25))' : row.varYtdPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', fontSize: 10 }}>{row.varYtd}</td>
                     <td style={{ textAlign:'center' }}>
                       <span style={{ fontSize:10, color: row.statusPos ? 'var(--success, #4ade80)' : 'var(--danger, #f87171)', background: row.statusPos ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding:'2px 7px', borderRadius:20, display:'inline-flex', alignItems:'center', gap:3 }}>
                         {row.statusPos ? '▲' : '▼'} YTD
