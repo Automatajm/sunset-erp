@@ -41,6 +41,29 @@
   /* absolutes (theme-independent) */
   --white:            #fff;       /* knobs, on-accent text   */
   --black:            #000;
+
+  /* theme-flipping neutral ramp — dark values EQUAL the rgba(255,255,255,a)
+     literals they replace, so dark mode is byte-identical. html.light remaps
+     them to dark-ink-on-light so page chrome stays legible in light mode. */
+  --w55: rgba(255,255,255,0.55);
+  --w50: rgba(255,255,255,0.50);
+  --w45: rgba(255,255,255,0.45);
+  --w40: rgba(255,255,255,0.40);
+  --w35: rgba(255,255,255,0.35);
+  --w30: rgba(255,255,255,0.30);
+  --w28: rgba(255,255,255,0.28);
+  --w25: rgba(255,255,255,0.25);
+  --w22: rgba(255,255,255,0.22);
+  --w20: rgba(255,255,255,0.20);
+  --w18: rgba(255,255,255,0.18);
+  --w15: rgba(255,255,255,0.15);
+  --w10: rgba(255,255,255,0.10);
+  --l08: rgba(255,255,255,0.08);
+  --l07: rgba(255,255,255,0.07);
+  --l06: rgba(255,255,255,0.06);
+  --l05: rgba(255,255,255,0.05);
+  --l03: rgba(255,255,255,0.03);
+  --l02: rgba(255,255,255,0.02);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -50,16 +73,37 @@
    text flip. Pages that hardcode dark literals won't fully invert — the
    token-driven surfaces (cards, shell, tables) do.
    ────────────────────────────────────────────────────────────────────────── */
-:root.light {
-  --bg:               #f4f3f7;
-  --surface:          #ffffff;
-  --surface-raised:   #f0eef4;
-  --border:           #e3e0ea;
-  --border-strong:    #cfcad9;
+html.light {
+  --bg:               #ffffff;
+  --surface:          #f8f7ff;
+  --surface-raised:   #f0eef8;
+  --border:           #e2dfe8;
+  --border-strong:    #c8c5d5;
 
-  --text-strong:      #15121f;
-  --text-primary:     #2a2535;
+  --text-strong:      #0a0712;
+  --text-primary:     #1a1428;
   --text-secondary:   #6b7280;
+
+  /* neutral ramp → dark-ink-on-light */
+  --w55: rgba(26,20,40,0.72);
+  --w50: rgba(26,20,40,0.68);
+  --w45: rgba(26,20,40,0.62);
+  --w40: rgba(26,20,40,0.56);
+  --w35: rgba(26,20,40,0.50);
+  --w30: rgba(26,20,40,0.46);
+  --w28: rgba(26,20,40,0.44);
+  --w25: rgba(26,20,40,0.40);
+  --w22: rgba(26,20,40,0.36);
+  --w20: rgba(26,20,40,0.34);
+  --w18: rgba(26,20,40,0.30);
+  --w15: rgba(0,0,0,0.16);
+  --w10: rgba(0,0,0,0.12);
+  --l08: rgba(0,0,0,0.10);
+  --l07: rgba(0,0,0,0.09);
+  --l06: rgba(0,0,0,0.08);
+  --l05: rgba(0,0,0,0.07);
+  --l03: rgba(0,0,0,0.04);
+  --l02: rgba(0,0,0,0.03);
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -71,6 +115,42 @@ html.light body {
   background-color: var(--bg);
   color: var(--text-primary);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Light-mode overrides for the ERPShell frame. The shell paints its chrome
+   with hardcoded dark literals in a global <style>, so a CSS-variable flip
+   alone leaves the frame dark. These class overrides (higher specificity than
+   the shell's own rules) make the whole app frame go light. Dark mode (no
+   `.light` class) is untouched.
+   ────────────────────────────────────────────────────────────────────────── */
+html.light .shell-root {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(234,88,12,0.10) 0%, transparent 60%),
+    linear-gradient(to bottom, #fbfaff 0%, #f4f2fa 55%, #f8f4ef 100%);
+  color: var(--text-primary);
+}
+html.light .shell-brand { background: rgba(255,255,255,0.88); border-bottom-color: rgba(234,88,12,0.22); }
+html.light .shell-wordmark { color: #1a1428; }
+html.light .shell-search-btn { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: rgba(26,20,40,0.45); }
+html.light .shell-search-btn:hover { background: rgba(0,0,0,0.06); color: rgba(26,20,40,0.62); border-color: rgba(234,88,12,0.3); }
+html.light .shell-search-btn svg { opacity: 0.55; }
+html.light .shell-search-btn-kbd kbd { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: rgba(26,20,40,0.4); }
+html.light .shell-uname { color: rgba(26,20,40,0.82); }
+html.light .shell-urole { color: rgba(26,20,40,0.45); }
+html.light .shell-nav { background: rgba(248,247,255,0.92); border-bottom-color: rgba(0,0,0,0.08); }
+html.light .ni { color: rgba(26,20,40,0.55); }
+html.light .ni:hover, html.light .ni-open { color: rgba(26,20,40,0.92); background: rgba(0,0,0,0.05); }
+html.light .shell-bc { color: rgba(26,20,40,0.45); }
+html.light .shell-bc-sep { color: rgba(26,20,40,0.25); }
+html.light .shell-bc-cur { color: rgba(26,20,40,0.7); }
+html.light .dd-panel { background: rgba(255,255,255,0.98); border-color: rgba(234,88,12,0.22); box-shadow: 0 20px 50px rgba(0,0,0,0.18); }
+html.light .dd-left { background: rgba(0,0,0,0.02); border-right-color: rgba(0,0,0,0.08); }
+html.light .dd-group { color: rgba(26,20,40,0.55); }
+html.light .dd-group:hover { background: rgba(0,0,0,0.05); color: rgba(26,20,40,0.85); }
+html.light .dd-right-hdr { border-bottom-color: rgba(0,0,0,0.08); }
+html.light .dd-leaf { color: rgba(26,20,40,0.6); }
+html.light .dd-leaf:hover { background: rgba(0,0,0,0.05); }
 
 /* Tremor Dark Theme Overrides */
 .dark {

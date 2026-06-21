@@ -171,11 +171,11 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--surface, #0e0b1a)', border: '0.5px solid rgba(251,191,36,0.3)', borderRadius: 14, width: '100%', maxWidth: 500, boxShadow: '0 24px 60px rgba(0,0,0,0.8)' }}>
 
-        <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid var(--l06)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning, #fbbf24)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--warning, #fbbf24)' }}>Confirm System UOM Changes</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--w30)', marginTop: 2 }}>
               {payload.changes.length} change{payload.changes.length !== 1 ? 's' : ''} will be saved
             </div>
           </div>
@@ -184,12 +184,12 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Change summary table */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--l03)', borderRadius: 8, overflow: 'hidden' }}>
             {payload.changes.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderBottom: i < payload.changes.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none' }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', width: 90, flexShrink: 0 }}>{c.label}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderBottom: i < payload.changes.length - 1 ? '0.5px solid var(--l05)' : 'none' }}>
+                <span style={{ fontSize: 11, color: 'var(--w35)', width: 90, flexShrink: 0 }}>{c.label}</span>
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--success, #4ade80)' }}>{c.fromCode}</span>
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>→</span>
+                <span style={{ fontSize: 13, color: 'var(--w25)' }}>→</span>
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, color: 'var(--danger, #f87171)' }}>{c.toCode}</span>
               </div>
             ))}
@@ -205,7 +205,7 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
             ].map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{item.text}</span>
+                <span style={{ fontSize: 11, color: 'var(--w40)', lineHeight: 1.5 }}>{item.text}</span>
               </div>
             ))}
           </div>
@@ -215,9 +215,9 @@ function WarningModal({ payload, onCancel }: { payload: WarnPayload; onCancel: (
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 20px 16px', borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '10px 20px 16px', borderTop: '0.5px solid var(--l06)' }}>
           <button onClick={onCancel}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+            style={{ background: 'var(--l05)', border: '0.5px solid var(--w10)', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontFamily: "'IBM Plex Sans',sans-serif", color: 'var(--w50)', cursor: 'pointer' }}>
             Cancel — review changes
           </button>
           <button onClick={() => payload.onConfirm()}
@@ -237,7 +237,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <div>
       <label className="gs-flabel">
         {label}
-        {hint && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.25)', marginLeft: 6 }}>{hint}</span>}
+        {hint && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--w25)', marginLeft: 6 }}>{hint}</span>}
       </label>
       {children}
     </div>
@@ -258,11 +258,11 @@ function SegGroup<T extends string>({ options, value, onChange }: {
             style={{
               display: 'flex', flexDirection: 'column', gap: 2, padding: '9px 8px', borderRadius: 8, cursor: 'pointer',
               fontFamily: "'IBM Plex Sans',sans-serif", textAlign: 'center', transition: 'all 0.15s',
-              border: `0.5px solid ${active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.08)'}`,
-              background: active ? 'color-mix(in srgb, var(--accent, #ea580c) 9%, transparent)' : 'rgba(255,255,255,0.02)',
+              border: `0.5px solid ${active ? 'var(--accent-strong, #fb923c)' : 'var(--l08)'}`,
+              background: active ? 'color-mix(in srgb, var(--accent, #ea580c) 9%, transparent)' : 'var(--l02)',
             }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.55)' }}>{o.label}</span>
-            <span style={{ fontSize: 9, color: active ? 'color-mix(in srgb, var(--accent-strong, #fb923c) 55%, transparent)' : 'rgba(255,255,255,0.22)' }}>{o.sub}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: active ? 'var(--accent-strong, #fb923c)' : 'var(--w55)' }}>{o.label}</span>
+            <span style={{ fontSize: 9, color: active ? 'color-mix(in srgb, var(--accent-strong, #fb923c) 55%, transparent)' : 'var(--w22)' }}>{o.sub}</span>
           </button>
         );
       })}
@@ -511,12 +511,12 @@ export default function GeneralSettingsPage() {
         @media (max-width:820px){.gs-grid{grid-template-columns:1fr}}
         .gs-card{background:var(--surface,#0e0b1a);border:0.5px solid var(--border,#2a2535);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
         .gs-card-title{font-size:11px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent-strong,#fb923c);display:flex;align-items:center;gap:8px;margin:0}
-        .gs-card-sub{font-size:10px;color:rgba(255,255,255,0.28);line-height:1.5;margin:-8px 0 0}
-        .gs-flabel{font-size:11px;font-weight:500;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;display:block}
-        .gs-input{width:100%;background:rgba(255,255,255,0.03);border:0.5px solid var(--border-strong,#3a3447);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text-primary,#e2dfd8);font-family:'IBM Plex Sans',sans-serif;outline:none;box-sizing:border-box}
+        .gs-card-sub{font-size:10px;color:var(--w28);line-height:1.5;margin:-8px 0 0}
+        .gs-flabel{font-size:11px;font-weight:500;color:var(--w55);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;display:block}
+        .gs-input{width:100%;background:var(--l03);border:0.5px solid var(--border-strong,#3a3447);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text-primary,#e2dfd8);font-family:'IBM Plex Sans',sans-serif;outline:none;box-sizing:border-box}
         .gs-input:focus{border-color:var(--accent-strong,#fb923c)}
-        .gs-divider{height:0.5px;background:rgba(255,255,255,0.06);margin:2px 0}
-        .gs-sublabel{font-size:10px;color:rgba(255,255,255,0.28);line-height:1.5}
+        .gs-divider{height:0.5px;background:var(--l06);margin:2px 0}
+        .gs-sublabel{font-size:10px;color:var(--w28);line-height:1.5}
         .gs-btn-save{background:linear-gradient(135deg,var(--accent-pressed,#c2410c),var(--accent,#ea580c),var(--accent-mid,#f97316));border:none;border-radius:7px;padding:9px 24px;font-size:13px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;color:#fff;cursor:pointer;box-shadow:0 3px 12px rgba(234,88,12,0.35)}
         .gs-btn-save:disabled{opacity:0.5;cursor:not-allowed}
         .gs-alert{border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px;flex-shrink:0}
@@ -581,7 +581,7 @@ export default function GeneralSettingsPage() {
                   placeholder="Select number format…" clearLabel="— Select —" minWidth={240} />
               </Field>
 
-              <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.1)', borderRadius: 9, padding: '9px 12px', fontSize: 10, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
+              <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.1)', borderRadius: 9, padding: '9px 12px', fontSize: 10, color: 'var(--w30)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--accent-blue, #60a5fa)' }}>Base currency</strong> is stored on the tenant and drives the frozen-rate pattern. Company, language, timezone and formats are stored as local preferences.
               </div>
             </div>
@@ -619,7 +619,7 @@ export default function GeneralSettingsPage() {
                     );
                   })}
                   {savedSystemUoms.length === 0 && (
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>No system UOMs saved yet.</span>
+                    <span style={{ fontSize: 11, color: 'var(--w22)' }}>No system UOMs saved yet.</span>
                   )}
                 </div>
               </div>
@@ -636,13 +636,13 @@ export default function GeneralSettingsPage() {
                     const sub     = sys === 'metric' ? 'LTR · KG · M · PCS' : sys === 'imperial' ? 'GAL · LB · FT · PCS' : 'Pick each UOM freely →';
                     return (
                       <div key={sys} onClick={() => handleSystemChange(sys)}
-                        style={{ padding: '9px 13px', borderRadius: 8, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontSize: 13, fontWeight: 500, border: `0.5px solid ${active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s', color: active ? 'var(--accent-strong, #fb923c)' : 'rgba(255,255,255,0.4)', background: active ? 'color-mix(in srgb, var(--accent, #ea580c) 8%, transparent)' : 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        style={{ padding: '9px 13px', borderRadius: 8, cursor: 'pointer', fontFamily: "'IBM Plex Sans',sans-serif", fontSize: 13, fontWeight: 500, border: `0.5px solid ${active ? 'var(--accent-strong, #fb923c)' : 'var(--l07)'}`, transition: 'all 0.15s', color: active ? 'var(--accent-strong, #fb923c)' : 'var(--w40)', background: active ? 'color-mix(in srgb, var(--accent, #ea580c) 8%, transparent)' : 'var(--l02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>{systemLabel[sys]}</span>
                           {isSaved && !isDirty('defaultUomSystem') && <span className="badge-saved">saved</span>}
                           {active && !isSaved && <span className="badge-pending">● pending</span>}
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 400, color: active ? 'color-mix(in srgb, var(--accent-strong, #fb923c) 55%, transparent)' : 'rgba(255,255,255,0.18)' }}>{sub}</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: active ? 'color-mix(in srgb, var(--accent-strong, #fb923c) 55%, transparent)' : 'var(--w18)' }}>{sub}</span>
                       </div>
                     );
                   })}
@@ -667,11 +667,11 @@ export default function GeneralSettingsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
                         <span style={{ fontSize: 11, fontWeight: 500, color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{row.label}</span>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>e.g. {row.example}</span>
+                        <span style={{ fontSize: 10, color: 'var(--w20)' }}>e.g. {row.example}</span>
                         <span style={{ flex: 1 }} />
                         {savedUom
                           ? <span className="badge-saved" style={{ fontFamily: "'IBM Plex Mono',monospace" }}>{savedUom.code}</span>
-                          : <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', fontStyle: 'italic' }}>not set</span>}
+                          : <span style={{ fontSize: 10, color: 'var(--w18)', fontStyle: 'italic' }}>not set</span>}
                         {dirty && selUom && selUom.id !== savedId && (
                           <span className="badge-pending" style={{ fontFamily: "'IBM Plex Mono',monospace" }}>→ {selUom.code}</span>
                         )}
@@ -690,7 +690,7 @@ export default function GeneralSettingsPage() {
               </div>
 
               {/* How it works */}
-              <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.1)', borderRadius: 9, padding: '10px 13px', fontSize: 10, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7 }}>
+              <div style={{ background: 'rgba(96,165,250,0.04)', border: '0.5px solid rgba(96,165,250,0.1)', borderRadius: 9, padding: '10px 13px', fontSize: 10, color: 'var(--w30)', lineHeight: 1.7 }}>
                 <strong style={{ color: 'var(--accent-blue, #60a5fa)' }}>How it works:</strong> Formulators, buyers and warehouse staff work in any unit. MRP converts everything to system UOMs at aggregation time. ConsumptionGroups and Item consumption UOMs are restricted to these system units only.
               </div>
             </div>
@@ -716,7 +716,7 @@ export default function GeneralSettingsPage() {
                     return (
                       <button key={p.key} type="button" title={p.name} onClick={() => chooseAccent(p)}
                         className="gs-swatch"
-                        style={{ background: p.accent, border: active ? '2px solid #fff' : '0.5px solid rgba(255,255,255,0.15)', boxShadow: active ? `0 0 0 2px ${p.accent}` : 'none' }}>
+                        style={{ background: p.accent, border: active ? '2px solid #fff' : '0.5px solid var(--w15)', boxShadow: active ? `0 0 0 2px ${p.accent}` : 'none' }}>
                         {active && (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', inset: 0, margin: 'auto' }}><polyline points="20 6 9 17 4 12"/></svg>
                         )}
@@ -747,7 +747,7 @@ export default function GeneralSettingsPage() {
                     </span>
                   </div>
                   <div style={{ border: '0.5px solid var(--border, #2a2535)', borderRadius: 8, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.02)', borderBottom: '0.5px solid var(--border, #2a2535)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', fontSize: 11, color: 'var(--w45)', background: 'var(--l02)', borderBottom: '0.5px solid var(--border, #2a2535)' }}>
                       <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9 }}>Sample row</span>
                       <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9 }}>Value</span>
                     </div>
