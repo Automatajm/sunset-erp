@@ -43,10 +43,33 @@
   --black:            #000;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Light theme override (settings → Appearance → Light / System).
+   Activated by `class="light"` on <html> (set client-side from the
+   "sunset-theme" preference). Accent stays brand-orange; only surfaces and
+   text flip. Pages that hardcode dark literals won't fully invert — the
+   token-driven surfaces (cards, shell, tables) do.
+   ────────────────────────────────────────────────────────────────────────── */
+:root.light {
+  --bg:               #f4f3f7;
+  --surface:          #ffffff;
+  --surface-raised:   #f0eef4;
+  --border:           #e3e0ea;
+  --border-strong:    #cfcad9;
+
+  --text-strong:      #15121f;
+  --text-primary:     #2a2535;
+  --text-secondary:   #6b7280;
+}
+
 html, body { height: 100%; overflow: hidden; }
 body {
   background-color: #0f172a;
   color: #f1f5f9;
+}
+html.light body {
+  background-color: var(--bg);
+  color: var(--text-primary);
 }
 
 /* Tremor Dark Theme Overrides */
